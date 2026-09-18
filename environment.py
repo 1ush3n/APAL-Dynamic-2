@@ -92,6 +92,8 @@ class AirLineEnv_Graph(gym.Env):
         
         self.num_workers = configs.n_w
         self.num_stations = configs.n_m
+        self.assigned_tasks: list[Any] = []
+        self._clear_dynamic_edges()
         
         # 目录中只保留轻量文件描述符，完整图上下文按需加载。
         self.dataset_pool: list[dict[str, Any]] = []
@@ -233,6 +235,47 @@ class AirLineEnv_Graph(gym.Env):
             "file_path": str(ctx["file_path"]),
             "num_tasks": None if "num_tasks" not in ctx else int(ctx["num_tasks"]),
         }
+
+    def _clear_dynamic_edges(self) -> None:
+        """清空运行时增量动态边缓存列表。"""
+        self._dyn_ts_src: list[int] = []
+        self._dyn_ts_dst: list[int] = []
+        self._dyn_tw_src: list[int] = []
+        self._dyn_tw_dst: list[int] = []
+
+    def _record_dynamic_edge(self, task_id: int, station_id: int, team: Iterable[int]) -> None:
+        """单步增量追加已指派的任务-工位边和任务-工人边。"""
+        if station_id != -1:
+            t_idx = int(task_id)
+            s_idx = int(station_id)
+            self._dyn_ts_src.append(t_idx)
+            self._dyn_ts_dst.append(s_idx)
+            for w_id in team:
+                self._dyn_tw_src.append(t_idx)
+                self._dyn_tw_dst.append(int(w_id))
+
+    @staticmethod
+    def _build_dynamic_edges(
+        ts_src: list[int],
+        ts_dst: list[int],
+        tw_src: list[int],
+        tw_dst: list[int],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """由工序-站位及工序-团队列表构建统一的 PyG 动态边张量。"""
+        if ts_src:
+            t_s_edge = torch.tensor([ts_src, ts_dst], dtype=torch.long)
+            s_t_edge = torch.stack([t_s_edge[1], t_s_edge[0]], dim=0)
+        else:
+            t_s_edge = torch.empty((2, 0), dtype=torch.long)
+            s_t_edge = torch.empty((2, 0), dtype=torch.long)
+
+        if tw_src:
+            t_w_edge = torch.tensor([tw_src, tw_dst], dtype=torch.long)
+        else:
+            t_w_edge = torch.empty((2, 0), dtype=torch.long)
+
+        return t_s_edge, s_t_edge, t_w_edge
+
     def _skill_hub_topology(
         self,
         task_skill_edge_index: torch.Tensor,
@@ -446,6 +489,7 @@ class AirLineEnv_Graph(gym.Env):
         self.current_time = self.reschedule_start_time
 
         self.assigned_tasks = []
+        self._clear_dynamic_edges()
         self.task_station_map = {}
         self.task_end_times = -np.ones(self.num_tasks)
         self.task_status.fill(0)
@@ -476,6 +520,7 @@ class AirLineEnv_Graph(gym.Env):
             self.task_end_times[task_id] = end
             self.task_station_map[task_id] = sid
             self.assigned_tasks.append((task_id, sid, team, start, end))
+            self._record_dynamic_edge(task_id, sid, team)
             if sid >= 0:
                 self.station_loads[sid] += duration * max(1, len(team))
                 self.station_wall_clock[sid] = max(self.station_wall_clock[sid], end)
@@ -888,7 +933,8 @@ class AirLineEnv_Graph(gym.Env):
         # 小顶堆：记录每个站位中各并行工序的预计完成时间，用于计算等待延迟
         self.station_task_finish_times = [[] for _ in range(self.num_stations)]
         
-        self.assigned_tasks = [] 
+        self.assigned_tasks = []
+        self._clear_dynamic_edges()
         self.task_station_map = {} 
         self.task_end_times = -np.ones(self.num_tasks)
         
@@ -1480,6 +1526,7 @@ class AirLineEnv_Graph(gym.Env):
         self.task_station_map[task_id] = station_id
         
         self.assigned_tasks.append((task_id, station_id, team, start_time, finish_time))
+        self._record_dynamic_edge(task_id, station_id, team)
         # 2. 添加事件到队列
         self.event_queue.push(Event(finish_time, EventType.TASK_FINISH, 
                                     {'task_id': task_id, 'worker_ids': team, 'station_id': station_id}))
@@ -1886,30 +1933,17 @@ class AirLineEnv_Graph(gym.Env):
         data['station'].x = station_x
         
         # 4. Dynamic Edges (Assigned To)
-        ts_src, ts_dst, tw_src, tw_dst = [], [], [], []
-        for t_id, s_id, team, _, _ in self.assigned_tasks:
-            if s_id != -1:
-                ts_src.append(t_id)
-                ts_dst.append(s_id)
-                for w_id in team:
-                    tw_src.append(t_id)
-                    tw_dst.append(w_id)
-                    
-        if ts_src:
-            t_s_edge = torch.tensor([ts_src, ts_dst], dtype=torch.long)
-            s_t_edge = torch.stack([t_s_edge[1], t_s_edge[0]], dim=0)
-        else:
-            t_s_edge = torch.empty((2, 0), dtype=torch.long)
-            s_t_edge = torch.empty((2, 0), dtype=torch.long)
-            
+        if not self._dyn_ts_src and self.assigned_tasks:
+            for t_id, s_id, team, _, _ in self.assigned_tasks:
+                if s_id != -1:
+                    self._record_dynamic_edge(t_id, s_id, team)
+
+        t_s_edge, s_t_edge, t_w_edge = self._build_dynamic_edges(
+            self._dyn_ts_src, self._dyn_ts_dst,
+            self._dyn_tw_src, self._dyn_tw_dst,
+        )
         data['task', 'assigned_to', 'station'].edge_index = t_s_edge
         data['station', 'has_task', 'task'].edge_index = s_t_edge
-        
-        if tw_src:
-            t_w_edge = torch.tensor([tw_src, tw_dst], dtype=torch.long)
-        else:
-            t_w_edge = torch.empty((2, 0), dtype=torch.long)
-             
         data['task', 'done_by', 'worker'].edge_index = t_w_edge
         
         return data
@@ -2176,21 +2210,11 @@ class AirLineEnv_Graph(gym.Env):
                     tw_src.append(t_id)
                     tw_dst.append(w_id)
                     
-        if ts_src:
-            t_s_edge = torch.tensor([ts_src, ts_dst], dtype=torch.long)
-            s_t_edge = torch.stack([t_s_edge[1], t_s_edge[0]], dim=0)
-        else:
-            t_s_edge = torch.empty((2, 0), dtype=torch.long)
-            s_t_edge = torch.empty((2, 0), dtype=torch.long)
-            
+        t_s_edge, s_t_edge, t_w_edge = self._build_dynamic_edges(
+            ts_src, ts_dst, tw_src, tw_dst,
+        )
         data['task', 'assigned_to', 'station'].edge_index = t_s_edge
         data['station', 'has_task', 'task'].edge_index = s_t_edge
-        
-        if tw_src:
-            t_w_edge = torch.tensor([tw_src, tw_dst], dtype=torch.long)
-        else:
-            t_w_edge = torch.empty((2, 0), dtype=torch.long)
-             
         data['task', 'done_by', 'worker'].edge_index = t_w_edge
         
         data.apal_resource_topology_key = topology_key
