@@ -1958,9 +1958,9 @@ class AirLineEnv_Graph(gym.Env):
             'station_wall_clock': self.station_wall_clock.copy(),
             'current_time': self.current_time,
             'assigned_tasks': list(self.assigned_tasks),
-            # 每个向量环境可具有独立的工时扰动；PPO 重建时必须保留该副本。
-            'base_task_x': self.base_task_x.clone(),
-            'base_worker_x': self.base_worker_x.clone(),
+            # 每个向量环境可具有独立的工时扰动；快照直接传递张量引用，下游若需突变则自行克隆
+            'base_task_x': self.base_task_x,
+            'base_worker_x': self.base_worker_x,
             'dataset_idx': getattr(self, 'active_dataset_idx', 0),
             'worker_topology_key': self._active_worker_topology_key,
             # [Dynamic Events] 保存新增状态变量
