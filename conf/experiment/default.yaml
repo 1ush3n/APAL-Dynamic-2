@@ -1,0 +1,8 @@
+defaults:
+  - /model/hb_gat_pn@_global_
+  - /env/apal_default@_global_
+  - /env/dynamic_events@_global_
+  - /reward/default@_global_
+  - /train/ppo_default@_global_
+  - /rollout/fastpath@_global_
+  - _self_

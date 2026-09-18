@@ -1,0 +1,12 @@
+hardware:
+  num_envs: 16
+  worker_pointer_v2_fast_default_num_envs: 16
+  ddqn_num_envs: 8
+  vector_env_start_method: forkserver
+  vector_env_worker_threads: 1
+  vector_env_init_timeout_sec: 180.0
+  vector_env_command_timeout_sec: 180.0
+  log_dir: /root/tf-logs
+  report_dir: results/reports
+  generate_report_every_episodes: 100
+  float32_matmul_precision: high

@@ -1,0 +1,14 @@
+defaults:
+  - /model/hb_gat_pn@_global_
+  - /env/apal_default@_global_
+  - /env/reschedule_task_delay@_global_
+  - /reward/default@_global_
+  - /train/ppo_default@_global_
+  - /rollout/fastpath@_global_
+  - _self_
+
+experiment:
+  experiment_name: reschedule_task_delay
+  checkpoint_root: checkpoints
+  lr: 1.0e-4
+  actor_lr_multiplier: 1.0

@@ -1,0 +1,225 @@
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+from types import SimpleNamespace
+
+import pandas as pd
+
+from configs import Config, configs, load_config_files
+from environment import AirLineEnv_Graph
+import scripts.evaluate_reschedule_manifest as manifest_eval
+from runtime.reschedule_manifest import load_reschedule_manifest
+from runtime.initial_worker_mapping import apply_initial_worker_mapping
+from tests.runtime_safety import temporary_config
+from tests.test_reschedule_task_delay import PROJECT_ROOT, _reschedule_overrides, _write_greedy_baseline
+
+
+def _write_manifest(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"version": 1, "kind": "reschedule_dataset_manifest", "instances": rows}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def test_reschedule_manifest_matches_by_instance_and_data_path(tmp_path: Path) -> None:
+    data_path = tmp_path / "case.csv"
+    baseline_path = tmp_path / "case_schedule.csv"
+    scenario_path = tmp_path / "case_scenarios.csv"
+    data_path.write_text("dummy", encoding="utf-8")
+    baseline_path.write_text("dummy", encoding="utf-8")
+    scenario_path.write_text("dummy", encoding="utf-8")
+    manifest_path = tmp_path / "manifest.json"
+    _write_manifest(
+        manifest_path,
+        [
+            {
+                "instance_id": "real_680",
+                "split": "eval",
+                "source": "real",
+                "data_path": str(data_path),
+                "baseline_schedule_path": str(baseline_path),
+                "scenario_path": str(scenario_path),
+                "status": "ready",
+            }
+        ],
+    )
+
+    manifest = load_reschedule_manifest(manifest_path)
+    entry = manifest.get("real_680")
+    assert entry.data_path == data_path
+    assert entry.baseline_schedule_path == baseline_path
+    assert entry.scenario_path == scenario_path
+    assert manifest.find_by_data_path(data_path).instance_id == "real_680"
+
+
+def test_environment_switches_reschedule_baseline_from_manifest(tmp_path: Path) -> None:
+    data_dir = tmp_path / "datasets"
+    data_dir.mkdir()
+    case_a = data_dir / "case_a.csv"
+    case_b = data_dir / "case_b.csv"
+    shutil.copy2(PROJECT_ROOT / "data" / "283.csv", case_a)
+    shutil.copy2(PROJECT_ROOT / "data" / "283.csv", case_b)
+
+    baseline_a = tmp_path / "baseline_a.csv"
+    baseline_b = tmp_path / "baseline_b.csv"
+    df = _write_greedy_baseline(baseline_a)
+    shifted = df.copy()
+    shifted["Start"] = shifted["Start"] + 10.0
+    shifted["End"] = shifted["End"] + 10.0
+    shifted.to_csv(baseline_b, index=False)
+    scenario_path = tmp_path / "scenario.csv"
+    delayed_row = df[df["Start"] > float(df["Start"].quantile(0.35))].iloc[0]
+    pd.DataFrame(
+        [
+            {
+                "reschedule_start_time": float(df["Start"].quantile(0.35)),
+                "TaskID": int(delayed_row["TaskID"]),
+                "release_time": float(delayed_row["Start"] + 8.0),
+            }
+        ]
+    ).to_csv(scenario_path, index=False)
+
+    manifest_path = tmp_path / "manifest.json"
+    _write_manifest(
+        manifest_path,
+        [
+            {
+                "instance_id": "train_a",
+                "split": "train",
+                "source": "generated",
+                "data_path": str(case_a),
+                "baseline_schedule_path": str(baseline_a),
+                "status": "ready",
+            },
+            {
+                "instance_id": "train_b",
+                "split": "train",
+                "source": "generated",
+                "data_path": str(case_b),
+                "baseline_schedule_path": str(baseline_b),
+                "status": "ready",
+            },
+        ],
+    )
+
+    cfg = Config()
+    load_config_files([str(PROJECT_ROOT / "conf" / "experiment" / "reschedule_task_delay.yaml")], target=cfg)
+    overrides = cfg.to_flat_dict()
+    overrides.update(
+        {
+            "reschedule_manifest_path": str(manifest_path),
+            "reschedule_scenario_path": str(scenario_path),
+            "reschedule_eval_scenario_path": str(scenario_path),
+            "data_file_path": str(case_a),
+            "train_data_path_or_dir": str(data_dir),
+            "randomize_durations": False,
+            "enable_shadow_mask_verification": False,
+        }
+    )
+    with temporary_config(configs, overrides):
+        env = AirLineEnv_Graph(data_path_or_dir=str(data_dir), seed=19)
+        env.reset(randomize_duration=False, randomize_workers=False, seed=19)
+        assert abs(env.baseline_schedule.makespan - float(df["End"].max())) < 1e-6
+
+        env.switch_dataset(1)
+        env.reset(randomize_duration=False, randomize_workers=False, seed=19)
+        assert abs(env.baseline_schedule.makespan - float(shifted["End"].max())) < 1e-6
+
+
+def test_fiveskill_r4_real_manifest_resets_with_dataset_worker_mapping() -> None:
+    """四个真实重调度实例必须按各自固定工人规模加载合法基准。"""
+
+    manifest_path = PROJECT_ROOT / "data" / "r4" / "m.json"
+    manifest = load_reschedule_manifest(manifest_path)
+    expected_workers = {
+        "real_283": 80,
+        "real_680": 100,
+        "real_2338": 140,
+        "real_3182": 160,
+    }
+    cfg = Config()
+    load_config_files([str(PROJECT_ROOT / "conf" / "experiment" / "reschedule_task_delay.yaml")], target=cfg)
+    overrides = cfg.to_flat_dict()
+    overrides.update(
+        {
+            "enable_reschedule_mode": True,
+            "reschedule_manifest_path": str(manifest_path),
+            "randomize_durations": False,
+            "enable_shadow_mask_verification": False,
+        }
+    )
+    with temporary_config(configs, overrides):
+        for instance_id, expected_worker_count in expected_workers.items():
+            entry = manifest.get(instance_id)
+            configs.reschedule_eval_instance_id = instance_id
+            apply_initial_worker_mapping(configs, entry.data_path, explicit_fields=set())
+            env = AirLineEnv_Graph(data_path_or_dir=str(entry.data_path), seed=42)
+            env.reset(randomize_duration=False, randomize_workers=False, seed=42)
+            assert int(configs.n_w) == expected_worker_count
+            assert env.num_workers == expected_worker_count
+            assert env.baseline_schedule is not None
+
+
+def test_manifest_evaluation_preserves_context_for_each_instance(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    entries = []
+    for instance_id in ("case_a", "case_b"):
+        data_path = tmp_path / f"{instance_id}.csv"
+        baseline_path = tmp_path / f"{instance_id}_baseline.csv"
+        scenario_path = tmp_path / f"{instance_id}_scenarios.csv"
+        for path in (data_path, baseline_path, scenario_path):
+            path.write_text("placeholder", encoding="utf-8")
+        entries.append(
+            {
+                "instance_id": instance_id,
+                "split": "eval",
+                "source": "generated",
+                "data_path": str(data_path),
+                "baseline_schedule_path": str(baseline_path),
+                "scenario_path": str(scenario_path),
+                "status": "ready",
+            }
+        )
+    manifest_path = tmp_path / "manifest.json"
+    _write_manifest(manifest_path, entries)
+
+    observed_context = []
+    monkeypatch.setattr(
+        manifest_eval,
+        "load_checkpoint",
+        lambda _path: SimpleNamespace(model_spec=object(), format_name="test"),
+    )
+    monkeypatch.setattr(manifest_eval, "apply_checkpoint_model_spec", lambda *args, **kwargs: None)
+    monkeypatch.setattr(manifest_eval, "apply_initial_worker_mapping", lambda *args, **kwargs: None)
+
+    def fake_evaluate_saved_reschedule_model(**_kwargs):
+        observed_context.append(
+            (configs.reschedule_manifest_path, configs.reschedule_eval_instance_id)
+        )
+        return {"scenario_count": 1}
+
+    monkeypatch.setattr(
+        manifest_eval,
+        "evaluate_saved_reschedule_model",
+        fake_evaluate_saved_reschedule_model,
+    )
+
+    manifest_eval.evaluate_manifest_instances(
+        model_path=tmp_path / "model.ckpt",
+        manifest_path=manifest_path,
+        instance_ids=["case_a", "case_b"],
+        num_runs=None,
+        scenario_ids=None,
+        temperature=0.0,
+        output_dir=tmp_path / "output",
+    )
+
+    assert observed_context == [
+        (str(manifest_path.resolve()), "case_a"),
+        (str(manifest_path.resolve()), "case_b"),
+    ]

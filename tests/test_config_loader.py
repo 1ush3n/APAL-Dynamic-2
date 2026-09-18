@@ -1,0 +1,733 @@
+# -*- coding: utf-8 -*-
+"""验证分层 YAML 配置加载保持旧 Config 单例兼容。"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from configs import (
+    Config,
+    load_config_files,
+    load_training_config,
+    resolve_platform_hardware_config,
+)
+from runtime.configuration import parse_set_overrides, resolve_runtime_config
+from runtime.hydra_config import (
+    ExtraArgument,
+    HydraCliError,
+    apply_hydra_config,
+    compose_hydra_config,
+    initialize_hydra_runtime,
+    parse_hydra_args,
+)
+from runtime.artifacts import (
+    build_run_id,
+    checkpoint_paths as artifact_checkpoint_paths,
+    resolve_run_output_dir,
+    run_context,
+)
+from runtime.paths import PROJECT_ROOT, resolve_checkpoint_paths, resolve_tensorboard_log_root, write_best_model_meta
+
+
+def test_layered_yaml_config_loads_into_flat_config() -> None:
+    cfg = Config()
+    load_config_files([str(PROJECT_ROOT / "conf" / "experiment" / "default.yaml")], target=cfg)
+
+    assert cfg.use_input_layer_norm is True
+    assert cfg.use_gat_layer_norm is False
+    assert cfg.use_head_layer_norm is False
+    assert cfg.use_rollout_snapshot_fastpath is True
+    assert cfg.n_m == 5
+    assert cfg.batch_size == 32
+
+
+def test_hydra_root_config_loads_through_compat_loader() -> None:
+    cfg = Config()
+    load_config_files([str(PROJECT_ROOT / "conf" / "config.yaml")], target=cfg)
+
+    assert cfg.use_skill_hub is True
+    assert cfg.use_rollout_snapshot_fastpath is True
+    assert cfg.batch_size == 32
+
+
+def test_later_yaml_overrides_earlier_yaml(tmp_path: Path) -> None:
+    override = tmp_path / "override.yaml"
+    override.write_text(
+        "train:\n"
+        "  batch_size: 8\n"
+        "model:\n"
+        "  use_head_layer_norm: true\n",
+        encoding="utf-8",
+    )
+
+    cfg = Config()
+    load_config_files(
+        [
+            str(PROJECT_ROOT / "conf" / "experiment" / "default.yaml"),
+            str(override),
+        ],
+        target=cfg,
+    )
+
+    assert cfg.batch_size == 8
+    assert cfg.use_head_layer_norm is True
+
+
+def test_initial_schedule_config_disables_dynamic_events_but_keeps_training_randomization() -> None:
+    cfg = Config()
+    load_config_files([str(PROJECT_ROOT / "conf" / "experiment" / "initial_schedule.yaml")], target=cfg)
+
+    assert cfg.experiment_name == "initial_schedule"
+    assert cfg.checkpoint_root == "checkpoints"
+    assert cfg.enable_dynamic_events is False
+    assert cfg.enable_station_breakdown is False
+    assert cfg.enable_material_delay is False
+    assert cfg.enable_online_duration_perturb is False
+    assert cfg.enable_worker_fatigue is False
+    assert cfg.prob_worker_absent_base == 0.0
+    assert cfg.prob_worker_absent_max == 0.0
+    assert cfg.prob_station_breakdown_base == 0.0
+    assert cfg.prob_station_breakdown_max == 0.0
+    assert cfg.prob_material_delay_base == 0.0
+    assert cfg.prob_material_delay_max == 0.0
+    assert cfg.online_perturb_prob_per_step == 0.0
+    assert cfg.randomize_durations is True
+    assert cfg.dur_random_range == 0.2
+
+
+def test_experiment_checkpoint_paths_and_best_model_meta_are_isolated(tmp_path: Path) -> None:
+    cfg = Config()
+    cfg.experiment_name = "initial_schedule_test"
+    cfg.checkpoint_root = str(tmp_path / "checkpoints")
+    cfg.config_paths = ("conf/experiment/initial_schedule.yaml",)
+    cfg.data_file_path = "data/283.csv"
+    cfg.train_data_path_or_dir = "data/random_datasets"
+
+    paths = resolve_checkpoint_paths(cfg)
+
+    assert paths["checkpoint_path"] == tmp_path / "checkpoints" / "initial_schedule_test" / "latest_checkpoint.pth"
+    assert paths["best_model_path"] == tmp_path / "checkpoints" / "initial_schedule_test" / "bestmodel" / "best_model.pth"
+    assert paths["checkpoint_path"] != tmp_path / "checkpoints" / "latest_checkpoint.pth"
+
+    write_best_model_meta(paths["best_model_meta_path"], episode=7, eval_makespan=123.4, config_obj=cfg)
+    meta_text = paths["best_model_meta_path"].read_text(encoding="utf-8")
+
+    assert '"episode": 7' in meta_text
+    assert '"eval_makespan": 123.4' in meta_text
+    assert "conf/experiment/initial_schedule.yaml" in meta_text
+
+
+def test_tensorboard_log_root_strictly_uses_config() -> None:
+    cfg = Config()
+    cfg.log_dir = "/root/tf-logs"
+    cfg.artifact_layout = "legacy"
+    assert resolve_tensorboard_log_root(cfg) == Path("/root/tf-logs")
+
+
+def test_runs_layout_creates_stable_run_context(tmp_path: Path) -> None:
+    cfg = Config()
+    cfg.experiment_name = "initial schedule 680"
+    cfg.runs_root = str(tmp_path / "runs")
+    cfg.run_id = "initial_schedule_680_260630-153000"
+
+    context = run_context(cfg, PROJECT_ROOT, create_dirs=True)
+
+    assert context.experiment_name == "initial_schedule_680"
+    assert context.run_id == "initial_schedule_680_260630-153000"
+    assert context.run_dir == tmp_path / "runs" / "initial_schedule_680" / "initial_schedule_680_260630-153000"
+    assert context.checkpoint_dir.exists()
+    assert context.configs_dir.exists()
+    assert context.eval_dir.exists()
+    assert str(context.run_dir) == cfg.run_dir
+
+
+def test_runs_layout_checkpoint_paths_do_not_use_legacy_root(tmp_path: Path) -> None:
+    cfg = Config()
+    cfg.experiment_name = "initial_schedule_680"
+    cfg.runs_root = str(tmp_path / "runs")
+    cfg.run_id = "initial_schedule_680_260630-153000"
+
+    paths = artifact_checkpoint_paths(cfg, PROJECT_ROOT)
+
+    assert paths["lightning_latest"] == tmp_path / "runs" / "initial_schedule_680" / "initial_schedule_680_260630-153000" / "checkpoints" / "last.ckpt"
+    assert paths["lightning_best"] == tmp_path / "runs" / "initial_schedule_680" / "initial_schedule_680_260630-153000" / "checkpoints" / "best.ckpt"
+    assert paths["legacy_latest"].parent.name == "legacy"
+
+
+def test_auto_run_id_uses_experiment_and_compact_timestamp() -> None:
+    from datetime import datetime
+
+    cfg = Config()
+    cfg.experiment_name = "initial_schedule_680"
+
+    assert build_run_id(cfg, now=datetime(2026, 6, 30, 15, 30, 0)) == "initial_schedule_680_260630-153000"
+
+
+def test_training_config_selects_windows_low_memory_profile() -> None:
+    cfg = Config()
+    _, paths = load_training_config(
+        [str(PROJECT_ROOT / "conf" / "experiment" / "initial_schedule_283.yaml")],
+        target=cfg,
+        system_name="Windows",
+    )
+
+    assert cfg.num_envs == 2
+    assert cfg.vector_env_start_method == "spawn"
+    assert cfg.batch_size == 4
+    assert cfg.ppo_batch_size_cap == 4
+    assert Path(paths[-1]).name == "windows_4060_low_memory.yaml"
+
+
+def test_training_config_selects_linux_profile() -> None:
+    cfg = Config()
+    _, paths = load_training_config(
+        [str(PROJECT_ROOT / "conf" / "experiment" / "initial_schedule_283.yaml")],
+        target=cfg,
+        system_name="Linux",
+    )
+
+    assert cfg.num_envs == 16
+    assert cfg.vector_env_start_method == "forkserver"
+    assert cfg.ppo_batch_size_cap == 0
+    assert cfg.batch_size == 512
+    assert Path(paths[-1]).name == "linux_server.yaml"
+
+
+def test_worker_pointer_v2_linux_config_keeps_256_by_16_training_semantics() -> None:
+    cfg = Config()
+    _, paths = load_training_config(
+        [
+            str(
+                PROJECT_ROOT
+                / "conf"
+                / "experiment"
+                / "initial_worker_pointer_v2_exploratory.yaml"
+            )
+        ],
+        target=cfg,
+        system_name="Linux",
+    )
+
+    assert cfg.batch_size == 256
+    assert cfg.accumulation_steps == 16
+    assert cfg.worker_pointer_v2_behavior_replay is True
+    assert cfg.worker_pointer_v2_replay_mode == "behavior_group_exact_v1"
+    assert cfg.worker_pointer_v2_logical_batch_cap == 256
+    assert cfg.worker_pointer_v2_rollout_group_upper_bound == 4
+    assert cfg.async_eval_enabled is True
+    assert cfg.async_eval_submit_every_episodes == 3
+    assert cfg.async_eval_worker_count == 2
+    assert cfg.checkpoint_selection_protocol == "multiscale_manifest"
+    assert cfg.checkpoint_selection_manifest_path == (
+        "data/initial_selection_manifests/real_four_instances_temperature0_v1.json"
+    )
+    # Linux 硬件层仍可给出 16；正式启动命令须最终覆盖为 4。
+    assert cfg.num_envs == 16
+    assert Path(paths[-1]).name == "linux_server.yaml"
+
+
+def test_batched_v2_exploratory_config_resolves_without_async_gpu_evaluation() -> None:
+    """批量 v2 实验配置必须保持轻量本地验证语义。"""
+    cfg = Config()
+    initialize_hydra_runtime(
+        ["experiment=initial_worker_pointer_v2_batched_exploratory"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.team_selection_mode == "autoregressive_pressure_v2"
+    assert cfg.worker_pointer_v2_replay_mode == "batched_vectorized_v2"
+    assert cfg.worker_pointer_v2_behavior_replay is False
+    assert cfg.worker_pointer_v2_strict_gpu_replay is False
+    assert cfg.async_eval_enabled is False
+    assert cfg.batch_size == 16
+    assert cfg.accumulation_steps == 16
+    assert cfg.worker_pointer_v2_dynamic_eft_features is False
+    assert cfg.worker_pointer_v2_explicit_team_state is False
+    assert cfg.worker_pointer_v2_marginal_scarcity is False
+    assert cfg.worker_pointer_v2_interaction_residual is False
+    assert cfg.worker_pointer_v2_next_frontier_pressure is False
+    assert cfg.conditional_head_baseline_mode == "off"
+    assert cfg.conditional_head_value_coef == 1.0
+
+
+@pytest.mark.parametrize(
+    "experiment_name",
+    [
+        "reschedule_task_delay_r5_operation_only_strict",
+        "reschedule_task_delay_r5_operation_station_strict",
+        "reschedule_task_delay_r5_homogeneous_graphsage_strict",
+    ],
+)
+def test_strict_reschedule_configs_load_with_isolated_protocol(
+    experiment_name: str,
+) -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        [f"experiment={experiment_name}"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Windows",
+        create_run_context=False,
+    )
+
+    assert cfg.reschedule_baseline_identity_conditioning is False
+    assert cfg.ablation_protocol == "strict_v1"
+    assert cfg.graph_input_scope != "match_policy"
+    if experiment_name.endswith("operation_only_strict"):
+        assert cfg.policy_action_scope == "operation"
+        assert cfg.policy_observation_scope == "task"
+        assert cfg.critic_observation_scope == "match_policy"
+        assert cfg.task_feature_scope == "intrinsic"
+        assert cfg.action_completion_mode == "min_wait"
+        assert cfg.task_mask_mode == "precedence_release_only"
+        assert cfg.station_mask_mode == "structural_only"
+    elif experiment_name.endswith("operation_station_strict"):
+        assert cfg.policy_action_scope == "operation_station"
+        assert cfg.policy_observation_scope == "task_station"
+        assert cfg.action_completion_mode == "min_wait"
+        assert cfg.station_mask_mode == "structural_only"
+    else:
+        assert cfg.graph_encoder_mode == "homogeneous_graphsage_strict"
+        assert cfg.homogeneous_use_type_embedding is False
+
+
+def test_batched_v2_dynamic_eft_feature_can_be_enabled_from_hydra_cli() -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        [
+            "experiment=initial_worker_pointer_v2_batched_exploratory",
+            "model.worker_pointer_v2_dynamic_eft_features=true",
+        ],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.worker_pointer_v2_dynamic_eft_features is True
+    assert cfg.worker_pointer_v2_dynamic_eft_feature_clip == 10.0
+
+
+@pytest.mark.parametrize(
+    ("experiment", "explicit_team_state", "marginal_scarcity"),
+    [
+        ("initial_worker_pointer_v2_v0", False, False),
+        ("initial_worker_pointer_v2_v1", True, False),
+        ("initial_worker_pointer_v2_v2", True, True),
+    ],
+)
+def test_worker_pointer_v2_v0_v1_hydra_diffs_select_only_a1(
+    experiment: str,
+    explicit_team_state: bool,
+    marginal_scarcity: bool,
+) -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        [f"experiment={experiment}"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.worker_pointer_v2_explicit_team_state is explicit_team_state
+    assert cfg.worker_pointer_v2_marginal_scarcity is marginal_scarcity
+    assert cfg.worker_pointer_v2_interaction_residual is False
+    assert cfg.worker_pointer_v2_next_frontier_pressure is False
+    assert cfg.conditional_head_baseline_mode == "off"
+
+
+def test_experiments_do_not_embed_hardware_profiles() -> None:
+    experiment_dir = PROJECT_ROOT / "conf" / "experiment"
+    for path in experiment_dir.glob("*.yaml"):
+        assert "../hardware/" not in path.read_text(encoding="utf-8")
+
+
+def test_worker_pointer_v2_v3_hydra_diff_enables_a1_a2_a3_only() -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        ["experiment=initial_worker_pointer_v2_v3"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.worker_pointer_v2_explicit_team_state is True
+    assert cfg.worker_pointer_v2_marginal_scarcity is True
+    assert cfg.worker_pointer_v2_interaction_residual is True
+    assert cfg.worker_pointer_v2_next_frontier_pressure is False
+    assert cfg.conditional_head_baseline_mode == "off"
+
+
+def test_worker_pointer_v2_b0_hydra_diff_enables_diagnostic_heads_only() -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        ["experiment=initial_worker_pointer_v2_b0"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.worker_pointer_v2_explicit_team_state is False
+    assert cfg.worker_pointer_v2_marginal_scarcity is False
+    assert cfg.worker_pointer_v2_interaction_residual is False
+    assert cfg.worker_pointer_v2_next_frontier_pressure is False
+    assert cfg.conditional_head_baseline_mode == "diagnostic"
+
+
+def test_worker_pointer_v2_b1_hydra_diff_enables_factorized_heads_only() -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        ["experiment=initial_worker_pointer_v2_b1"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.worker_pointer_v2_explicit_team_state is False
+    assert cfg.worker_pointer_v2_marginal_scarcity is False
+    assert cfg.worker_pointer_v2_interaction_residual is False
+    assert cfg.worker_pointer_v2_next_frontier_pressure is False
+    assert cfg.conditional_head_baseline_mode == "factorized"
+
+
+def test_worker_pointer_v2_c1_hydra_diff_enables_next_frontier_only() -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        ["experiment=initial_worker_pointer_v2_c1"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.worker_pointer_v2_explicit_team_state is False
+    assert cfg.worker_pointer_v2_marginal_scarcity is False
+    assert cfg.worker_pointer_v2_interaction_residual is False
+    assert cfg.worker_pointer_v2_next_frontier_pressure is True
+    assert cfg.conditional_head_baseline_mode == "off"
+
+
+def test_unsupported_platform_is_rejected() -> None:
+    with pytest.raises(RuntimeError, match="不支持的训练平台"):
+        resolve_platform_hardware_config(system_name="Darwin")
+
+
+def test_cli_overrides_yaml_and_platform_profile() -> None:
+    cfg = Config()
+    parsed = parse_hydra_args(
+        [
+            "experiment=initial_schedule_283",
+            "train.batch_size=12",
+            "parallel.num_envs=3",
+            "use_skill_hub=false",
+            "run_id=manual_260630-153000",
+            "eval_scenarios=[standard,duration_noise]",
+        ],
+        system_name="Windows",
+    )
+    hydra_cfg = compose_hydra_config(parsed, config_dir=PROJECT_ROOT / "conf")
+    explicit = apply_hydra_config(
+        hydra_cfg,
+        target=cfg,
+        config_paths=(
+            str(PROJECT_ROOT / "conf" / "experiment" / "initial_schedule_283.yaml"),
+            str(PROJECT_ROOT / "conf" / "hardware" / "windows_4060_low_memory.yaml"),
+        ),
+    )
+
+    assert cfg.batch_size == 12
+    assert cfg.num_envs == 3
+    assert cfg.use_skill_hub is False
+    assert cfg.skill_hub_bidirectional is False
+    assert cfg.run_id == "manual_260630-153000"
+    assert cfg.eval_scenarios == ["standard", "duration_noise"]
+    assert {"batch_size", "num_envs", "use_skill_hub", "run_id", "eval_scenarios"} <= explicit
+
+
+def test_hydra_style_overrides_are_compatible_with_flat_config() -> None:
+    cfg = Config()
+    parsed = parse_hydra_args(
+        [
+            "experiment=initial_schedule_283",
+            "train.batch_size=24",
+            "parallel.num_envs=5",
+            "artifacts.runs_root=tmp_runs",
+            "experiment.experiment_name=hydra_compat",
+        ],
+        system_name="Windows",
+    )
+    hydra_cfg = compose_hydra_config(parsed, config_dir=PROJECT_ROOT / "conf")
+    explicit = apply_hydra_config(
+        hydra_cfg,
+        target=cfg,
+        config_paths=(
+            str(PROJECT_ROOT / "conf" / "experiment" / "initial_schedule_283.yaml"),
+            str(PROJECT_ROOT / "conf" / "hardware" / "windows_4060_low_memory.yaml"),
+        ),
+    )
+
+    assert cfg.batch_size == 24
+    assert cfg.num_envs == 5
+    assert cfg.runs_root == "tmp_runs"
+    assert cfg.experiment_name == "hydra_compat"
+    assert {"batch_size", "num_envs", "runs_root", "experiment_name"} <= explicit
+
+
+def test_initialize_runtime_cli_leaf_override_wins_nested_experiment_defaults() -> None:
+    cfg = Config()
+    args = initialize_hydra_runtime(
+        [
+            "experiment=scale_400_800_schedule",
+            "train.batch_size=64",
+            "train_data_path_or_dir=data/scale_400_800_datasets",
+        ],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        default_experiment="initial_schedule_283",
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.batch_size == 64
+    assert args.batch_size == 64
+    assert cfg.train_data_path_or_dir == "data/scale_400_800_datasets"
+
+
+@pytest.mark.parametrize(
+    "batch_args",
+    [
+        ["--batch_size", "256"],
+        ["--batch_size=256"],
+        ["--batch-size", "256"],
+    ],
+)
+def test_compat_batch_size_cli_has_final_priority(batch_args: list[str]) -> None:
+    cfg = Config()
+    args = initialize_hydra_runtime(
+        [
+            "experiment=initial_worker_pointer_v2_exploratory",
+            "train.batch_size=16",
+            *batch_args,
+        ],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.batch_size == 256
+    assert args.batch_size == 256
+    assert "batch_size" in args.explicit_config_fields
+
+
+def test_compat_async_cadence_cli_has_final_priority() -> None:
+    cfg = Config()
+    args = initialize_hydra_runtime(
+        [
+            "experiment=initial_worker_pointer_v2_exploratory",
+            "train.async_eval_submit_every_episodes=5",
+            "--async_eval_submit_every_episodes",
+            "2",
+        ],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert cfg.async_eval_submit_every_episodes == 2
+    assert args.async_eval_submit_every_episodes == 2
+    assert "async_eval_submit_every_episodes" in args.explicit_config_fields
+
+
+def test_hydra_accepts_explicit_resume_checkpoint_path() -> None:
+    from runtime.hydra_config import parse_hydra_args
+
+    args = parse_hydra_args(
+        [
+            "experiment=initial_worker_pointer_v2_exploratory",
+            "resume=true",
+            "runtime.resume_checkpoint_path=checkpoints/best.ckpt",
+        ],
+        system_name="Linux",
+    )
+
+    assert args.resume is True
+    assert args.resume_checkpoint_path == "checkpoints/best.ckpt"
+
+
+def test_compat_batch_size_cli_disables_windows_platform_cap() -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        [
+            "experiment=initial_worker_pointer_v2_exploratory",
+            "--batch_size",
+            "256",
+        ],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Windows",
+        create_run_context=False,
+    )
+
+    assert cfg.batch_size == 256
+    assert cfg.ppo_batch_size_cap == 0
+
+
+def test_v2_default_batch_is_256_on_windows_hardware_profile() -> None:
+    cfg = Config()
+    initialize_hydra_runtime(
+        ["experiment=initial_worker_pointer_v2_exploratory"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Windows",
+        create_run_context=False,
+    )
+
+    assert cfg.batch_size == 256
+
+
+def test_ctg_margin2_experiment_loads_through_actual_training_entry() -> None:
+    """独立敏感度配置必须经训练入口保留正式 CTG 协议，仅改变先验间隔。"""
+    cfg = Config()
+    args = initialize_hydra_runtime(
+        ["experiment=initial_conditional_team_gate_prior_margin2"],
+        target=cfg,
+        project_root=PROJECT_ROOT,
+        system_name="Linux",
+        create_run_context=False,
+    )
+
+    assert args.hydra_experiment == "initial_conditional_team_gate_prior_margin2"
+    assert cfg.policy_action_scope == "operation_station_gated_team"
+    assert cfg.conditional_team_scoring_mode == "relative_heuristic_prior_v1"
+    assert cfg.conditional_team_prior_margin == 2.0
+    assert cfg.conditional_team_prior_weight == 1.0
+    assert cfg.conditional_team_gate_bias == -4.0
+    assert cfg.training_manifest_path == (
+        "data/scale_400_800_datasets/manifest_ctg_160_explicit_fiveskill_v1.json"
+    )
+    assert cfg.checkpoint_selection_manifest_path == (
+        "data/initial_selection_manifests/real_four_instances_temperature0_v1.json"
+    )
+
+
+def test_script_extra_arguments_do_not_enter_hydra_config() -> None:
+    parsed = parse_hydra_args(
+        [
+            "experiment=reschedule_task_delay",
+            "manifest_path=data/reschedule_manifests/reschedule_400_600_seed20260701.json",
+            "instance_ids=[real_283,real_680]",
+        ],
+        extra_arguments={
+            "manifest_path": ExtraArgument(default=None),
+            "instance_ids": ExtraArgument(default=None),
+        },
+        system_name="Linux",
+    )
+
+    assert "manifest_path" not in " ".join(parsed.config_overrides)
+    assert "instance_ids" not in " ".join(parsed.config_overrides)
+    assert parsed.extra_values["manifest_path"] == "data/reschedule_manifests/reschedule_400_600_seed20260701.json"
+    assert parsed.extra_values["instance_ids"] == ["real_283", "real_680"]
+
+
+def test_manifest_script_arguments_are_safe_if_misrouted_to_hydra() -> None:
+    parsed = parse_hydra_args(
+        [
+            "experiment=reschedule_task_delay",
+            "manifest_path=data/reschedule_manifests/reschedule_400_600_seed20260701.json",
+            "instance_ids=[real_283,real_680]",
+        ],
+        system_name="Linux",
+    )
+    cfg = Config()
+    hydra_cfg = compose_hydra_config(parsed, config_dir=PROJECT_ROOT / "conf")
+    explicit = apply_hydra_config(
+        hydra_cfg,
+        target=cfg,
+        config_paths=(
+            str(PROJECT_ROOT / "conf" / "experiment" / "reschedule_task_delay.yaml"),
+            str(PROJECT_ROOT / "conf" / "hardware" / "linux_server.yaml"),
+        ),
+    )
+
+    assert cfg.manifest_path == "data/reschedule_manifests/reschedule_400_600_seed20260701.json"
+    assert cfg.instance_ids == ["real_283", "real_680"]
+    assert {"manifest_path", "instance_ids"} <= explicit
+
+
+def test_hydra_style_override_rejects_unknown_fields() -> None:
+    parsed = parse_hydra_args(["experiment=initial_schedule_283", "train.no_such_field=1"], system_name="Windows")
+    hydra_cfg = compose_hydra_config(parsed, config_dir=PROJECT_ROOT / "conf")
+
+    with pytest.raises(KeyError, match="未知字段"):
+        apply_hydra_config(
+            hydra_cfg,
+            target=Config(),
+            config_paths=(
+                str(PROJECT_ROOT / "conf" / "experiment" / "initial_schedule_283.yaml"),
+                str(PROJECT_ROOT / "conf" / "hardware" / "windows_4060_low_memory.yaml"),
+            ),
+        )
+
+
+def test_old_public_cli_flags_are_rejected() -> None:
+    with pytest.raises(HydraCliError, match="不再支持旧 argparse 参数"):
+        parse_hydra_args(["--config", "conf/experiment/initial_schedule_283.yaml"], system_name="Windows")
+
+    with pytest.raises(HydraCliError, match="legacy 训练入口已归档"):
+        parse_hydra_args(["trainer=legacy"], system_name="Windows")
+
+
+def test_single_string_config_and_run_output_dir_are_supported(tmp_path: Path) -> None:
+    args = argparse.Namespace(
+        config=str(PROJECT_ROOT / "conf" / "experiment" / "initial_schedule_283.yaml"),
+        set_values=[],
+        hydra_overrides=[],
+    )
+    cfg = Config()
+    resolve_runtime_config(args, target=cfg, system_name="Windows")
+    cfg.runs_root = str(tmp_path / "runs")
+    cfg.run_id = "tool_run_260630-153000"
+
+    output_dir, context = resolve_run_output_dir(
+        cfg,
+        PROJECT_ROOT,
+        default_legacy_dir="results/eval_logs",
+        run_subdir="baselines/heuristic",
+        explicit_dir=None,
+        section="artifacts",
+    )
+
+    assert context is not None
+    assert output_dir == tmp_path / "runs" / cfg.experiment_name / "tool_run_260630-153000" / "artifacts" / "baselines" / "heuristic"
+    assert output_dir.exists()
+
+
+def test_set_rejects_invalid_syntax_and_unknown_fields() -> None:
+    with pytest.raises(ValueError, match="key=value"):
+        parse_set_overrides(["batch_size"])
+
+    args = argparse.Namespace(
+        config=[],
+        set_values=["not_a_config_field=1"],
+        hydra_overrides=[],
+    )
+    with pytest.raises(KeyError, match="未知配置字段"):
+        resolve_runtime_config(args, target=Config(), system_name="Windows")

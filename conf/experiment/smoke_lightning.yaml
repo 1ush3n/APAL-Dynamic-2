@@ -1,0 +1,29 @@
+defaults:
+  - /model/hb_gat_pn@_global_
+  - /env/apal_default@_global_
+  - /env/initial_schedule@_global_
+  - /env/initial_bucket_283@_global_
+  - /reward/default@_global_
+  - /train/ppo_default@_global_
+  - /train/batch_32@_global_
+  - /rollout/fastpath@_global_
+  - _self_
+
+experiment:
+  experiment_name: lightning_smoke
+
+env:
+  data_file_path: data/283.csv
+  train_data_path_or_dir: data/283.csv
+
+train:
+  max_episodes: 1
+  update_every_episodes: 1
+  eval_freq: 1
+  batch_size: 4
+  k_epochs: 1
+  accumulation_steps: 4
+  use_schedule_free: false
+
+rollout:
+  rollout_max_steps: 5
