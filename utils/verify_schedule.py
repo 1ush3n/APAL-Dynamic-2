@@ -9,6 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from environment import AirLineEnv_Graph
+from core.constraints import calculate_team_synergy_factor
 from configs import configs
 from runtime.hydra_config import (
     ExtraArgument,
@@ -165,7 +166,7 @@ def verify_schedule(data_path, schedule_path):
                  continue # 因为下文人数不足会报错，不要重复报这里
                  
              eff_sum = sum([env.worker_efficiency[w] for w in info['team']])
-             synergy = pow(0.95, n_act - 1)
+             synergy = calculate_team_synergy_factor(n_act)
              expected_dur = (t_std * req_demand) / (eff_sum * synergy)
              
              if abs(expected_dur - info['duration']) > 1e-4:

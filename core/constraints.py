@@ -12,6 +12,18 @@ from typing import Iterable, Mapping, Sequence
 import numpy as np
 
 
+DEFAULT_TEAM_SYNERGY_BASE: float = 0.95
+
+
+def calculate_team_synergy_factor(team_size: int, base: float = DEFAULT_TEAM_SYNERGY_BASE) -> float:
+    """APAL 标准人员协同折减系数：base ^ max(0, team_size - 1)。
+
+    单人作业时 (team_size <= 1)，无折减 (factor = 1.0)；
+    多人协作时，每增加一人产生 base 折减 (例如 2 人为 0.95, 3 人为 0.9025)。
+    """
+    return float(base ** max(0, int(team_size) - 1))
+
+
 Assignment = tuple[int, int, Sequence[int], float, float]
 
 

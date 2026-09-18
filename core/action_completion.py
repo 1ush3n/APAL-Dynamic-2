@@ -8,6 +8,7 @@ from typing import Any
 import torch
 from torch_geometric.data import HeteroData
 
+from core.constraints import calculate_team_synergy_factor
 from worker_feature_layout import resolve_worker_feature_layout
 
 
@@ -83,7 +84,7 @@ class EarliestFinishActionCompleter:
     ) -> tuple[float, float, int, tuple[int, ...]]:
         team_ready = max(float(worker_wait[wid].item()) for wid in team)
         capacity_sum = sum(float(worker_capacity[wid].item()) for wid in team)
-        synergy = 0.95 ** (len(team) - 1)
+        synergy = calculate_team_synergy_factor(len(team))
         estimated_finish = max(team_ready, float(station_wait[station_id].item()))
         estimated_finish += task_duration * demand / max(capacity_sum * synergy, 1.0e-6)
         station_load = float(station_x[station_id, 0].item())

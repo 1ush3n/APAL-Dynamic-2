@@ -35,21 +35,30 @@ def apply_activation(x):
         return F.leaky_relu(x, negative_slope=0.1)
     return F.relu(x)
 
-def get_layer_norm(dim, enabled=None):
+def get_layer_norm(dim: int, enabled: bool | None = None) -> nn.Module:
     if enabled is None:
-        enabled = getattr(configs, 'use_layer_norm', True)
+        enabled = bool(getattr(configs, 'use_layer_norm', False))
     if enabled:
         return nn.LayerNorm(dim)
     return nn.Identity()
 
-def get_input_layer_norm(dim):
-    return get_layer_norm(dim, getattr(configs, 'use_input_layer_norm', True))
+def get_input_layer_norm(dim: int) -> nn.Module:
+    enabled = getattr(configs, 'use_input_layer_norm', None)
+    if enabled is None:
+        enabled = getattr(configs, 'use_layer_norm', True)
+    return get_layer_norm(dim, enabled)
 
-def get_gat_layer_norm(dim):
-    return get_layer_norm(dim, getattr(configs, 'use_gat_layer_norm', getattr(configs, 'use_layer_norm', True)))
+def get_gat_layer_norm(dim: int) -> nn.Module:
+    enabled = getattr(configs, 'use_gat_layer_norm', None)
+    if enabled is None:
+        enabled = getattr(configs, 'use_layer_norm', False)
+    return get_layer_norm(dim, enabled)
 
-def get_head_layer_norm(dim):
-    return get_layer_norm(dim, getattr(configs, 'use_head_layer_norm', True))
+def get_head_layer_norm(dim: int) -> nn.Module:
+    enabled = getattr(configs, 'use_head_layer_norm', None)
+    if enabled is None:
+        enabled = getattr(configs, 'use_layer_norm', False)
+    return get_layer_norm(dim, enabled)
 
 
 def _task_intrinsic_indices(num_skill_types: int, feature_dim: int) -> tuple[int, ...]:

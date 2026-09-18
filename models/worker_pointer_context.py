@@ -7,6 +7,8 @@ from typing import Sequence
 
 import torch
 
+from core.constraints import DEFAULT_TEAM_SYNERGY_BASE
+
 
 NUM_SKILL_TYPES = 5
 TASK_SKILL_SLICE = slice(5, 10)
@@ -181,7 +183,7 @@ def build_worker_eft_features(
             + worker_capacity.float().clamp_min(1.0e-6)
         )
         synergy = torch.pow(
-            torch.tensor(0.95, device=worker_wait.device, dtype=torch.float32),
+            torch.tensor(DEFAULT_TEAM_SYNERGY_BASE, device=worker_wait.device, dtype=torch.float32),
             team_state.count.float(),
         )
         finish = candidate_ready + duration * task_demand / (candidate_capacity * synergy)

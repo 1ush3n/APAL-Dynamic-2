@@ -17,7 +17,7 @@ from configs import configs
 from worker_feature_layout import resolve_worker_feature_layout
 from core.event_engine import Event, EventType, EventQueue
 from core.action_masker import ActionMasker
-from core.constraints import Assignment, ConstraintEngine, ScheduleValidationReport
+from core.constraints import Assignment, ConstraintEngine, ScheduleValidationReport, calculate_team_synergy_factor
 from core.time_comparison import release_time_tolerance, time_reached_scalar
 from models.worker_pointer_context import PHYSICAL_PREDECESSOR_EDGE
 from utils.resource_graph import (
@@ -1165,7 +1165,7 @@ class AirLineEnv_Graph(gym.Env):
             sum_efficiency += self.worker_efficiency[w] * fatigue_f
         
         # 协同折扣
-        syn_factor = 0.95 ** (n_act - 1)
+        syn_factor = calculate_team_synergy_factor(n_act)
         
         effective_capacity = sum_efficiency * syn_factor
         

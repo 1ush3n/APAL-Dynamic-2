@@ -138,10 +138,10 @@ class Config:
     num_gat_layers: int = 5              # GAT 层数 (Message Passing Depth)
     num_heads: int = 4                   # 多头注意力头数 (Attention Heads)
     use_leaky_relu: bool = True          # [新增] 是否在深层网络和Critic中使用 LeakyReLU 以防止梯度消失/ReLU死亡
-    use_layer_norm: bool = False          # 兼容旧配置：不再直接控制所有 LayerNorm
-    use_input_layer_norm: bool = True     # 输入嵌入层保持 LayerNorm，稳定异构原始特征尺度
-    use_gat_layer_norm: bool = False      # GAT 消息传递层默认关闭 LayerNorm，保留 APAL 绝对时间/负载尺度
-    use_head_layer_norm: bool = False     # 策略头与价值头 MLP 默认关闭 LayerNorm，避免改变旧版 head 输出尺度
+    use_layer_norm: bool = False          # 全局/遗留开关：当子开关为 None 时作为兜底
+    use_input_layer_norm: bool = True     # 输入嵌入层 LayerNorm (推荐开启以稳定异构特征尺度)
+    use_gat_layer_norm: bool = False      # GAT 消息传递层 LayerNorm (默认关闭以保留绝对时间/负载尺度)
+    use_head_layer_norm: bool = False     # 策略头与价值头 MLP LayerNorm (默认关闭避免改变旧版输出尺度)
     
     task_feat_dim: int = 18              # Task Node Input Features (17 -> 18, 新增物料等待时间)
     worker_feat_dim: int = 17            # [效率 | 5 技能 | 等待 | 空闲 | 8 锁状态 | 疲劳]
