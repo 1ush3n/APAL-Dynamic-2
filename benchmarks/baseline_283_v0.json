@@ -1,0 +1,99 @@
+{
+  "version": "v0_baseline",
+  "created_at": "2026-09-18 14:42:19",
+  "dataset": "data/283.csv",
+  "spt_results": {
+    "dataset": "283.csv",
+    "seed": 42,
+    "makespan": 411.5650729839728,
+    "balance_std": 399.52564655166384,
+    "scheduled_tasks": 290,
+    "num_total_tasks": 290,
+    "is_legal": true,
+    "violations": {
+      "duplicate_task_count": 0,
+      "missing_task_count": 0,
+      "precedence_violation_count": 0,
+      "physical_station_violation_count": 0,
+      "station_range_violation_count": 0,
+      "fixed_station_violation_count": 0,
+      "demand_violation_count": 0,
+      "worker_range_violation_count": 0,
+      "skill_violation_count": 0,
+      "worker_station_binding_violation_count": 0,
+      "worker_overlap_violation_count": 0,
+      "station_slot_violation_count": 0,
+      "negative_or_reversed_time_count": 0
+    },
+    "timing": {
+      "total_wall_time_sec": 2.9765819999956875,
+      "total_steps": 284,
+      "step_time_ms_mean": 6.5283866200151754,
+      "step_time_ms_median": 6.517599998915102,
+      "step_time_ms_p95": 11.767334998876319,
+      "obs_time_ms_mean": 3.9246800006367266,
+      "sweep_line_call_count": 283,
+      "sweep_line_time_ms_mean": 0.13454063608234604,
+      "sweep_line_time_ms_total": 38.07500001130393
+    }
+  },
+  "ppo_results": {
+    "ppo_seed": 42,
+    "test_steps": 5,
+    "decisions": [
+      {
+        "step": 0,
+        "task_id": 0,
+        "station_id": -1,
+        "team": [],
+        "value": -0.3771393895149231,
+        "logprob": 0.0
+      },
+      {
+        "step": 1,
+        "task_id": 27,
+        "station_id": 0,
+        "team": [
+          52,
+          16
+        ],
+        "value": -0.38789260387420654,
+        "logprob": 0.0
+      },
+      {
+        "step": 2,
+        "task_id": 28,
+        "station_id": 1,
+        "team": [
+          72,
+          12
+        ],
+        "value": -0.3380143642425537,
+        "logprob": 0.0
+      },
+      {
+        "step": 3,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          10,
+          36
+        ],
+        "value": -0.3110318183898926,
+        "logprob": 0.0
+      },
+      {
+        "step": 4,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          22,
+          25
+        ],
+        "value": -0.31404244899749756,
+        "logprob": 0.0
+      }
+    ],
+    "rss_memory_mb": 758.17578125
+  }
+}

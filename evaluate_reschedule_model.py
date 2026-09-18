@@ -118,6 +118,7 @@ def evaluate_saved_reschedule_model(
         total_timesteps=1,
         config=configs,
     )
+    agent.policy.eval()
 
     start_time = time.time()
     makespan, balance, reward, _best_schedule, duration, worker_util, station_util = evaluate_reschedule_model(

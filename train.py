@@ -19,11 +19,6 @@ from runtime.hydra_config import (
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 
-def train(_args) -> None:
-    """历史 legacy 训练入口已归档；主入口固定使用 Lightning。"""
-    raise RuntimeError("legacy 训练入口已归档；请使用 `python train.py experiment=...` 启动 Lightning。")
-
-
 def main(argv: list[str] | None = None) -> int:
     raw_args = list(sys.argv[1:] if argv is None else argv)
     if should_show_help(raw_args):

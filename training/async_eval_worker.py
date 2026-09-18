@@ -257,6 +257,7 @@ def load_checkpoint_agent_for_evaluation(job: dict[str, Any], device: "torch.dev
         scaler_state = agent_state.get("scaler")
         if isinstance(scaler_state, dict):
             agent.scaler.load_state_dict(scaler_state)
+    agent.policy.eval()
     return checkpoint, saved_config, agent
 
 
@@ -768,6 +769,9 @@ def run_worker(
     thread_count = max(1, int(os.environ.get("APAL_ASYNC_EVAL_CPU_THREADS", "4")))
     torch.set_num_threads(thread_count)
     torch.set_num_interop_threads(1)
+    from configs import configs
+    from runtime.seed import set_seed
+    set_seed(int(os.environ.get("APAL_ASYNC_EVAL_SEED", getattr(configs, "seed", 42))))
     lock_path = paths.worker_locks / f"{worker_id}.lock"
     heartbeat_path = paths.heartbeats / f"{worker_id}.json"
     with _WorkerLock(lock_path):

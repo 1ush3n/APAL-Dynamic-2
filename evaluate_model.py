@@ -155,6 +155,7 @@ def main(args: Any) -> dict[str, object]:
         model, configs.lr, configs.gamma, configs.k_epochs,
         configs.eps_clip, device, configs.batch_size, config=configs,
     )
+    agent.policy.eval()
     env = AirLineEnv_Graph(data_path_or_dir=data_path, seed=int(configs.seed))
     result = run_evaluation(
         env,
