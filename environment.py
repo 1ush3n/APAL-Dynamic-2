@@ -1173,20 +1173,25 @@ class AirLineEnv_Graph(gym.Env):
         return t_real
 
     def _get_station_earliest_available_time(self, sid, min_start_time, duration):
-        """
-        寻找最早的起步时间 T (T >= min_start_time)，使得在 [T, T+duration] 期间，
+        """寻找最早的起步时间 T (T >= min_start_time)，使得在 [T, T+duration] 期间，
         站位 sid 的并发任务数严格低于 allowed_slots。
         """
         max_slots = getattr(configs, 'max_slots_per_station', 3)
         allowed_slots = self.station_available_slots[sid] if hasattr(self, 'station_available_slots') else max_slots
-        
-        intervals = [(at[3], at[4]) for at in self.assigned_tasks if at[1] == sid]
-        if len(intervals) < allowed_slots:
+
+        # 仅过滤可能与未来 [min_start_time, +inf) 产生交集的在制/未来任务
+        # 已在 min_start_time 或之前完工的任务不可能与任何未来的测试区间发生重叠
+        relevant_intervals = [
+            (at[3], at[4]) for at in self.assigned_tasks
+            if at[1] == sid and at[4] > min_start_time
+        ]
+
+        # Fast-Path: 如果未来在制任务数严格小于容量上限，即便全部同时并发也绝不会超限
+        if len(relevant_intervals) < allowed_slots:
             return min_start_time
-            
-        candidate_times = [min_start_time] + [ed for (_, ed) in intervals if ed >= min_start_time]
-        candidate_times.sort()
-        
+
+        candidate_times = sorted({min_start_time}.union(ed for _, ed in relevant_intervals))
+
         for t in candidate_times:
             test_start = t
             test_end = t + duration
@@ -1194,14 +1199,15 @@ class AirLineEnv_Graph(gym.Env):
             # 即使重叠只有数值误差量级，也应把新任务吸附到已有任务的结束时刻，
             # 从而与最终统一约束校验器保持完全一致。
             endpoints = []
-            for (st, ed) in intervals:
+            for (st, ed) in relevant_intervals:
                 # 严格重叠条件
                 if max(st, test_start) < min(ed, test_end):
                     endpoints.append((max(st, test_start), 1))
                     endpoints.append((min(ed, test_end), -1))
-            
-            if not endpoints: return test_start
-            
+
+            if not endpoints:
+                return test_start
+
             endpoints.sort(key=lambda x: (x[0], x[1]))
             cur_overlap = 0
             is_valid = True
@@ -1210,9 +1216,10 @@ class AirLineEnv_Graph(gym.Env):
                 if cur_overlap >= allowed_slots:
                     is_valid = False
                     break
-            
-            if is_valid: return test_start
-            
+
+            if is_valid:
+                return test_start
+
         return candidate_times[-1]
 
     def _get_estimated_cmax(self):
