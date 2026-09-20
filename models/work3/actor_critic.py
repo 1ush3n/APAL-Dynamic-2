@@ -33,7 +33,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
-from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskRuntimeState
+from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskRuntimeState, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
 
@@ -79,6 +79,66 @@ def extract_candidate_task_features(
         feats[idx, 7] = rel_station_offset / 4.0
 
     return feats
+
+
+def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: float) -> torch.Tensor:
+    """提取当前仿真状态的 32 维精炼物理特征向量。
+
+    维度组成:
+      [0]: 当前周期已运行时间比例 (t - P_{q-1}) / H_0
+      [1:6]: 5 站剩余未完工工序标准工时比例
+      [6:11]: 5 站当前正在执行任务数比例 (<= 3)
+      [11:16]: 5 站延误到料任务数比例
+      [16:21]: 5 站最大物料延误紧迫度 (log1p)
+      [21:26]: 5 站在场飞机编号归一化
+      [26]: 启发式估计剩余时间比例 (P_q^h - t) / H_0
+      [27]: 名义剩余时间比例 (P_{q-1} + H_0 - t) / H_0
+      [28]: 产线当前脉动周期比例
+      [29]: 全线累计完工工序比例
+      [30]: 全线累计后移工序数比例
+      [31]: 归一化总生产时长进度
+    """
+    feat = torch.zeros(32, dtype=torch.float)
+    h0 = float(state.h0)
+    current_time = float(state.current_time)
+    p_last = float(state.last_transfer_time)
+
+    feat[0] = max(0.0, current_time - p_last) / h0
+
+    for s in range(5):
+        ac_id = state.get_aircraft_at_station(s)
+        st_tasks = [
+            t for t in state.tasks.values()
+            if t.current_station == s and t.status != TaskStatus.COMPLETED
+        ]
+        w_remain = sum(t.duration for t in st_tasks)
+        feat[1 + s] = float(w_remain) / h0
+
+        running_count = sum(1 for t in st_tasks if t.status == TaskStatus.RUNNING)
+        feat[6 + s] = float(running_count) / 3.0
+
+        delayed_tasks = [t for t in st_tasks if t.material_ready_time > current_time]
+        feat[11 + s] = float(len(delayed_tasks)) / 10.0
+
+        if delayed_tasks:
+            max_delay = max(t.material_ready_time - current_time for t in delayed_tasks)
+            feat[16 + s] = math.log1p(float(max_delay) / h0)
+
+        feat[21 + s] = float(ac_id) / 10.0 if ac_id is not None else -1.0
+
+    feat[26] = max(0.0, estimated_cmax - current_time) / h0
+    feat[27] = (p_last + h0 - current_time) / h0
+    feat[28] = float(state.current_cycle) / 14.0
+
+    completed = sum(1 for t in state.tasks.values() if t.status == TaskStatus.COMPLETED)
+    feat[29] = float(completed) / 2830.0
+
+    postponed = sum(t.postpone_count for t in state.tasks.values())
+    feat[30] = float(postponed) / 50.0
+
+    feat[31] = current_time / (14.0 * h0)
+
+    return feat
 
 
 class ActorCriticWork3(nn.Module):
