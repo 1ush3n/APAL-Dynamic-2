@@ -37,11 +37,14 @@ class AirLineEnvWork3:
         max_slots_per_station: int = 3,
         tolerance: float = 1e-5,
         weights: ObjectiveWeights | None = None,
+        max_steps_per_rollout: int | None = None,
     ) -> None:
         self.baseline_json_path = baseline_json_path
         self.max_slots_per_station = int(max_slots_per_station)
         self.tolerance = float(tolerance)
         self.weights: ObjectiveWeights = weights if weights is not None else ObjectiveWeights()
+        self.max_steps_per_rollout: int | None = max_steps_per_rollout
+        self.step_count: int = 0
 
         self.state: MultiAircraftState = initialize_multi_aircraft_state(self.baseline_json_path)
         self.event_queue: DiscreteEventQueue = DiscreteEventQueue()
@@ -79,6 +82,7 @@ class AirLineEnvWork3:
         self.cost_team = 0.0
         self.cost_postpone = 0.0
         self.step_rewards.clear()
+        self.step_count = 0
 
         # 0 号飞机在时刻 0.0 进入 0 号站位
         ac0 = self.state.aircraft[0]
@@ -89,6 +93,22 @@ class AirLineEnvWork3:
         self._refresh_aircraft_station_readiness(aircraft_id=0, station_id=0)
 
         return self._get_observation()
+
+    def load_scenario(self, scenario: Any) -> None:
+        """注入扰动场景，向事件优先队列压入最高优先级的 DISTURBANCE 事件。"""
+        if hasattr(scenario, "to_dict"):
+            payload = scenario.to_dict()
+        elif isinstance(scenario, dict):
+            payload = dict(scenario)
+        else:
+            raise TypeError(f"不支持的场景数据格式: {type(scenario)}")
+
+        tau = float(payload["tau"])
+        self.event_queue.push(
+            event_type=EventType.DISTURBANCE,
+            timestamp=tau,
+            payload=payload,
+        )
 
     def get_ready_tasks(self) -> list[TaskRuntimeState]:
         """获取全线所有在场站位中处于 READY 状态的全部工序。"""
@@ -196,8 +216,13 @@ class AirLineEnvWork3:
         if len(self.get_ready_tasks()) == 0:
             self._advance_events_until_next_decision()
 
+        self.step_count += 1
         terminated = self._check_terminated()
-        truncated = False
+        truncated = bool(
+            self.max_steps_per_rollout is not None
+            and self.step_count >= self.max_steps_per_rollout
+            and not terminated
+        )
         obs = self._get_observation()
 
         cost_after = self.cumulative_cost
@@ -318,6 +343,71 @@ class AirLineEnvWork3:
 
             elif event.event_type == EventType.SYNCHRONOUS_TRANSFER:
                 self._execute_synchronous_transfer(event.timestamp)
+
+            elif event.event_type == EventType.DISTURBANCE:
+                self._handle_disturbance_event(event.timestamp, event.payload)
+
+    def _handle_disturbance_event(self, timestamp: float, payload: dict[str, Any]) -> None:
+        """处理突发工序开工可用性延迟扰动 (Task 4.2 / 易错点 1 攻坚)。
+
+        物理规则：
+        1. 已开工 (RUNNING) 与已完工 (COMPLETED) 工序硬冻结，绝不强制中断；
+        2. 已预约 (RESERVED) 且原排定开工时刻 t_sched < R 的工序：
+           - 立刻释放所有指派工人的时间日历预占区间；
+           - 调用 task.cancel_reservation() 递增版本代数，使事件队列旧开工事件失效；
+           - 将工序退回 UNREADY 状态；
+           - 压入时间戳为 R 的 MATERIAL_ARRIVE 事件；
+        3. 处于 READY 状态的工序：
+           - 由于 R > current_time，失去当前就绪资格，退回 UNREADY；
+           - 压入时间戳为 R 的 MATERIAL_ARRIVE 事件；
+        4. 处于 UNREADY 或 POSTPONED 状态的工序：
+           - 更新 material_ready_time = max(material_ready_time, R)。
+        """
+        recovery_time = float(payload["recovery_time"])
+        affected_keys = payload.get("affected_task_keys", [])
+
+        for task_key in affected_keys:
+            task = self.state.tasks.get(task_key)
+            if task is None:
+                continue
+
+            # 统一直接建模工序开工可用性延迟：r_{k*,i}^{new} = max(r_{k*,i}^{old}, R)
+            task.material_ready_time = max(task.material_ready_time, recovery_time)
+
+            if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
+                # 物理规则 3：实际已开工与已完工作业硬冻结，绝不强制打断
+                continue
+
+            elif task.status == TaskStatus.RESERVED:
+                # 易错点 1 攻坚：若原排定开工时刻早于物理恢复时刻 R，必须立刻废除旧预约！
+                if task.scheduled_start is not None and task.scheduled_start < recovery_time - self.tolerance:
+                    # 1. 立即释放指派工人的时间日历预占区间
+                    for w in task.assigned_team:
+                        self.state.workers[w].remove_interval(task.task_key)
+                    # 2. 取消预约（递增代数标记使事件队列旧开工事件失效）
+                    task.cancel_reservation()
+                    self.event_queue.invalidate_task_events(task.task_key, task.generation)
+                    task.status = TaskStatus.UNREADY
+                    # 3. 挂载时间戳为 R 的 MATERIAL_ARRIVE 事件
+                    self.event_queue.push(
+                        event_type=EventType.MATERIAL_ARRIVE,
+                        timestamp=recovery_time,
+                        task_key=task.task_key,
+                        generation=task.generation,
+                    )
+
+            elif task.status == TaskStatus.READY:
+                # 物料推迟到未来时刻到达，退回 UNREADY
+                task.status = TaskStatus.UNREADY
+                self.event_queue.push(
+                    event_type=EventType.MATERIAL_ARRIVE,
+                    timestamp=recovery_time,
+                    task_key=task.task_key,
+                    generation=task.generation,
+                )
+
+            elif task.status in (TaskStatus.UNREADY, TaskStatus.POSTPONED):
+                pass
 
     def _on_task_started(self, task: TaskRuntimeState, start_time: float) -> None:
         """工序正式进入 RUNNING 状态，结算基准开工位置偏差 D_time 与团队替换 D_team 增量。"""
