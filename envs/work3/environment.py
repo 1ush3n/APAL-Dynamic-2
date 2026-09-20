@@ -1,11 +1,11 @@
 """工作三多架次飞机脉动装配协同调度核心仿真环境 (AirLineEnvWork3)。
 
-严格遵循顶层设计与 Ponytail 准则：
-- 最小可用代码，无冗余抽象；
+严格遵循顶层设计与 Ponytail 准则（标准脉动控速转站，易错点全闭环）：
 - 维护多架次全局状态与离散事件队列；
 - 支持自回归动作分支 A（留在当前站：指派团队、二元对齐、立即开工或未来预约）；
 - 支持自回归动作分支 B（合法后移至下一站：动作当场截断，保留恢复时间 R）；
-- 支持无可用动作时自动推进离散事件。
+- 支持全线同步脉动判定与推进 (Task 2.5)：各站放行后严格按脉动节拍 H0 步进；
+- 支持生产自然终止 (Task 2.6)：全部 10 架飞机离线出站且 2,830 道工序完成才终止。
 """
 
 from __future__ import annotations
@@ -13,8 +13,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Any, Sequence
-
-import numpy as np
 
 from envs.work3.core_types import (
     ActionBranch,
@@ -44,6 +42,7 @@ class AirLineEnvWork3:
 
         self.state: MultiAircraftState = initialize_multi_aircraft_state(self.baseline_json_path)
         self.event_queue: DiscreteEventQueue = DiscreteEventQueue()
+        self._transfer_scheduled_for_cycle: int = 0
 
         # 构建工序直接后继索引：aircraft_id -> task_id -> list of successor task_ids
         self._successors_map: dict[int, dict[int, list[int]]] = {
@@ -59,6 +58,7 @@ class AirLineEnvWork3:
         """重置仿真环境到初始生产状态（0号飞机进驻0号站位）。"""
         self.state = initialize_multi_aircraft_state(self.baseline_json_path)
         self.event_queue.reset(start_time=0.0)
+        self._transfer_scheduled_for_cycle = 0
 
         # 0 号飞机在时刻 0.0 进入 0 号站位
         ac0 = self.state.aircraft[0]
@@ -78,16 +78,7 @@ class AirLineEnvWork3:
         return ready
 
     def step(self, action: dict[str, Any]) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
-        """执行单步调度动作。
-
-        Action 格式：
-        {
-            "task_key": str,           # 选定工序标识 (如 "0_2")
-            "branch": int | ActionBranch,  # 0: STAY (留站执行), 1: POSTPONE (后移)
-            "team": Sequence[int],      # 指派工人团队 (分支 0 必填)
-            "align": int,              # 二元对齐 0: 最早可行, 1: 对齐周期内位置 (分支 0)
-        }
-        """
+        """执行单步调度动作。"""
         task_key = str(action["task_key"])
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
 
@@ -98,7 +89,6 @@ class AirLineEnvWork3:
         if task.status != TaskStatus.READY:
             raise ValueError(f"工序 {task_key} 当前状态为 {task.status.name}，不可调度！必须为 READY。")
 
-        # 校验工序当前所在站位是否有该飞机在场
         ac = self.state.aircraft[task.aircraft_id]
         if ac.current_station != task.current_station:
             raise ValueError(
@@ -110,23 +100,17 @@ class AirLineEnvWork3:
         info: dict[str, Any] = {"action_branch": branch.name, "task_key": task_key}
 
         if branch == ActionBranch.STATION_EXECUTE:
-            # -------------------------------------------------------------
-            # 分支 A：留在当前站位执行 (Task 2.3)
-            # -------------------------------------------------------------
+            # 分支 A：留在当前站位执行
             team = tuple(int(w) for w in action.get("team", ()))
             align = int(action.get("align", 0))
 
-            # 校验团队资质与站位独占绑定
             self._validate_team_for_task(task, team)
 
-            # 计算开工时间搜索起点下界
             search_start = max(self.state.current_time, task.material_ready_time)
             if align == 1:
-                # 对齐下界：上次转站时刻 + 模板偏移 b_i^0
                 align_target = self.state.last_transfer_time + task.in_station_offset
                 search_start = max(search_start, align_target)
 
-            # 在团队所有工人的日历与站位槽位中搜索最早可行执行区间
             t_sched = self._find_team_earliest_slot(
                 station_id=task.current_station,
                 team=team,
@@ -134,7 +118,6 @@ class AirLineEnvWork3:
                 duration=task.duration,
             )
 
-            # 登记工人日历占用
             for w in team:
                 self.state.workers[w].add_interval(
                     start=t_sched,
@@ -143,7 +126,6 @@ class AirLineEnvWork3:
                 )
 
             if abs(t_sched - self.state.current_time) <= self.tolerance:
-                # 立即开工
                 task.start_work(current_time=self.state.current_time)
                 task.assigned_team = list(team)
                 task.scheduled_start = t_sched
@@ -156,7 +138,6 @@ class AirLineEnvWork3:
                 info["scheduled_status"] = "RUNNING"
                 info["scheduled_start"] = t_sched
             else:
-                # 未来预约
                 task.reserve(team=team, scheduled_start=t_sched)
                 self.event_queue.push(
                     event_type=EventType.TASK_START,
@@ -168,18 +149,18 @@ class AirLineEnvWork3:
                 info["scheduled_start"] = t_sched
 
         elif branch == ActionBranch.POSTPONE:
-            # -------------------------------------------------------------
-            # 分支 B：合法后移至下一站位 (Task 2.4)
-            # -------------------------------------------------------------
+            # 分支 B：合法后移至下一站位
             if task.current_station >= self.state.num_stations - 1:
                 raise ValueError(f"末站（站位 {task.current_station + 1}）工序绝对禁止后移！")
 
-            # 动作截断：不指派团队，不占工人日历，不选对齐
             task.postpone_to_next_station()
             info["postponed_to_station"] = task.current_station
             info["postpone_count"] = task.postpone_count
 
-        # 动作执行后，若当前现场无 READY 任务，自动推进离散事件
+            # 后移可能使得当前周期站位放行条件满足，检查是否可安排转站
+            self._check_and_schedule_transfer()
+
+        # 若当前现场无可用调度动作，自动推进离散事件
         if len(self.get_ready_tasks()) == 0:
             self._advance_events_until_next_decision()
 
@@ -212,7 +193,6 @@ class AirLineEnvWork3:
         max_search_steps = 1000
 
         for _ in range(max_search_steps):
-            # 1. 检查团队成员全员可用性
             next_free = candidate
             for w in team:
                 wc = self.state.workers[w]
@@ -224,9 +204,7 @@ class AirLineEnvWork3:
                 candidate = next_free
                 continue
 
-            # 2. 检查站位槽位并发上限
             if not self._is_station_slot_available(station_id, candidate, candidate + duration):
-                # 槽位超限，向后微步推移
                 candidate += 0.5
                 continue
 
@@ -235,8 +213,7 @@ class AirLineEnvWork3:
         return candidate
 
     def _is_station_slot_available(self, station_id: int, start: float, end: float) -> bool:
-        """检查指定站位在 [start, end] 区间内槽位并发数是否 <= max_slots_per_station - 1。"""
-        # 收集该站位所有已排定区间的任务
+        """检查指定站位在 [start, end] 区间内槽位并发数是否 < max_slots_per_station。"""
         intervals: list[tuple[float, float]] = []
         for t in self.state.tasks.values():
             if t.current_station == station_id and t.status in (
@@ -246,12 +223,6 @@ class AirLineEnvWork3:
                 if t.scheduled_start is not None:
                     intervals.append((t.scheduled_start, t.scheduled_start + t.duration))
 
-        # 扫描 [start, end] 期间的已有并发数
-        for s_ex, e_ex in intervals:
-            # 若已有重叠，统计重叠密度
-            pass
-
-        # 简易而严格的离散采样或端点重叠检查
         time_points = [start, (start + end) / 2.0, end - self.tolerance]
         for pt in time_points:
             active_count = sum(1 for s_ex, e_ex in intervals if s_ex <= pt < e_ex - self.tolerance)
@@ -261,8 +232,15 @@ class AirLineEnvWork3:
         return True
 
     def _advance_events_until_next_decision(self) -> None:
-        """推进事件队列，直至产生新的就绪工序或全线已无事件。"""
-        while not self.event_queue.is_empty() and len(self.get_ready_tasks()) == 0:
+        """推进事件队列，直至产生新的就绪工序或全线完工退出。"""
+        while len(self.get_ready_tasks()) == 0:
+            # 首先检查是否满足全线同步脉动放行条件
+            self._check_and_schedule_transfer()
+
+            if self.event_queue.is_empty():
+                # 既无就绪动作也无未来事件，退出循环
+                break
+
             event = self.event_queue.pop()
             if event is None:
                 break
@@ -270,7 +248,6 @@ class AirLineEnvWork3:
             self.state.current_time = event.timestamp
 
             if event.event_type == EventType.TASK_START:
-                # 预约工序到达开工时刻，转为 RUNNING
                 task = self.state.tasks[event.task_key]
                 if task.status == TaskStatus.RESERVED:
                     task.start_work(current_time=event.timestamp)
@@ -282,19 +259,18 @@ class AirLineEnvWork3:
                     )
 
             elif event.event_type == EventType.TASK_FINISH:
-                # 工序完工，释放工人与后继
                 task = self.state.tasks[event.task_key]
                 if task.status == TaskStatus.RUNNING:
                     task.complete_work(current_time=event.timestamp)
                     self._on_task_completed(task)
+                    # 完工后检查是否解锁全线脉动转站
+                    self._check_and_schedule_transfer()
 
             elif event.event_type == EventType.MATERIAL_ARRIVE:
-                # 物料/可用性到达
                 task = self.state.tasks[event.task_key]
                 self._check_and_update_task_readiness(task)
 
             elif event.event_type == EventType.SYNCHRONOUS_TRANSFER:
-                # 全线脉动转站 (Task 2.5 完整对接)
                 self._execute_synchronous_transfer(event.timestamp)
 
     def _on_task_completed(self, completed_task: TaskRuntimeState) -> None:
@@ -315,22 +291,18 @@ class AirLineEnvWork3:
             return
 
         ac = self.state.aircraft[task.aircraft_id]
-        # 必须在当前站位停靠
         if ac.current_station != task.current_station:
             return
 
-        # 检查所有前驱是否均已 COMPLETED
         for pred_id in task.predecessors:
             pred_key = f"{task.aircraft_id}_{pred_id}"
             pred_task = self.state.tasks.get(pred_key)
             if pred_task is not None and pred_task.status != TaskStatus.COMPLETED:
                 return
 
-        # 检查到料可用性时刻
         if self.state.current_time >= task.material_ready_time - self.tolerance:
             task.status = TaskStatus.READY
         else:
-            # 安排物料到达事件
             self.event_queue.push(
                 event_type=EventType.MATERIAL_ARRIVE,
                 timestamp=task.material_ready_time,
@@ -346,21 +318,69 @@ class AirLineEnvWork3:
                     task.status = TaskStatus.UNREADY
                     self._check_and_update_task_readiness(task)
 
+    def _check_and_schedule_transfer(self) -> None:
+        """检查全线站位是否满足放行转站要求，若满足且未安排过本周期转站，则安排 SYNCHRONOUS_TRANSFER。
+
+        严格落实用户确认的规范：
+        采用选项 A，严格等待各站工序最晚完工时间与名义节拍 H0，按节拍脉动转站。
+        """
+        if self._check_terminated():
+            return
+        if not self.state.is_all_stations_cleared_for_transfer():
+            return
+
+        # 避免为同一个周期重复排定转站事件
+        if self._transfer_scheduled_for_cycle == self.state.current_cycle:
+            return
+
+        # 检查当前现场是否仍有未完工但在制/预约的任务
+        has_active_tasks = any(
+            t.status in (TaskStatus.RUNNING, TaskStatus.RESERVED)
+            for t in self.state.tasks.values()
+        )
+        if has_active_tasks:
+            # 尚有任务在加工，等待其完成
+            return
+
+        # 选项 A：转站时刻 P_q = max(P_{q-1} + H_0, max_s F_{s,q}, current_time)
+        nominal_takt_end = self.state.last_transfer_time + self.state.h0
+        latest_finish = self.state.current_time
+
+        for s in range(self.state.num_stations):
+            k = self.state.get_aircraft_at_station(s)
+            if k is not None:
+                for t in self.state.tasks.values():
+                    if t.aircraft_id == k and t.current_station == s and t.status == TaskStatus.COMPLETED:
+                        if t.actual_end is not None and t.actual_end > latest_finish:
+                            latest_finish = t.actual_end
+
+        transfer_time = max(nominal_takt_end, latest_finish, self.state.current_time)
+
+        self._transfer_scheduled_for_cycle = self.state.current_cycle
+        self.event_queue.push(
+            event_type=EventType.SYNCHRONOUS_TRANSFER,
+            timestamp=transfer_time,
+            payload={"cycle": self.state.current_cycle},
+        )
+
     def _execute_synchronous_transfer(self, timestamp: float) -> None:
-        """执行全线同步脉动流转（各机站位+1，唤醒后移任务）。"""
+        """执行全线同步脉动流转（Task 2.5）：各机站位+1，唤醒后移任务。"""
         self.state.last_transfer_time = float(timestamp)
         self.state.transfer_history.append(float(timestamp))
+        current_q = self.state.current_cycle
         self.state.current_cycle += 1
 
-        for k, ac in self.state.aircraft.items():
-            if ac.current_station >= 0 and not ac.is_completed:
+        # 各在场飞机向前推进一步
+        for k in range(self.state.num_aircraft):
+            ac = self.state.aircraft[k]
+            if ac.is_in_factory:
                 ac.step_to_next_station(timestamp)
                 if ac.is_in_factory:
                     self._refresh_aircraft_station_readiness(k, ac.current_station)
 
-        # 检查下一架待进线飞机
-        next_k = self.state.current_cycle - 1
-        if 0 <= next_k < self.state.num_aircraft:
+        # 检查下一架待进线飞机 k = current_q
+        next_k = current_q
+        if next_k < self.state.num_aircraft:
             ac_next = self.state.aircraft[next_k]
             if ac_next.current_station == -1:
                 ac_next.current_station = 0
@@ -368,7 +388,7 @@ class AirLineEnvWork3:
                 self._refresh_aircraft_station_readiness(next_k, 0)
 
     def _check_terminated(self) -> bool:
-        """检查生产是否自然终止（全部飞机离开末站，所有工序完工）。"""
+        """检查生产是否自然终止（Task 2.6：全部飞机离开末站，所有工序完工）。"""
         all_completed = all(t.status == TaskStatus.COMPLETED for t in self.state.tasks.values())
         all_exited = all(ac.is_completed for ac in self.state.aircraft.values())
         return all_completed and all_exited
