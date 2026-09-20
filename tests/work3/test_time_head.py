@@ -32,11 +32,10 @@ def test_time_residual_head_shapes() -> None:
 
 
 def test_zero_residual_fallback() -> None:
-    """测试零残差退化特性：当模型权重置零时，修正时间退化为启发式基准。"""
+    """测试零残差退化特性：当模型门控关闭或权重清零时，修正时间退化为启发式基准。"""
     head = TimeResidualHead(in_dim=32, hidden_dim=64)
-    # 手动将最后一层权重与偏置清零，确保输出 delta = 0
-    head.fc2.weight.data.zero_()
-    head.fc2.bias.data.zero_()
+    # 手动将门控偏置设为极小值，确保输出 delta = 0
+    head.gate_fc[-1].bias.data.fill_(-100.0)
 
     x = torch.randn(5, 32)
     t = 100.0
@@ -60,15 +59,15 @@ def test_time_monotonicity_and_physical_bound() -> None:
     """测试当网络预测大幅负向残差时，物理时间下界严格生效，绝不早于当前时刻 t。"""
     head = TimeResidualHead(in_dim=32, hidden_dim=64)
 
-    # 构造极端负残差场景：t = 500, p_h = 510, delta 被强制设为极度负值 -10.0
+    # 构造极端负残差场景：t = 500, p_h = 510, delta 被强制激活并设为负值
     x = torch.randn(32)
     t = 500.0
     p_h = 510.0
     h0 = 100.0
 
-    # 假定 delta 计算后大幅跌穿 t (如 510 - 1000 = -490 < 500)
     with torch.no_grad():
-        head.fc2.bias.data.fill_(-10.0)
+        head.gate_fc[-1].bias.data.fill_(10.0)
+        head.reg_fc[-1].bias.data.fill_(-10.0)
 
     p_corr, r_est, h_est = head.predict_corrected_time(
         state_feat=x,
@@ -91,14 +90,14 @@ def test_gradient_backpropagation() -> None:
     x = torch.randn(8, 32)
     y_target = torch.randn(8)
 
-    delta = head(x)
-    loss = F.smooth_l1_loss(delta, y_target)
+    gate_logits, mag, delta = head.forward_with_logits(x)
+    loss = F.binary_cross_entropy_with_logits(gate_logits, torch.ones_like(gate_logits)) + F.smooth_l1_loss(mag, y_target)
 
     optimizer.zero_grad()
     loss.backward()
 
-    assert head.fc1.weight.grad is not None, "fc1 梯度未正常生成"
-    assert head.fc2.weight.grad is not None, "fc2 梯度未正常生成"
-    assert not torch.isnan(head.fc1.weight.grad).any(), "梯度中含有 NaN"
+    assert head.gate_fc[0].weight.grad is not None, "gate_fc 梯度未正常生成"
+    assert head.reg_fc[0].weight.grad is not None, "reg_fc 梯度未正常生成"
+    assert not torch.isnan(head.reg_fc[0].weight.grad).any(), "梯度中含有 NaN"
 
     optimizer.step()

@@ -24,41 +24,65 @@ import torch.nn.functional as F
 
 
 class TimeResidualHead(nn.Module):
-    """用于预测周期脉动完工时间归一化残差的轻量级神经网络模块。"""
+    """用于预测周期脉动完工时间归一化残差的轻量级门控神经网络模块。
+    
+    采用两阶段门控回归架构 (Hurdle / Gated Residual Regression)：
+    1. gate_fc: 学习扰动与瓶颈识别门控，对名义无延误状态输出 0，杜绝假阳性时间漂移；
+    2. reg_fc: 对存在延误风险的状态精确回归时间残差量值；
+    3. 输出: δ_ψ(s) = Gate(s) · Reg(s) >= 0。
+    """
 
     def __init__(
         self,
         in_dim: int = 32,
         hidden_dim: int = 64,
         use_layer_norm: bool = True,
+        gate_threshold: float = 0.4,
     ) -> None:
         super().__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
+        self.gate_threshold = float(gate_threshold)
 
-        self.fc1 = nn.Linear(in_dim, hidden_dim)
-        self.ln = nn.LayerNorm(hidden_dim) if use_layer_norm else nn.Identity()
-        self.act = nn.LeakyReLU(negative_slope=0.1)
-        self.fc2 = nn.Linear(hidden_dim, 1)
+        # 1. 扰动/瓶颈门控网络
+        self.gate_fc = nn.Sequential(
+            nn.Linear(in_dim, 32),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(32, 1),
+        )
 
-        # 初始化输出层接近 0，使初始策略行为平滑退化至启发式基准
-        nn.init.zeros_(self.fc2.bias)
-        nn.init.normal_(self.fc2.weight, mean=0.0, std=0.01)
+        # 2. 残差量值回归网络
+        self.reg_fc = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim) if use_layer_norm else nn.Identity(),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, 32),
+            nn.LayerNorm(32) if use_layer_norm else nn.Identity(),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(32, 1),
+        )
+
+        # 初始化回归偏置为微正值，防止死 ReLU
+        self.reg_fc[-1].bias.data.fill_(0.05)
+        # 初始化门控偏置为负值，使初始先验偏向于无扰动基准
+        self.gate_fc[-1].bias.data.fill_(-1.0)
 
     def forward(self, state_feat: torch.Tensor) -> torch.Tensor:
-        """前向传播计算归一化时间残差 δ_ψ(s)。
+        """前向传播计算归一化时间残差 δ_ψ(s)。"""
+        gate_logits = self.gate_fc(state_feat).squeeze(-1)
+        prob = torch.sigmoid(gate_logits)
+        active = (prob > self.gate_threshold).float()
+        mag = F.relu(self.reg_fc(state_feat).squeeze(-1))
+        return active * mag
 
-        Args:
-            state_feat: 状态特征张量，形状为 (..., in_dim)
-
-        Returns:
-            归一化时间残差张量，形状与输入 batch 维度匹配，最后一维被挤压或为 1
-        """
-        x = self.fc1(state_feat)
-        x = self.ln(x)
-        x = self.act(x)
-        delta = self.fc2(x)
-        return delta.squeeze(-1)
+    def forward_with_logits(self, state_feat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """训练时专用前向接口，同时返回门控 logits、回归未激活输出与最终残差。"""
+        gate_logits = self.gate_fc(state_feat).squeeze(-1)
+        prob = torch.sigmoid(gate_logits)
+        active = (prob > self.gate_threshold).float()
+        mag = self.reg_fc(state_feat).squeeze(-1)
+        delta = active * F.relu(mag)
+        return gate_logits, mag, delta
 
     def predict_residual(self, state_feat: torch.Tensor) -> torch.Tensor:
         """调用前向传播计算残差。"""

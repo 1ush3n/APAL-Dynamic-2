@@ -181,6 +181,7 @@ def collect_all_trajectories(
     output_path: str = "data/work3/val_trajectories.pt",
     max_scenarios: int | None = None,
     num_nominal: int = 5,
+    scenario_ids: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """收集指定规模的验证轨迹并落盘为 PyTorch 数据集。"""
     agent = HeuristicAgentWork3()
@@ -192,7 +193,9 @@ def collect_all_trajectories(
         with open(sc_path, "r", encoding="utf-8") as f:
             scenarios = json.load(f)
 
-    if max_scenarios is not None:
+    if scenario_ids is not None:
+        scenarios = [s for s in scenarios if s.get("scenario_id") in scenario_ids]
+    elif max_scenarios is not None:
         scenarios = scenarios[:max_scenarios]
 
     all_trajectories: list[dict[str, Any]] = []
