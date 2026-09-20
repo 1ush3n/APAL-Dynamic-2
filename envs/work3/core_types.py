@@ -139,6 +139,9 @@ class TaskRuntimeState:
     material_ready_time: float = 0.0  # 开工可用性到达时刻 R（受扰后继承）
     postpone_count: int = 0           # 累计正式改站/后移次数 n_{ki}
     generation: int = 0               # 预约版本代数，用于失效令牌校验
+    base_team: tuple[int, ...] = field(default_factory=tuple)  # 基准标准团队 W_i^0
+    cycle_start_time: float | None = None  # 实际开工所在周期的转站时刻 P_{q-1}
+    start_cost_confirmed: bool = False     # 是否已确认并结算开工偏差与团队替换费用
 
     def can_physically_start(self, current_time: float, tolerance: float = 1e-5) -> bool:
         """检查任务是否满足物理开工硬条件（到料到达且时刻到达）。"""
@@ -157,9 +160,11 @@ class TaskRuntimeState:
         self.status = TaskStatus.READY
         self.generation += 1
 
-    def start_work(self, current_time: float) -> None:
+    def start_work(self, current_time: float, cycle_start_time: float | None = None) -> None:
         """实际开工。"""
         self.actual_start = float(current_time)
+        if cycle_start_time is not None:
+            self.cycle_start_time = float(cycle_start_time)
         self.status = TaskStatus.RUNNING
 
     def complete_work(self, current_time: float) -> None:
@@ -205,6 +210,9 @@ class TaskRuntimeState:
             material_ready_time=self.material_ready_time,
             postpone_count=self.postpone_count,
             generation=self.generation,
+            base_team=self.base_team,
+            cycle_start_time=self.cycle_start_time,
+            start_cost_confirmed=self.start_cost_confirmed,
         )
 
 
@@ -363,6 +371,7 @@ def initialize_multi_aircraft_state(
             skill=task.skill,
             ao_code=task.ao_code,
             predecessors=task.predecessors,
+            base_team=tuple(task.team),
         )
 
     # 构造工人日历与站位绑定

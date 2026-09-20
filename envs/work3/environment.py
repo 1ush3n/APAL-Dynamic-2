@@ -23,6 +23,7 @@ from envs.work3.core_types import (
     initialize_multi_aircraft_state,
 )
 from envs.work3.event_queue import DiscreteEventQueue, EventType, SimulationEvent
+from utils.work3.objective_evaluator import ObjectiveWeights, calculate_postpone_penalty
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +36,25 @@ class AirLineEnvWork3:
         baseline_json_path: str = "data/work3/real_283_k10_baseline.json",
         max_slots_per_station: int = 3,
         tolerance: float = 1e-5,
+        weights: ObjectiveWeights | None = None,
     ) -> None:
         self.baseline_json_path = baseline_json_path
         self.max_slots_per_station = int(max_slots_per_station)
         self.tolerance = float(tolerance)
+        self.weights: ObjectiveWeights = weights if weights is not None else ObjectiveWeights()
 
         self.state: MultiAircraftState = initialize_multi_aircraft_state(self.baseline_json_path)
         self.event_queue: DiscreteEventQueue = DiscreteEventQueue()
         self._transfer_scheduled_for_cycle: int = 0
+        self.total_tasks: int = len(self.state.tasks)
+
+        # 累计成本与单步奖励记账账本 (Task 3.2 / 里程碑 M2)
+        self.cumulative_cost: float = 0.0
+        self.cost_takt: float = 0.0
+        self.cost_time: float = 0.0
+        self.cost_team: float = 0.0
+        self.cost_postpone: float = 0.0
+        self.step_rewards: list[float] = []
 
         # 构建工序直接后继索引：aircraft_id -> task_id -> list of successor task_ids
         self._successors_map: dict[int, dict[int, list[int]]] = {
@@ -59,6 +71,14 @@ class AirLineEnvWork3:
         self.state = initialize_multi_aircraft_state(self.baseline_json_path)
         self.event_queue.reset(start_time=0.0)
         self._transfer_scheduled_for_cycle = 0
+        self.total_tasks = len(self.state.tasks)
+
+        self.cumulative_cost = 0.0
+        self.cost_takt = 0.0
+        self.cost_time = 0.0
+        self.cost_team = 0.0
+        self.cost_postpone = 0.0
+        self.step_rewards.clear()
 
         # 0 号飞机在时刻 0.0 进入 0 号站位
         ac0 = self.state.aircraft[0]
@@ -79,6 +99,7 @@ class AirLineEnvWork3:
 
     def step(self, action: dict[str, Any]) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         """执行单步调度动作。"""
+        cost_before = self.cumulative_cost
         task_key = str(action["task_key"])
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
 
@@ -96,7 +117,6 @@ class AirLineEnvWork3:
                 f"当前物理停靠在站位 {ac.current_station}，不可作业！"
             )
 
-        reward = 0.0
         info: dict[str, Any] = {"action_branch": branch.name, "task_key": task_key}
 
         if branch == ActionBranch.STATION_EXECUTE:
@@ -126,9 +146,9 @@ class AirLineEnvWork3:
                 )
 
             if abs(t_sched - self.state.current_time) <= self.tolerance:
-                task.start_work(current_time=self.state.current_time)
                 task.assigned_team = list(team)
                 task.scheduled_start = t_sched
+                self._on_task_started(task, t_sched)
                 self.event_queue.push(
                     event_type=EventType.TASK_FINISH,
                     timestamp=t_sched + task.duration,
@@ -153,9 +173,21 @@ class AirLineEnvWork3:
             if task.current_station >= self.state.num_stations - 1:
                 raise ValueError(f"末站（站位 {task.current_station + 1}）工序绝对禁止后移！")
 
+            n_old = task.postpone_count
             task.postpone_to_next_station()
+            n_new = task.postpone_count
+            penalty_delta = calculate_postpone_penalty(
+                n_new, self.weights.lambda_1, self.weights.lambda_2
+            ) - calculate_postpone_penalty(
+                n_old, self.weights.lambda_1, self.weights.lambda_2
+            )
+            cost_postpone_inc = self.weights.w_p * penalty_delta
+            self.cost_postpone += cost_postpone_inc
+            self.cumulative_cost += cost_postpone_inc
+
             info["postponed_to_station"] = task.current_station
             info["postpone_count"] = task.postpone_count
+            info["cost_postpone_inc"] = cost_postpone_inc
 
             # 后移可能使得当前周期站位放行条件满足，检查是否可安排转站
             self._check_and_schedule_transfer()
@@ -167,6 +199,20 @@ class AirLineEnvWork3:
         terminated = self._check_terminated()
         truncated = False
         obs = self._get_observation()
+
+        cost_after = self.cumulative_cost
+        step_cost = cost_after - cost_before
+        reward = -step_cost
+        self.step_rewards.append(reward)
+
+        info["step_cost"] = step_cost
+        info["cumulative_cost"] = cost_after
+        info["cost_breakdown"] = {
+            "cost_takt": self.cost_takt,
+            "cost_time": self.cost_time,
+            "cost_team": self.cost_team,
+            "cost_postpone": self.cost_postpone,
+        }
 
         return obs, reward, terminated, truncated, info
 
@@ -250,7 +296,7 @@ class AirLineEnvWork3:
             if event.event_type == EventType.TASK_START:
                 task = self.state.tasks[event.task_key]
                 if task.status == TaskStatus.RESERVED:
-                    task.start_work(current_time=event.timestamp)
+                    self._on_task_started(task, event.timestamp)
                     self.event_queue.push(
                         event_type=EventType.TASK_FINISH,
                         timestamp=event.timestamp + task.duration,
@@ -272,6 +318,35 @@ class AirLineEnvWork3:
 
             elif event.event_type == EventType.SYNCHRONOUS_TRANSFER:
                 self._execute_synchronous_transfer(event.timestamp)
+
+    def _on_task_started(self, task: TaskRuntimeState, start_time: float) -> None:
+        """工序正式进入 RUNNING 状态，结算基准开工位置偏差 D_time 与团队替换 D_team 增量。"""
+        task.start_work(current_time=start_time, cycle_start_time=self.state.last_transfer_time)
+        if task.start_cost_confirmed:
+            return
+
+        task.start_cost_confirmed = True
+        scale = (1.0 / self.total_tasks) if (self.weights.normalize_by_n and self.total_tasks > 0) else 1.0
+
+        # 1. 周期内开工位置偏差 b_ki - b_i0
+        b_ki = start_time - self.state.last_transfer_time
+        b_i0 = task.in_station_offset
+        d_time_item = abs(b_ki - b_i0) / self.state.h0
+        cost_time_inc = self.weights.w_t * d_time_item * scale
+
+        # 2. 团队替换率 d(W, W^0) = 1 - |W cap W^0| / m_i
+        w_actual = set(task.assigned_team)
+        w_base = set(task.base_team)
+        if task.demand > 0:
+            overlap = len(w_actual & w_base)
+            d_team_item = 1.0 - (overlap / task.demand)
+        else:
+            d_team_item = 0.0
+        cost_team_inc = self.weights.w_w * d_team_item * scale
+
+        self.cost_time += cost_time_inc
+        self.cost_team += cost_team_inc
+        self.cumulative_cost += (cost_time_inc + cost_team_inc)
 
     def _on_task_completed(self, completed_task: TaskRuntimeState) -> None:
         """工序完工后的事件链：解锁同机直接物理后继。"""
@@ -365,6 +440,14 @@ class AirLineEnvWork3:
 
     def _execute_synchronous_transfer(self, timestamp: float) -> None:
         """执行全线同步脉动流转（Task 2.5）：各机站位+1，唤醒后移任务。"""
+        # 计账：结算本周期节拍超期 J_takt 增量
+        duration_h = float(timestamp) - self.state.last_transfer_time
+        overdue_h = max(0.0, duration_h - self.state.h0)
+        takt_violation = overdue_h / self.state.h0
+        cost_takt_inc = self.weights.w_h * takt_violation
+        self.cost_takt += cost_takt_inc
+        self.cumulative_cost += cost_takt_inc
+
         self.state.last_transfer_time = float(timestamp)
         self.state.transfer_history.append(float(timestamp))
         current_q = self.state.current_cycle
