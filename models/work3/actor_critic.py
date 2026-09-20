@@ -269,7 +269,19 @@ class ActorCriticWork3(nn.Module):
         branch_logits = self.branch_head(branch_input).clone()
 
         # 物理硬掩码: 末站 (station 4) 或无法后移者，强制屏蔽 POSTPONE
+        # 依据《方法设计确认稿》第 2 节规则 5: 后移前驱若导致本站未完后继无法完成，则后移不合法
         can_postpone = (chosen_task.current_station < env.state.num_stations - 1)
+        if can_postpone and hasattr(env, "_successors_map"):
+            succ_ids = env._successors_map.get(chosen_task.aircraft_id, {}).get(chosen_task.task_id, [])
+            has_station_succ = any(
+                env.state.tasks.get(f"{chosen_task.aircraft_id}_{s_id}") is not None
+                and env.state.tasks[f"{chosen_task.aircraft_id}_{s_id}"].current_station == chosen_task.current_station
+                and env.state.tasks[f"{chosen_task.aircraft_id}_{s_id}"].status not in (TaskStatus.COMPLETED, TaskStatus.POSTPONED)
+                for s_id in succ_ids
+            )
+            if has_station_succ:
+                can_postpone = False
+
         if not can_postpone:
             branch_logits[1] = -1e4
 

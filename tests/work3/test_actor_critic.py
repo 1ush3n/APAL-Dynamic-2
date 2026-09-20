@@ -96,6 +96,10 @@ def test_conditional_branch_truncation(env: AirLineEnvWork3) -> None:
         net.branch_head[-1].bias.data[0] = -100.0
         net.branch_head[-1].bias.data[1] = 100.0
 
+    # 清空就绪工序的站内后继，确保符合 Rule 5 合法后移准则
+    for t in env.get_ready_tasks():
+        env._successors_map[t.aircraft_id][t.task_id] = []
+
     state_feat = torch.randn(32)
     time_urgency = torch.tensor([0.2, -0.5])
 
