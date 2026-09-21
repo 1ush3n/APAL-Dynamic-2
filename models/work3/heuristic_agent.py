@@ -62,12 +62,8 @@ class HeuristicAgentWork3:
         # 优先使用基准固定指派团队
         chosen_team = list(task.base_team) if task.base_team else []
         if len(chosen_team) != demand:
-            # 兜底：按资质挑选本站工人
-            qualified = [
-                w for w in st_workers
-                if task.skill in env.baseline.tasks[task.task_key].team or True
-            ]
-            chosen_team = qualified[:demand] if len(qualified) >= demand else st_workers[:demand]
+            # 兜底：按站位绑定工人顺延指派
+            chosen_team = st_workers[:demand]
 
         # 尝试检查是否有本站完全空闲的合格工人，若有则优先使用空闲工人
         free_workers = [
