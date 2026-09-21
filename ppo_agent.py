@@ -2952,52 +2952,56 @@ class PPOAgent:
                             False,
                         )
                     )
-                    if fast_batch is not None:
-                        baseline_stations_i = fast_batch.baseline_station_slices[i]
-                        baseline_edges_i = fast_batch.baseline_team_edge_index
-                        identity_task_i = t_idx + int(task_ptr[i])
-                        worker_offset_i = int(worker_ptr[i])
-                    else:
-                        baseline_snapshot_i = baseline_snapshots[i]
-                        baseline_stations_i = (
-                            None
-                            if baseline_snapshot_i is None
-                            else baseline_snapshot_i.get("baseline_station")
-                        )
-                        baseline_edges_i = (
-                            None
-                            if baseline_snapshot_i is None
-                            else baseline_snapshot_i.get("baseline_team_edge_index")
-                        )
-                        identity_task_i = t_idx
-                        worker_offset_i = 0
-                    station_baseline_match_i = build_station_baseline_match(
-                        baseline_stations_i,
-                        selected_tasks=torch.tensor(
-                            [t_idx], device=self.device
-                        ),
-                        candidate_station_ids=torch.arange(
-                            station_embs.size(0), device=self.device
-                        ),
-                        enabled=bic_enabled,
-                        device=self.device,
-                    )
-                    worker_baseline_member_i = (
-                        build_worker_baseline_membership(
-                            baseline_edges_i,
+                    if bic_enabled:
+                        if fast_batch is not None:
+                            baseline_stations_i = fast_batch.baseline_station_slices[i]
+                            baseline_edges_i = fast_batch.baseline_team_edge_index
+                            identity_task_i = t_idx + int(task_ptr[i])
+                            worker_offset_i = int(worker_ptr[i])
+                        else:
+                            baseline_snapshot_i = baseline_snapshots[i]
+                            baseline_stations_i = (
+                                None
+                                if baseline_snapshot_i is None
+                                else baseline_snapshot_i.get("baseline_station")
+                            )
+                            baseline_edges_i = (
+                                None
+                                if baseline_snapshot_i is None
+                                else baseline_snapshot_i.get("baseline_team_edge_index")
+                            )
+                            identity_task_i = t_idx
+                            worker_offset_i = 0
+                        station_baseline_match_i = build_station_baseline_match(
+                            baseline_stations_i,
                             selected_tasks=torch.tensor(
-                                [identity_task_i], device=self.device
+                                [t_idx], device=self.device
                             ),
-                            num_workers=worker_embs.size(0),
-                            candidate_worker_offsets=torch.tensor(
-                                [worker_offset_i], device=self.device
+                            candidate_station_ids=torch.arange(
+                                station_embs.size(0), device=self.device
                             ),
-                            enabled=bic_enabled,
+                            enabled=True,
                             device=self.device,
                         )
-                        if worker_embs is not None
-                        else None
-                    )
+                        worker_baseline_member_i = (
+                            build_worker_baseline_membership(
+                                baseline_edges_i,
+                                selected_tasks=torch.tensor(
+                                    [identity_task_i], device=self.device
+                                ),
+                                num_workers=worker_embs.size(0),
+                                candidate_worker_offsets=torch.tensor(
+                                    [worker_offset_i], device=self.device
+                                ),
+                                enabled=True,
+                                device=self.device,
+                            )
+                            if worker_embs is not None
+                            else None
+                        )
+                    else:
+                        station_baseline_match_i = None
+                        worker_baseline_member_i = None
                     station_logits = active_policy.station_head(
                         selected_task_emb,
                         station_embs_i,

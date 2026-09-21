@@ -1,0 +1,32 @@
+{
+  "tag": "post_optimization_fused",
+  "data": "data/283.csv",
+  "num_envs": 4,
+  "worker_threads": 2,
+  "resolved_worker_threads": [
+    2,
+    2,
+    2,
+    2
+  ],
+  "ipc_fusion": true,
+  "episodes": 2,
+  "total_steps": 800,
+  "total_wall_time": 135.33564970002044,
+  "overall_sps": 5.911228872608569,
+  "rollout_sps": 9.891385196732344,
+  "total_rollout_sec": 80.87845979997655,
+  "total_update_sec": 52.77108210005099,
+  "rollout_fraction": 0.5976138584271661,
+  "update_fraction": 0.3899274301857733,
+  "mean_ipc_mask_ms": 0.005334499292075634,
+  "mean_forward_ms": 375.0540180003736,
+  "mean_rebuild_ms": 11.937239499820862,
+  "mean_env_step_ms": 12.64149149734294,
+  "peak_cuda_mb": 2545.67333984375,
+  "cpu_percent_samples": [
+    24.1,
+    36.7,
+    36.6
+  ]
+}

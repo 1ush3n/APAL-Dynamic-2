@@ -331,7 +331,11 @@ class APALRolloutService:
                             stage_started = time.perf_counter()
                             states[idx] = self.vector_env.envs[
                                 idx
-                            ].rebuild_state_from_snapshot(snapshots[idx])
+                            ].rebuild_state_from_snapshot(
+                                snapshots[idx],
+                                reusable_state=states[idx],
+                                reuse_resource_topology=True,
+                            )
                             rebuild_seconds += time.perf_counter() - stage_started
                     else:
                         dones[idx] = True
@@ -520,7 +524,11 @@ class APALRolloutService:
                         stage_started = time.perf_counter()
                         states[env_idx] = self.vector_env.envs[
                             env_idx
-                        ].rebuild_state_from_snapshot(next_snapshots[env_idx])
+                        ].rebuild_state_from_snapshot(
+                            next_snapshots[env_idx],
+                            reusable_state=states[env_idx],
+                            reuse_resource_topology=True,
+                        )
                         rebuild_seconds += time.perf_counter() - stage_started
                 if self.use_ipc_fusion:
                     snapshots = next_snapshots

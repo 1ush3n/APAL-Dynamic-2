@@ -1,0 +1,32 @@
+{
+  "tag": "post_optimization",
+  "data": "data/283.csv",
+  "num_envs": 4,
+  "worker_threads": 2,
+  "resolved_worker_threads": [
+    2,
+    2,
+    2,
+    2
+  ],
+  "ipc_fusion": false,
+  "episodes": 2,
+  "total_steps": 800,
+  "total_wall_time": 134.08673169999383,
+  "overall_sps": 5.966287565200135,
+  "rollout_sps": 10.050697464323784,
+  "total_rollout_sec": 79.5964660999598,
+  "total_update_sec": 52.82620410004165,
+  "rollout_fraction": 0.5936192574075803,
+  "update_fraction": 0.3939704057985036,
+  "mean_ipc_mask_ms": 3.9469149996875785,
+  "mean_forward_ms": 367.65613100258633,
+  "mean_rebuild_ms": 11.576906497357413,
+  "mean_env_step_ms": 10.304490500420798,
+  "peak_cuda_mb": 2545.67333984375,
+  "cpu_percent_samples": [
+    21.3,
+    35.4,
+    35.9
+  ]
+}

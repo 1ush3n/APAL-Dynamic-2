@@ -1,0 +1,98 @@
+[
+  {
+    "tag": "T_auto_IPC_false",
+    "data": "data/283.csv",
+    "num_envs": 4,
+    "worker_threads": 8,
+    "resolved_worker_threads": [
+      8,
+      8,
+      8,
+      8
+    ],
+    "ipc_fusion": false,
+    "episodes": 2,
+    "total_steps": 800,
+    "total_wall_time": 135.79752510000253,
+    "overall_sps": 5.89112356363544,
+    "rollout_sps": 9.460077287196528,
+    "total_rollout_sec": 84.56590530002723,
+    "total_update_sec": 49.75956049998058,
+    "rollout_fraction": 0.6227352467414419,
+    "update_fraction": 0.3664246492219736,
+    "mean_ipc_mask_ms": 4.852750496938825,
+    "mean_forward_ms": 386.0480869971798,
+    "mean_rebuild_ms": 18.19628999917768,
+    "mean_env_step_ms": 10.72669649933232,
+    "peak_cuda_mb": 2545.67333984375,
+    "cpu_percent_samples": [
+      26.8,
+      46.6,
+      48.2
+    ]
+  },
+  {
+    "tag": "T_1_IPC_false",
+    "data": "data/283.csv",
+    "num_envs": 4,
+    "worker_threads": 1,
+    "resolved_worker_threads": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "ipc_fusion": false,
+    "episodes": 2,
+    "total_steps": 800,
+    "total_wall_time": 124.80517150001833,
+    "overall_sps": 6.409990791125851,
+    "rollout_sps": 10.665552998060281,
+    "total_rollout_sec": 75.00783130002674,
+    "total_update_sec": 48.19008480000775,
+    "rollout_fraction": 0.6009993848693659,
+    "update_fraction": 0.38612249973952945,
+    "mean_ipc_mask_ms": 4.288026497233659,
+    "mean_forward_ms": 342.6231645006919,
+    "mean_rebuild_ms": 15.281371497258078,
+    "mean_env_step_ms": 8.39319900085684,
+    "peak_cuda_mb": 2545.67333984375,
+    "cpu_percent_samples": [
+      26.4,
+      31.6,
+      34.4
+    ]
+  },
+  {
+    "tag": "T_1_IPC_true",
+    "data": "data/283.csv",
+    "num_envs": 4,
+    "worker_threads": 1,
+    "resolved_worker_threads": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "ipc_fusion": true,
+    "episodes": 2,
+    "total_steps": 800,
+    "total_wall_time": 126.01539110002341,
+    "overall_sps": 6.3484308782965115,
+    "rollout_sps": 10.48617203240596,
+    "total_rollout_sec": 76.29094749997603,
+    "total_update_sec": 48.254949699970894,
+    "rollout_fraction": 0.6054097585541823,
+    "update_fraction": 0.3829290158824252,
+    "mean_ipc_mask_ms": 0.0052729935850948095,
+    "mean_forward_ms": 352.0300859998679,
+    "mean_rebuild_ms": 15.297056502313353,
+    "mean_env_step_ms": 9.817339002038352,
+    "peak_cuda_mb": 2545.67333984375,
+    "cpu_percent_samples": [
+      21.7,
+      34.0,
+      37.7
+    ]
+  }
+]
