@@ -1,5 +1,5 @@
 hardware:
-  num_envs: 2
+  num_envs: 6
   worker_pointer_v2_fast_default_num_envs: 4
   ddqn_num_envs: 2
   vector_env_start_method: spawn
@@ -10,8 +10,8 @@ hardware:
   report_dir: results/reports
   generate_report_every_episodes: 100
   float32_matmul_precision: high
-  ppo_batch_size_cap: 4
+  ppo_batch_size_cap: 64
 
 train:
-  batch_size: 4
+  batch_size: 64
   accumulation_steps: 16
