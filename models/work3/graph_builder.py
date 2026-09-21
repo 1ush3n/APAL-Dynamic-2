@@ -40,6 +40,17 @@ from utils.resource_graph import (
 )
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
+# 状态独热映射表：UNREADY(0) 与 COMPLETED(4) 保持全 0（非活动待调态）
+# READY(1)->1, RESERVED(2)->2, RUNNING(3)->3, POSTPONED(5)->4 (后移待转站)
+TASK_STATUS_TO_SLOT: dict[TaskStatus, int | None] = {
+    TaskStatus.UNREADY: None,
+    TaskStatus.READY: 1,
+    TaskStatus.RESERVED: 2,
+    TaskStatus.RUNNING: 3,
+    TaskStatus.POSTPONED: 4,
+    TaskStatus.COMPLETED: None,
+}
+
 
 @dataclass
 class Work3ResourceConfig:
@@ -187,12 +198,11 @@ class MultiAircraftGraphBuilder:
             if t_rt is None:
                 continue
 
-            # [1:5] 状态独热设置 (UNREADY=0, READY=1, RESERVED=2, RUNNING=3, POSTPONED=4, COMPLETED=5)
-            st_val = int(t_rt.status)
-            if 0 <= st_val <= 4:
-                task_x_np[idx, 1:5] = 0.0
-                if st_val > 0:
-                    task_x_np[idx, st_val] = 1.0
+            # [1:5] 状态独热设置 (UNREADY/COMPLETED=全0, READY=1, RESERVED=2, RUNNING=3, POSTPONED=4)
+            task_x_np[idx, 1:5] = 0.0
+            slot = TASK_STATUS_TO_SLOT.get(t_rt.status)
+            if slot is not None:
+                task_x_np[idx, slot] = 1.0
 
             # [12] 物理相对站位偏移：(飞机当前所在站位 s_k - 工序基准基础站位 m_i^0)
             ac_state = state.aircraft.get(t_rt.aircraft_id)

@@ -116,3 +116,51 @@ def test_graph_building_latency_performance(baseline_path: str) -> None:
 
     print(f"\n[LATENCY] MultiAircraftGraphBuilder 单步构图平均耗时: {elapsed_ms:.2f} ms")
     assert elapsed_ms < 25.0, f"构图耗时超标: {elapsed_ms:.2f} ms >= 25.0 ms"
+
+
+def test_task_status_one_hot_encoding(baseline_path: str) -> None:
+    """测试状态独热编码与枚举对齐（包含 POSTPONED 状态在槽位 4 的准确置 1）。"""
+    from envs.work3.core_types import TaskStatus
+
+    baseline = MultiAircraftBaseline.load_from_json(baseline_path)
+    builder = MultiAircraftGraphBuilder(baseline)
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    env.reset()
+
+    # 人为设置不同状态以验证图特征槽位
+    first_task_key = builder.task_keys[0]
+    first_idx = 0
+
+    # 1. READY: 槽位 1
+    env.state.tasks[first_task_key].status = TaskStatus.READY
+    data = builder.build_graph(env)
+    assert data["task"].x[first_idx, 1].item() == 1.0
+    assert data["task"].x[first_idx, 2].item() == 0.0
+    assert data["task"].x[first_idx, 3].item() == 0.0
+    assert data["task"].x[first_idx, 4].item() == 0.0
+
+    # 2. RESERVED: 槽位 2
+    env.state.tasks[first_task_key].status = TaskStatus.RESERVED
+    data = builder.build_graph(env)
+    assert data["task"].x[first_idx, 2].item() == 1.0
+    assert data["task"].x[first_idx, 1].item() == 0.0
+
+    # 3. RUNNING: 槽位 3
+    env.state.tasks[first_task_key].status = TaskStatus.RUNNING
+    data = builder.build_graph(env)
+    assert data["task"].x[first_idx, 3].item() == 1.0
+
+    # 4. POSTPONED: 槽位 4
+    env.state.tasks[first_task_key].status = TaskStatus.POSTPONED
+    data = builder.build_graph(env)
+    assert data["task"].x[first_idx, 4].item() == 1.0
+    assert data["task"].x[first_idx, 1:4].sum().item() == 0.0
+
+    # 5. UNREADY / COMPLETED: 全 0
+    env.state.tasks[first_task_key].status = TaskStatus.UNREADY
+    data = builder.build_graph(env)
+    assert data["task"].x[first_idx, 1:5].sum().item() == 0.0
+
+    env.state.tasks[first_task_key].status = TaskStatus.COMPLETED
+    data = builder.build_graph(env)
+    assert data["task"].x[first_idx, 1:5].sum().item() == 0.0
