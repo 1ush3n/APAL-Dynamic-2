@@ -222,6 +222,7 @@ class ActorCriticWork3(nn.Module):
         e_fused = self.time_fusion(z, time_urgency)
         return v, e_fused
 
+    @torch.no_grad()
     def select_action(
         self,
         env: AirLineEnvWork3,
@@ -410,7 +411,7 @@ class ActorCriticWork3(nn.Module):
             task_pair = torch.cat([e_ctx_exp, cand_embed], dim=-1)
             task_logits = self.task_score_fc(task_pair).squeeze(-1)
             dist_task = Categorical(logits=task_logits)
-            lp_task = dist_task.log_prob(torch.tensor(task_idx, device=device))
+            lp_task = dist_task.log_prob(torch.as_tensor(task_idx, device=device))
             ent_task = dist_task.entropy()
 
             # 2. 重放 Head 2: 站位分支对数概率
@@ -422,7 +423,7 @@ class ActorCriticWork3(nn.Module):
                 branch_logits[1] = -1e4
             dist_branch = Categorical(logits=branch_logits)
             branch_act = rec["branch"]
-            lp_branch = dist_branch.log_prob(torch.tensor(branch_act, device=device))
+            lp_branch = dist_branch.log_prob(torch.as_tensor(branch_act, device=device))
             ent_branch = dist_branch.entropy()
 
             # 3. 条件分支截断判定
@@ -435,8 +436,8 @@ class ActorCriticWork3(nn.Module):
             # 4. STAY 分支：重放选人与对齐
             chosen_worker_indices = rec.get("chosen_worker_indices", ())
             num_st_workers = rec.get("num_st_workers", self.max_station_workers)
-            lp_workers = torch.tensor(0.0, device=device)
-            ent_workers = torch.tensor(0.0, device=device)
+            lp_workers = torch.zeros((), device=device)
+            ent_workers = torch.zeros((), device=device)
             worker_mask = torch.zeros(self.max_station_workers, dtype=torch.float, device=device)
 
             for step_w, w_idx in enumerate(chosen_worker_indices):
@@ -449,7 +450,7 @@ class ActorCriticWork3(nn.Module):
                 for prev in chosen_worker_indices[:step_w]:
                     w_logits[prev] = -1e4
                 dist_w = Categorical(logits=w_logits)
-                lp_workers = lp_workers + dist_w.log_prob(torch.tensor(w_idx, device=device))
+                lp_workers = lp_workers + dist_w.log_prob(torch.as_tensor(w_idx, device=device))
                 ent_workers = ent_workers + dist_w.entropy()
                 worker_mask[w_idx] = 1.0
 
@@ -457,7 +458,7 @@ class ActorCriticWork3(nn.Module):
             align_logits = self.align_head(align_input)
             dist_align = Categorical(logits=align_logits)
             align_act = rec.get("align", 0)
-            lp_align = dist_align.log_prob(torch.tensor(align_act, device=device))
+            lp_align = dist_align.log_prob(torch.as_tensor(align_act, device=device))
             ent_align = dist_align.entropy()
 
             total_lp = lp_task + lp_branch + lp_workers + lp_align

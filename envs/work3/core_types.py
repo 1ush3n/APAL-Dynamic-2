@@ -193,6 +193,17 @@ class TaskRuntimeState:
         else:
             self.status = TaskStatus.UNREADY
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "current_station":
+            old = getattr(self, "current_station", None)
+            super().__setattr__(name, value)
+            if old is not None and old != value:
+                state_ref = getattr(self, "_state_ref", None)
+                if state_ref is not None:
+                    state_ref.move_task_station(self, old, value)
+        else:
+            super().__setattr__(name, value)
+
     def copy(self) -> "TaskRuntimeState":
         """深拷贝任务运行时状态。"""
         copied = TaskRuntimeState(

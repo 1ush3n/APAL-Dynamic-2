@@ -59,48 +59,49 @@ def evaluate_single_trajectory(
         env.load_scenario(scenario)
 
     decisions = 0
-    while decisions < max_decisions:
-        ready = env.get_ready_tasks()
-        if not ready:
-            if env._check_terminated():
-                break
-            env._advance_events_until_next_decision()
+    with torch.inference_mode():
+        while decisions < max_decisions:
             ready = env.get_ready_tasks()
-            if not ready and env._check_terminated():
+            if not ready:
+                if env._check_terminated():
+                    break
+                env._advance_events_until_next_decision()
+                ready = env.get_ready_tasks()
+                if not ready and env._check_terminated():
+                    break
+                if not ready and env.event_queue.is_empty():
+                    break
+
+            if agent_type == "Baseline-C":
+                action = agent.select_action(env)
+            elif agent_type == "Method-D":
+                cmax = compute_cycle_heuristic_cmax(env.state)
+                s_feat = extract_compact_state_features(env.state, cmax)
+                r_est = max(0.0, cmax - float(env.state.current_time))
+                u_time = compute_time_urgency_vector(
+                    estimated_r=r_est,
+                    current_time=env.state.current_time,
+                    last_transfer_time=env.state.last_transfer_time,
+                    h0=env.state.h0,
+                    device=torch_device,
+                )
+                action, _, _, _ = agent.select_action(
+                    env=env,
+                    state_feat=s_feat,
+                    time_urgency=u_time,
+                    deterministic=True,
+                )
+            else:
+                raise ValueError(f"未知智能体类型: {agent_type}")
+
+            if action is None:
+                env._advance_events_until_next_decision()
+                continue
+
+            obs, reward, terminated, truncated, info = env.step(action)
+            decisions += 1
+            if terminated:
                 break
-            if not ready and env.event_queue.is_empty():
-                break
-
-        if agent_type == "Baseline-C":
-            action = agent.select_action(env)
-        elif agent_type == "Method-D":
-            cmax = compute_cycle_heuristic_cmax(env.state)
-            s_feat = extract_compact_state_features(env.state, cmax)
-            r_est = max(0.0, cmax - float(env.state.current_time))
-            u_time = compute_time_urgency_vector(
-                estimated_r=r_est,
-                current_time=env.state.current_time,
-                last_transfer_time=env.state.last_transfer_time,
-                h0=env.state.h0,
-                device=torch_device,
-            )
-            action, _, _, _ = agent.select_action(
-                env=env,
-                state_feat=s_feat,
-                time_urgency=u_time,
-                deterministic=True,
-            )
-        else:
-            raise ValueError(f"未知智能体类型: {agent_type}")
-
-        if action is None:
-            env._advance_events_until_next_decision()
-            continue
-
-        obs, reward, terminated, truncated, info = env.step(action)
-        decisions += 1
-        if terminated:
-            break
 
     # 统计生产指标
     completed = sum(1 for t in env.state.tasks.values() if t.status == TaskStatus.COMPLETED)
