@@ -731,3 +731,24 @@ def test_set_rejects_invalid_syntax_and_unknown_fields() -> None:
     )
     with pytest.raises(KeyError, match="未知配置字段"):
         resolve_runtime_config(args, target=Config(), system_name="Windows")
+
+
+def test_rollout_double_buffer_configuration_loading() -> None:
+    # 1. 默认值验证
+    cfg = Config()
+    assert cfg.rollout_double_buffer is False
+
+    # 2. 从 fastpath.yaml 加载
+    load_config_files([str(PROJECT_ROOT / "conf" / "rollout" / "fastpath.yaml")], target=cfg)
+    assert cfg.rollout_double_buffer is False
+
+    # 3. 通过 CLI / set_values 覆写验证
+    args = argparse.Namespace(
+        config=[str(PROJECT_ROOT / "conf" / "rollout" / "fastpath.yaml")],
+        set_values=["rollout_double_buffer=true"],
+        hydra_overrides=[],
+    )
+    target_cfg = Config()
+    resolve_runtime_config(args, target=target_cfg, system_name="Windows")
+    assert target_cfg.rollout_double_buffer is True
+

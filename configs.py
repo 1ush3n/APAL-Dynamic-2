@@ -350,6 +350,7 @@ class Config:
     # ------------------
     use_rollout_snapshot_fastpath: bool = True  # 是否启用轻量 snapshot + 主进程本地 rebuild 替代跨进程传输完整 HeteroData
     enable_rollout_ipc_fusion: bool = True       # 将 step/wait 后的 masks 与 snapshot 合并为一次 IPC (默认启用，减少 50% 管道往返)
+    rollout_double_buffer: bool = False          # 是否开启 A/B 环境双缓冲流水线 (CPU 步进与 GPU 前向推断重叠)
     enable_rollout_detailed_profiler: bool = False  # 低频 CUDA 同步，细分图打包/H2D/Actor/Critic/解码耗时
     enable_rollout_profiler: bool = True        # 是否开启 Rollout 计时分析器
     rollout_profile_interval: int = 10           # 每 N 个 episode 记录一次性能指标到 TensorBoard

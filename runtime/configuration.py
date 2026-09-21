@@ -351,6 +351,15 @@ def validate_runtime_config(config: Config) -> None:
         raise ValueError(
             "PPO 采样与重算分布一致性要求 sample_temperature=1.0"
         )
+    if bool(getattr(config, "rollout_double_buffer", False)):
+        if int(getattr(config, "num_envs", 1)) < 2:
+            raise ValueError(
+                f"rollout_double_buffer 要求 num_envs >= 2，收到 {int(getattr(config, 'num_envs', 1))}"
+            )
+        if not bool(getattr(config, "enable_rollout_ipc_fusion", False)):
+            raise ValueError(
+                "rollout_double_buffer 要求 enable_rollout_ipc_fusion=True"
+            )
     for field_name, choices in _VALID_EXPERIMENT_MODES.items():
         raw_val = getattr(config, field_name)
         if field_name == "conditional_head_baseline_mode" and (raw_val is False or str(raw_val).lower() in {"false", "0", "none", "off"}):

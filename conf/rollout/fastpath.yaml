@@ -1,6 +1,7 @@
 rollout:
   use_rollout_snapshot_fastpath: true
   enable_rollout_ipc_fusion: true
+  rollout_double_buffer: false
   enable_rollout_detailed_profiler: false
   enable_rollout_profiler: true
   rollout_profile_interval: 10

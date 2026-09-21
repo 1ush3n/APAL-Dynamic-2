@@ -49,6 +49,16 @@ class APALRolloutService:
         # L2D checkpoint 兼容层仍序列化该 RNG；主方法的数据集选择不依赖其进程内状态。
         self._rng = np.random.RandomState(int(config.seed))
         self.use_ipc_fusion = bool(getattr(config, "enable_rollout_ipc_fusion", False))
+        self.double_buffer = bool(getattr(config, "rollout_double_buffer", False))
+        if self.double_buffer:
+            if self.num_envs < 2:
+                raise ValueError(
+                    f"rollout_double_buffer 要求 num_envs >= 2，收到 {self.num_envs}"
+                )
+            if not self.use_ipc_fusion:
+                raise ValueError(
+                    "rollout_double_buffer 要求 enable_rollout_ipc_fusion=True"
+                )
         # Fast-Exact：训练 rollout 使用 GPU 常驻模板，不逐环境 CPU rebuild。
         self._fast_exact_builder = None
         if is_fast_exact_mode(config):
