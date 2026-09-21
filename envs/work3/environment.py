@@ -50,6 +50,9 @@ class AirLineEnvWork3:
         self.event_queue: DiscreteEventQueue = DiscreteEventQueue()
         self._transfer_scheduled_for_cycle: int = 0
         self.total_tasks: int = len(self.state.tasks)
+        self._station_occupied_tasks: dict[int, set[str]] = {
+            s: set() for s in range(self.state.num_stations)
+        }
 
         # 累计成本与单步奖励记账账本 (Task 3.2 / 里程碑 M2)
         self.cumulative_cost: float = 0.0
@@ -75,6 +78,7 @@ class AirLineEnvWork3:
         self.event_queue.reset(start_time=0.0)
         self._transfer_scheduled_for_cycle = 0
         self.total_tasks = len(self.state.tasks)
+        self._station_occupied_tasks = {s: set() for s in range(self.state.num_stations)}
 
         self.cumulative_cost = 0.0
         self.cost_takt = 0.0
@@ -175,6 +179,7 @@ class AirLineEnvWork3:
                     task_key=task.task_key,
                     generation=task.generation,
                 )
+                self._station_occupied_tasks[task.current_station].add(task.task_key)
                 info["scheduled_status"] = "RUNNING"
                 info["scheduled_start"] = t_sched
             else:
@@ -185,6 +190,7 @@ class AirLineEnvWork3:
                     task_key=task.task_key,
                     generation=task.generation,
                 )
+                self._station_occupied_tasks[task.current_station].add(task.task_key)
                 info["scheduled_status"] = "RESERVED"
                 info["scheduled_start"] = t_sched
 
@@ -284,15 +290,12 @@ class AirLineEnvWork3:
         return candidate
 
     def _is_station_slot_available(self, station_id: int, start: float, end: float) -> bool:
-        """检查指定站位在 [start, end] 区间内槽位并发数是否 < max_slots_per_station。"""
+        """检查指定站位在 [start, end] 区间内槽位并发数是否 < max_slots_per_station (O(K) 局部查找)。"""
         intervals: list[tuple[float, float]] = []
-        for t in self.state.tasks.values():
-            if t.current_station == station_id and t.status in (
-                TaskStatus.RUNNING,
-                TaskStatus.RESERVED,
-            ):
-                if t.scheduled_start is not None:
-                    intervals.append((t.scheduled_start, t.scheduled_start + t.duration))
+        for task_key in self._station_occupied_tasks.get(station_id, ()):
+            t = self.state.tasks[task_key]
+            if t.scheduled_start is not None:
+                intervals.append((t.scheduled_start, t.scheduled_start + t.duration))
 
         time_points = [start, (start + end) / 2.0, end - self.tolerance]
         for pt in time_points:
@@ -333,6 +336,7 @@ class AirLineEnvWork3:
                 task = self.state.tasks[event.task_key]
                 if task.status == TaskStatus.RUNNING:
                     task.complete_work(current_time=event.timestamp)
+                    self._station_occupied_tasks[task.current_station].discard(task.task_key)
                     self._on_task_completed(task)
                     # 完工后检查是否解锁全线脉动转站
                     self._check_and_schedule_transfer()
@@ -386,6 +390,7 @@ class AirLineEnvWork3:
                         self.state.workers[w].remove_interval(task.task_key)
                     # 2. 取消预约（递增代数标记使事件队列旧开工事件失效）
                     task.cancel_reservation()
+                    self._station_occupied_tasks[task.current_station].discard(task.task_key)
                     self.event_queue.invalidate_task_events(task.task_key, task.generation)
                     task.status = TaskStatus.UNREADY
                     # 3. 挂载时间戳为 R 的 MATERIAL_ARRIVE 事件
@@ -499,8 +504,7 @@ class AirLineEnvWork3:
 
         # 检查当前现场是否仍有未完工但在制/预约的任务
         has_active_tasks = any(
-            t.status in (TaskStatus.RUNNING, TaskStatus.RESERVED)
-            for t in self.state.tasks.values()
+            bool(keys) for keys in self._station_occupied_tasks.values()
         )
         if has_active_tasks:
             # 尚有任务在加工，等待其完成
