@@ -123,9 +123,9 @@ class Config:
     # WorkerPointer v2 Fast-Exact：正式训练严禁自动降级，GPU 模板失败/OOM/组不完整
     # 必须在 optimizer.step 前终止并报告（覆盖 skip_update_on_oom 的静默跳过分支）。
     worker_pointer_v2_strict_gpu_replay: bool = False
-    # Fast-Exact 平台默认环境数；由 conf/hardware/*.yaml 覆盖（Windows 4 / Linux 16）。
+    # Fast-Exact 平台默认环境数；由 conf/hardware/*.yaml 覆盖（Windows 6 / Linux 16）。
     # 仅在新模式且 CLI 未显式 --num_envs 时生效。
-    worker_pointer_v2_fast_default_num_envs: int = 4
+    worker_pointer_v2_fast_default_num_envs: int = 6
     graph_encoder_mode: str = "hetero_gat"
     actor_context_mode: str = "attention"
     homogeneous_use_type_embedding: bool = True
@@ -287,7 +287,7 @@ class Config:
     # ------------------
     # PPO 训练超参数 (PPO Training)
     # ------------------
-    num_envs: int = 4                      # DPPO 并行环境数量
+    num_envs: int = 6                      # DPPO 并行环境数量
     lr: float = 5e-5                       # 初始学习率
     actor_lr_multiplier: float = 0.5       # Actor 参数学习率倍率，用于放缓策略塌缩
     critic_lr_multiplier: float = 1.0      # Critic 参数学习率倍率，保持价值函数跟踪速度
@@ -296,7 +296,7 @@ class Config:
     eps_clip: float = 0.2                  # PPO Clip阈值
     eps_clip_end: float = 0.10             # PPO Clip 衰减下界，避免后期过早收窄到 0.05
     clip_v_grad_norm: float = 0.05          # 保护 Value Network 梯度的防破甲护盾
-    batch_size: int = 32                    # 严防爆显存
+    batch_size: int = 64                    # 严防爆显存 (黄金甜点位: 64)
     ppo_batch_size_cap: int = 0             # 0 表示不限制；平台配置可设置显存安全上限
     ddqn_updates_per_transition: float = 0.125  # DDQN 固定 update-to-data ratio
     ddqn_enable_batched_replay: bool = True     # 批量执行 next-action 图前向

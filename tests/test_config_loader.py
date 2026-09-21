@@ -46,7 +46,7 @@ def test_layered_yaml_config_loads_into_flat_config() -> None:
     assert cfg.use_head_layer_norm is False
     assert cfg.use_rollout_snapshot_fastpath is True
     assert cfg.n_m == 5
-    assert cfg.batch_size == 32
+    assert cfg.batch_size == 64
 
 
 def test_hydra_root_config_loads_through_compat_loader() -> None:
@@ -55,7 +55,7 @@ def test_hydra_root_config_loads_through_compat_loader() -> None:
 
     assert cfg.use_skill_hub is True
     assert cfg.use_rollout_snapshot_fastpath is True
-    assert cfg.batch_size == 32
+    assert cfg.batch_size == 64
 
 
 def test_later_yaml_overrides_earlier_yaml(tmp_path: Path) -> None:
