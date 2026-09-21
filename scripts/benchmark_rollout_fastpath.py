@@ -29,6 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--ipc-fusion", action="store_true")
+    parser.add_argument("--double-buffer", action="store_true", help="启用环境 A/B 双缓冲流水线")
     parser.add_argument("--detailed-profile", action="store_true")
     return parser.parse_args()
 
@@ -44,6 +45,7 @@ def main() -> int:
     if num_envs < 1 or args.max_steps < 1 or args.repeats < 1:
         raise ValueError("num_envs、max_steps 和 repeats 必须大于 0")
 
+    enable_fusion = bool(args.ipc_fusion or args.double_buffer)
     overrides = {
         "data_file_path": str(data_path),
         "train_data_path_or_dir": str(data_path),
@@ -55,7 +57,8 @@ def main() -> int:
         "enable_station_breakdown": False,
         "enable_material_delay": False,
         "rollout_heartbeat_interval_sec": 0.0,
-        "enable_rollout_ipc_fusion": bool(args.ipc_fusion),
+        "enable_rollout_ipc_fusion": enable_fusion,
+        "rollout_double_buffer": bool(args.double_buffer),
         "enable_rollout_detailed_profiler": bool(args.detailed_profile),
         "rollout_profile_interval": 1,
     }
@@ -131,7 +134,8 @@ def main() -> int:
         "device_name": torch.cuda.get_device_name(device) if device.type == "cuda" else "CPU",
         "num_envs": num_envs,
         "max_steps": int(args.max_steps),
-        "ipc_fusion": bool(args.ipc_fusion),
+        "ipc_fusion": bool(args.ipc_fusion or args.double_buffer),
+        "double_buffer": bool(args.double_buffer),
         "detailed_profile": bool(args.detailed_profile),
         "mean_sps": sum(float(item["sps"]) for item in measurements) / len(measurements),
         "peak_cuda_allocated_mb": (
