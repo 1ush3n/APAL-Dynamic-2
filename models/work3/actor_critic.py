@@ -103,9 +103,12 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
     current_time = float(state.current_time)
     p_last = float(state.last_transfer_time)
 
+    total_cycles = float(state.num_aircraft + state.num_stations - 1)
+    total_tasks = float(len(state.tasks)) if len(state.tasks) > 0 else 2830.0
+
     feat[0] = max(0.0, current_time - p_last) / h0
 
-    for s in range(5):
+    for s in range(state.num_stations):
         ac_id = state.get_aircraft_at_station(s)
         st_tasks = [
             t for t in state.tasks.values()
@@ -124,19 +127,19 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
             max_delay = max(t.material_ready_time - current_time for t in delayed_tasks)
             feat[16 + s] = math.log1p(float(max_delay) / h0)
 
-        feat[21 + s] = float(ac_id) / 10.0 if ac_id is not None else -1.0
+        feat[21 + s] = float(ac_id) / float(state.num_aircraft) if ac_id is not None else -1.0
 
     feat[26] = max(0.0, estimated_cmax - current_time) / h0
     feat[27] = (p_last + h0 - current_time) / h0
-    feat[28] = float(state.current_cycle) / 14.0
+    feat[28] = float(state.current_cycle) / total_cycles
 
     completed = sum(1 for t in state.tasks.values() if t.status == TaskStatus.COMPLETED)
-    feat[29] = float(completed) / 2830.0
+    feat[29] = float(completed) / total_tasks
 
     postponed = sum(t.postpone_count for t in state.tasks.values())
     feat[30] = float(postponed) / 50.0
 
-    feat[31] = current_time / (14.0 * h0)
+    feat[31] = current_time / (total_cycles * h0)
 
     return feat
 
