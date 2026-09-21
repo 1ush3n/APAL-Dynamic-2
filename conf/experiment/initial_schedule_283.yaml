@@ -5,7 +5,7 @@ defaults:
   - /env/initial_bucket_283@_global_
   - /reward/default@_global_
   - /train/ppo_default@_global_
-  - /train/batch_32@_global_
+  - /train/batch_4@_global_
   - /rollout/fastpath@_global_
   - _self_
 
