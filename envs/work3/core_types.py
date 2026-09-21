@@ -142,6 +142,7 @@ class TaskRuntimeState:
     base_team: tuple[int, ...] = field(default_factory=tuple)  # 基准标准团队 W_i^0
     cycle_start_time: float | None = None  # 实际开工所在周期的转站时刻 P_{q-1}
     start_cost_confirmed: bool = False     # 是否已确认并结算开工偏差与团队替换费用
+    _state_ref: Any = field(default=None, repr=False, compare=False)
 
     def can_physically_start(self, current_time: float, tolerance: float = 1e-5) -> bool:
         """检查任务是否满足物理开工硬条件（到料到达且时刻到达）。"""
@@ -174,12 +175,16 @@ class TaskRuntimeState:
 
     def postpone_to_next_station(self) -> None:
         """后移至下一站，更新状态并递增改派计数。"""
+        old_station = self.current_station
         self.assigned_team = []
         self.scheduled_start = None
         self.status = TaskStatus.POSTPONED
         self.current_station += 1
         self.postpone_count += 1
         self.generation += 1
+        state_ref = getattr(self, "_state_ref", None)
+        if state_ref is not None:
+            state_ref.move_task_station(self, old_station, self.current_station)
 
     def awaken_in_station(self, all_predecessors_completed: bool) -> None:
         """飞机到达新站后唤醒后移任务。"""
@@ -190,7 +195,7 @@ class TaskRuntimeState:
 
     def copy(self) -> "TaskRuntimeState":
         """深拷贝任务运行时状态。"""
-        return TaskRuntimeState(
+        copied = TaskRuntimeState(
             aircraft_id=self.aircraft_id,
             task_id=self.task_id,
             task_key=self.task_key,
@@ -214,6 +219,8 @@ class TaskRuntimeState:
             cycle_start_time=self.cycle_start_time,
             start_cost_confirmed=self.start_cost_confirmed,
         )
+        copied._state_ref = getattr(self, "_state_ref", None)
+        return copied
 
 
 @dataclass
@@ -269,6 +276,28 @@ class MultiAircraftState:
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
     workers: dict[int, WorkerCalendar] = field(default_factory=dict)
     station_worker_bindings: dict[int, list[int]] = field(default_factory=dict)
+    _ac_station_tasks: dict[tuple[int, int], list[TaskRuntimeState]] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+
+    def __post_init__(self) -> None:
+        self._rebuild_ac_station_tasks()
+
+    def _rebuild_ac_station_tasks(self) -> None:
+        """根据当前任务状态全量重建 (aircraft_id, current_station) 增量索引。"""
+        self._ac_station_tasks = {}
+        for t in self.tasks.values():
+            t._state_ref = self
+            self._ac_station_tasks.setdefault((t.aircraft_id, t.current_station), []).append(t)
+
+    def move_task_station(self, task: TaskRuntimeState, old_station: int, new_station: int) -> None:
+        """当工序跨站后移时，增量维护 (aircraft_id, station_id) 映射。"""
+        old_bucket = self._ac_station_tasks.get((task.aircraft_id, old_station))
+        if old_bucket and task in old_bucket:
+            old_bucket.remove(task)
+        new_bucket = self._ac_station_tasks.setdefault((task.aircraft_id, new_station), [])
+        if task not in new_bucket:
+            new_bucket.append(task)
 
     def get_aircraft_at_station(self, station_id: int) -> int | None:
         """查询当前物理停靠在指定站位的飞机编号（至多 1 架）。"""
@@ -278,15 +307,11 @@ class MultiAircraftState:
         return None
 
     def get_tasks_for_station(self, station_id: int) -> list[TaskRuntimeState]:
-        """获取当前停靠在指定站位的飞机归属在该站的全部活动任务。"""
+        """获取当前停靠在指定站位的飞机归属在该站的全部活动任务 (O(1) 索引)。"""
         k = self.get_aircraft_at_station(station_id)
         if k is None:
             return []
-        return [
-            t
-            for t in self.tasks.values()
-            if t.aircraft_id == k and t.current_station == station_id
-        ]
+        return list(self._ac_station_tasks.get((k, station_id), []))
 
     def get_ready_tasks_for_station(self, station_id: int) -> list[TaskRuntimeState]:
         """获取指定站位当前可被调度的 READY 状态任务列表。"""
@@ -303,11 +328,10 @@ class MultiAircraftState:
             # 空站位天然就绪
             return True
 
-        for t in self.tasks.values():
-            if t.aircraft_id == k and t.current_station == station_id:
-                # 若任务停留在本站且既未完工也未后移，则站位不可放行
-                if t.status not in (TaskStatus.COMPLETED, TaskStatus.POSTPONED):
-                    return False
+        for t in self._ac_station_tasks.get((k, station_id), []):
+            # 若任务停留在本站且既未完工也未后移，则站位不可放行
+            if t.status not in (TaskStatus.COMPLETED, TaskStatus.POSTPONED):
+                return False
 
         return True
 
@@ -339,6 +363,7 @@ class MultiAircraftState:
         self.aircraft = {k: ac.copy() for k, ac in snap["aircraft"].items()}
         self.tasks = {k: t.copy() for k, t in snap["tasks"].items()}
         self.workers = {w: wc.copy() for w, wc in snap["workers"].items()}
+        self._rebuild_ac_station_tasks()
 
 
 def initialize_multi_aircraft_state(

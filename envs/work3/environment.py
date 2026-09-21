@@ -477,11 +477,10 @@ class AirLineEnvWork3:
 
     def _refresh_aircraft_station_readiness(self, aircraft_id: int, station_id: int) -> None:
         """飞机进驻新站位时，扫描并激活该站位归属工序。"""
-        for task in self.state.tasks.values():
-            if task.aircraft_id == aircraft_id and task.current_station == station_id:
-                if task.status in (TaskStatus.UNREADY, TaskStatus.POSTPONED):
-                    task.status = TaskStatus.UNREADY
-                    self._check_and_update_task_readiness(task)
+        for task in self.state.get_tasks_for_station(station_id):
+            if task.status in (TaskStatus.UNREADY, TaskStatus.POSTPONED):
+                task.status = TaskStatus.UNREADY
+                self._check_and_update_task_readiness(task)
 
     def _check_and_schedule_transfer(self) -> None:
         """检查全线站位是否满足放行转站要求，若满足且未安排过本周期转站，则安排 SYNCHRONOUS_TRANSFER。
@@ -512,12 +511,10 @@ class AirLineEnvWork3:
         latest_finish = self.state.current_time
 
         for s in range(self.state.num_stations):
-            k = self.state.get_aircraft_at_station(s)
-            if k is not None:
-                for t in self.state.tasks.values():
-                    if t.aircraft_id == k and t.current_station == s and t.status == TaskStatus.COMPLETED:
-                        if t.actual_end is not None and t.actual_end > latest_finish:
-                            latest_finish = t.actual_end
+            for t in self.state.get_tasks_for_station(s):
+                if t.status == TaskStatus.COMPLETED:
+                    if t.actual_end is not None and t.actual_end > latest_finish:
+                        latest_finish = t.actual_end
 
         transfer_time = max(nominal_takt_end, latest_finish, self.state.current_time)
 
