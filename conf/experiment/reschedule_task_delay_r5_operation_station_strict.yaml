@@ -11,10 +11,14 @@ experiment:
     policy_observation_scope: task_station
     graph_input_scope: task_station
     critic_observation_scope: match_policy
+    task_feature_scope: intrinsic
+    station_feature_scope: no_worker_resource
     action_completion_mode: min_wait
+    task_mask_mode: precedence_release_only
     station_mask_mode: structural_only
     team_selection_mode: autoregressive
     conditional_head_baseline_mode: off
+    worker_pointer_v2_dynamic_eft_features: false
 
 model:
   ablation_protocol: strict_v1
@@ -22,10 +26,14 @@ model:
   policy_observation_scope: task_station
   graph_input_scope: task_station
   critic_observation_scope: match_policy
+  task_feature_scope: intrinsic
+  station_feature_scope: no_worker_resource
   action_completion_mode: min_wait
+  task_mask_mode: precedence_release_only
   station_mask_mode: structural_only
   team_selection_mode: autoregressive
   conditional_head_baseline_mode: off
+  worker_pointer_v2_dynamic_eft_features: false
 
 reschedule_task_delay:
   reschedule_baseline_identity_conditioning: false

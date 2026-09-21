@@ -17,6 +17,7 @@ experiment:
     station_mask_mode: structural_only
     team_selection_mode: autoregressive
     conditional_head_baseline_mode: off
+    worker_pointer_v2_dynamic_eft_features: false
 
 model:
   ablation_protocol: strict_v1
@@ -30,6 +31,7 @@ model:
   station_mask_mode: structural_only
   team_selection_mode: autoregressive
   conditional_head_baseline_mode: off
+  worker_pointer_v2_dynamic_eft_features: false
 
 reschedule_task_delay:
   reschedule_baseline_identity_conditioning: false
