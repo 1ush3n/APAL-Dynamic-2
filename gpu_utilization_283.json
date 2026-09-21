@@ -1,0 +1,15 @@
+{
+  "dataset": "data/283.csv",
+  "num_envs": 4,
+  "total_duration_sec": 138.7708785533905,
+  "sample_count": 689,
+  "overall_avg_gpu_util_pct": 47.38171262699564,
+  "overall_median_gpu_util_pct": 43.0,
+  "overall_std_gpu_util_pct": 13.542097432540647,
+  "max_gpu_util_pct": 81.0,
+  "avg_vram_mb": 3415.156748911466,
+  "max_vram_mb": 4545.0,
+  "ratio_under_15_pct": 0.0,
+  "ratio_15_to_50_pct": 68.50507982583454,
+  "ratio_above_50_pct": 31.494920174165458
+}
