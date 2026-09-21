@@ -62,6 +62,9 @@ class RolloutService(Protocol):
     def close(self) -> None:
         ...
 
+    def assert_rollout_idle(self) -> None:
+        ...
+
 
 class _RolloutDataset(IterableDataset):
     def __init__(
@@ -82,6 +85,8 @@ class _RolloutDataset(IterableDataset):
     def __iter__(self):
         for episode in range(self.start_episode, self.max_episodes + 1):
             yield self.rollout_service.collect(episode)
+            if hasattr(self.rollout_service, "assert_rollout_idle"):
+                self.rollout_service.assert_rollout_idle()
 
     def __len__(self) -> int:
         return self.max_episodes
@@ -209,6 +214,8 @@ class APALLightningModule(pl.LightningModule):
 
     def training_step(self, batch: RolloutUpdate, batch_idx: int):
         assert isinstance(batch, RolloutUpdate), type(batch)
+        if hasattr(self.rollout_service, "assert_rollout_idle"):
+            self.rollout_service.assert_rollout_idle()
         self.last_eval_metrics = None
         self.last_update_committed = False
         self.agent.validate_snapshot_homogeneity(batch.memory.states)

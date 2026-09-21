@@ -75,6 +75,9 @@ class _RolloutService:
     def close(self):
         self.closed = True
 
+    def assert_rollout_idle(self):
+        pass
+
 
 def _checkpointing_trainer(saved_paths: list[str]) -> SimpleNamespace:
     """返回会写出可加载 checkpoint 的 trainer 替身。"""
