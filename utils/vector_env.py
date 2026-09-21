@@ -33,6 +33,20 @@ class EnvCreator:
         return AirLineEnv_Graph(data_path_or_dir=self.data_path_or_dir, seed=self.seed_offset + index)
 
 
+from dataclasses import dataclass
+
+RolloutMasks = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+RolloutStepResult = Tuple[RolloutMasks, dict, float, bool, dict]
+
+
+@dataclass(frozen=True)
+class RolloutStepTicket:
+    pool_id: int
+    request_id: int
+    indices: tuple[int, ...]
+    deadline: float
+
+
 class VectorEnvWorkerError(RuntimeError):
     """VectorEnv 子进程启动、通信或执行失败。"""
 
@@ -358,6 +372,13 @@ class EnvProxy:
         self.task_status: Optional[np.ndarray] = None
         self.current_time: float = 0.0
         self._worker_skill_topology_cache: dict[tuple[int, bytes], torch.Tensor] = {}
+        self._in_flight: bool = False
+
+    def _assert_not_in_flight(self, operation: str) -> None:
+        if self._in_flight:
+            raise RuntimeError(
+                f"EnvProxy {self._idx} 当前有未收齐的在途异步任务，禁止执行 {operation}"
+            )
 
     def _enrich_snapshot(self, snapshot: dict) -> dict:
         """从本地影子缓存注入被剥离的静态特征张量，保证下游语义 100% 完整与零拷贝"""
@@ -419,6 +440,7 @@ class EnvProxy:
         if 'current_time' in info: self.current_time = info['current_time']
 
     def reset(self, randomize_duration: bool = False, randomize_workers: bool = False, seed: Optional[int] = None):
+        self._assert_not_in_flight("reset")
         self._conn.send(('reset', {'randomize_duration': randomize_duration, 'randomize_workers': randomize_workers, 'seed': seed}))
         snapshot, dynamic_info = self._recv("reset")
         snapshot = self._enrich_snapshot(snapshot)
@@ -427,6 +449,7 @@ class EnvProxy:
         return self.rebuild_state_from_snapshot(snapshot)
 
     def step(self, action: Any):
+        self._assert_not_in_flight("step")
         self._conn.send(('step', action))
         snapshot, reward, done, info = self._recv("step")
         snapshot = self._enrich_snapshot(snapshot)
@@ -435,10 +458,12 @@ class EnvProxy:
         return self.rebuild_state_from_snapshot(snapshot), reward, done, info
 
     def get_masks(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        self._assert_not_in_flight("get_masks")
         self._conn.send(('get_masks', None))
         return tuple(torch.from_numpy(mask) for mask in self._recv("get_masks"))
 
     def get_rollout_state(self):
+        self._assert_not_in_flight("get_rollout_state")
         self._conn.send(('get_rollout_state', None))
         masks, snap, dynamic_info = self._recv("get_rollout_state")
         snap = self._enrich_snapshot(snap)
@@ -446,6 +471,7 @@ class EnvProxy:
         return tuple(torch.from_numpy(mask) for mask in masks), snap
 
     def step_snapshot(self, action: Any):
+        self._assert_not_in_flight("step_snapshot")
         self._conn.send(('step_snapshot', action))
         snap, reward, done, info = self._recv("step_snapshot")
         snap = self._enrich_snapshot(snap)
@@ -454,16 +480,19 @@ class EnvProxy:
         return snap, reward, done, info
 
     def try_wait_for_resources(self) -> bool:
+        self._assert_not_in_flight("try_wait_for_resources")
         self._conn.send(('try_wait_for_resources', None))
         res, dynamic_info = self._recv("try_wait_for_resources")
         self.update_dynamic_properties(dynamic_info)
         return res
 
     def get_state_snapshot(self) -> dict:
+        self._assert_not_in_flight("get_state_snapshot")
         self._conn.send(('get_state_snapshot', None))
         return self._enrich_snapshot(self._recv("get_state_snapshot"))
 
     def switch_dataset(self, idx: int):
+        self._assert_not_in_flight("switch_dataset")
         self._conn.send(('switch_dataset', idx))
         val = self._recv("switch_dataset")
         self.update_static_properties(val)
@@ -761,6 +790,9 @@ class VectorEnv:
                 proxy.update_static_properties(info)
                 self.envs.append(proxy)
                 self.worker_audits.append(dict(info.get("worker_audit", {})))
+            self._in_flight_envs: set[int] = set()
+            self._registered_tickets: dict[int, RolloutStepTicket] = {}
+            self._next_ticket_id: int = 1
         except Exception:
             self.close()
             raise
@@ -818,13 +850,19 @@ class VectorEnv:
             )
         return value
 
-    def _recv_workers_unordered(self, target_indices: list[int], operation: str) -> dict[int, Any]:
+    def _recv_workers_unordered(
+        self,
+        target_indices: list[int],
+        operation: str,
+        deadline: Optional[float] = None,
+    ) -> dict[int, Any]:
         """使用 wait() 乱序收集所有 worker 的返回结果，消除固定顺序遍历的伪队头阻塞。"""
         if not target_indices:
             return {}
         pending_conns = {self.parent_conns[idx]: idx for idx in target_indices}
         results: dict[int, Any] = {}
-        deadline = time.monotonic() + self.command_timeout_sec
+        if deadline is None:
+            deadline = time.monotonic() + self.command_timeout_sec
 
         while pending_conns:
             remaining_time = max(0.0, deadline - time.monotonic())
@@ -978,27 +1016,90 @@ class VectorEnv:
             results[index] = (snapshot, float(reward), bool(done), info)
         return results
 
-    def step_rollout_indices(
+    def step_rollout_async(
         self,
         actions: dict[int, Any],
-    ) -> dict[
-        int,
-        tuple[
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor],
-            dict,
-            float,
-            bool,
-            dict,
-        ],
-    ]:
-        """只步进活跃环境，并在同一次 IPC 中返回下一 masks 与 snapshot。"""
+    ) -> RolloutStepTicket:
+        """异步提交活跃环境的步进动作，返回凭证 Ticket，不阻塞等待返回。"""
+        if self.closed:
+            raise VectorEnvWorkerError("VectorEnv 已关闭，无法提交 step_rollout_async")
+        if not actions:
+            return RolloutStepTicket(
+                pool_id=id(self),
+                request_id=0,
+                indices=(),
+                deadline=0.0,
+            )
         target_indices = sorted(int(index) for index in actions)
-        if not target_indices:
-            return {}
         for index in target_indices:
-            self._send_worker(index, ('step_rollout', actions[index]))
-        worker_results = self._recv_workers_unordered(target_indices, "step_rollout")
-        results = {}
+            if not (0 <= index < self.num_envs):
+                raise IndexError(
+                    f"环境索引越界: {index}，num_envs={self.num_envs}"
+                )
+        conflicts = set(target_indices) & self._in_flight_envs
+        if conflicts:
+            raise RuntimeError(
+                f"环境 {sorted(conflicts)} 已在途执行中，禁止并发重复提交"
+            )
+
+        deadline = time.monotonic() + self.command_timeout_sec
+        for index in target_indices:
+            self.envs[index]._in_flight = True
+        self._in_flight_envs.update(target_indices)
+
+        try:
+            for index in target_indices:
+                self._send_worker(index, ('step_rollout', actions[index]))
+        except Exception as exc:
+            self.close()
+            raise VectorEnvWorkerError("提交 step_rollout 失败，环境池已关闭") from exc
+
+        ticket_id = self._next_ticket_id
+        self._next_ticket_id += 1
+        ticket = RolloutStepTicket(
+            pool_id=id(self),
+            request_id=ticket_id,
+            indices=tuple(target_indices),
+            deadline=deadline,
+        )
+        self._registered_tickets[ticket_id] = ticket
+        return ticket
+
+    def step_rollout_wait(
+        self,
+        ticket: RolloutStepTicket,
+    ) -> dict[int, RolloutStepResult]:
+        """按凭证 Ticket 收集对应环境的返回结果，完成状态刷新并释放环境。"""
+        if ticket.indices == ():
+            return {}
+        if ticket.pool_id != id(self):
+            raise ValueError(
+                f"ticket 属于其他环境池实例 (pool_id={ticket.pool_id} != {id(self)})，禁止跨池等待"
+            )
+        if (
+            ticket.request_id not in self._registered_tickets
+            or self._registered_tickets[ticket.request_id] is not ticket
+        ):
+            raise ValueError(
+                f"ticket request_id={ticket.request_id} 无效或已被接收"
+            )
+
+        del self._registered_tickets[ticket.request_id]
+
+        target_indices = list(ticket.indices)
+        try:
+            worker_results = self._recv_workers_unordered(
+                target_indices,
+                "step_rollout",
+                deadline=ticket.deadline,
+            )
+        finally:
+            for index in target_indices:
+                if 0 <= index < len(self.envs):
+                    self.envs[index]._in_flight = False
+            self._in_flight_envs.difference_update(target_indices)
+
+        results: dict[int, RolloutStepResult] = {}
         for index in target_indices:
             masks, snapshot, reward, done, info = worker_results[index]
             snapshot = self.envs[index]._enrich_snapshot(snapshot)
@@ -1012,6 +1113,25 @@ class VectorEnv:
                 info,
             )
         return results
+
+    def step_rollout_indices(
+        self,
+        actions: dict[int, Any],
+    ) -> dict[int, RolloutStepResult]:
+        """只步进活跃环境，并在同一次 IPC 中返回下一 masks 与 snapshot (组合调用 async 与 wait)。"""
+        ticket = self.step_rollout_async(actions)
+        return self.step_rollout_wait(ticket)
+
+    def assert_idle(self) -> None:
+        """断言当前无任何在途未收齐环境或未接收 ticket。"""
+        if self._in_flight_envs:
+            raise AssertionError(
+                f"VectorEnv 仍有在途未收齐环境: {sorted(self._in_flight_envs)}"
+            )
+        if self._registered_tickets:
+            raise AssertionError(
+                f"VectorEnv 仍有未接收的 ticket: {list(self._registered_tickets.keys())}"
+            )
 
     def get_masks_all(self) -> List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         """异步收集各进程环境的动作空间掩码"""
@@ -1146,6 +1266,12 @@ class VectorEnv:
     def close(self):
         if self.closed:
             return
+        if hasattr(self, "_in_flight_envs"):
+            self._in_flight_envs.clear()
+        if hasattr(self, "_registered_tickets"):
+            self._registered_tickets.clear()
+        for env in getattr(self, "envs", ()):
+            env._in_flight = False
         for conn, process in zip(
             getattr(self, "parent_conns", ()),
             getattr(self, "processes", ()),

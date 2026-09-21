@@ -22,7 +22,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from configs import configs
 from tests.runtime_safety import seed_everything, temporary_config
-from utils.vector_env import EnvCreator, VectorEnv, VectorEnvWorkerError
+from utils.vector_env import (
+    EnvCreator,
+    RolloutStepTicket,
+    VectorEnv,
+    VectorEnvWorkerError,
+)
 from worker_feature_layout import resolve_worker_feature_layout
 
 
@@ -479,3 +484,106 @@ def test_snapshot_rebuild_loads_dataset_context_locally() -> None:
         finally:
             if vec_env is not None:
                 vec_env.close()
+
+
+def test_step_rollout_async_and_wait_contract() -> None:
+    """验证 VectorEnv 异步步进与等待的票据契约、防并发冲突与状态保护。"""
+    seed_everything(42)
+    overrides = {
+        "n_w": 40,
+        "n_m": 5,
+        "max_slots_per_station": 3,
+        "randomize_durations": False,
+        "enable_dynamic_events": False,
+        "enable_station_breakdown": False,
+        "enable_material_delay": False,
+    }
+
+    vec_env = None
+    with temporary_config(configs, overrides):
+        make_env = EnvCreator(str(PROJECT_ROOT / "data" / "283.csv"), seed_offset=500)
+        vec_env = VectorEnv(make_env, num_envs=2)
+        try:
+            masks_list, snapshots = vec_env.reset_rollout_all(
+                randomize_duration=False, randomize_workers=False
+            )
+            # 1. 空动作测试
+            empty_ticket = vec_env.step_rollout_async({})
+            empty_res = vec_env.step_rollout_wait(empty_ticket)
+            assert empty_res == {}
+
+            # 2. 越界索引测试
+            with pytest.raises(IndexError, match="越界"):
+                vec_env.step_rollout_async({99: (0, 0, (0,))})
+
+            # 准备两个环境的动作
+            actions = {}
+            for i in range(2):
+                task_mask, station_mask, worker_mask = masks_list[i]
+                valid_tasks = torch.where(~task_mask)[0]
+                task_id = int(valid_tasks[0].item())
+                valid_stations = torch.where(~station_mask[task_id])[0]
+                station_id = int(valid_stations[0].item())
+                valid_workers = torch.where(~worker_mask[task_id])[0]
+                team = tuple(int(w.item()) for w in valid_workers[:1])
+                actions[i] = (task_id, station_id, team)
+
+            # 3. 提交 env 0
+            ticket_0 = vec_env.step_rollout_async({0: actions[0]})
+            assert vec_env._in_flight_envs == {0}
+            assert vec_env.envs[0]._in_flight is True
+            assert vec_env.envs[1]._in_flight is False
+
+            # 4. 重复提交 env 0 应报错
+            with pytest.raises(RuntimeError, match="在途"):
+                vec_env.step_rollout_async({0: actions[0]})
+
+            # 5. 在途环境直接调用代理方法应报错
+            with pytest.raises(RuntimeError, match="在途"):
+                vec_env.envs[0].step(actions[0])
+            with pytest.raises(RuntimeError, match="在途"):
+                vec_env.envs[0].reset()
+            with pytest.raises(RuntimeError, match="在途"):
+                vec_env.envs[0].get_masks()
+
+            # 6. 提交不相交的 env 1
+            ticket_1 = vec_env.step_rollout_async({1: actions[1]})
+            assert vec_env._in_flight_envs == {0, 1}
+            assert vec_env.envs[1]._in_flight is True
+
+            # 7. 伪造或跨池 ticket 应被拒绝
+            fake_ticket = RolloutStepTicket(pool_id=id(vec_env) + 1, request_id=1, indices=(0,), deadline=0.0)
+            with pytest.raises(ValueError, match="跨池"):
+                vec_env.step_rollout_wait(fake_ticket)
+
+            # 8. 等待 env 0
+            res_0 = vec_env.step_rollout_wait(ticket_0)
+            assert 0 in res_0
+            assert len(res_0[0]) == 5  # masks, snapshot, reward, done, info
+            assert vec_env.envs[0]._in_flight is False
+            assert vec_env._in_flight_envs == {1}
+
+            # 9. 重复等待已消费 ticket 应报错
+            with pytest.raises(ValueError, match="无效或已被接收"):
+                vec_env.step_rollout_wait(ticket_0)
+
+            # 10. 等待 env 1
+            res_1 = vec_env.step_rollout_wait(ticket_1)
+            assert 1 in res_1
+            assert vec_env.envs[1]._in_flight is False
+            assert vec_env._in_flight_envs == set()
+
+            # 11. 验证空闲断言
+            vec_env.assert_idle()
+
+            # 12. 验证同步包装器 step_rollout_indices 正常运作
+            next_task_mask_0 = res_0[0][0][0]
+            valid_tasks_0 = torch.where(~next_task_mask_0)[0]
+            next_act_0 = (int(valid_tasks_0[0].item()), 0, (0,)) if len(valid_tasks_0) > 0 else (0, 0, (0,))
+            sync_res = vec_env.step_rollout_indices({0: next_act_0})
+            assert 0 in sync_res
+            vec_env.assert_idle()
+        finally:
+            if vec_env is not None:
+                vec_env.close()
+
