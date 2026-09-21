@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 from typing import Any
 
@@ -8,6 +9,7 @@ import torch
 
 from configs import Config
 from environment import AirLineEnv_Graph
+from utils.vector_env import RolloutStepTicket
 from runtime.evaluation import compute_apal_rollout_diagnostics, evaluate_model
 from runtime.modes import (
     is_fast_exact_mode,
@@ -220,10 +222,407 @@ class APALRolloutService:
             ),
         }
 
+    def _collect_episode_double_buffer(
+        self,
+        episode: int,
+    ) -> tuple[list[Memory], RolloutMetrics]:
+        """A/B 环境双缓冲流水线采样：重叠 CPU 环境步进与 GPU 神经网络前向推断。"""
+        self.agent.policy.train()
+        v2_mode = is_worker_pointer_v2_mode(self.config)
+        fast_exact = self._fast_exact_builder is not None
+        if self.device.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(self.device)
+        if v2_mode:
+            self.agent.reset_worker_pointer_v2_diagnostics()
+        rollout_call_index = 0
+        heartbeat = RolloutHeartbeat(
+            episode,
+            self.num_envs,
+            float(self.config.rollout_heartbeat_interval_sec),
+        )
+        heartbeat.start()
+        total_started = time.perf_counter()
+        ipc_seconds = 0.0
+        forward_seconds = 0.0
+        rebuild_seconds = 0.0
+        environment_step_seconds = 0.0
+        detailed_profile_sums: dict[str, float] = {}
+        detailed_profile_samples = 0
+        loop_steps = 0
+        environment_steps = 0
+        objective_delta_sums = np.zeros(self.num_envs, dtype=float)
+        objective_final_scores = np.zeros(self.num_envs, dtype=float)
+        objective_dense_steps = np.zeros(self.num_envs, dtype=int)
+        objective_clip_counts = np.zeros(self.num_envs, dtype=int)
+        objective_term_keys = (
+            "score_makespan",
+            "score_balance",
+            "score_takt_violation",
+            "score_start_stability",
+            "score_station_change",
+            "score_team_change",
+        )
+        objective_term_sums = {
+            key: np.zeros(self.num_envs, dtype=float)
+            for key in objective_term_keys
+        }
+
+        apply_noise = bool(
+            self.config.randomize_durations
+            and episode > int(self.config.curriculum_episodes)
+        )
+        heartbeat.update("reset", 0, 0, 0)
+        masks_list, snapshots = self.vector_env.reset_rollout_all(
+            randomize_duration=apply_noise,
+            randomize_workers=apply_noise,
+        )
+        if fast_exact:
+            states: list[Any] = [None] * self.num_envs
+        else:
+            states = [
+                self.vector_env.envs[index].rebuild_state_from_snapshot(snapshots[index])
+                for index in range(self.num_envs)
+            ]
+        memories = [Memory() for _ in range(self.num_envs)]
+        dones = [False] * self.num_envs
+        local_step_count = [0] * self.num_envs
+        max_steps = max(int(env.num_tasks) for env in self.vector_env.envs) * 2
+        if self.config.rollout_max_steps > 0:
+            max_steps = min(max_steps, self.config.rollout_max_steps)
+
+        # 固定两组划分：A 组为前 ceil(N/2) 个环境，B 组为剩余环境
+        mid = math.ceil(self.num_envs / 2)
+        group_A = tuple(range(0, mid))
+        group_B = tuple(range(mid, self.num_envs))
+
+        ticket_A: RolloutStepTicket | None = None
+        staged_A: dict[int, dict] = {}
+        ticket_B: RolloutStepTicket | None = None
+        staged_B: dict[int, dict] = {}
+
+        def _stage_and_dispatch(group_indices: tuple[int, ...]) -> tuple[RolloutStepTicket | None, dict[int, dict]]:
+            nonlocal rollout_call_index, ipc_seconds, forward_seconds, rebuild_seconds, detailed_profile_samples
+            active = [i for i in group_indices if not dones[i] and local_step_count[i] < max_steps]
+            if not active:
+                return None, {}
+
+            # 1. 资源等待 (Resource Wait)
+            waiting_indices = [i for i in active if masks_list[i][0].all()]
+            if waiting_indices:
+                stage_started = time.perf_counter()
+                fused_wait = self.vector_env.wait_rollout_indices(waiting_indices)
+                ipc_seconds += time.perf_counter() - stage_started
+                for idx in waiting_indices:
+                    waited, new_masks, new_snap, dyn = fused_wait[idx]
+                    if waited:
+                        masks_list[idx] = new_masks
+                        snapshots[idx] = new_snap
+                        if not fast_exact:
+                            stage_started = time.perf_counter()
+                            states[idx] = self.vector_env.envs[idx].rebuild_state_from_snapshot(
+                                new_snap,
+                                reusable_state=states[idx],
+                                reuse_resource_topology=True,
+                            )
+                            rebuild_seconds += time.perf_counter() - stage_started
+                    else:
+                        dones[idx] = True
+                        if memories[idx].rewards:
+                            memories[idx].rewards[-1] -= (
+                                self.config.deadlock_penalty_constant
+                                * self.config.r_coef_makespan
+                                * self.config.reward_scale
+                            )
+                            memories[idx].is_terminals[-1] = True
+
+            active = [i for i in group_indices if not dones[i] and local_step_count[i] < max_steps]
+            if not active:
+                return None, {}
+
+            # 2. 神经网络前向推断 (Inference)
+            heartbeat.update("forward", max(local_step_count), len(active), self.num_envs - len(active))
+            stage_started = time.perf_counter()
+            profile_breakdown = bool(
+                getattr(self.config, "enable_rollout_detailed_profiler", False)
+                and episode % max(1, int(self.config.rollout_profile_interval)) == 0
+                and max(local_step_count) % max(1, int(self.vector_env.envs[0].num_tasks) // 4) == 0
+            )
+            with torch.inference_mode():
+                if fast_exact:
+                    results = self.agent.select_actions_batch(
+                        [],
+                        mask_task_list=[masks_list[idx][0] for idx in active],
+                        mask_station_matrix_list=[masks_list[idx][1] for idx in active],
+                        mask_worker_list=[masks_list[idx][2] for idx in active],
+                        deterministic=False,
+                        temperature=float(self.config.sample_temperature),
+                        is_eval=False,
+                        profile_breakdown=profile_breakdown,
+                        snapshots=[snapshots[idx] for idx in active],
+                        fast_exact_builder=self._fast_exact_builder,
+                    )
+                else:
+                    results = self.agent.select_actions_batch(
+                        obs_list=[states[idx] for idx in active],
+                        mask_task_list=[masks_list[idx][0] for idx in active],
+                        mask_station_matrix_list=[masks_list[idx][1] for idx in active],
+                        mask_worker_list=[masks_list[idx][2] for idx in active],
+                        deterministic=False,
+                        temperature=float(self.config.sample_temperature),
+                        is_eval=False,
+                        profile_breakdown=profile_breakdown,
+                        baseline_snapshots=[snapshots[idx] for idx in active],
+                    )
+            forward_seconds += time.perf_counter() - stage_started
+            if profile_breakdown:
+                detailed_profile_samples += 1
+                for key, value in self.agent.last_action_profile.items():
+                    detailed_profile_sums[key] = (
+                        detailed_profile_sums.get(key, 0.0) + float(value)
+                    )
+
+            # 3. 立即捕获行为组元数据
+            behavior_traces = []
+            if v2_mode and uses_behavior_group_exact_replay(self.config):
+                behavior_traces = make_behavior_traces(
+                    group_id=(episode, rollout_call_index),
+                    env_indices=list(active),
+                    behavior_logprobs=self.agent.last_v2_behavior_logprobs,
+                )
+                rollout_call_index += 1
+            behavior_trace_by_env = {
+                trace.env_index: trace for trace in behavior_traces
+            }
+            gated_traces = list(self.agent.last_gated_team_traces)
+            anchor_traces = list(self.agent.last_anchor_proposal_traces)
+            v2_logprobs = list(self.agent.last_v2_behavior_logprobs)
+            v2_values = list(self.agent.last_v2_behavior_values)
+
+            # 4. 组装暂存动作记录
+            staged_dict: dict[int, dict] = {}
+            for res_idx, env_idx in enumerate(active):
+                action, logprob, value, _, is_invalid = results[res_idx]
+                if is_invalid or action is None:
+                    dones[env_idx] = True
+                    if memories[env_idx].rewards:
+                        memories[env_idx].rewards[-1] -= (
+                            self.config.deadlock_penalty_constant
+                            * self.config.r_coef_makespan
+                            * self.config.reward_scale
+                        )
+                        memories[env_idx].is_terminals[-1] = True
+                    continue
+                staged_dict[env_idx] = {
+                    "state": snapshots[env_idx],
+                    "action": action,
+                    "logprob": logprob,
+                    "value": value,
+                    "masks": masks_list[env_idx],
+                    "gated_team_trace": gated_traces[res_idx],
+                    "anchor_proposal_trace": anchor_traces[res_idx],
+                    "worker_pointer_v2_behavior_trace": behavior_trace_by_env.get(env_idx),
+                    "component_behavior_logprobs": v2_logprobs[res_idx],
+                    "conditional_values": v2_values[res_idx],
+                }
+
+            if not staged_dict:
+                return None, {}
+
+            # 5. 异步提交 step
+            heartbeat.update("environment_step", max(local_step_count), len(staged_dict), self.num_envs - len(staged_dict))
+            step_actions = {env_idx: staged_dict[env_idx]["action"] for env_idx in staged_dict}
+            ticket = self.vector_env.step_rollout_async(step_actions)
+            return ticket, staged_dict
+
+        def _wait_and_commit(ticket: RolloutStepTicket, staged_dict: dict[int, dict]) -> None:
+            nonlocal environment_step_seconds, environment_steps, rebuild_seconds
+            stage_started = time.perf_counter()
+            step_results = self.vector_env.step_rollout_wait(ticket)
+            environment_step_seconds += time.perf_counter() - stage_started
+
+            for env_idx, item in staged_dict.items():
+                self._append_action(
+                    memories[env_idx],
+                    state=item["state"],
+                    action=item["action"],
+                    logprob=item["logprob"],
+                    value=item["value"],
+                    masks=item["masks"],
+                    gated_team_trace=item["gated_team_trace"],
+                    anchor_proposal_trace=item["anchor_proposal_trace"],
+                    worker_pointer_v2_behavior_trace=item["worker_pointer_v2_behavior_trace"],
+                    component_behavior_logprobs=item["component_behavior_logprobs"],
+                    conditional_values=item["conditional_values"],
+                )
+
+                next_masks, next_snapshot, reward, step_done, step_info = step_results[env_idx]
+                if step_info.get("invalid_action", False):
+                    raise RuntimeError(
+                        "训练环境拒绝掩码允许的动作，禁止恢复以避免污染 on-policy 轨迹: "
+                        f"env={env_idx} action={item['action']} info={step_info}"
+                    )
+                if "reschedule_objective_delta" in step_info:
+                    objective_dense_steps[env_idx] += 1
+                    objective_delta_sums[env_idx] += float(step_info["reschedule_objective_delta"])
+                    objective_final_scores[env_idx] = float(step_info.get("reschedule_objective_score", 0.0))
+                    objective_clip_counts[env_idx] += int(
+                        float(step_info.get("reschedule_objective_reward_clipped", 0.0)) > 0.0
+                    )
+                    for key in objective_term_keys:
+                        objective_term_sums[key][env_idx] += float(step_info.get(f"reschedule_delta_{key}", 0.0))
+
+                memories[env_idx].rewards.append(float(reward))
+                memories[env_idx].is_terminals.append(bool(step_done))
+                memories[env_idx].is_truncated.append(False)
+                dones[env_idx] = bool(step_done)
+                local_step_count[env_idx] += 1
+                environment_steps += 1
+
+                masks_list[env_idx] = next_masks
+                snapshots[env_idx] = next_snapshot
+                if not fast_exact and not step_done:
+                    stage_started = time.perf_counter()
+                    states[env_idx] = self.vector_env.envs[env_idx].rebuild_state_from_snapshot(
+                        next_snapshot,
+                        reusable_state=states[env_idx],
+                        reuse_resource_topology=True,
+                    )
+                    rebuild_seconds += time.perf_counter() - stage_started
+
+        try:
+            # 启动 (Startup)
+            ticket_A, staged_A = _stage_and_dispatch(group_A)
+            ticket_B, staged_B = _stage_and_dispatch(group_B)
+
+            # 稳态循环 (Steady State)
+            while not all(dones):
+                loop_steps += 1
+                if ticket_A is not None:
+                    _wait_and_commit(ticket_A, staged_A)
+                    ticket_A, staged_A = None, {}
+
+                can_step_A = [i for i in group_A if not dones[i] and local_step_count[i] < max_steps]
+                if can_step_A:
+                    ticket_A, staged_A = _stage_and_dispatch(group_A)
+
+                if ticket_B is not None:
+                    _wait_and_commit(ticket_B, staged_B)
+                    ticket_B, staged_B = None, {}
+
+                can_step_B = [i for i in group_B if not dones[i] and local_step_count[i] < max_steps]
+                if can_step_B:
+                    ticket_B, staged_B = _stage_and_dispatch(group_B)
+
+                if ticket_A is None and ticket_B is None:
+                    break
+
+            # 收尾 (Wind-down): 清空在途任务
+            if ticket_A is not None:
+                _wait_and_commit(ticket_A, staged_A)
+                ticket_A, staged_A = None, {}
+            if ticket_B is not None:
+                _wait_and_commit(ticket_B, staged_B)
+                ticket_B, staged_B = None, {}
+
+            # 处理步数截断
+            for i in range(self.num_envs):
+                if not dones[i] and local_step_count[i] >= max_steps:
+                    dones[i] = True
+                    if memories[i].is_terminals:
+                        memories[i].is_terminals[-1] = True
+        finally:
+            heartbeat.stop()
+            if ticket_A is not None:
+                try:
+                    self.vector_env.step_rollout_wait(ticket_A)
+                except Exception:
+                    pass
+            if ticket_B is not None:
+                try:
+                    self.vector_env.step_rollout_wait(ticket_B)
+                except Exception:
+                    pass
+
+        self.assert_rollout_idle()
+
+        for memory in memories:
+            if memory.is_terminals and not memory.is_terminals[-1]:
+                memory.is_truncated[-1] = True
+
+        total_seconds = time.perf_counter() - total_started
+        makespans = [
+            float(np.max(env.station_wall_clock)) if env.assigned_tasks else 0.0
+            for env in self.vector_env.envs
+        ]
+        completion_rates = [
+            len(env.assigned_tasks) / max(1, int(env.num_tasks))
+            for env in self.vector_env.envs
+        ]
+        divisor = max(1, loop_steps)
+        extra_metrics: dict[str, float] = {}
+        total_dense_steps = int(np.sum(objective_dense_steps))
+        if total_dense_steps > 0:
+            extra_metrics = {
+                "Reward/ObjectiveDelta": float(np.mean(objective_delta_sums)),
+                "Reward/ObjectiveFinalScore": float(np.mean(objective_final_scores)),
+                "Reward/ObjectiveClipFraction": float(
+                    np.sum(objective_clip_counts) / total_dense_steps
+                ),
+            }
+            for key in objective_term_keys:
+                label = key.removeprefix("score_")
+                extra_metrics[f"Reward/Delta/{label}"] = float(
+                    np.mean(objective_term_sums[key])
+                )
+        if detailed_profile_samples > 0:
+            for key, value in detailed_profile_sums.items():
+                label = "".join(part.title() for part in key.removesuffix("_ms").split("_"))
+                extra_metrics[f"Rollout/Profile/{label}Ms"] = float(
+                    value / detailed_profile_samples
+                )
+            extra_metrics["Rollout/Profile/SampleCount"] = float(
+                detailed_profile_samples
+            )
+        if str(self.config.policy_action_scope) == "operation_station_anchor_proposal_team":
+            merged = Memory()
+            self._merge_memories(merged, memories)
+            apcf_metrics = self.agent._anchor_proposal_rollout_metrics(merged)
+            extra_metrics.update(apcf_metrics)
+        if bool(
+            getattr(self.config, "reschedule_baseline_identity_conditioning", False)
+        ):
+            extra_metrics.update(self._baseline_identity_metrics(memories))
+        if v2_mode:
+            extra_metrics.update(self.agent.finalize_worker_pointer_v2_diagnostics())
+        if self.device.type == "cuda":
+            peak_memory_mib = float(
+                torch.cuda.max_memory_allocated(self.device) / (1024.0**2)
+            )
+            extra_metrics["Memory/PeakAllocatedMiB"] = peak_memory_mib
+            if v2_mode:
+                extra_metrics["PointerV2/PeakMemoryMiB"] = peak_memory_mib
+        metrics = RolloutMetrics(
+            episode=int(episode),
+            average_reward=float(np.mean([sum(memory.rewards) for memory in memories])),
+            average_makespan=float(np.mean(makespans)),
+            completion_rate=float(np.mean(completion_rates)),
+            environment_steps=environment_steps,
+            steps_per_second=environment_steps / max(total_seconds, 1e-9),
+            total_seconds=total_seconds,
+            ipc_mask_ms=ipc_seconds * 1000.0 / divisor,
+            forward_ms=forward_seconds * 1000.0 / divisor,
+            rebuild_ms=rebuild_seconds * 1000.0 / divisor,
+            environment_step_ms=environment_step_seconds * 1000.0 / divisor,
+            extra_metrics=extra_metrics,
+        )
+        return memories, metrics
+
     def _collect_episode(
         self,
         episode: int,
     ) -> tuple[list[Memory], RolloutMetrics]:
+        if self.double_buffer:
+            return self._collect_episode_double_buffer(episode)
         self.agent.policy.train()
         v2_mode = is_worker_pointer_v2_mode(self.config)
         fast_exact = self._fast_exact_builder is not None
@@ -917,5 +1316,14 @@ class APALRolloutService:
         )
         return metrics
 
+    def assert_rollout_idle(self) -> None:
+        """断言当前采样服务处于完全空闲状态：环境池无在途任务，本地无未提交暂存记录。"""
+        if hasattr(self.vector_env, "assert_idle"):
+            self.vector_env.assert_idle()
+
     def close(self) -> None:
         self.vector_env.close()
+
+
+RolloutService = APALRolloutService
+
