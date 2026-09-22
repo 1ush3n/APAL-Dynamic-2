@@ -383,6 +383,8 @@ class AirLineEnvWork3:
             timestamp=tau,
             payload=payload,
         )
+        if tau <= self.state.current_time + self.tolerance:
+            self.process_due_events()
 
     def get_ready_tasks(self) -> list[TaskRuntimeState]:
         """获取全线所有在场站位中处于 READY 状态的全部工序。"""
@@ -400,6 +402,7 @@ class AirLineEnvWork3:
         if task_key not in self.state.tasks:
             raise KeyError(f"未找到工序: {task_key}")
 
+        self.process_due_events()
         task = self.state.tasks[task_key]
         if task.status != TaskStatus.READY:
             raise ValueError(f"工序 {task_key} 当前状态为 {task.status.name}，不可调度！必须为 READY。")
@@ -639,51 +642,90 @@ class AirLineEnvWork3:
 
         return None
 
-    def _advance_events_until_next_decision(self) -> None:
-        """推进事件队列，直至产生新的就绪工序或全线完工退出。"""
-        while len(self.get_ready_tasks()) == 0:
-            # 首先检查是否满足全线同步脉动放行条件
-            self._check_and_schedule_transfer()
-
-            if self.event_queue.is_empty():
-                # 既无就绪动作也无未来事件，退出循环
-                break
+    def process_due_events(self) -> None:
+        """处理当前时刻全部事件，包含处理过程中生成的同刻事件。"""
+        while True:
+            event = self.event_queue.peek()
+            if event is None or event.timestamp > self.state.current_time + self.tolerance:
+                self._check_and_schedule_transfer()
+                next_event = self.event_queue.peek()
+                if next_event is None or next_event.timestamp > self.state.current_time + self.tolerance:
+                    return
+                continue
 
             event = self.event_queue.pop()
             if event is None:
-                break
-
+                return
             self.state.current_time = event.timestamp
+            self._dispatch_event(event)
 
-            if event.event_type == EventType.TASK_START:
-                task = self.state.tasks[event.task_key]
-                if task.status == TaskStatus.RESERVED:
-                    self._on_task_started(task, event.timestamp)
-                    self.event_queue.push(
-                        event_type=EventType.TASK_FINISH,
-                        timestamp=event.timestamp + (task.execution_duration or task.duration),
-                        task_key=task.task_key,
-                        generation=task.generation,
-                    )
+    def _dispatch_event(self, event: SimulationEvent) -> None:
+        """执行一个已按时间和优先级取出的事件。"""
+        if event.event_type == EventType.TASK_START:
+            self._handle_task_start_event(event)
+        elif event.event_type == EventType.TASK_FINISH:
+            task = self.state.tasks[event.task_key]
+            if task.status == TaskStatus.RUNNING:
+                task.complete_work(current_time=event.timestamp)
+                self._station_occupied_tasks[task.current_station].discard(task.task_key)
+                self._on_task_completed(task)
+        elif event.event_type == EventType.MATERIAL_ARRIVE:
+            task = self.state.tasks[event.task_key]
+            self._check_and_update_task_readiness(task)
+        elif event.event_type == EventType.SYNCHRONOUS_TRANSFER:
+            self._execute_synchronous_transfer(event.timestamp)
+        elif event.event_type == EventType.DISTURBANCE:
+            self._handle_disturbance_event(event.timestamp, event.payload)
 
-            elif event.event_type == EventType.TASK_FINISH:
-                task = self.state.tasks[event.task_key]
-                if task.status == TaskStatus.RUNNING:
-                    task.complete_work(current_time=event.timestamp)
-                    self._station_occupied_tasks[task.current_station].discard(task.task_key)
-                    self._on_task_completed(task)
-                    # 完工后检查是否解锁全线脉动转站
-                    self._check_and_schedule_transfer()
+    def _handle_task_start_event(self, event: SimulationEvent) -> None:
+        """在预约开工时重新核验物理条件，失败则撤销预约。"""
+        task = self.state.tasks[event.task_key]
+        if task.status != TaskStatus.RESERVED:
+            return
 
-            elif event.event_type == EventType.MATERIAL_ARRIVE:
-                task = self.state.tasks[event.task_key]
-                self._check_and_update_task_readiness(task)
+        aircraft = self.state.aircraft[task.aircraft_id]
+        predecessors_completed = all(
+            self.state.tasks[f"{task.aircraft_id}_{pred_id}"].status == TaskStatus.COMPLETED
+            for pred_id in task.predecessors
+        )
+        valid_start = (
+            aircraft.current_station == task.current_station
+            and task.can_physically_start(event.timestamp, self.tolerance)
+            and predecessors_completed
+        )
+        try:
+            self._validate_team_for_task(task, tuple(task.assigned_team))
+        except ValueError:
+            valid_start = False
 
-            elif event.event_type == EventType.SYNCHRONOUS_TRANSFER:
-                self._execute_synchronous_transfer(event.timestamp)
+        if not valid_start:
+            for worker_id in task.assigned_team:
+                self.state.workers[worker_id].remove_interval(task.task_key)
+            self._station_occupied_tasks[task.current_station].discard(task.task_key)
+            task.cancel_reservation()
+            task.status = TaskStatus.UNREADY
+            self.event_queue.invalidate_task_events(task.task_key, task.generation)
+            self._check_and_update_task_readiness(task)
+            return
 
-            elif event.event_type == EventType.DISTURBANCE:
-                self._handle_disturbance_event(event.timestamp, event.payload)
+        self._on_task_started(task, event.timestamp)
+        self.event_queue.push(
+            event_type=EventType.TASK_FINISH,
+            timestamp=event.timestamp + (task.execution_duration or task.duration),
+            task_key=task.task_key,
+            generation=task.generation,
+        )
+
+    def _advance_events_until_next_decision(self) -> None:
+        """推进事件队列，直至产生新的就绪工序或全线完工退出。"""
+        while True:
+            self.process_due_events()
+            if self.get_ready_tasks():
+                return
+            next_event = self.event_queue.peek()
+            if next_event is None:
+                return
+            self.state.current_time = max(self.state.current_time, next_event.timestamp)
 
     def _handle_disturbance_event(self, timestamp: float, payload: dict[str, Any]) -> None:
         """处理突发工序开工可用性延迟扰动 (Task 4.2 / 易错点 1 攻坚)。

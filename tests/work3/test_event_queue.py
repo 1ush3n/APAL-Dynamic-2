@@ -61,10 +61,10 @@ def test_same_timestamp_priority_ordering() -> None:
         assert ev is not None
         popped_types.append(ev.event_type)
 
-    # 期望优先级：DISTURBANCE(1) -> TASK_FINISH(2) -> MATERIAL_ARRIVE(3) -> SYNCHRONOUS_TRANSFER(4) -> TASK_START(5)
+    # 期望优先级：TASK_FINISH(1) -> DISTURBANCE(2) -> MATERIAL_ARRIVE(3) -> SYNCHRONOUS_TRANSFER(4) -> TASK_START(5)
     expected = [
-        EventType.DISTURBANCE,
         EventType.TASK_FINISH,
+        EventType.DISTURBANCE,
         EventType.MATERIAL_ARRIVE,
         EventType.SYNCHRONOUS_TRANSFER,
         EventType.TASK_START,

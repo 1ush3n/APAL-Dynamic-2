@@ -25,15 +25,15 @@ class EventType(IntEnum):
     """离散事件类型定义及同刻执行优先级。
 
     同刻优先级原则（数值越小优先级越高）：
-    1. DISTURBANCE: 扰动先揭示，以便在开工前撤销冲突预约；
-    2. TASK_FINISH: 先完工并释放工人与槽位；
+    1. TASK_FINISH: 先完工并释放工人与槽位；
+    2. DISTURBANCE: 扰动在任务开工前揭示，以便撤销冲突预约；
     3. MATERIAL_ARRIVE: 物料到达解锁就绪；
     4. SYNCHRONOUS_TRANSFER: 本周期全部完工后脉动转站；
     5. TASK_START: 预约工序开工（此时工人已完成前序释放）。
     """
 
-    DISTURBANCE = 1
-    TASK_FINISH = 2
+    TASK_FINISH = 1
+    DISTURBANCE = 2
     MATERIAL_ARRIVE = 3
     SYNCHRONOUS_TRANSFER = 4
     TASK_START = 5
