@@ -74,9 +74,12 @@ def run_training(
     time_head = TimeResidualHead(in_dim=32, hidden_dim=64)
     if Path(time_head_ckpt).is_file():
         ckpt_data = torch.load(time_head_ckpt, map_location="cpu")
-        state_dict = ckpt_data.get("model_state_dict", ckpt_data)
-        time_head.load_state_dict(state_dict)
-        logger.info(f"已成功载入离线预训练时间修正头: {time_head_ckpt}")
+        if ckpt_data.get("model_version") == "signed_residual_v1":
+            state_dict = ckpt_data.get("model_state_dict", ckpt_data)
+            time_head.load_state_dict(state_dict)
+            logger.info(f"已成功载入有符号离线时间修正头: {time_head_ckpt}")
+        else:
+            logger.warning(f"检查点 {time_head_ckpt} 不是有符号残差版本，本次不加载旧门控权重")
     else:
         logger.warning(f"未找到预训练时间修正头 {time_head_ckpt}，使用随机初始化头")
 

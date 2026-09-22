@@ -43,6 +43,8 @@ class PPOTrainerWork3:
         vf_coef: float = 0.5,
         ent_coef: float = 0.01,
         max_grad_norm: float = 0.5,
+        time_head: nn.Module | None = None,
+        time_loss_coef: float = 0.0,
         device: str | torch.device = "cpu",
     ) -> None:
         self.actor_critic = actor_critic
@@ -50,21 +52,56 @@ class PPOTrainerWork3:
         self.vf_coef = float(vf_coef)
         self.ent_coef = float(ent_coef)
         self.max_grad_norm = float(max_grad_norm)
+        self.time_head = time_head
+        self.time_loss_coef = float(time_loss_coef)
         self.device = torch.device(device)
 
         self.actor_critic.to(self.device)
+        if self.time_head is not None:
+            self.time_head.to(self.device)
+        self.optimized_parameters: list[nn.Parameter] = list(self.actor_critic.parameters())
+        if self.time_head is not None:
+            actor_parameter_ids = {id(parameter) for parameter in self.optimized_parameters}
+            self.optimized_parameters.extend(
+                parameter
+                for parameter in self.time_head.parameters()
+                if id(parameter) not in actor_parameter_ids
+            )
         self.optimizer = torch.optim.AdamW(
-            self.actor_critic.parameters(),
+            self.optimized_parameters,
             lr=lr,
             eps=1e-5,
             weight_decay=1e-4,
         )
+
+    def compute_time_auxiliary_loss(self, batch: dict[str, Any]) -> torch.Tensor:
+        """在采样快照上计算共享图表征的有符号时间监督损失。"""
+        if self.time_head is None:
+            raise RuntimeError("未配置时间残差头，不能计算时间辅助损失")
+        state_feats = batch["state_feats"].to(self.device)
+        graph_snapshots = batch["graph_snapshots"]
+        targets = batch["target_residuals"].to(self.device)
+        assert state_feats.ndim == 2
+        assert len(graph_snapshots) == state_feats.size(0)
+        assert targets.shape == (state_feats.size(0),)
+
+        shared_features = torch.stack([
+            self.actor_critic.encode_shared_representation(
+                state_feats[index],
+                graph_snapshots[index],
+            )
+            for index in range(state_feats.size(0))
+        ])
+        predictions = self.time_head(shared_features)
+        assert predictions.shape == targets.shape
+        return F.smooth_l1_loss(predictions, targets, beta=0.01)
 
     def train_step(
         self,
         buffer: RolloutBufferWork3,
         ppo_epochs: int = 4,
         batch_size: int = 64,
+        time_auxiliary_batch: dict[str, Any] | None = None,
     ) -> dict[str, float]:
         """使用缓冲区的 Rollout 经验执行一轮多 Epoch PPO 更新。
 
@@ -77,6 +114,8 @@ class PPOTrainerWork3:
             训练过程诊断统计指标字典
         """
         self.actor_critic.train()
+        if self.time_head is not None:
+            self.time_head.train()
 
         total_policy_loss = 0.0
         total_value_loss = 0.0
@@ -85,6 +124,7 @@ class PPOTrainerWork3:
         total_kl = 0.0
         total_clip_frac = 0.0
         total_grad_norm = 0.0
+        total_time_loss = 0.0
         num_updates = 0
 
         for epoch in range(ppo_epochs):
@@ -119,8 +159,18 @@ class PPOTrainerWork3:
                 entropy = entropies.mean()
                 entropy_loss = -entropy
 
+                if time_auxiliary_batch is not None:
+                    time_loss = self.compute_time_auxiliary_loss(time_auxiliary_batch)
+                else:
+                    time_loss = policy_loss.new_zeros(())
+
                 # 6. 综合损失
-                loss = policy_loss + (self.vf_coef * value_loss) + (self.ent_coef * entropy_loss)
+                loss = (
+                    policy_loss
+                    + (self.vf_coef * value_loss)
+                    + (self.ent_coef * entropy_loss)
+                    + (self.time_loss_coef * time_loss)
+                )
 
                 # 7. 反向传播与梯度裁剪
                 self.optimizer.zero_grad()
@@ -128,7 +178,7 @@ class PPOTrainerWork3:
 
                 # 梯度断言检查
                 grad_norm = nn.utils.clip_grad_norm_(
-                    self.actor_critic.parameters(),
+                    self.optimized_parameters,
                     self.max_grad_norm,
                 )
 
@@ -150,6 +200,7 @@ class PPOTrainerWork3:
                 total_kl += approx_kl
                 total_clip_frac += clip_frac
                 total_grad_norm += float(grad_norm.item() if isinstance(grad_norm, torch.Tensor) else grad_norm)
+                total_time_loss += float(time_loss.item())
                 num_updates += 1
 
         k = max(1, num_updates)
@@ -161,6 +212,7 @@ class PPOTrainerWork3:
             "approx_kl": total_kl / k,
             "clip_fraction": total_clip_frac / k,
             "grad_norm": total_grad_norm / k,
+            "time_loss": total_time_loss / k,
             "num_updates": num_updates,
         }
 

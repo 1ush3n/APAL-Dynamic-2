@@ -131,6 +131,8 @@ def test_milestone_m4_checkpoint_acceptance() -> None:
         pytest.skip("检查点或轨迹数据集尚未就绪，跳过 M4 验收测试")
 
     ckpt = torch.load(ckpt_path, weights_only=False)
+    if ckpt.get("model_version") != "signed_residual_v1":
+        pytest.skip("现有检查点属于旧门控非负残差版本")
     metrics = ckpt.get("metrics", {})
     impr = metrics.get("mae_improvement_pct", 0.0)
 
@@ -149,4 +151,3 @@ def test_milestone_m4_checkpoint_acceptance() -> None:
         f"修正 MAE={eval_metrics['mae_corrected_hours']:.3f}h, "
         f"改善幅度={eval_metrics['mae_improvement_pct']:.2f}% < 15.0%"
     )
-

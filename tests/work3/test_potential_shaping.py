@@ -19,8 +19,11 @@ from models.work3.time_head import TimeResidualHead
 def test_potential_monotonicity() -> None:
     """测试预计节拍耗时与超期严重度对势能的负向单调影响。"""
     head = TimeResidualHead(in_dim=32, hidden_dim=64)
-    # 将门控置为极小值，使修正时间严格退化为启发式基准值
-    head.gate_fc[-1].bias.data.fill_(-100.0)
+    # 将回归头置零，使修正时间严格退化为启发式基准值
+    for module in head.reg_fc:
+        if isinstance(module, torch.nn.Linear):
+            module.weight.data.zero_()
+            module.bias.data.zero_()
 
     shaper = PotentialRewardShaper(time_head=head, a=0.5, b=1.0, beta=1.0)
     feat = torch.randn(32)
@@ -124,7 +127,10 @@ def test_telescoping_sum_policy_invariance() -> None:
 def test_frozen_head_isolation() -> None:
     """测试轨迹内预测器版本冻结：外部网络权重修改不影响当前塑形器副本。"""
     head = TimeResidualHead(in_dim=32, hidden_dim=64)
-    head.gate_fc[-1].bias.data.fill_(10.0)
+    for module in head.reg_fc:
+        if isinstance(module, torch.nn.Linear):
+            module.weight.data.zero_()
+            module.bias.data.zero_()
     head.reg_fc[-1].bias.data.fill_(1.0)
 
     shaper = PotentialRewardShaper(time_head=head)

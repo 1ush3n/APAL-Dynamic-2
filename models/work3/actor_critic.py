@@ -327,6 +327,19 @@ class ActorCriticWork3(nn.Module):
         e_fused = self.time_fusion(context, time_urgency)
         return v, e_fused, task_nodes, worker_nodes
 
+    def encode_shared_representation(
+        self,
+        state_feat: torch.Tensor,
+        graph_data: HeteroData | None = None,
+    ) -> torch.Tensor:
+        """返回供时间辅助头共享的图增强状态表征。"""
+        assert state_feat.ndim == 1 and state_feat.size(0) == self.state_dim
+        legacy_context = self.encoder(state_feat)
+        if graph_data is None or not self.graph_policy_enabled:
+            return legacy_context
+        graph_context, _, _ = self.graph_encoder(graph_data)
+        return legacy_context + graph_context
+
     def encode_state(
         self,
         state_feat: torch.Tensor,

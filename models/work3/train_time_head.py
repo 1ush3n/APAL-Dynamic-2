@@ -201,21 +201,10 @@ def train_time_head(
         for batch in train_loader:
             x = batch["state_feat"].to(torch_device)
             y = batch["label_y"].to(torch_device)
-            is_del = (y > 1e-4).float()
-
             optimizer.zero_grad()
-            if hasattr(model, "forward_with_logits"):
-                gate_logits, mag, delta = model.forward_with_logits(x)
-                pos_weight = torch.tensor(8.0, device=torch_device)
-                loss_gate = F.binary_cross_entropy_with_logits(gate_logits, is_del, pos_weight=pos_weight)
-                if (is_del > 0).any():
-                    loss_reg = F.smooth_l1_loss(mag[is_del > 0], y[is_del > 0], beta=0.01)
-                else:
-                    loss_reg = torch.tensor(0.0, device=torch_device)
-                loss = loss_gate + 2.0 * loss_reg
-            else:
-                delta = model(x)
-                loss = F.smooth_l1_loss(delta, y, beta=0.01)
+            delta = model(x)
+            # 正负残差都参加同一个有符号回归损失。
+            loss = F.smooth_l1_loss(delta, y, beta=0.01)
 
             loss.backward()
             optimizer.step()
@@ -248,6 +237,7 @@ def train_time_head(
                     "model_state_dict": model.state_dict(),
                     "in_dim": in_dim,
                     "hidden_dim": hidden_dim,
+                    "model_version": "signed_residual_v1",
                     "metrics": best_eval_metrics,
                 }, ckpt_p)
 
