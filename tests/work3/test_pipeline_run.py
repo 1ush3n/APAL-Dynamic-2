@@ -34,7 +34,11 @@ def test_single_cycle_transfer_progression() -> None:
     while env.state.current_cycle == 1 and steps < max_steps:
         ready = env.get_ready_tasks()
         if not ready:
-            break
+            if env._check_terminated() or env.event_queue.is_empty():
+                break
+            env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+            steps += 1
+            continue
         task = ready[0]
         team = env.state.station_worker_bindings[task.current_station][: task.demand]
         env.step({
@@ -81,13 +85,13 @@ def test_full_14_cycles_pipeline_run() -> None:
             # 无可用动作，检查是否已经终止
             if env._check_terminated():
                 break
-            # 否则主动推进一步
-            env._advance_events_until_next_decision()
-            if not env.get_ready_tasks() and env._check_terminated():
-                break
-            if not env.get_ready_tasks() and env.event_queue.is_empty():
+            if env.event_queue.is_empty():
                 # 异常死锁检测
                 pytest.fail("环境在未终止前陷入死锁！无可用动作且无未来事件！")
+            # 显式结束当前预约修订轮并推进一个事件。
+            env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+            total_decisions += 1
+            continue
 
         # 选取当前就绪工序中最早的一道
         ready_tasks = env.get_ready_tasks()

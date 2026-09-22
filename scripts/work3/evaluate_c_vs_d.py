@@ -115,6 +115,7 @@ def evaluate_single_trajectory(
         "d_time": env.cost_time,
         "d_team": env.cost_team,
         "j_postpone": env.cost_postpone,
+        "j_revision": env.cost_revision,
         "j_total": total_cost,
         "makespan": float(env.state.current_time),
         "completed_tasks": completed,

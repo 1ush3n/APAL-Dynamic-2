@@ -225,6 +225,11 @@ class ActorCriticWork3(nn.Module):
         e_fused = self.time_fusion(z, time_urgency)
         return v, e_fused
 
+    def _advance_logits(self, context: torch.Tensor) -> torch.Tensor:
+        """复用既有分支头产生推进门控，保持旧Actor检查点可加载。"""
+        zero_task = torch.zeros(self.hidden_dim, dtype=context.dtype, device=context.device)
+        return self.branch_head(torch.cat([context, zero_task], dim=-1))
+
     @torch.no_grad()
     def select_action(
         self,
@@ -249,6 +254,37 @@ class ActorCriticWork3(nn.Module):
         # 1. 状态编码
         v, e_fused = self.encode_state(state_feat, time_urgency)
         state_value = float(v.item())
+
+        revision_available = any(
+            task.status == TaskStatus.RESERVED
+            and any(env.get_action_branch_mask(task))
+            for task in candidate_tasks
+        )
+        advance_log_prob = torch.zeros((), device=device)
+        advance_choice = 0
+        if revision_available:
+            advance_logits = self._advance_logits(e_fused)
+            dist_advance = Categorical(logits=advance_logits)
+            advance_choice = (
+                int(torch.argmax(advance_logits).item())
+                if deterministic
+                else int(dist_advance.sample().item())
+            )
+            advance_log_prob = dist_advance.log_prob(
+                torch.tensor(advance_choice, device=device)
+            )
+            if advance_choice == 1:
+                return (
+                    {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT},
+                    float(advance_log_prob.item()),
+                    state_value,
+                    {
+                        "action_type": "advance_to_next_event",
+                        "advance_available": True,
+                        "advance_choice": 1,
+                        "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
+                    },
+                )
 
         # 2. Head 1: 工序选择
         cand_feats = extract_candidate_task_features(env.state, candidate_tasks).to(device)
@@ -292,6 +328,9 @@ class ActorCriticWork3(nn.Module):
         # 4. 条件分支判定与动作截断 (Conditional Branch Truncation)
         # -------------------------------------------------------------
         sample_record = {
+            "action_type": "schedule",
+            "advance_available": revision_available,
+            "advance_choice": advance_choice,
             "task_idx": task_idx,
             "task_key": chosen_task.task_key,
             "branch": branch_act,
@@ -305,7 +344,7 @@ class ActorCriticWork3(nn.Module):
 
         if branch_act == 1:
             # 分支 B: POSTPONE 后移 —— 动作严格截断！
-            total_log_prob = log_prob_task + log_prob_branch
+            total_log_prob = advance_log_prob + log_prob_task + log_prob_branch
             action_dict = {
                 "task_key": chosen_task.task_key,
                 "branch": ActionBranch.POSTPONE,
@@ -368,7 +407,9 @@ class ActorCriticWork3(nn.Module):
         log_prob_align = dist_align.log_prob(torch.tensor(align_act, device=device))
 
         # 7. 全量对数概率求和
-        total_log_prob = log_prob_task + log_prob_branch + log_prob_workers + log_prob_align
+        total_log_prob = (
+            advance_log_prob + log_prob_task + log_prob_branch + log_prob_workers + log_prob_align
+        )
 
         sample_record["chosen_team"] = chosen_team
         sample_record["chosen_worker_indices"] = tuple(chosen_worker_indices)
@@ -407,6 +448,20 @@ class ActorCriticWork3(nn.Module):
             rec = sample_records[i]
             e_ctx = e_fused[i]
 
+            if rec.get("action_type") == "advance_to_next_event":
+                dist_advance = Categorical(logits=self._advance_logits(e_ctx))
+                lp_advance = dist_advance.log_prob(torch.as_tensor(1, device=device))
+                log_probs.append(lp_advance)
+                entropies.append(dist_advance.entropy())
+                continue
+
+            lp_advance = torch.zeros((), device=device)
+            ent_advance = torch.zeros((), device=device)
+            if rec.get("advance_available", False):
+                dist_advance = Categorical(logits=self._advance_logits(e_ctx))
+                lp_advance = dist_advance.log_prob(torch.as_tensor(0, device=device))
+                ent_advance = dist_advance.entropy()
+
             # 1. 重放 Head 1: 工序对数概率
             cand_feats = rec["cand_feats"].to(device)
             task_idx = rec["task_idx"]
@@ -436,8 +491,8 @@ class ActorCriticWork3(nn.Module):
             # 3. 条件分支截断判定
             if branch_act == 1:
                 # POSTPONE 分支：仅累加工序与站位
-                log_probs.append(lp_task + lp_branch)
-                entropies.append(ent_task + ent_branch)
+                log_probs.append(lp_advance + lp_task + lp_branch)
+                entropies.append(ent_advance + ent_task + ent_branch)
                 continue
 
             # 4. STAY 分支：重放选人与对齐
@@ -468,8 +523,8 @@ class ActorCriticWork3(nn.Module):
             lp_align = dist_align.log_prob(torch.as_tensor(align_act, device=device))
             ent_align = dist_align.entropy()
 
-            total_lp = lp_task + lp_branch + lp_workers + lp_align
-            total_ent = ent_task + ent_branch + ent_workers + ent_align
+            total_lp = lp_advance + lp_task + lp_branch + lp_workers + lp_align
+            total_ent = ent_advance + ent_task + ent_branch + ent_workers + ent_align
 
             log_probs.append(total_lp)
             entropies.append(total_ent)

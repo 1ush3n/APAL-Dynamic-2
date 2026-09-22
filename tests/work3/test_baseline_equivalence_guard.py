@@ -108,11 +108,15 @@ def test_baseline_c_completion_and_ledger_consistency(sc_id: str, baseline_eval_
 
     # 2. F01修复允许合法回填改变局部开工时刻，因此不再锁死旧产物的逐位时间成本。
     assert math.isfinite(res["makespan"]) and res["makespan"] >= 0.0
-    for metric in ("j_takt", "d_time", "d_team", "j_postpone", "j_total"):
+    for metric in ("j_takt", "d_time", "d_team", "j_postpone", "j_revision", "j_total"):
         assert math.isfinite(res[metric]) and res[metric] >= 0.0
     assert math.isclose(
         res["j_total"],
-        res["j_takt"] + res["d_time"] + res["d_team"] + res["j_postpone"],
+        res["j_takt"]
+        + res["d_time"]
+        + res["d_team"]
+        + res["j_postpone"]
+        + res["j_revision"],
         rel_tol=1e-12,
         abs_tol=1e-12,
     )
@@ -132,11 +136,15 @@ def test_method_d_completion_and_ledger_consistency(sc_id: str, baseline_eval_ma
     assert res["completed_tasks"] == 2830
     assert res["transfers"] == 14
     assert math.isfinite(res["makespan"]) and res["makespan"] >= 0.0
-    for metric in ("j_takt", "d_time", "d_team", "j_postpone", "j_total"):
+    for metric in ("j_takt", "d_time", "d_team", "j_postpone", "j_revision", "j_total"):
         assert math.isfinite(res[metric]) and res[metric] >= 0.0
     assert math.isclose(
         res["j_total"],
-        res["j_takt"] + res["d_time"] + res["d_team"] + res["j_postpone"],
+        res["j_takt"]
+        + res["d_time"]
+        + res["d_team"]
+        + res["j_postpone"]
+        + res["j_revision"],
         rel_tol=1e-12,
         abs_tol=1e-12,
     )

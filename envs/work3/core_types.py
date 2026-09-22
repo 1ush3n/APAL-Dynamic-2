@@ -42,6 +42,7 @@ class ActionBranch(IntEnum):
 
     STATION_EXECUTE = 0  # 留在当前站位执行（后续选队并对齐）
     POSTPONE = 1        # 合法后移至紧邻下一站位（动作当场截断）
+    ADVANCE_TO_NEXT_EVENT = 2  # 结束当前修订轮次并推进到下一个离散事件
 
 
 class TimeInterval(NamedTuple):
@@ -145,7 +146,21 @@ class TaskRuntimeState:
     execution_duration: float | None = None  # 本次团队对应的实际工时
     cycle_start_time: float | None = None  # 实际开工所在周期的转站时刻 P_{q-1}
     start_cost_confirmed: bool = False     # 是否已确认并结算开工偏差与团队替换费用
+    baseline_assignment: dict[str, Any] = field(default_factory=dict)
+    current_assignment: dict[str, Any] = field(default_factory=dict)
+    revision_history: list[dict[str, Any]] = field(default_factory=list)
     _state_ref: Any = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        """初始化基准安排与当前正式安排快照。"""
+        if not self.baseline_assignment:
+            self.baseline_assignment = {
+                "station": int(self.base_station),
+                "team": list(self.base_team),
+                "position": float(self.in_station_offset),
+            }
+        if not self.current_assignment:
+            self.current_assignment = copy.deepcopy(self.baseline_assignment)
 
     def can_physically_start(self, current_time: float, tolerance: float = 1e-5) -> bool:
         """检查任务是否满足物理开工硬条件（到料到达且时刻到达）。"""
@@ -237,6 +252,9 @@ class TaskRuntimeState:
             execution_duration=self.execution_duration,
             cycle_start_time=self.cycle_start_time,
             start_cost_confirmed=self.start_cost_confirmed,
+            baseline_assignment=copy.deepcopy(self.baseline_assignment),
+            current_assignment=copy.deepcopy(self.current_assignment),
+            revision_history=copy.deepcopy(self.revision_history),
         )
         copied._state_ref = getattr(self, "_state_ref", None)
         return copied

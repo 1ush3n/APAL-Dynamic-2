@@ -48,7 +48,11 @@ def test_sampling_truncation_interface_preserves_state(baseline_path: str) -> No
     while step_count < max_steps:
         ready = env.get_ready_tasks()
         if not ready:
-            break
+            if env._check_terminated() or env.event_queue.is_empty():
+                break
+            env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+            step_count += 1
+            continue
         task = ready[0]
         valid_workers = env.valid_team_completion_workers(task, [])
         assert len(valid_workers) >= task.demand
@@ -67,6 +71,9 @@ def test_sampling_truncation_interface_preserves_state(baseline_path: str) -> No
 
     # 核心断言 2: 截断后产线现场完好，不重置、不归零，继续 step 能无缝继续运行
     ready_after = env.get_ready_tasks()
+    while not ready_after and not env.event_queue.is_empty():
+        env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+        ready_after = env.get_ready_tasks()
     assert len(ready_after) > 0
     t_next = ready_after[0]
     valid_next_workers = env.valid_team_completion_workers(t_next, [])
@@ -78,7 +85,7 @@ def test_sampling_truncation_interface_preserves_state(baseline_path: str) -> No
         "team": team_next,
         "align": 1,
     })
-    assert env.step_count == max_steps + 1
+    assert env.step_count > max_steps
     assert term2 is False
 
 
@@ -112,12 +119,11 @@ def test_decoupled_scenario_pipeline_execution(
         if not ready:
             if env._check_terminated():
                 break
-            env._advance_events_until_next_decision()
-            ready = env.get_ready_tasks()
-            if not ready and env._check_terminated():
-                break
-            if not ready and env.event_queue.is_empty():
+            if env.event_queue.is_empty():
                 pytest.fail(f"[{scenario_id}] 环境异常死锁！既无就绪工序也无未来事件。")
+            env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+            total_decisions += 1
+            continue
 
         task = ready[0]
         # 默认优先使用基准指派团队，若工人被占用则选派空闲团队

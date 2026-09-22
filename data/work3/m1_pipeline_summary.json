@@ -4,7 +4,7 @@
   "total_tasks": 2830,
   "total_transfers": 14,
   "total_makespan": 3103.6603779493453,
-  "total_decisions": 2830,
+  "total_decisions": 6172,
   "h0": 292.5726004548256,
   "transfers": [
     14.072224743031757,

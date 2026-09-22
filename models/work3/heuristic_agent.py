@@ -31,6 +31,13 @@ class HeuristicAgentWork3:
         if not candidate_tasks:
             return None
 
+        non_reserved_tasks = [
+            task for task in candidate_tasks if task.status != TaskStatus.RESERVED
+        ]
+        if not non_reserved_tasks:
+            return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+        candidate_tasks = non_reserved_tasks
+
         state = env.state
         h0 = float(state.h0)
         p_last = float(state.last_transfer_time)
@@ -59,12 +66,9 @@ class HeuristicAgentWork3:
         # 2. 留在当前站排产 (Branch A: STATION_EXECUTE)
         # ------------------
         if not env.can_reserve(task):
-            if can_postpone:
-                return {
-                    "task_key": task.task_key,
-                    "branch": ActionBranch.POSTPONE,
-                }
-            return None
+            # 前驱尚未完成或已知物料尚未到达时，先推进到下一个事件；
+            # 只有上面的超期规则才主动后移，避免无扰动轨迹凭空增加改站。
+            return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
         st_workers = state.station_worker_bindings.get(task.current_station, [])
         demand = task.demand
         valid_workers = env.valid_team_completion_workers(task, [])
@@ -179,6 +183,7 @@ class HeuristicAgentWork3:
             "cost_time": float(env.cost_time),
             "cost_team": float(env.cost_team),
             "cost_postpone": float(env.cost_postpone),
+            "cost_revision": float(env.cost_revision),
             "cumulative_cost": float(env.cumulative_cost),
             "step_records": step_records,
         }

@@ -39,6 +39,9 @@ class ObjectiveWeights:
     lambda_1: float = 0.10
     lambda_2: float = 0.20
     normalize_by_n: bool = True
+    # 未锁定时沿用已有时间/团队目标权重；正式实验可显式覆盖。
+    w_revision_time: float | None = None
+    w_revision_team: float | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +61,10 @@ class ObjectiveBreakdown:
     num_postponed_tasks: int     # 发生过至少一次后移的独立工序数
     num_started_tasks: int       # 实际已确认开工工序数
     total_tasks: int             # 总工序基准规模 N (默认 2830)
+    revision_time: float         # 相邻正式安排时间位置变化（已归一化）
+    revision_team: float         # 相邻正式安排团队变化（已归一化）
+    j_revision: float            # 时间/团队相邻修订加权费用
+    num_revisions: int           # 正式修订次数
 
     def to_dict(self) -> dict[str, float | int]:
         return asdict(self)
@@ -157,12 +164,34 @@ def evaluate_trajectory_objective(
                 n, lambda_1=weights.lambda_1, lambda_2=weights.lambda_2
             )
 
-    # 4. 加权综合总成本 J_total
+    # 4. 相邻正式安排修订费用。站位变更的累计次数费用已由 j_postpone 计入，
+    # 这里仅统计相邻安排的时间位置与团队变化，避免重复收取同一份改站代价。
+    revision_time_sum = 0.0
+    revision_team_sum = 0.0
+    num_revisions = 0
+    for task in state.tasks.values():
+        for revision in task.revision_history:
+            revision_time_sum += float(revision.get("time_change", 0.0))
+            revision_team_sum += float(revision.get("team_change", 0.0))
+            num_revisions += 1
+
+    revision_time = revision_time_sum * scale
+    revision_team = revision_team_sum * scale
+    revision_time_weight = (
+        weights.w_t if weights.w_revision_time is None else weights.w_revision_time
+    )
+    revision_team_weight = (
+        weights.w_w if weights.w_revision_team is None else weights.w_revision_team
+    )
+    j_revision = revision_time_weight * revision_time + revision_team_weight * revision_team
+
+    # 5. 加权综合总成本 J_total
     j_total = (
         weights.w_h * j_takt
         + weights.w_t * d_time
         + weights.w_w * d_team
         + weights.w_p * j_postpone
+        + j_revision
     )
 
     return ObjectiveBreakdown(
@@ -177,4 +206,8 @@ def evaluate_trajectory_objective(
         num_postponed_tasks=num_postponed_tasks,
         num_started_tasks=num_started,
         total_tasks=total_tasks,
+        revision_time=revision_time,
+        revision_team=revision_team,
+        j_revision=j_revision,
+        num_revisions=num_revisions,
     )

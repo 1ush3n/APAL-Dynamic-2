@@ -85,7 +85,11 @@ def test_postponed_task_retains_material_constraint_across_transfer(baseline_pat
     while env.state.current_cycle == 1 and steps < max_steps:
         cur_ready = env.get_ready_tasks()
         if not cur_ready:
-            break
+            if env._check_terminated() or env.event_queue.is_empty():
+                break
+            env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+            steps += 1
+            continue
         t = cur_ready[0]
         team = tuple(env.state.station_worker_bindings[t.current_station][: t.demand])
         env.step({

@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import csv
+import copy
 import logging
 import math
 import re
@@ -78,6 +79,7 @@ class AirLineEnvWork3:
         self.cost_time: float = 0.0
         self.cost_team: float = 0.0
         self.cost_postpone: float = 0.0
+        self.cost_revision: float = 0.0
         self.step_rewards: list[float] = []
 
         # 构建工序直接后继索引：aircraft_id -> task_id -> list of successor task_ids
@@ -104,6 +106,7 @@ class AirLineEnvWork3:
         self.cost_time = 0.0
         self.cost_team = 0.0
         self.cost_postpone = 0.0
+        self.cost_revision = 0.0
         self.step_rewards.clear()
         self.step_count = 0
 
@@ -338,7 +341,9 @@ class AirLineEnvWork3:
 
     def can_reserve(self, task: TaskRuntimeState) -> bool:
         """判断任务是否可以登记留站预约，不代表当前时刻可以实际开工。"""
-        if task.status in (TaskStatus.RESERVED, TaskStatus.RUNNING, TaskStatus.COMPLETED):
+        if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
+            return False
+        if task.status == TaskStatus.RESERVED and task.actual_start is not None:
             return False
         aircraft = self.state.aircraft[task.aircraft_id]
         if aircraft.current_station != task.current_station:
@@ -349,7 +354,9 @@ class AirLineEnvWork3:
 
     def can_postpone(self, task: TaskRuntimeState) -> bool:
         """判断任务是否可以独立后移，不要求物料已在当前时刻恢复。"""
-        if task.status in (TaskStatus.RESERVED, TaskStatus.RUNNING, TaskStatus.COMPLETED):
+        if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
+            return False
+        if task.status == TaskStatus.RESERVED and task.actual_start is not None:
             return False
         return self.validate_postpone(task) is None
 
@@ -383,6 +390,130 @@ class AirLineEnvWork3:
         if effective_capacity <= self.tolerance:
             raise ValueError(f"团队 {team_tuple} 的有效工时能力不足")
         return float(task.duration * task.demand / effective_capacity)
+
+    def _assignment_snapshot(
+        self,
+        task: TaskRuntimeState,
+        *,
+        station: int,
+        team: Sequence[int] | None,
+        scheduled_start: float | None,
+    ) -> dict[str, Any]:
+        """生成可写入正式安排账本的不可变值快照。"""
+        position = None
+        if scheduled_start is not None:
+            position = float(scheduled_start - self.state.last_transfer_time)
+        return {
+            "station": int(station),
+            "team": None if team is None else [int(worker_id) for worker_id in team],
+            "scheduled_start": None if scheduled_start is None else float(scheduled_start),
+            "position": position,
+        }
+
+    def _revision_cost_components(
+        self,
+        before: dict[str, Any],
+        after: dict[str, Any],
+        task: TaskRuntimeState,
+    ) -> tuple[float, float, bool]:
+        """计算相邻正式安排的时间位置、团队与站位变化。"""
+        before_position = before.get("position")
+        after_position = after.get("position")
+        time_change = 0.0
+        if before_position is not None and after_position is not None:
+            time_change = abs(float(after_position) - float(before_position)) / self.state.h0
+
+        before_team = before.get("team")
+        after_team = after.get("team")
+        team_change = 0.0
+        if before_team is not None and after_team is not None and task.demand > 0:
+            overlap = len(set(before_team) & set(after_team))
+            team_change = 1.0 - overlap / task.demand
+
+        station_changed = int(before.get("station")) != int(after.get("station"))
+        return time_change, team_change, station_changed
+
+    def _record_formal_revision(
+        self,
+        task: TaskRuntimeState,
+        after: dict[str, Any],
+        *,
+        reason: str,
+        additional_cost: float = 0.0,
+    ) -> float:
+        """提交一次正式修订并计入相邻安排的增量账本。"""
+        before = dict(task.current_assignment or task.baseline_assignment)
+        time_change, team_change, station_changed = self._revision_cost_components(
+            before, after, task
+        )
+        changed = (
+            station_changed
+            or time_change > self.tolerance
+            or team_change > self.tolerance
+            or before.get("team") != after.get("team")
+            or before.get("scheduled_start") != after.get("scheduled_start")
+        )
+        task.current_assignment = dict(after)
+        if not changed:
+            return 0.0
+
+        scale = (1.0 / self.total_tasks) if (self.weights.normalize_by_n and self.total_tasks > 0) else 1.0
+        revision_time_weight = (
+            self.weights.w_t
+            if self.weights.w_revision_time is None
+            else self.weights.w_revision_time
+        )
+        revision_team_weight = (
+            self.weights.w_w
+            if self.weights.w_revision_team is None
+            else self.weights.w_revision_team
+        )
+        revision_cost = scale * (
+            revision_time_weight * time_change + revision_team_weight * team_change
+        )
+        total_increment = revision_cost + float(additional_cost)
+        task.revision_history.append(
+            {
+                "reason": reason,
+                "before": before,
+                "after": dict(after),
+                "time_change": time_change,
+                "team_change": team_change,
+                "station_changed": station_changed,
+                "revision_cost": total_increment,
+            }
+        )
+        self.cost_revision += revision_cost
+        self.cumulative_cost += revision_cost
+        return total_increment
+
+    def _release_reserved_resources(self, task: TaskRuntimeState) -> None:
+        """临时释放未开工预约，供事务式改派使用。"""
+        for worker_id in task.assigned_team:
+            self.state.workers[worker_id].remove_interval(task.task_key)
+        self._station_occupied_tasks[task.current_station].discard(task.task_key)
+
+    def _restore_reserved_resources(self, task: TaskRuntimeState) -> None:
+        """恢复事务失败前的未开工预约资源。"""
+        if task.scheduled_start is None or task.execution_duration is None:
+            return
+        for worker_id in task.assigned_team:
+            self.state.workers[worker_id].add_interval(
+                start=task.scheduled_start,
+                end=task.scheduled_start + task.execution_duration,
+                task_key=task.task_key,
+            )
+        self._station_occupied_tasks[task.current_station].add(task.task_key)
+
+    def _advance_to_next_event(self) -> bool:
+        """推进到单个下一个离散事件，不允许指定任意等待时长。"""
+        self.process_due_events()
+        next_event = self.event_queue.peek()
+        if next_event is None:
+            return False
+        self.state.current_time = max(self.state.current_time, float(next_event.timestamp))
+        self.process_due_events()
+        return True
 
     def validate_postpone(self, task: TaskRuntimeState) -> str | None:
         """统一检查当前任务后移到紧邻下一站的工艺合法性。"""
@@ -453,23 +584,28 @@ class AirLineEnvWork3:
     def step(self, action: dict[str, Any]) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         """执行单步调度动作。"""
         cost_before = self.cumulative_cost
-        task_key = str(action["task_key"])
+        task_key_value = action.get("task_key")
+        task_key = None if task_key_value is None else str(task_key_value)
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
 
-        if task_key not in self.state.tasks:
-            raise KeyError(f"未找到工序: {task_key}")
-
         self.process_due_events()
-        task = self.state.tasks[task_key]
-
-        ac = self.state.aircraft[task.aircraft_id]
-        if ac.current_station != task.current_station:
-            raise ValueError(
-                f"工序 {task_key} 归属站位 {task.current_station}，但飞机 {task.aircraft_id} "
-                f"当前物理停靠在站位 {ac.current_station}，不可作业！"
-            )
-
         info: dict[str, Any] = {"action_branch": branch.name, "task_key": task_key}
+
+        explicit_advance = branch == ActionBranch.ADVANCE_TO_NEXT_EVENT
+        no_change_revision = False
+        if explicit_advance:
+            info["advanced"] = self._advance_to_next_event()
+        else:
+            if task_key is None or task_key not in self.state.tasks:
+                raise KeyError(f"未找到工序: {task_key}")
+            task = self.state.tasks[task_key]
+
+            ac = self.state.aircraft[task.aircraft_id]
+            if ac.current_station != task.current_station:
+                raise ValueError(
+                    f"工序 {task_key} 归属站位 {task.current_station}，但飞机 {task.aircraft_id} "
+                    f"当前物理停靠在站位 {ac.current_station}，不可作业！"
+                )
 
         if branch == ActionBranch.STATION_EXECUTE:
             # 分支 A：留在当前站位执行
@@ -477,61 +613,108 @@ class AirLineEnvWork3:
                 raise ValueError(f"工序 {task_key} 当前不具备留站预约资格")
             team = tuple(int(w) for w in action.get("team", ()))
             align = int(action.get("align", 0))
+            was_reserved = task.status == TaskStatus.RESERVED
+            old_team = tuple(task.assigned_team)
+            old_start = task.scheduled_start
+            old_duration = task.execution_duration
 
-            self._validate_team_for_task(task, team)
+            if was_reserved:
+                self._release_reserved_resources(task)
 
-            predecessor_release = self._predecessor_release_time(task)
-            if predecessor_release is None:
-                raise ValueError(f"工序 {task_key} 的前驱尚未完成或没有有效预约")
-            search_start = max(self.state.current_time, task.material_ready_time, predecessor_release)
-            if align == 1:
-                align_target = self.state.last_transfer_time + task.in_station_offset
-                search_start = max(search_start, align_target)
+            try:
+                self._validate_team_for_task(task, team)
 
-            execution_duration = self.duration_for_team(
-                task,
-                team,
-                start_time=search_start,
-            )
+                predecessor_release = self._predecessor_release_time(task)
+                if predecessor_release is None:
+                    raise ValueError(f"工序 {task_key} 的前驱尚未完成或没有有效预约")
+                search_start = max(self.state.current_time, task.material_ready_time, predecessor_release)
+                if align == 1:
+                    align_target = self.state.last_transfer_time + task.in_station_offset
+                    search_start = max(search_start, align_target)
 
-            t_sched = self._find_team_earliest_slot(
-                station_id=task.current_station,
-                team=team,
-                search_start=search_start,
-                duration=execution_duration,
-            )
-
-            task.execution_duration = execution_duration
-            for w in team:
-                self.state.workers[w].add_interval(
-                    start=t_sched,
-                    end=t_sched + execution_duration,
-                    task_key=task.task_key,
+                execution_duration = self.duration_for_team(
+                    task,
+                    team,
+                    start_time=search_start,
                 )
 
-            if abs(t_sched - self.state.current_time) <= self.tolerance:
+                t_sched = self._find_team_earliest_slot(
+                    station_id=task.current_station,
+                    team=team,
+                    search_start=search_start,
+                    duration=execution_duration,
+                )
+            except Exception:
+                if was_reserved:
+                    self._restore_reserved_resources(task)
+                raise
+
+            unchanged = was_reserved and (
+                old_team == team
+                and old_start is not None
+                and abs(float(old_start) - t_sched) <= self.tolerance
+                and old_duration is not None
+                and abs(float(old_duration) - execution_duration) <= self.tolerance
+            )
+            if unchanged:
+                self._restore_reserved_resources(task)
+                no_change_revision = True
+                info["revision_changed"] = False
+                info["cost_revision_inc"] = 0.0
+                info["scheduled_status"] = "RESERVED"
+                info["scheduled_start"] = old_start
+            else:
+                if was_reserved:
+                    task.generation += 1
+                    self.event_queue.invalidate_task_events(task.task_key, task.generation)
+
+                task.execution_duration = execution_duration
                 task.assigned_team = list(team)
                 task.scheduled_start = t_sched
-                self._on_task_started(task, t_sched)
-                self.event_queue.push(
-                    event_type=EventType.TASK_FINISH,
-                    timestamp=t_sched + execution_duration,
-                    task_key=task.task_key,
-                    generation=task.generation,
+                after_assignment = self._assignment_snapshot(
+                    task,
+                    station=task.current_station,
+                    team=team,
+                    scheduled_start=t_sched,
                 )
+                revision_cost_inc = 0.0
+                if was_reserved:
+                    revision_cost_inc = self._record_formal_revision(
+                        task,
+                        after_assignment,
+                        reason="reservation_revision",
+                    )
+                else:
+                    task.current_assignment = after_assignment
+
+                for w in team:
+                    self.state.workers[w].add_interval(
+                        start=t_sched,
+                        end=t_sched + execution_duration,
+                        task_key=task.task_key,
+                    )
+
+                if abs(t_sched - self.state.current_time) <= self.tolerance:
+                    self._on_task_started(task, t_sched)
+                    self.event_queue.push(
+                        event_type=EventType.TASK_FINISH,
+                        timestamp=t_sched + execution_duration,
+                        task_key=task.task_key,
+                        generation=task.generation,
+                    )
+                    info["scheduled_status"] = "RUNNING"
+                else:
+                    task.status = TaskStatus.RESERVED
+                    self.event_queue.push(
+                        event_type=EventType.TASK_START,
+                        timestamp=t_sched,
+                        task_key=task.task_key,
+                        generation=task.generation,
+                    )
+                    info["scheduled_status"] = "RESERVED"
                 self._station_occupied_tasks[task.current_station].add(task.task_key)
-                info["scheduled_status"] = "RUNNING"
-                info["scheduled_start"] = t_sched
-            else:
-                task.reserve(team=team, scheduled_start=t_sched)
-                self.event_queue.push(
-                    event_type=EventType.TASK_START,
-                    timestamp=t_sched,
-                    task_key=task.task_key,
-                    generation=task.generation,
-                )
-                self._station_occupied_tasks[task.current_station].add(task.task_key)
-                info["scheduled_status"] = "RESERVED"
+                info["revision_changed"] = was_reserved
+                info["cost_revision_inc"] = revision_cost_inc
                 info["scheduled_start"] = t_sched
 
         elif branch == ActionBranch.POSTPONE:
@@ -542,8 +725,13 @@ class AirLineEnvWork3:
                     postpone_error = f"工序 {task_key} 当前状态不允许后移"
                 raise ValueError(postpone_error)
 
+            was_reserved = task.status == TaskStatus.RESERVED
+            if was_reserved:
+                self._release_reserved_resources(task)
             n_old = task.postpone_count
+            previous_assignment = copy.deepcopy(task.current_assignment)
             task.postpone_to_next_station()
+            self.event_queue.invalidate_task_events(task.task_key, task.generation)
             n_new = task.postpone_count
             penalty_delta = calculate_postpone_penalty(
                 n_new, self.weights.lambda_1, self.weights.lambda_2
@@ -554,15 +742,31 @@ class AirLineEnvWork3:
             self.cost_postpone += cost_postpone_inc
             self.cumulative_cost += cost_postpone_inc
 
+            after_assignment = self._assignment_snapshot(
+                task,
+                station=task.current_station,
+                team=previous_assignment.get("team"),
+                scheduled_start=None,
+            )
+            revision_total_inc = self._record_formal_revision(
+                task,
+                after_assignment,
+                reason="postpone_revision",
+                additional_cost=cost_postpone_inc,
+            )
+
             info["postponed_to_station"] = task.current_station
             info["postpone_count"] = task.postpone_count
             info["cost_postpone_inc"] = cost_postpone_inc
+            info["cost_revision_inc"] = revision_total_inc - cost_postpone_inc
 
             # 后移可能使得当前周期站位放行条件满足，检查是否可安排转站
             self._check_and_schedule_transfer()
 
-        # 若当前现场无可用调度动作，自动推进离散事件
-        if len(self.get_ready_tasks()) == 0:
+        # 没有任何合法调度动作时自动推进；存在 RESERVED 修订候选时交给显式推进动作决定。
+        if not explicit_advance and no_change_revision:
+            self._advance_to_next_event()
+        elif not explicit_advance and len(self.get_action_candidates()) == 0:
             self._advance_events_until_next_decision()
 
         self.step_count += 1
@@ -586,6 +790,7 @@ class AirLineEnvWork3:
             "cost_time": self.cost_time,
             "cost_team": self.cost_team,
             "cost_postpone": self.cost_postpone,
+            "cost_revision": self.cost_revision,
         }
 
         return obs, reward, terminated, truncated, info
@@ -779,7 +984,7 @@ class AirLineEnvWork3:
         )
 
     def _advance_events_until_next_decision(self) -> None:
-        """推进事件队列，直至产生新的就绪工序或全线完工退出。"""
+        """推进事件队列，直至产生新的实际开工决策或全线完工退出。"""
         while True:
             self.process_due_events()
             if self.get_ready_tasks():

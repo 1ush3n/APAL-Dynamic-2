@@ -141,7 +141,13 @@ def test_delayed_takt_violation_consistency(baseline_path: str) -> None:
     while env.state.current_cycle == 1:
         ready = env.get_ready_tasks()
         if not ready:
-            break
+                if env.get_action_candidates():
+                    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+                    continue
+                if env.event_queue.is_empty():
+                    break
+                env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+                continue
         t = ready[0]
         # 人为推迟物料到达时间
         t.material_ready_time = max(t.material_ready_time, h0 + delay_hours)
@@ -193,7 +199,9 @@ def test_randomized_trajectory_mathematical_equivalence(baseline_path: str, seed
         if not ready:
             if env._check_terminated():
                 break
-            env._advance_events_until_next_decision()
+            if env.event_queue.is_empty():
+                break
+            env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
             ready = env.get_ready_tasks()
             if not ready:
                 break
