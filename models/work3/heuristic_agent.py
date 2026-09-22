@@ -45,7 +45,7 @@ class HeuristicAgentWork3:
         # ------------------
         # 条件：物料延迟导致在当前名义节拍内无法就绪 (R > P_{q-1} + H_0)，且非末站工序 (站位 0~3)
         is_delayed_beyond_cycle = task.material_ready_time > nominal_cycle_end + 1e-4
-        can_postpone = task.current_station < state.num_stations - 1
+        can_postpone = env.validate_postpone(task) is None
 
         if is_delayed_beyond_cycle and can_postpone:
             return {
@@ -58,17 +58,19 @@ class HeuristicAgentWork3:
         # ------------------
         st_workers = state.station_worker_bindings.get(task.current_station, [])
         demand = task.demand
+        valid_workers = env.valid_team_completion_workers(task, [])
 
         # 优先使用基准固定指派团队
         chosen_team = list(task.base_team) if task.base_team else []
-        if len(chosen_team) != demand:
+        if len(chosen_team) != demand or any(worker_id not in valid_workers for worker_id in chosen_team):
             # 兜底：按站位绑定工人顺延指派
-            chosen_team = st_workers[:demand]
+            chosen_team = valid_workers[:demand]
 
         # 尝试检查是否有本站完全空闲的合格工人，若有则优先使用空闲工人
         free_workers = [
             w for w in st_workers
-            if state.workers[w].is_available(state.current_time, state.current_time + 1e-5)
+            if w in valid_workers
+            and state.workers[w].is_available(state.current_time, state.current_time + 1e-5)
         ]
         if len(free_workers) >= demand and any(
             not state.workers[w].is_available(state.current_time, state.current_time + 1e-5)

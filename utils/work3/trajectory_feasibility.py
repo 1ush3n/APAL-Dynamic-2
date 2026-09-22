@@ -1,0 +1,165 @@
+"""独立复核工作三执行日志，不调用环境的排程可行性判断。"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Iterable, Mapping, Sequence
+
+
+@dataclass(frozen=True)
+class TaskConstraintRecord:
+    """单架次工序的静态硬约束。"""
+
+    demand: int
+    required_skill: int
+    predecessors: tuple[int, ...] = ()
+    fixed_station: int | None = None
+    max_allowed_station: int | None = None
+
+
+@dataclass(frozen=True)
+class TrajectoryExecutionRecord:
+    """从最终执行日志提取的单次物理执行记录。"""
+
+    aircraft_id: int
+    task_id: int
+    station_id: int
+    team: tuple[int, ...]
+    start: float
+    end: float
+    material_ready_time: float = 0.0
+    station_entry_time: float | None = None
+    aircraft_station_at_start: int | None = None
+
+
+@dataclass(frozen=True)
+class TrajectoryFeasibilityReport:
+    """独立轨迹检查结果；仅记录实际发现的违规类型。"""
+
+    violations: dict[str, int]
+    examples: dict[str, list[dict[str, object]]] = field(default_factory=dict)
+
+    @property
+    def is_feasible(self) -> bool:
+        return not any(self.violations.values())
+
+
+def validate_trajectory(
+    records: Iterable[TrajectoryExecutionRecord],
+    *,
+    task_constraints: Mapping[int, TaskConstraintRecord],
+    worker_skills: Mapping[int, set[int] | frozenset[int] | Sequence[int]],
+    worker_station_bindings: Mapping[int, int],
+    station_capacities: Mapping[int, int],
+    tolerance: float = 1e-5,
+) -> TrajectoryFeasibilityReport:
+    """独立扫描执行记录中的资源、工艺、恢复、位置和转站约束。"""
+    rows = list(records)
+    counts: dict[str, int] = {}
+    examples: dict[str, list[dict[str, object]]] = {}
+
+    def add(kind: str, record: TrajectoryExecutionRecord, **details: object) -> None:
+        counts[kind] = counts.get(kind, 0) + 1
+        examples.setdefault(kind, [])
+        if len(examples[kind]) < 5:
+            examples[kind].append(
+                {
+                    "aircraft_id": record.aircraft_id,
+                    "task_id": record.task_id,
+                    **details,
+                }
+            )
+
+    keyed: dict[tuple[int, int], TrajectoryExecutionRecord] = {}
+    worker_intervals: dict[int, list[TrajectoryExecutionRecord]] = {}
+    station_intervals: dict[int, list[TrajectoryExecutionRecord]] = {}
+
+    for record in rows:
+        key = (int(record.aircraft_id), int(record.task_id))
+        if key in keyed:
+            add("duplicate_task", record)
+        keyed[key] = record
+        constraint = task_constraints.get(record.task_id)
+        if constraint is None:
+            add("unknown_task", record)
+            continue
+
+        if record.start < -tolerance or record.end <= record.start + tolerance:
+            add("invalid_time", record)
+        if record.start < record.material_ready_time - tolerance:
+            add("material_release", record, release_time=record.material_ready_time)
+        if (
+            record.station_entry_time is not None
+            and record.start < record.station_entry_time - tolerance
+        ):
+            add("station_entry", record, entry_time=record.station_entry_time)
+        if (
+            record.aircraft_station_at_start is not None
+            and int(record.aircraft_station_at_start) != int(record.station_id)
+        ):
+            add("aircraft_position", record)
+
+        if constraint.fixed_station is not None and record.station_id != constraint.fixed_station:
+            add("fixed_station", record, expected_station=constraint.fixed_station)
+        if (
+            constraint.max_allowed_station is not None
+            and record.station_id > constraint.max_allowed_station
+        ):
+            add("station_upper_bound", record, max_station=constraint.max_allowed_station)
+        if len(record.team) != int(constraint.demand) or len(set(record.team)) != len(record.team):
+            add("team_size", record, expected_demand=constraint.demand)
+
+        for worker_id in record.team:
+            if worker_id not in worker_skills:
+                add("unknown_worker", record, worker_id=worker_id)
+            elif int(constraint.required_skill) not in set(worker_skills[worker_id]):
+                add("skill", record, worker_id=worker_id)
+            if worker_station_bindings.get(worker_id) != record.station_id:
+                add("worker_station", record, worker_id=worker_id)
+            worker_intervals.setdefault(worker_id, []).append(record)
+        station_intervals.setdefault(record.station_id, []).append(record)
+
+    for (aircraft_id, task_id), record in keyed.items():
+        constraint = task_constraints.get(task_id)
+        if constraint is None:
+            continue
+        for predecessor_id in constraint.predecessors:
+            predecessor = keyed.get((aircraft_id, predecessor_id))
+            if predecessor is None:
+                add("missing_predecessor", record, predecessor_id=predecessor_id)
+            elif predecessor.end > record.start + tolerance:
+                add("precedence", record, predecessor_id=predecessor_id)
+            if predecessor is not None and predecessor.station_id > record.station_id:
+                add("station_precedence", record, predecessor_id=predecessor_id)
+
+    for worker_id, intervals in worker_intervals.items():
+        ordered = sorted(intervals, key=lambda item: (item.start, item.end))
+        for previous, current in zip(ordered, ordered[1:]):
+            if previous.end > current.start + tolerance:
+                add("worker_overlap", current, worker_id=worker_id)
+
+    for station_id, intervals in station_intervals.items():
+        capacity = station_capacities.get(station_id)
+        if capacity is None:
+            for record in intervals:
+                add("unknown_station_capacity", record)
+            continue
+        events: list[tuple[float, int, TrajectoryExecutionRecord]] = []
+        for record in intervals:
+            if record.end > record.start + tolerance:
+                events.extend(((record.start, 1, record), (record.end, -1, record)))
+        active = 0
+        events.sort(key=lambda item: (item[0], item[1]))
+        for event_time, delta, record in events:
+            active += delta
+            if active > int(capacity):
+                add(
+                    "station_capacity",
+                    record,
+                    station_id=station_id,
+                    time=event_time,
+                    capacity=capacity,
+                )
+                break
+
+    return TrajectoryFeasibilityReport(violations=counts, examples=examples)

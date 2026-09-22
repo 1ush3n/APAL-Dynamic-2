@@ -109,12 +109,14 @@ def test_conditional_branch_truncation(env: AirLineEnvWork3) -> None:
     ready_tasks = env.get_ready_tasks()
     chosen_task = ready_tasks[rec["task_idx"]]
 
-    if chosen_task.current_station < env.state.num_stations - 1:
-        # 非末站应顺利触发 POSTPONE
+    if env.validate_postpone(chosen_task) is None:
         assert act["branch"] == ActionBranch.POSTPONE
         assert rec["branch"] == 1
         assert "team" not in act or act.get("team") == ()
         assert "align" not in act or act.get("align") == 0
+    else:
+        assert act["branch"] == ActionBranch.STATION_EXECUTE
+        assert rec["branch"] == 0
 
 
 def test_last_station_cannot_postpone(env: AirLineEnvWork3) -> None:

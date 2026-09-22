@@ -10,10 +10,16 @@
 
 from __future__ import annotations
 
+import csv
 import logging
+import math
+import re
 from pathlib import Path
 from typing import Any, Sequence
 
+import numpy as np
+
+from core.constraints import ConstraintEngine, calculate_team_synergy_factor
 from envs.work3.core_types import (
     ActionBranch,
     AircraftRuntimeState,
@@ -37,13 +43,17 @@ class AirLineEnvWork3:
 
     def __init__(
         self,
-        baseline_json_path: str = "data/work3/real_283_k10_baseline.json",
+        baseline_json_path: str | Path = "data/work3/real_283_k10_baseline.json",
+        raw_data_path: str | Path = "data/283.csv",
+        worker_pool_path: str | Path = "data/worker_pool_fixed.csv",
         max_slots_per_station: int = 3,
         tolerance: float = 1e-5,
         weights: ObjectiveWeights | None = None,
         max_steps_per_rollout: int | None = None,
     ) -> None:
         self.baseline_json_path = baseline_json_path
+        self.raw_data_path = Path(raw_data_path)
+        self.worker_pool_path = Path(worker_pool_path)
         self.max_slots_per_station = int(max_slots_per_station)
         self.tolerance = float(tolerance)
         self.weights: ObjectiveWeights = weights if weights is not None else ObjectiveWeights()
@@ -51,6 +61,10 @@ class AirLineEnvWork3:
         self.step_count: int = 0
 
         self.state: MultiAircraftState = initialize_multi_aircraft_state(self.baseline_json_path)
+        self.worker_efficiencies: dict[int, float] = {}
+        self.worker_skills: dict[int, frozenset[int]] = {}
+        self.constraint_engine = self._load_domain_metadata()
+        self._attach_task_domain_metadata()
         self.event_queue: DiscreteEventQueue = DiscreteEventQueue()
         self._transfer_scheduled_for_cycle: int = 0
         self.total_tasks: int = len(self.state.tasks)
@@ -79,6 +93,7 @@ class AirLineEnvWork3:
     def reset(self) -> dict[str, Any]:
         """重置仿真环境到初始生产状态（0号飞机进驻0号站位）。"""
         self.state = initialize_multi_aircraft_state(self.baseline_json_path)
+        self._attach_task_domain_metadata()
         self.event_queue.reset(start_time=0.0)
         self._transfer_scheduled_for_cycle = 0
         self.total_tasks = len(self.state.tasks)
@@ -101,6 +116,257 @@ class AirLineEnvWork3:
         self._refresh_aircraft_station_readiness(aircraft_id=0, station_id=0)
 
         return self._get_observation()
+
+    @staticmethod
+    def _find_domain_column(
+        fieldnames: Sequence[str], aliases: Sequence[str], label: str
+    ) -> str:
+        for alias in aliases:
+            if alias in fieldnames:
+                return alias
+        raise ValueError(f"原始工艺数据缺少{label}字段，已检查: {tuple(aliases)}")
+
+    @staticmethod
+    def _parse_optional_station(value: str, *, task_id: int) -> int:
+        text = str(value).strip()
+        if not text:
+            return -1
+        try:
+            station_id = int(float(text)) - 1
+        except ValueError as exc:
+            raise ValueError(f"工序 {task_id} 的固定站位无法解析: {value!r}") from exc
+        if station_id < 0:
+            raise ValueError(f"工序 {task_id} 的固定站位必须为正数: {value!r}")
+        return station_id
+
+    def _load_domain_metadata(self) -> ConstraintEngine:
+        """加载工作一、二沿用的技能、效率和工艺站位约束。"""
+        if not self.raw_data_path.is_file():
+            raise FileNotFoundError(f"原始工艺数据不存在: {self.raw_data_path}")
+        if not self.worker_pool_path.is_file():
+            raise FileNotFoundError(f"工人池技能/效率数据不存在: {self.worker_pool_path}")
+
+        with self.worker_pool_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            worker_rows = list(csv.DictReader(handle))
+        if not worker_rows:
+            raise ValueError(f"工人池为空: {self.worker_pool_path}")
+
+        required_worker_columns = {"worker_id", "efficiency", *(f"skill_{i}" for i in range(5))}
+        missing_worker_columns = required_worker_columns - set(worker_rows[0])
+        if missing_worker_columns:
+            raise ValueError(f"工人池缺少字段: {sorted(missing_worker_columns)}")
+
+        for row in worker_rows:
+            worker_id = int(row["worker_id"])
+            if worker_id in self.worker_efficiencies:
+                raise ValueError(f"工人池存在重复工人ID: {worker_id}")
+            efficiency = float(row["efficiency"])
+            if not math.isfinite(efficiency) or efficiency <= 0.0:
+                raise ValueError(f"工人 {worker_id} 的效率必须为正有限数: {efficiency}")
+            self.worker_efficiencies[worker_id] = efficiency
+            self.worker_skills[worker_id] = frozenset(
+                skill_id
+                for skill_id in range(5)
+                if float(row[f"skill_{skill_id}"]) >= 0.5
+            )
+
+        bound_workers = {
+            worker_id
+            for worker_ids in self.state.station_worker_bindings.values()
+            for worker_id in worker_ids
+        }
+        missing_bound_workers = sorted(bound_workers - self.worker_efficiencies.keys())
+        if missing_bound_workers:
+            raise ValueError(f"基准站位绑定的工人未出现在工人池: {missing_bound_workers}")
+
+        with self.raw_data_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            raw_reader = csv.DictReader(handle)
+            raw_rows = list(raw_reader)
+            fieldnames = raw_reader.fieldnames or []
+        if not raw_rows:
+            raise ValueError(f"原始工艺数据为空: {self.raw_data_path}")
+
+        task_id_column = self._find_domain_column(
+            fieldnames, ("序号", "task_id", "TaskID"), "工序编号"
+        )
+        ao_column = self._find_domain_column(fieldnames, ("AO号", "ao_code", "AO"), "AO号")
+        predecessor_column = self._find_domain_column(
+            fieldnames, ("紧前工序AO号", "predecessors", "predecessor"), "紧前工序"
+        )
+        duration_column = self._find_domain_column(
+            fieldnames, ("加工时间/h", "duration", "Duration"), "加工时间"
+        )
+        skill_column = self._find_domain_column(fieldnames, ("工种", "skill", "skill_type"), "工种")
+        demand_column = self._find_domain_column(
+            fieldnames, ("需求人数", "demand", "demand_workers"), "需求人数"
+        )
+        fixed_station_column = self._find_domain_column(
+            fieldnames,
+            ("限定站位", "fixed_station", "Fixed_Station", "station_constraint"),
+            "固定站位",
+        )
+
+        rows_by_task_id: dict[int, dict[str, str]] = {}
+        ao_to_task_id: dict[str, int] = {}
+        for row in raw_rows:
+            task_id = int(float(row[task_id_column])) - 1
+            if task_id in rows_by_task_id:
+                raise ValueError(f"原始工艺数据存在重复工序编号: {task_id}")
+            rows_by_task_id[task_id] = row
+            ao_to_task_id[str(row[ao_column]).strip()] = task_id
+
+        num_raw_tasks = max(rows_by_task_id) + 1
+        if set(rows_by_task_id) != set(range(num_raw_tasks)):
+            raise ValueError("原始工艺工序编号不是连续的0-based集合")
+
+        durations = np.zeros(num_raw_tasks, dtype=float)
+        fixed_stations = np.full(num_raw_tasks, -1, dtype=np.int64)
+        required_skills: dict[int, int] = {}
+        demands: dict[int, int] = {}
+        edges: list[tuple[int, int]] = []
+        for task_id, row in rows_by_task_id.items():
+            durations[task_id] = float(row[duration_column] or 0.0)
+            fixed_stations[task_id] = self._parse_optional_station(
+                row[fixed_station_column], task_id=task_id
+            )
+            required_skills[task_id] = int(float(row[skill_column]))
+            demands[task_id] = int(float(row[demand_column]))
+            raw_predecessors = str(row[predecessor_column] or "").strip()
+            for token in re.split(r"[,，;；\s]+", raw_predecessors):
+                if token and token in ao_to_task_id:
+                    edges.append((ao_to_task_id[token], task_id))
+
+        edge_array = np.asarray(edges, dtype=np.int64).T if edges else np.empty((2, 0), dtype=np.int64)
+        engine = ConstraintEngine.build(
+            num_tasks=num_raw_tasks,
+            num_stations=self.state.num_stations,
+            edges=edge_array,
+            durations=durations,
+            fixed_stations=fixed_stations,
+        )
+
+        successors: list[list[int]] = [[] for _ in range(num_raw_tasks)]
+        indegree = [len(preds) for preds in engine.predecessors]
+        for task_id, predecessors in enumerate(engine.predecessors):
+            for predecessor in predecessors:
+                successors[predecessor].append(task_id)
+        queue = [task_id for task_id, degree in enumerate(indegree) if degree == 0]
+        topological_order: list[int] = []
+        while queue:
+            task_id = queue.pop()
+            topological_order.append(task_id)
+            for successor in successors[task_id]:
+                indegree[successor] -= 1
+                if indegree[successor] == 0:
+                    queue.append(successor)
+        if len(topological_order) != num_raw_tasks:
+            raise ValueError("原始工艺依赖图存在环，无法建立后移合法性边界")
+
+        max_allowed = np.full(num_raw_tasks, self.state.num_stations - 1, dtype=np.int64)
+        max_allowed[engine.fixed_stations >= 0] = engine.fixed_stations[engine.fixed_stations >= 0]
+        for task_id in reversed(topological_order):
+            for predecessor in engine.predecessors[task_id]:
+                max_allowed[predecessor] = min(max_allowed[predecessor], max_allowed[task_id])
+
+        self._raw_required_skills = required_skills
+        self._raw_demands = demands
+        return engine.with_max_allowed_stations(max_allowed)
+
+    def _attach_task_domain_metadata(self) -> None:
+        """把原始工艺约束写入当前多架次任务状态。"""
+        for task in self.state.tasks.values():
+            task_id = int(task.task_id)
+            if not 0 <= task_id < self.constraint_engine.num_tasks:
+                raise ValueError(f"基准任务 {task.task_key} 不在原始工艺数据中")
+            if not bool(self.constraint_engine.physical_mask[task_id]):
+                raise ValueError(f"基准任务 {task.task_key} 对应原始虚拟工序")
+            if int(task.skill) != int(self._raw_required_skills[task_id]):
+                raise ValueError(f"任务 {task.task_key} 的技能与原始工艺数据不一致")
+            if int(task.demand) != int(self._raw_demands[task_id]):
+                raise ValueError(f"任务 {task.task_key} 的需求人数与原始工艺数据不一致")
+            fixed_station = int(self.constraint_engine.fixed_stations[task_id])
+            task.fixed_station = fixed_station if fixed_station >= 0 else None
+            task.max_allowed_station = int(self.constraint_engine.max_allowed_stations[task_id])
+
+    def valid_team_completion_workers(
+        self,
+        task: TaskRuntimeState,
+        selected_team: Sequence[int],
+    ) -> list[int]:
+        """返回加入当前部分团队后仍可补全合法团队的本站工人。"""
+        selected = [int(worker_id) for worker_id in selected_team]
+        if len(selected) > task.demand or len(selected) != len(set(selected)):
+            return []
+        allowed = set(self.state.station_worker_bindings.get(task.current_station, []))
+        for worker_id in selected:
+            if worker_id not in allowed or worker_id not in self.worker_efficiencies:
+                return []
+            if task.skill >= 0 and task.skill not in self.worker_skills[worker_id]:
+                return []
+
+        candidates = [
+            worker_id
+            for worker_id in self.state.station_worker_bindings.get(task.current_station, [])
+            if worker_id not in selected
+            and (task.skill < 0 or task.skill in self.worker_skills[worker_id])
+        ]
+        required = task.demand - len(selected)
+        return candidates if len(candidates) >= required else []
+
+    def duration_for_team(
+        self,
+        task: TaskRuntimeState,
+        team: Sequence[int],
+        start_time: float | None = None,
+    ) -> float:
+        """按工作一、二的效率求和与团队协同折减计算本次团队工时。"""
+        del start_time  # 当前工作三域数据没有疲劳状态，保留参数以保持工时接口可扩展。
+        team_tuple = tuple(int(worker_id) for worker_id in team)
+        self._validate_team_for_task(task, team_tuple)
+        if task.duration <= self.tolerance:
+            return 0.0
+        efficiency_sum = sum(self.worker_efficiencies[worker_id] for worker_id in team_tuple)
+        effective_capacity = efficiency_sum * calculate_team_synergy_factor(len(team_tuple))
+        if effective_capacity <= self.tolerance:
+            raise ValueError(f"团队 {team_tuple} 的有效工时能力不足")
+        return float(task.duration * task.demand / effective_capacity)
+
+    def validate_postpone(self, task: TaskRuntimeState) -> str | None:
+        """统一检查当前任务后移到紧邻下一站的工艺合法性。"""
+        if task.current_station >= self.state.num_stations - 1:
+            return f"工序 {task.task_key} 位于末站，禁止后移"
+        aircraft = self.state.aircraft[task.aircraft_id]
+        if aircraft.current_station != task.current_station:
+            return f"工序 {task.task_key} 的飞机实际不在当前站位，禁止后移"
+
+        target_station = task.current_station + 1
+        if task.fixed_station is not None and target_station != task.fixed_station:
+            return f"工序 {task.task_key} 受固定站位 {task.fixed_station + 1} 约束，禁止后移"
+        if task.max_allowed_station is not None and target_station > task.max_allowed_station:
+            return f"工序 {task.task_key} 超过允许最晚站位，禁止后移"
+
+        station_map = {item.task_id: item.current_station for item in self.state.tasks.values()}
+        violation = self.constraint_engine.station_violation(
+            task.task_id,
+            target_station,
+            station_map,
+        )
+        if violation is not None:
+            if violation["reason"] == "fixed_station_violation":
+                return f"工序 {task.task_key} 受固定站位约束，禁止后移"
+            return f"工序 {task.task_key} 的目标站位不满足工艺约束，禁止后移"
+
+        same_station_successors = [
+            successor_id
+            for successor_id in self._successors_map[task.aircraft_id][task.task_id]
+            if self.state.tasks[f"{task.aircraft_id}_{successor_id}"].current_station
+            == task.current_station
+            and self.state.tasks[f"{task.aircraft_id}_{successor_id}"].status
+            not in (TaskStatus.COMPLETED, TaskStatus.POSTPONED)
+        ]
+        if same_station_successors:
+            return f"工序 {task.task_key} 仍有本站未完成后继 {same_station_successors}，禁止后移"
+        return None
 
     def load_scenario(self, scenario: Any) -> None:
         """注入扰动场景，向事件优先队列压入最高优先级的 DISTURBANCE 事件。"""
@@ -159,17 +425,24 @@ class AirLineEnvWork3:
                 align_target = self.state.last_transfer_time + task.in_station_offset
                 search_start = max(search_start, align_target)
 
+            execution_duration = self.duration_for_team(
+                task,
+                team,
+                start_time=search_start,
+            )
+
             t_sched = self._find_team_earliest_slot(
                 station_id=task.current_station,
                 team=team,
                 search_start=search_start,
-                duration=task.duration,
+                duration=execution_duration,
             )
 
+            task.execution_duration = execution_duration
             for w in team:
                 self.state.workers[w].add_interval(
                     start=t_sched,
-                    end=t_sched + task.duration,
+                    end=t_sched + execution_duration,
                     task_key=task.task_key,
                 )
 
@@ -179,7 +452,7 @@ class AirLineEnvWork3:
                 self._on_task_started(task, t_sched)
                 self.event_queue.push(
                     event_type=EventType.TASK_FINISH,
-                    timestamp=t_sched + task.duration,
+                    timestamp=t_sched + execution_duration,
                     task_key=task.task_key,
                     generation=task.generation,
                 )
@@ -200,8 +473,9 @@ class AirLineEnvWork3:
 
         elif branch == ActionBranch.POSTPONE:
             # 分支 B：合法后移至下一站位
-            if task.current_station >= self.state.num_stations - 1:
-                raise ValueError(f"末站（站位 {task.current_station + 1}）工序绝对禁止后移！")
+            postpone_error = self.validate_postpone(task)
+            if postpone_error is not None:
+                raise ValueError(postpone_error)
 
             n_old = task.postpone_count
             task.postpone_to_next_station()
@@ -260,11 +534,15 @@ class AirLineEnvWork3:
 
         allowed_workers = set(self.state.station_worker_bindings.get(task.current_station, []))
         for w in team:
+            if w not in self.worker_efficiencies:
+                raise ValueError(f"工人 {w} 不存在于工人池！")
             if w not in allowed_workers:
                 raise ValueError(
                     f"工人 {w} 不属于站位 {task.current_station}！"
                     f"该站允许工人为: {allowed_workers}"
                 )
+            if task.skill >= 0 and task.skill not in self.worker_skills[w]:
+                raise ValueError(f"工人 {w} 不具备工序 {task.task_key} 所需技能 {task.skill}！")
 
     def _find_team_earliest_slot(
         self, station_id: int, team: Sequence[int], search_start: float, duration: float
@@ -330,7 +608,8 @@ class AirLineEnvWork3:
             if t.scheduled_start is None:
                 continue
             interval_start = float(t.scheduled_start)
-            interval_end = interval_start + float(t.duration)
+            interval_duration = t.execution_duration if t.execution_duration is not None else t.duration
+            interval_end = interval_start + float(interval_duration)
             if interval_end <= interval_start + self.tolerance:
                 continue
             if interval_end <= start + self.tolerance or interval_start >= end - self.tolerance:
@@ -382,7 +661,7 @@ class AirLineEnvWork3:
                     self._on_task_started(task, event.timestamp)
                     self.event_queue.push(
                         event_type=EventType.TASK_FINISH,
-                        timestamp=event.timestamp + task.duration,
+                        timestamp=event.timestamp + (task.execution_duration or task.duration),
                         task_key=task.task_key,
                         generation=task.generation,
                     )

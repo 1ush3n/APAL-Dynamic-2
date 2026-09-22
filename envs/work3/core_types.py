@@ -140,6 +140,9 @@ class TaskRuntimeState:
     postpone_count: int = 0           # 累计正式改站/后移次数 n_{ki}
     generation: int = 0               # 预约版本代数，用于失效令牌校验
     base_team: tuple[int, ...] = field(default_factory=tuple)  # 基准标准团队 W_i^0
+    fixed_station: int | None = None  # 原始实例固定站位（0-based）
+    max_allowed_station: int | None = None  # 工艺后继约束允许的最晚站位（0-based）
+    execution_duration: float | None = None  # 本次团队对应的实际工时
     cycle_start_time: float | None = None  # 实际开工所在周期的转站时刻 P_{q-1}
     start_cost_confirmed: bool = False     # 是否已确认并结算开工偏差与团队替换费用
     _state_ref: Any = field(default=None, repr=False, compare=False)
@@ -158,6 +161,7 @@ class TaskRuntimeState:
         """取消当前预约，退回就绪状态，并递增版本代数使事件队列旧开工事件失效。"""
         self.assigned_team = []
         self.scheduled_start = None
+        self.execution_duration = None
         self.status = TaskStatus.READY
         self.generation += 1
 
@@ -178,6 +182,7 @@ class TaskRuntimeState:
         old_station = self.current_station
         self.assigned_team = []
         self.scheduled_start = None
+        self.execution_duration = None
         self.status = TaskStatus.POSTPONED
         self.current_station += 1
         self.postpone_count += 1
@@ -227,6 +232,9 @@ class TaskRuntimeState:
             postpone_count=self.postpone_count,
             generation=self.generation,
             base_team=self.base_team,
+            fixed_station=self.fixed_station,
+            max_allowed_station=self.max_allowed_station,
+            execution_duration=self.execution_duration,
             cycle_start_time=self.cycle_start_time,
             start_cost_confirmed=self.start_cost_confirmed,
         )

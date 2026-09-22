@@ -111,7 +111,7 @@ def test_branch_a_future_reservation_when_worker_busy(env: AirLineEnvWork3) -> N
     team1 = station_workers[: task1.demand]
     team2 = station_workers[: task2.demand]
 
-    # 第一个任务立即开工，占用 [0, task1.duration]
+    # 第一个任务立即开工，占用 [0, task1.execution_duration]
     env.step({
         "task_key": task1.task_key,
         "branch": ActionBranch.STATION_EXECUTE,
@@ -130,13 +130,17 @@ def test_branch_a_future_reservation_when_worker_busy(env: AirLineEnvWork3) -> N
 
     assert task2.status == TaskStatus.RESERVED
     assert task2.scheduled_start is not None
-    assert task2.scheduled_start >= task1.duration - 1e-5
+    assert task1.execution_duration is not None
+    assert task2.scheduled_start >= task1.execution_duration - 1e-5
 
 
 def test_branch_b_postpone_and_truncation(env: AirLineEnvWork3) -> None:
     """测试分支 B：合法后移当场截断，保留物料约束 R (Task 2.4)。"""
-    ready_tasks = env.get_ready_tasks()
-    task = ready_tasks[0]
+    task = next(
+        task for task in env.state.tasks.values()
+        if env.validate_postpone(task) is None
+    )
+    task.status = TaskStatus.READY
     task.material_ready_time = 45.0  # 注入恢复时间 R
 
     action = {
@@ -167,7 +171,7 @@ def test_branch_b_final_station_forbidden(env: AirLineEnvWork3) -> None:
         "branch": ActionBranch.POSTPONE,
     }
 
-    with pytest.raises(ValueError, match="末站.*绝对禁止后移"):
+    with pytest.raises(ValueError, match="末站.*禁止后移"):
         env.step(action)
 
 

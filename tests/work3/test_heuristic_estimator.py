@@ -70,8 +70,11 @@ def test_postpone_decoupling_effect(baseline_path: str) -> None:
     env.reset()
 
     h0 = env.state.h0
-    ready = env.get_ready_tasks()
-    task = ready[0]
+    task = next(
+        task for task in env.state.tasks.values()
+        if task.current_station == 0 and env.validate_postpone(task) is None
+    )
+    task.status = TaskStatus.READY
     st0 = task.current_station
 
     # 注入大延误
@@ -107,7 +110,9 @@ def test_estimator_monotonicity_and_drainout(baseline_path: str) -> None:
         if not ready:
             break
         task = ready[0]
-        team = tuple(env.state.station_worker_bindings[task.current_station][: task.demand])
+        valid_workers = env.valid_team_completion_workers(task, [])
+        assert len(valid_workers) >= task.demand
+        team = tuple(valid_workers[: task.demand])
         env.step({
             "task_key": task.task_key,
             "branch": ActionBranch.STATION_EXECUTE,

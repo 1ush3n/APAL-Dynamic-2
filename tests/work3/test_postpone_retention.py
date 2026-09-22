@@ -35,11 +35,12 @@ def test_postponed_task_retains_material_constraint_across_transfer(baseline_pat
 
     # 0 号飞机在 0 号站位，选取无站内后继的工序进行后移（符合工艺放行原则）
     ready = env.get_ready_tasks()
-    # 筛选在 0 号站位没有后继工序的任务 (如 task_id in {2, 3, 4, 5, 7, 16})
+    # 筛选在 0 号站位没有后继且满足完整后移约束的任务。
     leaf_candidates = [
         t for t in env.state.tasks.values()
         if t.aircraft_id == 0 and t.current_station == 0
         and len(env._successors_map.get(0, {}).get(t.task_id, [])) == 0
+        and env.validate_postpone(t) is None
     ]
     task = leaf_candidates[0]
     h0 = env.state.h0

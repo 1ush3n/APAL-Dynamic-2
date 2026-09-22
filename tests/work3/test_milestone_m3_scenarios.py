@@ -50,7 +50,9 @@ def test_sampling_truncation_interface_preserves_state(baseline_path: str) -> No
         if not ready:
             break
         task = ready[0]
-        team = tuple(env.state.station_worker_bindings[task.current_station][: task.demand])
+        valid_workers = env.valid_team_completion_workers(task, [])
+        assert len(valid_workers) >= task.demand
+        team = tuple(valid_workers[: task.demand])
         obs, reward, terminated, truncated, info = env.step({
             "task_key": task.task_key,
             "branch": ActionBranch.STATION_EXECUTE,
@@ -67,7 +69,9 @@ def test_sampling_truncation_interface_preserves_state(baseline_path: str) -> No
     ready_after = env.get_ready_tasks()
     assert len(ready_after) > 0
     t_next = ready_after[0]
-    team_next = tuple(env.state.station_worker_bindings[t_next.current_station][: t_next.demand])
+    valid_next_workers = env.valid_team_completion_workers(t_next, [])
+    assert len(valid_next_workers) >= t_next.demand
+    team_next = tuple(valid_next_workers[: t_next.demand])
     obs2, _, term2, _, _ = env.step({
         "task_key": t_next.task_key,
         "branch": ActionBranch.STATION_EXECUTE,

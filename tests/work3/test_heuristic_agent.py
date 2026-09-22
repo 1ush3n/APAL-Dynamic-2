@@ -58,8 +58,13 @@ def test_baseline_c_postpone_rule_trigger(baseline_path: str) -> None:
     env.reset()
     agent = HeuristicAgentWork3()
 
-    ready = env.get_ready_tasks()
-    task = ready[0]
+    task = next(
+        task for task in env.state.tasks.values()
+        if env.validate_postpone(task) is None
+    )
+    for ready_task in env.get_ready_tasks():
+        ready_task.status = TaskStatus.UNREADY
+    task.status = TaskStatus.READY
     h0 = env.state.h0
 
     # 注入严重超期物料延迟 R = H_0 + 50.0 (超过当前名义周期结束点)

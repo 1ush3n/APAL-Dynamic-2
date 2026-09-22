@@ -78,7 +78,8 @@ def test_postpone_incremental_consistency(baseline_path: str) -> None:
     assert len(ready) > 0
 
     # 选取第 1 道工序执行后移 (n=1)
-    task1 = ready[0]
+    task1 = next(task for task in env.state.tasks.values() if env.validate_postpone(task) is None)
+    task1.status = TaskStatus.READY
     obs, reward1, _, _, info1 = env.step({
         "task_key": task1.task_key,
         "branch": ActionBranch.POSTPONE,
@@ -102,7 +103,7 @@ def test_team_replacement_consistency(baseline_path: str) -> None:
 
     ready = env.get_ready_tasks()
     task = ready[0]
-    allowed_workers = env.state.station_worker_bindings[task.current_station]
+    allowed_workers = env.valid_team_completion_workers(task, [])
     base_team = set(task.base_team)
 
     # 构造一个与基准完全不同的可用团队
@@ -144,10 +145,12 @@ def test_delayed_takt_violation_consistency(baseline_path: str) -> None:
         t = ready[0]
         # 人为推迟物料到达时间
         t.material_ready_time = max(t.material_ready_time, h0 + delay_hours)
+        valid_workers = env.valid_team_completion_workers(t, [])
+        assert len(valid_workers) >= t.demand
         env.step({
             "task_key": t.task_key,
             "branch": ActionBranch.STATION_EXECUTE,
-            "team": env.state.station_worker_bindings[t.current_station][: t.demand],
+            "team": tuple(valid_workers[: t.demand]),
             "align": 0,
         })
 
@@ -199,7 +202,7 @@ def test_randomized_trajectory_mathematical_equivalence(baseline_path: str, seed
         task = random.choice(ready)
 
         # 若非末站工序，以 15% 概率执行后移
-        if task.current_station < env.state.num_stations - 1 and random.random() < 0.15:
+        if env.validate_postpone(task) is None and random.random() < 0.15:
             action = {
                 "task_key": task.task_key,
                 "branch": ActionBranch.POSTPONE,
@@ -208,7 +211,9 @@ def test_randomized_trajectory_mathematical_equivalence(baseline_path: str, seed
             # 留在当前站执行，随机选队
             station_workers = env.state.station_worker_bindings[task.current_station]
             # 从该站工人中随机挑选 demand 个
-            team = tuple(random.sample(station_workers, task.demand))
+            valid_workers = env.valid_team_completion_workers(task, [])
+            assert len(valid_workers) >= task.demand
+            team = tuple(random.sample(valid_workers, task.demand))
             align = random.choice([0, 1])
             action = {
                 "task_key": task.task_key,
