@@ -134,6 +134,7 @@ def test_running_task_not_interrupted_by_disturbance(baseline_path: str) -> None
     })
     assert task.status == TaskStatus.RUNNING
     actual_start = task.actual_start
+    original_material_ready_time = task.material_ready_time
 
     # 在开工后注入扰动
     scenario_payload = {
@@ -152,3 +153,4 @@ def test_running_task_not_interrupted_by_disturbance(baseline_path: str) -> None
     # 断言作业仍然保持 RUNNING，未被中断或取消
     assert task.status == TaskStatus.RUNNING
     assert task.actual_start == actual_start
+    assert task.material_ready_time == original_material_ready_time

@@ -189,7 +189,11 @@ class MultiAircraftGraphBuilder:
         assigned_ts_dst: list[int] = []
         done_by_src: list[int] = []
         done_by_dst: list[int] = []
+        baseline_team_src: list[int] = []
+        baseline_team_dst: list[int] = []
         station_remain_workload = [0.0] * 5
+        station_current_workload = [0.0] * 5
+        station_future_workload = [0.0] * 5
         station_running_count = [0] * 5
 
         h0 = self.h0
@@ -197,6 +201,11 @@ class MultiAircraftGraphBuilder:
             t_rt: TaskRuntimeState | None = state.tasks.get(key)
             if t_rt is None:
                 continue
+
+            for w_id in t_rt.base_team:
+                if w_id in self.worker_id_to_idx:
+                    baseline_team_src.append(idx)
+                    baseline_team_dst.append(self.worker_id_to_idx[w_id])
 
             # [1:5] 状态独热设置 (UNREADY/COMPLETED=全0, READY=1, RESERVED=2, RUNNING=3, POSTPONED=4)
             task_x_np[idx, 1:5] = 0.0
@@ -225,6 +234,10 @@ class MultiAircraftGraphBuilder:
                 assigned_ts_dst.append(st)
                 if t_rt.status != TaskStatus.COMPLETED:
                     station_remain_workload[st] += t_rt.duration
+                    if ac_state is not None and ac_state.current_station == st:
+                        station_current_workload[st] += t_rt.duration
+                    else:
+                        station_future_workload[st] += t_rt.duration
                     if t_rt.status == TaskStatus.RUNNING:
                         station_running_count[st] += 1
 
@@ -241,6 +254,13 @@ class MultiAircraftGraphBuilder:
         # 2. 刷新 Worker 特征 (NumPy 极速批量更新)
         worker_x_np = self.base_worker_x_np.copy()
         for w_idx, w_id in enumerate(self.sorted_workers):
+            if w_id in env.worker_efficiencies:
+                worker_x_np[w_idx, 0] = float(env.worker_efficiencies[w_id])
+            if w_id in env.worker_skills:
+                worker_x_np[w_idx, 1:6] = 0.0
+                for skill_id in env.worker_skills[w_id]:
+                    if 0 <= skill_id < self.config.num_skill_types:
+                        worker_x_np[w_idx, 1 + skill_id] = 1.0
             cal = state.workers.get(w_id)
             if cal is not None:
                 is_free = True
@@ -266,6 +286,9 @@ class MultiAircraftGraphBuilder:
             station_x_np[s, 1] = float(ac_id) / 10.0 if ac_id is not None else -1.0
             station_x_np[s, 2] = float(max(0, 3 - station_running_count[s])) / 3.0
             station_x_np[s, 3] = cycle_elapsed / h0
+            # [4] 当前在场飞机负荷；[5] 后续飞机已知负荷，避免混成一个站位总负荷。
+            station_x_np[s, 4] = float(station_current_workload[s]) / h0
+            station_x_np[s, 5] = float(station_future_workload[s]) / h0
 
         data["station"].x = torch.from_numpy(station_x_np)
 
@@ -286,6 +309,14 @@ class MultiAircraftGraphBuilder:
         else:
             t_w = torch.empty((2, 0), dtype=torch.long)
         data["task", "done_by", "worker"].edge_index = t_w
+
+        if baseline_team_src:
+            baseline_edges = torch.tensor(
+                [baseline_team_src, baseline_team_dst], dtype=torch.long
+            )
+        else:
+            baseline_edges = torch.empty((2, 0), dtype=torch.long)
+        data["task", "baseline_team", "worker"].edge_index = baseline_edges
 
         # 5. 挂载 Skill Hub 特征与双向资源边
         apply_resource_graph(

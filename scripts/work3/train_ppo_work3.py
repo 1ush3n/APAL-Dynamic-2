@@ -236,9 +236,11 @@ def run_training(
                 device=torch_device,
             )
             with torch.no_grad():
+                last_graph = actor_critic.build_graph_snapshot(env)
                 last_v, _ = actor_critic.encode_state(
-                    last_s_feat.unsqueeze(0).to(torch_device),
-                    last_u_time.unsqueeze(0).to(torch_device),
+                    last_s_feat.to(torch_device),
+                    last_u_time.to(torch_device),
+                    graph_data=last_graph,
                 )
                 last_val = float(last_v.squeeze().item()) if not last_terminated else 0.0
 

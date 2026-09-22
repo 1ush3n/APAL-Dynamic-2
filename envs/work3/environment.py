@@ -1018,14 +1018,15 @@ class AirLineEnvWork3:
             if task is None:
                 continue
 
-            # 统一直接建模工序开工可用性延迟：r_{k*,i}^{new} = max(r_{k*,i}^{old}, R)
-            task.material_ready_time = max(task.material_ready_time, recovery_time)
-
             if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
                 # 物理规则 3：实际已开工与已完工作业硬冻结，绝不强制打断
                 continue
 
-            elif task.status == TaskStatus.RESERVED:
+            # 统一建模尚未开工工序的物料开工下界：
+            # r_{k*,i}^{new} = max(r_{k*,i}^{old}, R)。
+            task.material_ready_time = max(task.material_ready_time, recovery_time)
+
+            if task.status == TaskStatus.RESERVED:
                 # 易错点 1 攻坚：若原排定开工时刻早于物理恢复时刻 R，必须立刻废除旧预约！
                 if task.scheduled_start is not None and task.scheduled_start < recovery_time - self.tolerance:
                     # 1. 立即释放指派工人的时间日历预占区间

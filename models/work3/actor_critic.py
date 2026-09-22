@@ -26,16 +26,83 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
+from torch_geometric.data import HeteroData
 
 from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskRuntimeState, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
+from models.hb_gat_pn import FeatureEmbedder, HeteroGATEncoder
+from models.work3.graph_builder import MultiAircraftGraphBuilder, Work3ResourceConfig
+from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+
+
+class Work3GraphEncoder(nn.Module):
+    """工作三轻量异构图编码器，复用仓库已有 HB-GAT 输入与消息传递。"""
+
+    def __init__(self, hidden_dim: int) -> None:
+        super().__init__()
+        config = SimpleNamespace(
+            hidden_dim=int(hidden_dim),
+            num_gat_layers=1,
+            num_heads=2,
+            task_feat_dim=18,
+            worker_feat_dim=17,
+            station_feat_dim=15,
+            skill_feat_dim=11,
+            use_skill_hub=True,
+            skill_hub_bidirectional=True,
+            num_skill_types=5,
+            worker_skill_feature_slots=5,
+            graph_encoder_mode="hetero_gat",
+            task_feature_scope="full",
+            station_feature_scope="full",
+            homogeneous_shared_input_projection=False,
+        )
+        self.embedder = FeatureEmbedder(config)
+        self.message_passing = HeteroGATEncoder(config)
+        self.context_projection = nn.Sequential(
+            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+
+    def forward(
+        self,
+        graph: HeteroData,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """返回全局上下文、任务节点嵌入和工人节点嵌入。"""
+        device = next(self.parameters()).device
+        graph = graph.to(device)
+        raw_x = graph.x_dict
+        assert set(("task", "worker", "station", "skill")) <= set(raw_x)
+        x_dict = self.embedder(raw_x)
+        edge_index_dict = graph.edge_index_dict
+        encoded = self.message_passing(x_dict, edge_index_dict)
+
+        def mean_pool(node_type: str) -> torch.Tensor:
+            value = encoded.get(node_type)
+            if value is None or value.numel() == 0:
+                return torch.zeros(
+                    (1, next(self.parameters()).size(0)),
+                    dtype=next(self.parameters()).dtype,
+                    device=device,
+                )
+            return value.mean(dim=0, keepdim=True)
+
+        pooled = torch.cat(
+            [mean_pool("task"), mean_pool("worker"), mean_pool("station"), mean_pool("skill")],
+            dim=-1,
+        )
+        context = self.context_projection(pooled).squeeze(0)
+        return context, encoded["task"], encoded["worker"]
 
 
 def extract_candidate_task_features(
@@ -160,6 +227,14 @@ class ActorCriticWork3(nn.Module):
         self.hidden_dim = hidden_dim
         self.max_station_workers = max_station_workers
 
+        # 图骨干；encoder 保留为旧32维接口的补充状态分支和旧检查点兼容层。
+        self.graph_encoder = Work3GraphEncoder(hidden_dim)
+        self.task_graph_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.worker_graph_score = nn.Linear(hidden_dim, 1)
+        self.graph_builder: MultiAircraftGraphBuilder | None = None
+        self._graph_baseline_key: str | None = None
+        self.graph_policy_enabled = True
+
         # 1. 状态编码器与 Critic 头
         self.encoder = nn.Sequential(
             nn.Linear(state_dim, hidden_dim),
@@ -214,16 +289,72 @@ class ActorCriticWork3(nn.Module):
             nn.Linear(hidden_dim, 2),  # 0: 对齐 α=0, 1: 对齐 α=1
         )
 
+    def _get_graph_builder(self, env: AirLineEnvWork3) -> MultiAircraftGraphBuilder:
+        """按环境基准实例缓存图构造器，动态节点特征仍每步重建。"""
+        baseline_key = str(Path(env.baseline_json_path).resolve())
+        if self.graph_builder is None or self._graph_baseline_key != baseline_key:
+            baseline = MultiAircraftBaseline.load_from_json(env.baseline_json_path)
+            self.graph_builder = MultiAircraftGraphBuilder(
+                baseline,
+                config=Work3ResourceConfig(),
+            )
+            self._graph_baseline_key = baseline_key
+        return self.graph_builder
+
+    def build_graph_snapshot(self, env: AirLineEnvWork3) -> HeteroData:
+        """构造可保存的当前图快照，避免PPO重放读取变化后的现场状态。"""
+        graph = self._get_graph_builder(env).build_graph(env)
+        return graph.clone()
+
+    def _encode_state_components(
+        self,
+        state_feat: torch.Tensor,
+        time_urgency: torch.Tensor,
+        graph_data: HeteroData | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+        """编码状态并返回图节点嵌入；无图时走旧接口兼容路径。"""
+        assert state_feat.ndim == 1 and state_feat.size(0) == self.state_dim
+        assert time_urgency.ndim == 1 and time_urgency.size(0) == 2
+        legacy_context = self.encoder(state_feat)
+        task_nodes: torch.Tensor | None = None
+        worker_nodes: torch.Tensor | None = None
+        if graph_data is None or not self.graph_policy_enabled:
+            context = legacy_context
+        else:
+            graph_context, task_nodes, worker_nodes = self.graph_encoder(graph_data)
+            context = graph_context + legacy_context
+        v = self.critic(context).squeeze(-1)
+        e_fused = self.time_fusion(context, time_urgency)
+        return v, e_fused, task_nodes, worker_nodes
+
     def encode_state(
         self,
         state_feat: torch.Tensor,
         time_urgency: torch.Tensor,
+        graph_data: HeteroData | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """编码状态表征，输出状态值 V(s) 与时间感知决策上下文 e_fused。"""
-        z = self.encoder(state_feat)
-        v = self.critic(z).squeeze(-1)
-        e_fused = self.time_fusion(z, time_urgency)
+        """编码状态，图快照存在时输出图增强的价值与策略上下文。"""
+        if state_feat.ndim == 2:
+            if graph_data is not None:
+                raise ValueError("批量状态请通过 evaluate_action_log_probs 传入图快照列表")
+            z = self.encoder(state_feat)
+            v = self.critic(z).squeeze(-1)
+            e_fused = self.time_fusion(z, time_urgency)
+            return v, e_fused
+        v, e_fused, _, _ = self._encode_state_components(
+            state_feat,
+            time_urgency,
+            graph_data,
+        )
         return v, e_fused
+
+    def load_state_dict(self, state_dict: dict[str, torch.Tensor], strict: bool = True, assign: bool = False):
+        """兼容没有图模块参数的旧工作三 Actor 检查点。"""
+        has_graph_weights = any(key.startswith("graph_encoder.") for key in state_dict)
+        if strict and not has_graph_weights:
+            strict = False
+        self.graph_policy_enabled = has_graph_weights
+        return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def _advance_logits(self, context: torch.Tensor) -> torch.Tensor:
         """复用既有分支头产生推进门控，保持旧Actor检查点可加载。"""
@@ -252,7 +383,13 @@ class ActorCriticWork3(nn.Module):
             return None, 0.0, 0.0, {}
 
         # 1. 状态编码
-        v, e_fused = self.encode_state(state_feat, time_urgency)
+        graph_snapshot = self.build_graph_snapshot(env)
+        graph_builder = self._get_graph_builder(env)
+        v, e_fused, task_nodes, worker_nodes = self._encode_state_components(
+            state_feat,
+            time_urgency,
+            graph_snapshot,
+        )
         state_value = float(v.item())
 
         revision_available = any(
@@ -283,12 +420,22 @@ class ActorCriticWork3(nn.Module):
                         "advance_available": True,
                         "advance_choice": 1,
                         "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
+                        "graph_snapshot": graph_snapshot,
+                        "graph_version": "work3_graph_v1",
+                        "candidate_task_node_indices": (),
+                        "worker_node_indices": (),
                     },
                 )
 
         # 2. Head 1: 工序选择
         cand_feats = extract_candidate_task_features(env.state, candidate_tasks).to(device)
         cand_embed = self.task_proj(cand_feats)  # (N, hidden_dim)
+        candidate_task_node_indices = [
+            graph_builder.task_key_to_idx[task.task_key] for task in candidate_tasks
+        ]
+        if task_nodes is not None:
+            node_indices = torch.as_tensor(candidate_task_node_indices, device=device)
+            cand_embed = cand_embed + self.task_graph_proj(task_nodes[node_indices])
 
         e_ctx_expanded = e_fused.unsqueeze(0).expand(len(candidate_tasks), -1)  # (N, hidden_dim)
         task_pair = torch.cat([e_ctx_expanded, cand_embed], dim=-1)
@@ -340,6 +487,10 @@ class ActorCriticWork3(nn.Module):
             "num_st_workers": self.max_station_workers,
             "chosen_team": (),
             "align": 0,
+            "graph_snapshot": graph_snapshot,
+            "graph_version": "work3_graph_v1",
+            "candidate_task_node_indices": tuple(candidate_task_node_indices),
+            "worker_node_indices": (),
         }
 
         if branch_act == 1:
@@ -355,6 +506,8 @@ class ActorCriticWork3(nn.Module):
         st_workers = env.state.station_worker_bindings.get(chosen_task.current_station, [])
         num_st_workers = len(st_workers)
         sample_record["num_st_workers"] = num_st_workers
+        worker_node_indices = [graph_builder.worker_id_to_idx[w] for w in st_workers]
+        sample_record["worker_node_indices"] = tuple(worker_node_indices)
         demand = chosen_task.demand
 
         # 5. Head 3: 站内工人指针自回归选择
@@ -372,6 +525,10 @@ class ActorCriticWork3(nn.Module):
             # 掩码: 已选取的工人置 -1e4
             for prev_idx in chosen_worker_indices:
                 w_logits[prev_idx] = -1e4
+            if worker_nodes is not None and worker_node_indices:
+                worker_graph_ids = torch.as_tensor(worker_node_indices, device=device)
+                worker_bias = self.worker_graph_score(worker_nodes[worker_graph_ids]).squeeze(-1)
+                w_logits[:num_st_workers] = w_logits[:num_st_workers] + worker_bias
             valid_global_workers = set(
                 env.valid_team_completion_workers(
                     chosen_task,
@@ -439,7 +596,22 @@ class ActorCriticWork3(nn.Module):
         time_urgencies = time_urgencies.to(device)
         batch_size = len(sample_records)
 
-        values, e_fused = self.encode_state(state_feats, time_urgencies)
+        values_list: list[torch.Tensor] = []
+        context_list: list[torch.Tensor] = []
+        task_nodes_list: list[torch.Tensor | None] = []
+        worker_nodes_list: list[torch.Tensor | None] = []
+        for index, record in enumerate(sample_records):
+            value_i, context_i, task_nodes_i, worker_nodes_i = self._encode_state_components(
+                state_feats[index],
+                time_urgencies[index],
+                record.get("graph_snapshot"),
+            )
+            values_list.append(value_i)
+            context_list.append(context_i)
+            task_nodes_list.append(task_nodes_i)
+            worker_nodes_list.append(worker_nodes_i)
+        values = torch.stack(values_list)
+        e_fused = torch.stack(context_list)
 
         log_probs = []
         entropies = []
@@ -466,6 +638,13 @@ class ActorCriticWork3(nn.Module):
             cand_feats = rec["cand_feats"].to(device)
             task_idx = rec["task_idx"]
             cand_embed = self.task_proj(cand_feats)
+            replay_task_nodes = task_nodes_list[i]
+            candidate_node_indices = rec.get("candidate_task_node_indices", ())
+            if replay_task_nodes is not None and candidate_node_indices:
+                node_indices = torch.as_tensor(candidate_node_indices, device=device)
+                cand_embed = cand_embed + self.task_graph_proj(
+                    replay_task_nodes[node_indices]
+                )
             e_ctx_exp = e_ctx.unsqueeze(0).expand(len(cand_feats), -1)
             task_pair = torch.cat([e_ctx_exp, cand_embed], dim=-1)
             task_logits = self.task_score_fc(task_pair).squeeze(-1)
@@ -501,6 +680,14 @@ class ActorCriticWork3(nn.Module):
             lp_workers = torch.zeros((), device=device)
             ent_workers = torch.zeros((), device=device)
             worker_mask = torch.zeros(self.max_station_workers, dtype=torch.float, device=device)
+            replay_worker_nodes = worker_nodes_list[i]
+            worker_node_indices = rec.get("worker_node_indices", ())
+            worker_bias = None
+            if replay_worker_nodes is not None and worker_node_indices:
+                node_indices = torch.as_tensor(worker_node_indices, device=device)
+                worker_bias = self.worker_graph_score(
+                    replay_worker_nodes[node_indices]
+                ).squeeze(-1)
 
             for step_w, w_idx in enumerate(chosen_worker_indices):
                 ptr_input = torch.cat([e_ctx, chosen_task_embed, worker_mask], dim=-1)
@@ -508,6 +695,8 @@ class ActorCriticWork3(nn.Module):
                 # 掩码超出本站工人数的位置
                 if self.max_station_workers > num_st_workers:
                     w_logits[num_st_workers:] = -1e4
+                if worker_bias is not None:
+                    w_logits[:num_st_workers] = w_logits[:num_st_workers] + worker_bias
                 # 屏蔽已选
                 for prev in chosen_worker_indices[:step_w]:
                     w_logits[prev] = -1e4
