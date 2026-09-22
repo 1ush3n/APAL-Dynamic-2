@@ -218,17 +218,30 @@ class PPOTrainerWork3:
 
     def save_checkpoint(self, path: str) -> None:
         """保存模型与优化器检查点。"""
-        torch.save(
-            {
-                "actor_critic_state": self.actor_critic.state_dict(),
-                "optimizer_state": self.optimizer.state_dict(),
-            },
-            path,
-        )
+        checkpoint: dict[str, Any] = {
+            "checkpoint_version": "work3_actor_time_v1",
+            "actor_critic_state": self.actor_critic.state_dict(),
+            "optimizer_state": self.optimizer.state_dict(),
+        }
+        if self.time_head is not None:
+            checkpoint.update({
+                "time_head_state": self.time_head.state_dict(),
+                "time_head_model_version": "signed_residual_v1",
+                "time_head_in_dim": int(getattr(self.time_head, "in_dim", -1)),
+            })
+        torch.save(checkpoint, path)
 
     def load_checkpoint(self, path: str) -> None:
         """恢复模型检查点。"""
         checkpoint = torch.load(path, map_location=self.device)
         self.actor_critic.load_state_dict(checkpoint["actor_critic_state"])
+        if self.time_head is not None:
+            if "time_head_state" not in checkpoint:
+                raise ValueError("检查点缺少共享图时间头，不能作为完整工作三模型恢复")
+            if checkpoint.get("time_head_model_version") != "signed_residual_v1":
+                raise ValueError("检查点时间头不是有符号残差版本")
+            self.time_head.load_state_dict(checkpoint["time_head_state"])
+        elif "time_head_state" in checkpoint:
+            raise ValueError("完整工作三检查点包含时间头，但当前训练器未配置时间头")
         if "optimizer_state" in checkpoint:
             self.optimizer.load_state_dict(checkpoint["optimizer_state"])

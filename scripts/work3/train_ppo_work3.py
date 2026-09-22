@@ -29,7 +29,7 @@ from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from models.work3.potential_shaping import PotentialRewardShaper
-from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
 from models.work3.ppo_trainer import PPOTrainerWork3
 from models.work3.time_head import TimeResidualHead
 
@@ -38,6 +38,38 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def compute_online_time_inputs(
+    actor_critic: ActorCriticWork3,
+    time_head: TimeResidualHead,
+    env: AirLineEnvWork3,
+    state_feat: torch.Tensor,
+    estimated_cmax: float,
+) -> tuple[Any, torch.Tensor, torch.Tensor]:
+    """用当前图表征和时间头生成Actor实际接收的时间输入。"""
+    device = next(actor_critic.parameters()).device
+    graph_snapshot = actor_critic.build_graph_snapshot(env)
+    with torch.no_grad():
+        shared_feature = actor_critic.encode_shared_representation(
+            state_feat.to(device),
+            graph_snapshot,
+        ).unsqueeze(0)
+        predicted_transfer, remaining, _ = time_head.predict_corrected_time(
+            state_feat=shared_feature,
+            estimated_cmax=estimated_cmax,
+            current_time=float(env.state.current_time),
+            h0=float(env.state.h0),
+            last_transfer_time=float(env.state.last_transfer_time),
+        )
+        urgency = compute_time_urgency_vector(
+            estimated_r=remaining.squeeze(0),
+            current_time=env.state.current_time,
+            last_transfer_time=env.state.last_transfer_time,
+            h0=env.state.h0,
+            device=device,
+        )
+    return graph_snapshot, urgency, predicted_transfer.squeeze(0)
 
 
 def run_training(
@@ -52,6 +84,7 @@ def run_training(
     gamma: float = 0.99,
     gae_lambda: float = 0.95,
     beta_shaping: float = 1.0,
+    time_loss_coef: float = 1.0,
     seed: int = 42,
     baseline_path: str = "data/work3/real_283_k10_baseline.json",
     time_head_ckpt: str = "models/work3/checkpoints/time_head_best.pt",
@@ -70,41 +103,46 @@ def run_training(
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     env.reset()
 
-    # 2. 初始化时间预测头与势函数奖励塑形器
-    time_head = TimeResidualHead(in_dim=32, hidden_dim=64)
-    if Path(time_head_ckpt).is_file():
-        ckpt_data = torch.load(time_head_ckpt, map_location="cpu")
-        if ckpt_data.get("model_version") == "signed_residual_v1":
-            state_dict = ckpt_data.get("model_state_dict", ckpt_data)
-            time_head.load_state_dict(state_dict)
-            logger.info(f"已成功载入有符号离线时间修正头: {time_head_ckpt}")
-        else:
-            logger.warning(f"检查点 {time_head_ckpt} 不是有符号残差版本，本次不加载旧门控权重")
-    else:
-        logger.warning(f"未找到预训练时间修正头 {time_head_ckpt}，使用随机初始化头")
-
-    shaper = PotentialRewardShaper(
-        time_head=time_head,
-        a=0.5,
-        b=1.0,
-        beta=beta_shaping,
-        gamma=gamma,
-    )
-
-    # 3. 初始化条件分支自回归 Actor-Critic 网络与 PPO 训练器
+    # 2. 初始化Actor与共享图表征上的时间预测头
     actor_critic = ActorCriticWork3(
         state_dim=32,
         task_feat_dim=8,
         hidden_dim=64,
         max_station_workers=16,
     ).to(torch_device)
+    time_head = TimeResidualHead(in_dim=actor_critic.hidden_dim, hidden_dim=64).to(torch_device)
+    if Path(time_head_ckpt).is_file():
+        ckpt_data = torch.load(time_head_ckpt, map_location="cpu")
+        if (
+            ckpt_data.get("model_version") == "signed_residual_v1"
+            and int(ckpt_data.get("in_dim", -1)) == actor_critic.hidden_dim
+        ):
+            state_dict = ckpt_data.get("model_state_dict", ckpt_data)
+            time_head.load_state_dict(state_dict)
+            logger.info(f"已成功载入有符号离线时间修正头: {time_head_ckpt}")
+        else:
+            logger.warning(f"检查点 {time_head_ckpt} 不是当前共享图有符号版本，本次不加载")
+    else:
+        logger.warning(f"未找到预训练时间修正头 {time_head_ckpt}，使用随机初始化头")
 
+    shaper = PotentialRewardShaper(
+        time_head=time_head,
+        actor_critic=actor_critic,
+        a=0.5,
+        b=1.0,
+        beta=beta_shaping,
+        gamma=gamma,
+    )
+
+    # 3. 初始化条件分支自回归 PPO 训练器
     trainer = PPOTrainerWork3(
         actor_critic=actor_critic,
         lr=lr,
         clip_eps=clip_eps,
         vf_coef=vf_coef,
         ent_coef=ent_coef,
+        time_head=time_head,
+        time_loss_coef=time_loss_coef,
         device=torch_device,
     )
 
@@ -117,6 +155,8 @@ def run_training(
     history: list[dict[str, Any]] = []
     total_env_steps = 0
     start_time = time.time()
+    episode_id = 0
+    pending_time_labels = PendingTimeLabelCache()
 
     logger.info("=" * 80)
     logger.info(f"开始条件分支 PPO 训练验证 (共 {num_iterations} 轮, 每轮 {steps_per_iter} 步, 总计 ~{num_iterations * steps_per_iter} 步)")
@@ -135,7 +175,10 @@ def run_training(
         # -------------------------
         for step in range(steps_per_iter):
             if env._check_terminated():
+                pending_time_labels.discard_episode(episode_id)
                 env.reset()
+                episode_id += 1
+                shaper.update_snapshot(time_head, actor_critic)
 
             candidates = env.get_action_candidates()
             if not candidates:
@@ -147,13 +190,12 @@ def run_training(
 
             cmax_est = compute_cycle_heuristic_cmax(env.state)
             s_feat = extract_compact_state_features(env.state, cmax_est)
-            r_est = max(0.0, cmax_est - float(env.state.current_time))
-            u_time = compute_time_urgency_vector(
-                estimated_r=r_est,
-                current_time=env.state.current_time,
-                last_transfer_time=env.state.last_transfer_time,
-                h0=env.state.h0,
-                device=torch_device,
+            graph_snapshot, u_time, _ = compute_online_time_inputs(
+                actor_critic=actor_critic,
+                time_head=time_head,
+                env=env,
+                state_feat=s_feat,
+                estimated_cmax=cmax_est,
             )
 
             # 计算当前状态势 Φ(s_t)
@@ -164,6 +206,7 @@ def run_training(
                 h0=float(env.state.h0),
                 last_transfer_time=float(env.state.last_transfer_time),
                 is_terminal=False,
+                graph_data=graph_snapshot,
             )
 
             # 采样条件动作
@@ -179,10 +222,33 @@ def run_training(
                 env._advance_events_until_next_decision()
                 continue
 
+            cycle_id = int(env.state.current_cycle)
+            pending_time_labels.add(
+                episode_id=episode_id,
+                cycle_id=cycle_id,
+                state_feat=s_feat,
+                graph_snapshot=rec.get("graph_snapshot", graph_snapshot),
+                estimated_cmax=cmax_est,
+                current_time=float(env.state.current_time),
+                h0=float(env.state.h0),
+                predictor_version=shaper.snapshot_version,
+                time_urgency=u_time,
+            )
+
             # 环境执行一步调度动作
+            transfer_count_before = len(env.state.transfer_history)
             obs, raw_reward, terminated, truncated, info = env.step(act)
             done = terminated or truncated
             last_terminated = bool(terminated)
+
+            for offset, actual_transfer_time in enumerate(
+                env.state.transfer_history[transfer_count_before:]
+            ):
+                pending_time_labels.attach_transfer(
+                    episode_id=episode_id,
+                    cycle_id=cycle_id + offset,
+                    actual_transfer_time=float(actual_transfer_time),
+                )
 
             # 计算下一状态势 Φ(s_{t+1}) 与塑形奖励
             if terminated:
@@ -190,6 +256,13 @@ def run_training(
             else:
                 next_cmax_est = compute_cycle_heuristic_cmax(env.state)
                 next_s_feat = extract_compact_state_features(env.state, next_cmax_est)
+                next_graph_snapshot, _, _ = compute_online_time_inputs(
+                    actor_critic=actor_critic,
+                    time_head=time_head,
+                    env=env,
+                    state_feat=next_s_feat,
+                    estimated_cmax=next_cmax_est,
+                )
                 phi_next = shaper.compute_potential(
                     state_feat=next_s_feat,
                     estimated_cmax=next_cmax_est,
@@ -197,6 +270,7 @@ def run_training(
                     h0=float(env.state.h0),
                     last_transfer_time=float(env.state.last_transfer_time),
                     is_terminal=False,
+                    graph_data=next_graph_snapshot,
                 )
 
             shaped_reward = shaper.shape_reward(
@@ -230,13 +304,12 @@ def run_training(
         if len(buffer) > 0:
             last_cmax = compute_cycle_heuristic_cmax(env.state)
             last_s_feat = extract_compact_state_features(env.state, last_cmax)
-            last_r_est = max(0.0, last_cmax - float(env.state.current_time))
-            last_u_time = compute_time_urgency_vector(
-                estimated_r=last_r_est,
-                current_time=env.state.current_time,
-                last_transfer_time=env.state.last_transfer_time,
-                h0=env.state.h0,
-                device=torch_device,
+            _, last_u_time, _ = compute_online_time_inputs(
+                actor_critic=actor_critic,
+                time_head=time_head,
+                env=env,
+                state_feat=last_s_feat,
+                estimated_cmax=last_cmax,
             )
             with torch.no_grad():
                 last_graph = actor_critic.build_graph_snapshot(env)
@@ -248,6 +321,7 @@ def run_training(
                 last_val = float(last_v.squeeze().item()) if not last_terminated else 0.0
 
             buffer.finish_trajectory(last_value=last_val)
+            time_auxiliary_batch = pending_time_labels.drain_ready()
 
             # -------------------------
             # PPO 训练更新步
@@ -256,6 +330,7 @@ def run_training(
                 buffer=buffer,
                 ppo_epochs=ppo_epochs,
                 batch_size=batch_size,
+                time_auxiliary_batch=time_auxiliary_batch,
             )
         else:
             metrics = {}
@@ -274,6 +349,7 @@ def run_training(
             "approx_kl": metrics.get("approx_kl", 0.0),
             "clip_fraction": metrics.get("clip_fraction", 0.0),
             "grad_norm": metrics.get("grad_norm", 0.0),
+            "time_loss": metrics.get("time_loss", 0.0),
             "mean_raw_reward": mean_raw_r,
             "mean_shaped_reward": mean_shaped_r,
             "elapsed_seconds": iter_elapsed,

@@ -43,6 +43,121 @@ class PPOTransition:
     truncated: bool = False           # 采样截断，不代表生产终止
 
 
+@dataclass
+class PendingTimeLabel:
+    """等待真实转站时刻揭示的周期级时间监督样本。"""
+
+    episode_id: int
+    cycle_id: int
+    state_feat: torch.Tensor
+    graph_snapshot: Any
+    estimated_cmax: float
+    current_time: float
+    h0: float
+    predictor_version: int
+    time_urgency: torch.Tensor | None = None
+
+
+class PendingTimeLabelCache:
+    """跨PPO采样段保存周期样本，直到真实转站事件补齐标签。"""
+
+    def __init__(self) -> None:
+        self._pending: dict[tuple[int, int], PendingTimeLabel] = {}
+        self._ready: list[dict[str, Any]] = []
+
+    @property
+    def pending_count(self) -> int:
+        return len(self._pending)
+
+    def add(
+        self,
+        *,
+        episode_id: int,
+        cycle_id: int,
+        state_feat: torch.Tensor,
+        graph_snapshot: Any,
+        estimated_cmax: float,
+        current_time: float,
+        h0: float,
+        predictor_version: int,
+        time_urgency: torch.Tensor | None = None,
+    ) -> bool:
+        """登记周期首个状态；同一周期重复状态不扩大缓存。"""
+        key = (int(episode_id), int(cycle_id))
+        if key in self._pending:
+            return False
+        self._pending[key] = PendingTimeLabel(
+            episode_id=key[0],
+            cycle_id=key[1],
+            state_feat=state_feat.detach().cpu().clone(),
+            graph_snapshot=graph_snapshot,
+            estimated_cmax=float(estimated_cmax),
+            current_time=float(current_time),
+            h0=float(h0),
+            predictor_version=int(predictor_version),
+            time_urgency=None if time_urgency is None else time_urgency.detach().cpu().clone(),
+        )
+        return True
+
+    def attach_transfer(
+        self,
+        *,
+        episode_id: int,
+        cycle_id: int,
+        actual_transfer_time: float,
+    ) -> bool:
+        """用真实转站时刻补齐一个周期的归一化残差。"""
+        key = (int(episode_id), int(cycle_id))
+        sample = self._pending.pop(key, None)
+        if sample is None:
+            return False
+        label_y = (float(actual_transfer_time) - sample.estimated_cmax) / sample.h0
+        self._ready.append({
+            "episode_id": sample.episode_id,
+            "cycle_id": sample.cycle_id,
+            "state_feat": sample.state_feat,
+            "graph_snapshot": sample.graph_snapshot,
+            "estimated_cmax": sample.estimated_cmax,
+            "current_time": sample.current_time,
+            "h0": sample.h0,
+            "predictor_version": sample.predictor_version,
+            "time_urgency": sample.time_urgency,
+            "actual_transfer_time": float(actual_transfer_time),
+            "target_residual": float(label_y),
+        })
+        return True
+
+    def drain_ready(self) -> dict[str, Any] | None:
+        """取出已补齐标签的批次；没有真实转站标签时返回None。"""
+        if not self._ready:
+            return None
+        ready = self._ready
+        self._ready = []
+        result: dict[str, Any] = {
+            "episode_ids": [item["episode_id"] for item in ready],
+            "cycle_ids": [item["cycle_id"] for item in ready],
+            "state_feats": torch.stack([item["state_feat"] for item in ready]),
+            "graph_snapshots": [item["graph_snapshot"] for item in ready],
+            "estimated_cmax": torch.tensor([item["estimated_cmax"] for item in ready]),
+            "current_times": torch.tensor([item["current_time"] for item in ready]),
+            "h0": torch.tensor([item["h0"] for item in ready]),
+            "predictor_versions": [item["predictor_version"] for item in ready],
+            "actual_transfer_times": torch.tensor([item["actual_transfer_time"] for item in ready]),
+            "target_residuals": torch.tensor([item["target_residual"] for item in ready]),
+        }
+        if all(item["time_urgency"] is not None for item in ready):
+            result["time_urgencies"] = torch.stack([item["time_urgency"] for item in ready])
+        return result
+
+    def discard_episode(self, episode_id: int) -> None:
+        """丢弃未发生真实转站的旧生产轨迹标签，避免跨episode污染。"""
+        episode = int(episode_id)
+        self._pending = {
+            key: value for key, value in self._pending.items()
+            if value.episode_id != episode
+        }
+
+
 class RolloutBufferWork3:
     """工作三 PPO 经验回放缓存。"""
 

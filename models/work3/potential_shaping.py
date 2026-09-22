@@ -35,6 +35,7 @@ class PotentialRewardShaper:
     def __init__(
         self,
         time_head: TimeResidualHead,
+        actor_critic: Any | None = None,
         a: float = 0.5,
         b: float = 1.0,
         beta: float = 1.0,
@@ -53,19 +54,31 @@ class PotentialRewardShaper:
         self.b = float(b)
         self.beta = float(beta)
         self.gamma = float(gamma)
+        self.snapshot_version = 0
 
         # 保持只读冻结副本
         self.frozen_head = copy.deepcopy(time_head)
+        self.frozen_actor = copy.deepcopy(actor_critic) if actor_critic is not None else None
         self.frozen_head.eval()
         for p in self.frozen_head.parameters():
             p.requires_grad = False
+        if self.frozen_actor is not None:
+            self.frozen_actor.eval()
+            for p in self.frozen_actor.parameters():
+                p.requires_grad = False
 
-    def update_snapshot(self, new_head: TimeResidualHead) -> None:
+    def update_snapshot(self, new_head: TimeResidualHead, new_actor: Any | None = None) -> None:
         """在新的训练 episode/轨迹开始前，同步最新的在线预测头权重副本。"""
         self.frozen_head = copy.deepcopy(new_head)
         self.frozen_head.eval()
         for p in self.frozen_head.parameters():
             p.requires_grad = False
+        if new_actor is not None:
+            self.frozen_actor = copy.deepcopy(new_actor)
+            self.frozen_actor.eval()
+            for p in self.frozen_actor.parameters():
+                p.requires_grad = False
+        self.snapshot_version += 1
 
     def compute_potential(
         self,
@@ -75,6 +88,7 @@ class PotentialRewardShaper:
         h0: float,
         last_transfer_time: float,
         is_terminal: bool = False,
+        graph_data: Any | None = None,
     ) -> float:
         """计算指定状态下的势能值 Φ(s)。
 
@@ -103,8 +117,17 @@ class PotentialRewardShaper:
             feat_tensor = feat_tensor.unsqueeze(0)
 
         with torch.no_grad():
+            if self.frozen_actor is not None:
+                if graph_data is None:
+                    raise ValueError("图预测器塑形必须提供当前状态图快照")
+                shared_feat = self.frozen_actor.encode_shared_representation(
+                    feat_tensor.squeeze(0),
+                    graph_data,
+                ).unsqueeze(0)
+            else:
+                shared_feat = feat_tensor
             _, _, h_est_tensor = self.frozen_head.predict_corrected_time(
-                state_feat=feat_tensor,
+                state_feat=shared_feat,
                 estimated_cmax=estimated_cmax,
                 current_time=current_time,
                 h0=h0,
