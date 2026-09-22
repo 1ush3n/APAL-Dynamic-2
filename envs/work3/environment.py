@@ -28,6 +28,10 @@ from utils.work3.objective_evaluator import ObjectiveWeights, calculate_postpone
 logger = logging.getLogger(__name__)
 
 
+class NoFeasibleSlotError(RuntimeError):
+    """在保护范围内找不到同时满足资源约束的预约时刻。"""
+
+
 class AirLineEnvWork3:
     """多架次飞机脉动装配协同调度环境。"""
 
@@ -265,45 +269,96 @@ class AirLineEnvWork3:
     def _find_team_earliest_slot(
         self, station_id: int, team: Sequence[int], search_start: float, duration: float
     ) -> float:
-        """寻找满足团队全员空闲且站位槽位并发 <= 3 的最早时间起点。"""
-        candidate = search_start
-        max_search_steps = 1000
+        """寻找团队和站位资源同时可行的最早半开区间起点。"""
+        if duration < -self.tolerance:
+            raise ValueError(f"工时不能为负数: {duration}")
+        if duration <= self.tolerance:
+            return float(search_start)
 
-        for _ in range(max_search_steps):
-            next_free = candidate
-            for w in team:
-                wc = self.state.workers[w]
-                slot = wc.find_earliest_slot(candidate, duration, tolerance=self.tolerance)
-                if slot > next_free:
-                    next_free = slot
+        candidate = float(search_start)
+        interval_count = len(self._station_occupied_tasks.get(station_id, ()))
+        interval_count += sum(len(self.state.workers[w].intervals) for w in team)
+        max_iterations = max(1, interval_count + 1)
 
-            if next_free > candidate + self.tolerance:
-                candidate = next_free
+        for _ in range(max_iterations):
+            team_candidate = candidate
+            for worker_id in team:
+                worker_slot = self.state.workers[worker_id].find_earliest_slot(
+                    candidate,
+                    duration,
+                    tolerance=self.tolerance,
+                )
+                team_candidate = max(team_candidate, worker_slot)
+
+            if team_candidate > candidate + self.tolerance:
+                candidate = team_candidate
                 continue
 
-            if not self._is_station_slot_available(station_id, candidate, candidate + duration):
-                candidate += 0.5
-                continue
+            conflict_end = self._next_station_conflict_end(
+                station_id,
+                candidate,
+                candidate + duration,
+            )
+            if conflict_end is None:
+                return candidate
+            if conflict_end <= candidate + self.tolerance:
+                break
+            candidate = conflict_end
 
-            return candidate
-
-        return candidate
+        raise NoFeasibleSlotError(
+            f"站位 {station_id}、团队 {tuple(team)} 在保护搜索范围内找不到 "
+            f"[start={search_start}, duration={duration}] 的可行预约区间"
+        )
 
     def _is_station_slot_available(self, station_id: int, start: float, end: float) -> bool:
-        """检查指定站位在 [start, end] 区间内槽位并发数是否 < max_slots_per_station (O(K) 局部查找)。"""
+        """按区间端点扫描检查半开区间 ``[start, end)`` 的站位容量。"""
+        return self._next_station_conflict_end(station_id, start, end) is None
+
+    def _next_station_conflict_end(
+        self,
+        station_id: int,
+        start: float,
+        end: float,
+    ) -> float | None:
+        """返回候选区间内第一次容量超限的相关完工时刻。"""
+        if end <= start + self.tolerance:
+            return None
+
         intervals: list[tuple[float, float]] = []
         for task_key in self._station_occupied_tasks.get(station_id, ()):
             t = self.state.tasks[task_key]
-            if t.scheduled_start is not None:
-                intervals.append((t.scheduled_start, t.scheduled_start + t.duration))
+            if t.scheduled_start is None:
+                continue
+            interval_start = float(t.scheduled_start)
+            interval_end = interval_start + float(t.duration)
+            if interval_end <= interval_start + self.tolerance:
+                continue
+            if interval_end <= start + self.tolerance or interval_start >= end - self.tolerance:
+                continue
+            intervals.append((interval_start, interval_end))
 
-        time_points = [start, (start + end) / 2.0, end - self.tolerance]
-        for pt in time_points:
-            active_count = sum(1 for s_ex, e_ex in intervals if s_ex <= pt < e_ex - self.tolerance)
-            if active_count >= self.max_slots_per_station:
-                return False
+        time_points = {float(start), float(end)}
+        for interval_start, interval_end in intervals:
+            if start + self.tolerance < interval_start < end - self.tolerance:
+                time_points.add(interval_start)
+            if start + self.tolerance < interval_end < end - self.tolerance:
+                time_points.add(interval_end)
 
-        return True
+        ordered_points = sorted(time_points)
+        for left, right in zip(ordered_points, ordered_points[1:]):
+            if right <= left + self.tolerance:
+                continue
+
+            active_intervals = [
+                (interval_start, interval_end)
+                for interval_start, interval_end in intervals
+                if interval_start <= left + self.tolerance
+                and interval_end > left + self.tolerance
+            ]
+            if len(active_intervals) >= self.max_slots_per_station:
+                return min(interval_end for _, interval_end in active_intervals)
+
+        return None
 
     def _advance_events_until_next_decision(self) -> None:
         """推进事件队列，直至产生新的就绪工序或全线完工退出。"""
