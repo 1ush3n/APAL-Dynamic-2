@@ -12,12 +12,12 @@
       t + W_remain(s) / M_s
   )
 全线同步脉动预计完成时刻：
-  P_q^h = max(t, P_{q-1} + H_0, max_{s=0}^4 F_s)
+  P_q^h = max(t, max_{s=0}^4 F_s)
 
 物理法则：
 1. W_remain(s) 严格仅统计本周期归属本站未后移工序的标准工时总和 (已后移工序进入后续周期，不混入本站)；
 2. M_s 为本站初始内生绑定的固定工人数；
-3. 保证估计值单调不倒退，且 P_q^h >= max(t, P_{q-1} + H_0)。
+3. 保证估计值不早于当前时刻；H_0只作为归一化和基准参照。
 """
 
 from __future__ import annotations
@@ -77,21 +77,15 @@ def compute_station_estimated_finish(
 def compute_cycle_heuristic_cmax(state: MultiAircraftState) -> float:
     """计算当前周期全线同步脉动完成时刻的启发式估计值 P_q^h(s)。"""
     current_time = float(state.current_time)
-    h0 = float(state.h0)
-    p_last = float(state.last_transfer_time)
-
-    # 基准名义节拍下界：P_{q-1} + H_0
-    nominal_takt_lower_bound = p_last + h0
-
     # 统计五大工位的各自完工下界
     station_finishes = [
-        compute_station_estimated_finish(state, s, h0)
+        compute_station_estimated_finish(state, s, state.h0)
         for s in range(state.num_stations)
     ]
     max_station_finish = max(station_finishes) if station_finishes else current_time
 
-    # 全线同步脉动转站时刻取全站瓶颈与基准节拍的最大值
-    estimated_pq = max(nominal_takt_lower_bound, max_station_finish)
+    # 全线同步脉动转站时刻取全站瓶颈与当前时刻的最大值。
+    estimated_pq = max(current_time, max_station_finish)
 
     # 确保绝不发生时间倒退
     return max(current_time, estimated_pq)

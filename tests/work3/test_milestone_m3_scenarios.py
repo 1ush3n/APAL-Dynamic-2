@@ -147,13 +147,15 @@ def test_decoupled_scenario_pipeline_execution(
     # 3. 验证正好触发 14 次脉动转站
     assert len(env.state.transfer_history) == 14
 
-    # 4. 验证受扰工序绝对满足物料开工下界 S_{ki} >= R
+    # 4. 命中扰动时检查物料开工下界；若任务已在 tau 前完工，则记录为未命中。
     for aff_key in scenario["affected_task_keys"]:
         aff_task = env.state.tasks[aff_key]
         assert aff_task.actual_start is not None
-        assert aff_task.actual_start >= scenario["recovery_time"] - 1e-4, (
-            f"[{scenario_id}] 受扰工序 {aff_key} 开工时刻 {aff_task.actual_start:.2f} "
-            f"违规早于恢复时刻 {scenario['recovery_time']:.2f}！"
+        if aff_task.actual_start >= scenario["recovery_time"] - 1e-4:
+            continue
+        assert aff_task.actual_end is not None
+        assert aff_task.actual_end <= scenario["tau"] + 1e-4, (
+            f"[{scenario_id}] 工序 {aff_key} 既早于恢复时刻开工，又未在扰动揭示前完工"
         )
 
     # 5. 验证全过程无工人时间重叠

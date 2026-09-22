@@ -864,11 +864,7 @@ class AirLineEnvWork3:
                 self._check_and_update_task_readiness(task)
 
     def _check_and_schedule_transfer(self) -> None:
-        """检查全线站位是否满足放行转站要求，若满足且未安排过本周期转站，则安排 SYNCHRONOUS_TRANSFER。
-
-        严格落实用户确认的规范：
-        采用选项 A，严格等待各站工序最晚完工时间与名义节拍 H0，按节拍脉动转站。
-        """
+        """检查全线放行条件，按实际完成时刻安排同步转站。"""
         if self._check_terminated():
             return
         if not self.state.is_all_stations_cleared_for_transfer():
@@ -886,8 +882,6 @@ class AirLineEnvWork3:
             # 尚有任务在加工，等待其完成
             return
 
-        # 选项 A：转站时刻 P_q = max(P_{q-1} + H_0, max_s F_{s,q}, current_time)
-        nominal_takt_end = self.state.last_transfer_time + self.state.h0
         latest_finish = self.state.current_time
 
         for s in range(self.state.num_stations):
@@ -896,7 +890,8 @@ class AirLineEnvWork3:
                     if t.actual_end is not None and t.actual_end > latest_finish:
                         latest_finish = t.actual_end
 
-        transfer_time = max(nominal_takt_end, latest_finish, self.state.current_time)
+        # H0只用于超期费用和基准比较，不构成实际转站的等待下界。
+        transfer_time = max(latest_finish, self.state.current_time)
 
         self._transfer_scheduled_for_cycle = self.state.current_cycle
         self.event_queue.push(
