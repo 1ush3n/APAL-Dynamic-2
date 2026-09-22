@@ -106,8 +106,8 @@ def test_conditional_branch_truncation(env: AirLineEnvWork3) -> None:
     act, lp, v, rec = net.select_action(env, state_feat, time_urgency, deterministic=True)
     assert act is not None
 
-    ready_tasks = env.get_ready_tasks()
-    chosen_task = ready_tasks[rec["task_idx"]]
+    candidate_tasks = env.get_action_candidates()
+    chosen_task = candidate_tasks[rec["task_idx"]]
 
     if env.validate_postpone(chosen_task) is None:
         assert act["branch"] == ActionBranch.POSTPONE

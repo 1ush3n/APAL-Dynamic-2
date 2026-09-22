@@ -313,6 +313,59 @@ class AirLineEnvWork3:
         required = task.demand - len(selected)
         return candidates if len(candidates) >= required else []
 
+    def _predecessor_release_time(self, task: TaskRuntimeState) -> float | None:
+        """返回前驱已完成或已预约时可证明的最早释放时刻。"""
+        release_time = self.state.current_time
+        for predecessor_id in task.predecessors:
+            predecessor = self.state.tasks.get(f"{task.aircraft_id}_{predecessor_id}")
+            if predecessor is None:
+                return None
+            if predecessor.status == TaskStatus.COMPLETED and predecessor.actual_end is not None:
+                release_time = max(release_time, float(predecessor.actual_end))
+                continue
+            if (
+                predecessor.status == TaskStatus.RESERVED
+                and predecessor.scheduled_start is not None
+                and predecessor.execution_duration is not None
+            ):
+                release_time = max(
+                    release_time,
+                    float(predecessor.scheduled_start + predecessor.execution_duration),
+                )
+                continue
+            return None
+        return release_time
+
+    def can_reserve(self, task: TaskRuntimeState) -> bool:
+        """判断任务是否可以登记留站预约，不代表当前时刻可以实际开工。"""
+        if task.status in (TaskStatus.RESERVED, TaskStatus.RUNNING, TaskStatus.COMPLETED):
+            return False
+        aircraft = self.state.aircraft[task.aircraft_id]
+        if aircraft.current_station != task.current_station:
+            return False
+        if len(self.valid_team_completion_workers(task, [])) < task.demand:
+            return False
+        return self._predecessor_release_time(task) is not None
+
+    def can_postpone(self, task: TaskRuntimeState) -> bool:
+        """判断任务是否可以独立后移，不要求物料已在当前时刻恢复。"""
+        if task.status in (TaskStatus.RESERVED, TaskStatus.RUNNING, TaskStatus.COMPLETED):
+            return False
+        return self.validate_postpone(task) is None
+
+    def get_action_branch_mask(self, task: TaskRuntimeState) -> tuple[bool, bool]:
+        """返回任务的``(stay_mask, postpone_mask)``。"""
+        return self.can_reserve(task), self.can_postpone(task)
+
+    def get_action_candidates(self) -> list[TaskRuntimeState]:
+        """返回至少有一个合法动作分支的任务。"""
+        candidates: list[TaskRuntimeState] = []
+        for station_id in range(self.state.num_stations):
+            for task in self.state.get_tasks_for_station(station_id):
+                if any(self.get_action_branch_mask(task)):
+                    candidates.append(task)
+        return candidates
+
     def duration_for_team(
         self,
         task: TaskRuntimeState,
@@ -345,7 +398,11 @@ class AirLineEnvWork3:
         if task.max_allowed_station is not None and target_station > task.max_allowed_station:
             return f"工序 {task.task_key} 超过允许最晚站位，禁止后移"
 
-        station_map = {item.task_id: item.current_station for item in self.state.tasks.values()}
+        station_map = {
+            predecessor_id: self.state.tasks[f"{task.aircraft_id}_{predecessor_id}"].current_station
+            for predecessor_id in self.constraint_engine.physical_predecessors[task.task_id]
+            if f"{task.aircraft_id}_{predecessor_id}" in self.state.tasks
+        }
         violation = self.constraint_engine.station_violation(
             task.task_id,
             target_station,
@@ -404,8 +461,6 @@ class AirLineEnvWork3:
 
         self.process_due_events()
         task = self.state.tasks[task_key]
-        if task.status != TaskStatus.READY:
-            raise ValueError(f"工序 {task_key} 当前状态为 {task.status.name}，不可调度！必须为 READY。")
 
         ac = self.state.aircraft[task.aircraft_id]
         if ac.current_station != task.current_station:
@@ -418,12 +473,17 @@ class AirLineEnvWork3:
 
         if branch == ActionBranch.STATION_EXECUTE:
             # 分支 A：留在当前站位执行
+            if not self.can_reserve(task):
+                raise ValueError(f"工序 {task_key} 当前不具备留站预约资格")
             team = tuple(int(w) for w in action.get("team", ()))
             align = int(action.get("align", 0))
 
             self._validate_team_for_task(task, team)
 
-            search_start = max(self.state.current_time, task.material_ready_time)
+            predecessor_release = self._predecessor_release_time(task)
+            if predecessor_release is None:
+                raise ValueError(f"工序 {task_key} 的前驱尚未完成或没有有效预约")
+            search_start = max(self.state.current_time, task.material_ready_time, predecessor_release)
             if align == 1:
                 align_target = self.state.last_transfer_time + task.in_station_offset
                 search_start = max(search_start, align_target)
@@ -476,8 +536,10 @@ class AirLineEnvWork3:
 
         elif branch == ActionBranch.POSTPONE:
             # 分支 B：合法后移至下一站位
-            postpone_error = self.validate_postpone(task)
-            if postpone_error is not None:
+            if not self.can_postpone(task):
+                postpone_error = self.validate_postpone(task)
+                if postpone_error is None:
+                    postpone_error = f"工序 {task_key} 当前状态不允许后移"
                 raise ValueError(postpone_error)
 
             n_old = task.postpone_count

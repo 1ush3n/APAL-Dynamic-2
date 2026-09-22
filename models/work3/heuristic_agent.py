@@ -27,8 +27,8 @@ class HeuristicAgentWork3:
 
     def select_action(self, env: AirLineEnvWork3) -> dict[str, Any] | None:
         """根据当前产线状态，依据基准启发式规则选出下一步调度动作。"""
-        ready_tasks = env.get_ready_tasks()
-        if not ready_tasks:
+        candidate_tasks = env.get_action_candidates()
+        if not candidate_tasks:
             return None
 
         state = env.state
@@ -37,8 +37,10 @@ class HeuristicAgentWork3:
         nominal_cycle_end = p_last + h0
 
         # 按站位编号、站内基准偏移与工序编号确定性排序
-        ready_tasks.sort(key=lambda t: (t.current_station, t.in_station_offset, t.task_id))
-        task: TaskRuntimeState = ready_tasks[0]
+        reservable_tasks = [task for task in candidate_tasks if env.can_reserve(task)]
+        candidate_tasks = reservable_tasks or candidate_tasks
+        candidate_tasks.sort(key=lambda t: (t.current_station, t.in_station_offset, t.task_id))
+        task: TaskRuntimeState = candidate_tasks[0]
 
         # ------------------
         # 1. 检查物理后移保节拍准则 (Branch B: POSTPONE)
@@ -56,6 +58,13 @@ class HeuristicAgentWork3:
         # ------------------
         # 2. 留在当前站排产 (Branch A: STATION_EXECUTE)
         # ------------------
+        if not env.can_reserve(task):
+            if can_postpone:
+                return {
+                    "task_key": task.task_key,
+                    "branch": ActionBranch.POSTPONE,
+                }
+            return None
         st_workers = state.station_worker_bindings.get(task.current_station, [])
         demand = task.demand
         valid_workers = env.valid_team_completion_workers(task, [])
@@ -112,15 +121,15 @@ class HeuristicAgentWork3:
         step_records: list[dict[str, Any]] = []
 
         while total_decisions < max_decisions:
-            ready = env.get_ready_tasks()
-            if not ready:
+            candidates = env.get_action_candidates()
+            if not candidates:
                 if env._check_terminated():
                     break
                 env._advance_events_until_next_decision()
-                ready = env.get_ready_tasks()
-                if not ready and env._check_terminated():
+                candidates = env.get_action_candidates()
+                if not candidates and env._check_terminated():
                     break
-                if not ready and env.event_queue.is_empty():
+                if not candidates and env.event_queue.is_empty():
                     raise RuntimeError("环境出现异常死锁：既无就绪工序也无未来事件！")
 
             # 记录当前状态与启发式估计值

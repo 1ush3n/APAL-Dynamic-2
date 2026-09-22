@@ -58,12 +58,10 @@ def test_baseline_c_postpone_rule_trigger(baseline_path: str) -> None:
     env.reset()
     agent = HeuristicAgentWork3()
 
-    task = next(
-        task for task in env.state.tasks.values()
-        if env.validate_postpone(task) is None
-    )
-    for ready_task in env.get_ready_tasks():
-        ready_task.status = TaskStatus.UNREADY
+    task = env.state.tasks["0_16"]
+    for other_task in env.state.tasks.values():
+        if other_task.task_key != task.task_key:
+            other_task.status = TaskStatus.COMPLETED
     task.status = TaskStatus.READY
     h0 = env.state.h0
 

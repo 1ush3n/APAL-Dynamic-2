@@ -242,8 +242,8 @@ class ActorCriticWork3(nn.Module):
         state_feat = state_feat.to(device)
         time_urgency = time_urgency.to(device)
 
-        ready_tasks = env.get_ready_tasks()
-        if not ready_tasks:
+        candidate_tasks = env.get_action_candidates()
+        if not candidate_tasks:
             return None, 0.0, 0.0, {}
 
         # 1. 状态编码
@@ -251,10 +251,10 @@ class ActorCriticWork3(nn.Module):
         state_value = float(v.item())
 
         # 2. Head 1: 工序选择
-        cand_feats = extract_candidate_task_features(env.state, ready_tasks).to(device)
+        cand_feats = extract_candidate_task_features(env.state, candidate_tasks).to(device)
         cand_embed = self.task_proj(cand_feats)  # (N, hidden_dim)
 
-        e_ctx_expanded = e_fused.unsqueeze(0).expand(len(ready_tasks), -1)  # (N, hidden_dim)
+        e_ctx_expanded = e_fused.unsqueeze(0).expand(len(candidate_tasks), -1)  # (N, hidden_dim)
         task_pair = torch.cat([e_ctx_expanded, cand_embed], dim=-1)
         task_logits = self.task_score_fc(task_pair).squeeze(-1)  # (N,)
 
@@ -264,7 +264,7 @@ class ActorCriticWork3(nn.Module):
         else:
             task_idx = int(dist_task.sample().item())
 
-        chosen_task = ready_tasks[task_idx]
+        chosen_task = candidate_tasks[task_idx]
         log_prob_task = dist_task.log_prob(torch.tensor(task_idx, device=device))
         chosen_task_embed = cand_embed[task_idx]
 
@@ -273,14 +273,11 @@ class ActorCriticWork3(nn.Module):
         branch_logits = self.branch_head(branch_input).clone()
 
         # 物理硬掩码：环境与Actor共用同一套后移合法性规则。
-        can_postpone = env.validate_postpone(chosen_task) is None
-        has_legal_team = len(
-            env.valid_team_completion_workers(chosen_task, [])
-        ) >= chosen_task.demand
+        can_reserve, can_postpone = env.get_action_branch_mask(chosen_task)
 
         if not can_postpone:
             branch_logits[1] = -1e4
-        if not has_legal_team:
+        if not can_reserve:
             branch_logits[0] = -1e4
 
         dist_branch = Categorical(logits=branch_logits)
@@ -299,6 +296,7 @@ class ActorCriticWork3(nn.Module):
             "task_key": chosen_task.task_key,
             "branch": branch_act,
             "cand_feats": cand_feats.cpu(),
+            "can_reserve": can_reserve,
             "can_postpone": can_postpone,
             "num_st_workers": self.max_station_workers,
             "chosen_team": (),
@@ -424,7 +422,10 @@ class ActorCriticWork3(nn.Module):
             chosen_task_embed = cand_embed[task_idx]
             branch_input = torch.cat([e_ctx, chosen_task_embed], dim=-1)
             branch_logits = self.branch_head(branch_input).clone()
+            can_reserve = rec.get("can_reserve", True)
             can_postpone = rec.get("can_postpone", True)
+            if not can_reserve:
+                branch_logits[0] = -1e4
             if not can_postpone:
                 branch_logits[1] = -1e4
             dist_branch = Categorical(logits=branch_logits)

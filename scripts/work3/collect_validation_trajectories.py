@@ -56,15 +56,15 @@ def collect_single_trajectory(
     total_decisions = 0
 
     while total_decisions < 10000:
-        ready = env.get_ready_tasks()
-        if not ready:
+        candidates = env.get_action_candidates()
+        if not candidates:
             if env._check_terminated():
                 break
             env._advance_events_until_next_decision()
-            ready = env.get_ready_tasks()
-            if not ready and env._check_terminated():
+            candidates = env.get_action_candidates()
+            if not candidates and env._check_terminated():
                 break
-            if not ready and env.event_queue.is_empty():
+            if not candidates and env.event_queue.is_empty():
                 break
 
         current_time = float(env.state.current_time)

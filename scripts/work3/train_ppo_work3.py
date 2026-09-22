@@ -133,13 +133,13 @@ def run_training(
             if env._check_terminated():
                 env.reset()
 
-            ready = env.get_ready_tasks()
-            if not ready:
+            candidates = env.get_action_candidates()
+            if not candidates:
                 env._advance_events_until_next_decision()
-                ready = env.get_ready_tasks()
-                if not ready and env._check_terminated():
+                candidates = env.get_action_candidates()
+                if not candidates and env._check_terminated():
                     env.reset()
-                    ready = env.get_ready_tasks()
+                    candidates = env.get_action_candidates()
 
             cmax_est = compute_cycle_heuristic_cmax(env.state)
             s_feat = extract_compact_state_features(env.state, cmax_est)
