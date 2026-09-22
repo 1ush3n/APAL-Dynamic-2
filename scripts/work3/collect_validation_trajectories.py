@@ -39,6 +39,25 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 
+def attach_transfer_labels(
+    steps: list[dict[str, Any]],
+    transfer_history: list[float],
+    h0: float,
+) -> None:
+    """只用已观测的真实转站时刻补标签，未观测周期显式保留缺失。"""
+    for rec in steps:
+        cycle_idx = int(rec["cycle_idx"])
+        if 1 <= cycle_idx <= len(transfer_history):
+            actual_time = float(transfer_history[cycle_idx - 1])
+            rec["actual_transfer_time"] = actual_time
+            rec["label_y"] = float((actual_time - rec["estimated_cmax"]) / h0)
+            rec["label_available"] = True
+        else:
+            rec["actual_transfer_time"] = None
+            rec["label_y"] = None
+            rec["label_available"] = False
+
+
 def collect_single_trajectory(
     agent: HeuristicAgentWork3,
     baseline_path: str,
@@ -92,18 +111,9 @@ def collect_single_trajectory(
         if terminated:
             break
 
-    # 回溯结算真实转站时刻 P_q 与时间残差监督标签 y = (P_q - P_q^h) / H_0
+    # 回溯结算真实转站时刻；尚未转站的周期不伪造监督标签。
     transfer_history = list(env.state.transfer_history)
-    for rec in steps_data:
-        c_idx = rec["cycle_idx"]
-        if c_idx <= len(transfer_history):
-            p_actual = float(transfer_history[c_idx - 1])
-        else:
-            p_actual = float(env.state.current_time)
-
-        rec["actual_transfer_time"] = p_actual
-        # 归一化时间残差标签
-        rec["label_y"] = float((p_actual - rec["estimated_cmax"]) / h0)
+    attach_transfer_labels(steps_data, transfer_history, h0)
 
     return {
         "trajectory_id": trajectory_id,

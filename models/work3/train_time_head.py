@@ -42,6 +42,12 @@ class StepResidualDataset(Dataset):
         for traj in trajectories:
             h0 = float(traj["h0"])
             for step in traj["steps"]:
+                if (
+                    step.get("label_available", step.get("label_y") is not None) is False
+                    or step.get("label_y") is None
+                    or step.get("actual_transfer_time") is None
+                ):
+                    continue
                 feat = step["state_feat"]
                 if not isinstance(feat, torch.Tensor):
                     feat = torch.tensor(feat, dtype=torch.float)

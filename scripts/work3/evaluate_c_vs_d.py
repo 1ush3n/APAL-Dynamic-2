@@ -36,12 +36,83 @@ from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from utils.work3.trajectory_feasibility import (
+    TaskConstraintRecord,
+    TrajectoryExecutionRecord,
+    validate_trajectory,
+)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def _check_completed_trajectory_feasibility(
+    env: AirLineEnvWork3,
+) -> tuple[bool, dict[str, int]]:
+    """从实际执行字段重建记录，再调用独立检查器复核可行性。"""
+    if not env._check_terminated():
+        return False, {"incomplete_trajectory": 1}
+
+    records: list[TrajectoryExecutionRecord] = []
+    constraints: dict[int, TaskConstraintRecord] = {}
+    for task in env.state.tasks.values():
+        constraints[task.task_id] = TaskConstraintRecord(
+            demand=task.demand,
+            required_skill=task.skill,
+            predecessors=tuple(task.predecessors),
+            fixed_station=task.fixed_station,
+            max_allowed_station=task.max_allowed_station,
+        )
+        if task.actual_start is None or task.actual_end is None:
+            return False, {"missing_execution_interval": 1}
+        aircraft = env.state.aircraft[task.aircraft_id]
+        records.append(
+            TrajectoryExecutionRecord(
+                aircraft_id=task.aircraft_id,
+                task_id=task.task_id,
+                station_id=task.current_station,
+                team=tuple(task.assigned_team),
+                start=float(task.actual_start),
+                end=float(task.actual_end),
+                material_ready_time=float(task.material_ready_time),
+                station_entry_time=aircraft.entry_times.get(task.current_station),
+                aircraft_station_at_start=task.current_station,
+            )
+        )
+
+    report = validate_trajectory(
+        records,
+        task_constraints=constraints,
+        worker_skills=env.worker_skills,
+        worker_station_bindings={
+            worker_id: station_id
+            for station_id, worker_ids in env.state.station_worker_bindings.items()
+            for worker_id in worker_ids
+        },
+        station_capacities={
+            station_id: env.max_slots_per_station
+            for station_id in range(env.state.num_stations)
+        },
+    )
+    return report.is_feasible, dict(report.violations)
+
+
+def _count_actual_disturbance_hits(
+    env: AirLineEnvWork3,
+    scenario: dict[str, Any] | None,
+) -> int:
+    """按环境实际继承的物料恢复时刻统计已命中的受扰工序。"""
+    if scenario is None:
+        return 0
+    return sum(
+        1
+        for task_key in scenario.get("affected_task_keys", [])
+        if task_key in env.state.tasks
+        and env.state.tasks[task_key].material_ready_time > env.tolerance
+    )
 
 
 def evaluate_single_trajectory(
@@ -59,17 +130,23 @@ def evaluate_single_trajectory(
         env.load_scenario(scenario)
 
     decisions = 0
+    termination_reason = "decision_limit"
+    terminated = False
+    truncated = False
     with torch.inference_mode():
         while decisions < max_decisions:
             candidates = env.get_action_candidates()
             if not candidates:
                 if env._check_terminated():
+                    termination_reason = "completed"
                     break
                 env._advance_events_until_next_decision()
                 candidates = env.get_action_candidates()
                 if not candidates and env._check_terminated():
+                    termination_reason = "completed"
                     break
                 if not candidates and env.event_queue.is_empty():
+                    termination_reason = "deadlock"
                     break
 
             if agent_type == "Baseline-C":
@@ -95,18 +172,34 @@ def evaluate_single_trajectory(
                 raise ValueError(f"未知智能体类型: {agent_type}")
 
             if action is None:
+                if env.event_queue.is_empty():
+                    termination_reason = "deadlock"
+                    break
                 env._advance_events_until_next_decision()
                 continue
 
             obs, reward, terminated, truncated, info = env.step(action)
             decisions += 1
             if terminated:
+                termination_reason = "completed"
                 break
+            if truncated:
+                termination_reason = "rollout_truncated"
+                break
+
+    if decisions >= max_decisions and not terminated and not truncated:
+        termination_reason = "decision_limit"
 
     # 统计生产指标
     completed = sum(1 for t in env.state.tasks.values() if t.status == TaskStatus.COMPLETED)
     postponed_total = sum(t.postpone_count for t in env.state.tasks.values())
     total_cost = env.cumulative_cost
+    feasible, constraint_violations = _check_completed_trajectory_feasibility(env)
+    success = bool(
+        feasible
+        and termination_reason == "completed"
+        and env._check_terminated()
+    )
 
     return {
         "agent": agent_type,
@@ -117,8 +210,21 @@ def evaluate_single_trajectory(
         "j_postpone": env.cost_postpone,
         "j_revision": env.cost_revision,
         "j_total": total_cost,
+        "raw_cost_components": {
+            "j_takt": env.cost_takt,
+            "d_time": env.cost_time,
+            "d_team": env.cost_team,
+            "j_postpone": env.cost_postpone,
+            "j_revision": env.cost_revision,
+        },
         "makespan": float(env.state.current_time),
         "completed_tasks": completed,
+        "success": success,
+        "feasible": feasible,
+        "termination_reason": termination_reason,
+        "constraint_violations": constraint_violations,
+        "constraint_violation_count": sum(constraint_violations.values()),
+        "actual_disturbance_hits": _count_actual_disturbance_hits(env, scenario),
         "postponed_count": postponed_total,
         "decisions": decisions,
         "transfers": len(env.state.transfer_history),

@@ -9,7 +9,7 @@
    - reward: 经势函数塑形后的标量回报 R_t = r_t^raw + F_t；
    - value: Critic 估计的状态价值 V(s_t)；
    - log_prob: 采样时 Actor 输出的动作全量对数概率 log π_old(a_t|s_t)；
-   - done: 是否为批次生产终局或周期截断。
+   - terminated/truncated: 分开的真实批次终止与采样截断标记。
 2. 广义优势估计 (Generalized Advantage Estimation, GAE)：
    - δ_t = R_t + γ · V(s_{t+1}) · (1 - d_t) - V(s_t)
    - A_t = δ_t + (γ · λ) · (1 - d_t) · A_{t+1}
@@ -37,8 +37,10 @@ class PPOTransition:
     raw_reward: float                 # 原始物理步步奖励
     value: float                      # Critic 估计的 V(s_t)
     log_prob: float                   # 采样时刻的动作对数概率 log π_old
-    done: bool = False                # 是否结束
+    done: bool = False                # 旧接口兼容字段
     action_dict: dict[str, Any] = field(default_factory=dict)
+    terminated: bool | None = None   # 真实终止；None 时回退到旧 done 语义
+    truncated: bool = False           # 采样截断，不代表生产终止
 
 
 class RolloutBufferWork3:
@@ -68,7 +70,7 @@ class RolloutBufferWork3:
         """计算全轨迹的 GAE 优势值与目标价值 V_target。
 
         Args:
-            last_value: 轨迹末尾状态的估计价值 V(s_T)。若终局 done=True 则为 0.0。
+            last_value: 轨迹末尾状态的估计价值 V(s_T)。真实终止时应传 0.0。
         """
         n = len(self.transitions)
         if n == 0:
@@ -83,7 +85,9 @@ class RolloutBufferWork3:
         # 逆序计算 GAE
         for t in reversed(range(n)):
             trans = self.transitions[t]
-            non_terminal = 1.0 - float(trans.done)
+            # 只有真实终止切断 bootstrap；truncated 仍存在合法后继状态。
+            is_terminal = trans.done if trans.terminated is None else trans.terminated
+            non_terminal = 1.0 - float(is_terminal)
             delta = trans.reward + (self.gamma * next_value * non_terminal) - trans.value
             gae = delta + (self.gamma * self.gae_lambda * non_terminal * gae)
             advantages[t] = gae

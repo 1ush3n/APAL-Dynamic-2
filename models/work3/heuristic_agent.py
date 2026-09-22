@@ -123,18 +123,22 @@ class HeuristicAgentWork3:
 
         total_decisions = 0
         step_records: list[dict[str, Any]] = []
+        termination_reason = "decision_limit"
 
         while total_decisions < max_decisions:
             candidates = env.get_action_candidates()
             if not candidates:
                 if env._check_terminated():
+                    termination_reason = "completed"
                     break
                 env._advance_events_until_next_decision()
                 candidates = env.get_action_candidates()
                 if not candidates and env._check_terminated():
+                    termination_reason = "completed"
                     break
                 if not candidates and env.event_queue.is_empty():
-                    raise RuntimeError("环境出现异常死锁：既无就绪工序也无未来事件！")
+                    termination_reason = "deadlock"
+                    break
 
             # 记录当前状态与启发式估计值
             current_cycle = env.state.current_cycle
@@ -161,20 +165,31 @@ class HeuristicAgentWork3:
             step_records.append(step_record)
 
             if terminated:
+                termination_reason = "completed"
                 break
 
         # 补充记录各周期最终实际达成的同步脉动转站时刻 P_q
         # transfer_history 中记录了转站时刻：索引 q-1 对应第 q 周期转站时刻
         transfer_history = list(env.state.transfer_history)
         for rec in step_records:
-            c_idx = rec["cycle_idx"]
-            # 若在 transfer_history 范围内，记录实际转站时刻
-            if c_idx <= len(transfer_history):
-                rec["actual_transfer_time"] = transfer_history[c_idx - 1]
+            c_idx = int(rec["cycle_idx"])
+            if 1 <= c_idx <= len(transfer_history):
+                actual_time = float(transfer_history[c_idx - 1])
+                rec["actual_transfer_time"] = actual_time
+                rec["label_y"] = float(
+                    (actual_time - rec["estimated_cmax"]) / env.state.h0
+                )
+                rec["label_available"] = True
             else:
-                rec["actual_transfer_time"] = float(env.state.current_time)
+                rec["actual_transfer_time"] = None
+                rec["label_y"] = None
+                rec["label_available"] = False
+
+        success = termination_reason == "completed" and env._check_terminated()
 
         return {
+            "success": success,
+            "termination_reason": termination_reason,
             "total_decisions": total_decisions,
             "makespan": float(env.state.current_time),
             "completed_tasks": sum(1 for t in env.state.tasks.values() if t.status == TaskStatus.COMPLETED),

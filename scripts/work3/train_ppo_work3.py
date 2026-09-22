@@ -125,6 +125,7 @@ def run_training(
 
         step_raw_rewards: list[float] = []
         step_shaped_rewards: list[float] = []
+        last_terminated = False
 
         # -------------------------
         # Rollout 数据采集循环
@@ -178,9 +179,10 @@ def run_training(
             # 环境执行一步调度动作
             obs, raw_reward, terminated, truncated, info = env.step(act)
             done = terminated or truncated
+            last_terminated = bool(terminated)
 
             # 计算下一状态势 Φ(s_{t+1}) 与塑形奖励
-            if done:
+            if terminated:
                 phi_next = 0.0
             else:
                 next_cmax_est = compute_cycle_heuristic_cmax(env.state)
@@ -210,6 +212,8 @@ def run_training(
                 log_prob=lp,
                 done=done,
                 action_dict=act,
+                terminated=terminated,
+                truncated=truncated,
             ))
 
             step_raw_rewards.append(raw_reward)
@@ -236,7 +240,7 @@ def run_training(
                     last_s_feat.unsqueeze(0).to(torch_device),
                     last_u_time.unsqueeze(0).to(torch_device),
                 )
-                last_val = float(last_v.squeeze().item()) if not done else 0.0
+                last_val = float(last_v.squeeze().item()) if not last_terminated else 0.0
 
             buffer.finish_trajectory(last_value=last_val)
 
