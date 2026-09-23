@@ -12,7 +12,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_16"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_MID_S0",
@@ -27,7 +30,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_16"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_HIGH_S0",
@@ -42,7 +48,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_16"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_LOW_S0",
@@ -57,7 +66,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_7"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_MID_S0",
@@ -72,7 +84,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_7"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_HIGH_S0",
@@ -87,7 +102,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_7"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_LOW_S0",
@@ -102,7 +120,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_4"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_MID_S0",
@@ -117,7 +138,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_4"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_HIGH_S0",
@@ -132,7 +156,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "5_4"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_LOW_S1",
@@ -147,7 +174,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_MID_S1",
@@ -162,7 +192,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_HIGH_S1",
@@ -177,7 +210,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_LOW_S1",
@@ -192,7 +228,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_MID_S1",
@@ -207,7 +246,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_HIGH_S1",
@@ -222,7 +264,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_LOW_S1",
@@ -237,7 +282,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_MID_S1",
@@ -252,7 +300,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_HIGH_S1",
@@ -267,7 +318,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "4_25"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_LOW_S2",
@@ -282,7 +336,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_MID_S2",
@@ -297,7 +354,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_HIGH_S2",
@@ -312,7 +372,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_LOW_S2",
@@ -327,7 +390,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_MID_S2",
@@ -342,7 +408,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_HIGH_S2",
@@ -357,7 +426,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_LOW_S2",
@@ -372,7 +444,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_MID_S2",
@@ -387,7 +462,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_HIGH_S2",
@@ -402,7 +480,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "3_27"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_LOW_S3",
@@ -417,7 +498,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_10"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_MID_S3",
@@ -432,7 +516,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_10"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_HIGH_S3",
@@ -447,7 +534,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_10"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_LOW_S3",
@@ -462,7 +552,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_17"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_MID_S3",
@@ -477,7 +570,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_17"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_HIGH_S3",
@@ -492,7 +588,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_17"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_LOW_S3",
@@ -507,7 +606,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_21"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_MID_S3",
@@ -522,7 +624,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_21"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_HIGH_S3",
@@ -537,7 +642,10 @@
     "affected_count": 1,
     "affected_task_keys": [
       "2_21"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_LOW_S4",
@@ -563,7 +671,10 @@
       "1_63",
       "1_64",
       "1_71"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_MID_S4",
@@ -600,7 +711,10 @@
       "1_44",
       "1_83",
       "1_41"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "EARLY_HIGH_S4",
@@ -655,7 +769,10 @@
       "1_135",
       "1_136",
       "1_137"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_LOW_S4",
@@ -676,7 +793,10 @@
       "1_58",
       "1_105",
       "1_59"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_MID_S4",
@@ -704,7 +824,10 @@
       "1_208",
       "1_165",
       "1_182"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "MID_HIGH_S4",
@@ -742,7 +865,10 @@
       "1_167",
       "1_222",
       "1_184"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_LOW_S4",
@@ -760,7 +886,10 @@
       "1_187",
       "1_174",
       "1_177"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_MID_S4",
@@ -781,7 +910,10 @@
       "1_172",
       "1_210",
       "1_211"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   },
   {
     "scenario_id": "LATE_HIGH_S4",
@@ -808,6 +940,9 @@
       "1_229",
       "1_230",
       "1_231"
-    ]
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null
   }
 ]

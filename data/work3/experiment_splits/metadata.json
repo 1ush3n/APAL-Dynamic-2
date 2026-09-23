@@ -1,0 +1,14 @@
+{
+  "seed": 2026,
+  "source": "scenarios_9class.json",
+  "split_names": [
+    "train",
+    "validation",
+    "test"
+  ],
+  "scenario_counts": {
+    "train": 25,
+    "validation": 10,
+    "test": 10
+  }
+}

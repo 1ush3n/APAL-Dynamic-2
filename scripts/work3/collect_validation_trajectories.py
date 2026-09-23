@@ -58,6 +58,28 @@ def attach_transfer_labels(
             rec["label_available"] = False
 
 
+def load_scenarios_for_split(
+    scenarios_path: str | Path,
+    split_path: str | Path,
+) -> list[dict[str, Any]]:
+    """从正式清单加载固定事件，不按当前算法状态重新挑选目标。"""
+    with Path(scenarios_path).open("r", encoding="utf-8") as handle:
+        all_scenarios = json.load(handle)
+    with Path(split_path).open("r", encoding="utf-8") as handle:
+        manifest = json.load(handle)
+
+    entries = manifest.get("scenarios", manifest) if isinstance(manifest, dict) else manifest
+    scenario_ids = [
+        entry if isinstance(entry, str) else entry["scenario_id"]
+        for entry in entries
+    ]
+    by_id = {str(item["scenario_id"]): item for item in all_scenarios}
+    missing = [scenario_id for scenario_id in scenario_ids if scenario_id not in by_id]
+    if missing:
+        raise ValueError(f"场景清单包含未知事件: {missing}")
+    return [by_id[scenario_id] for scenario_id in scenario_ids]
+
+
 def collect_single_trajectory(
     agent: HeuristicAgentWork3,
     baseline_path: str,
@@ -133,6 +155,7 @@ def collect_all_trajectories(
     max_scenarios: int | None = None,
     num_nominal: int = 5,
     scenario_ids: list[str] | None = None,
+    scenario_split_path: str | Path | None = None,
 ) -> list[dict[str, Any]]:
     """收集指定规模的验证轨迹并落盘为 PyTorch 数据集。"""
     agent = HeuristicAgentWork3()
@@ -140,8 +163,10 @@ def collect_all_trajectories(
     # 1. 加载 9 类解耦场景库
     scenarios: list[dict[str, Any]] = []
     sc_path = Path(scenarios_path)
-    if sc_path.is_file():
-        with open(sc_path, "r", encoding="utf-8") as f:
+    if scenario_split_path is not None:
+        scenarios = load_scenarios_for_split(scenarios_path, scenario_split_path)
+    elif sc_path.is_file():
+        with sc_path.open("r", encoding="utf-8") as f:
             scenarios = json.load(f)
 
     if scenario_ids is not None:
@@ -197,6 +222,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="data/work3/val_trajectories.pt")
     parser.add_argument("--max_scenarios", type=int, default=None)
     parser.add_argument("--num_nominal", type=int, default=5)
+    parser.add_argument("--scenario_split", type=str, default=None)
     args = parser.parse_args()
 
     collect_all_trajectories(
@@ -205,4 +231,5 @@ if __name__ == "__main__":
         output_path=args.output,
         max_scenarios=args.max_scenarios,
         num_nominal=args.num_nominal,
+        scenario_split_path=args.scenario_split,
     )

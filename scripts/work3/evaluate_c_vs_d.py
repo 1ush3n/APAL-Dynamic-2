@@ -36,6 +36,7 @@ from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 from utils.work3.trajectory_feasibility import (
     TaskConstraintRecord,
     TrajectoryExecutionRecord,
@@ -113,6 +114,71 @@ def _count_actual_disturbance_hits(
         if task_key in env.state.tasks
         and env.state.tasks[task_key].material_ready_time > env.tolerance
     )
+
+
+def summarize_disturbance_effects(
+    task_records: dict[str, Any],
+    scenario: dict[str, Any] | None,
+    *,
+    baseline_start_by_key: dict[str, float],
+    baseline_material_ready_by_key: dict[str, float] | None = None,
+    tolerance: float = 1e-5,
+) -> dict[str, Any]:
+    """区分预设目标、实际命中、观察等待和其他飞机传播。"""
+    if scenario is None:
+        return {
+            "target_count": 0,
+            "actual_hit_count": 0,
+            "actual_hit_rate": 0.0,
+            "actual_hit_task_keys": [],
+            "observed_added_wait_hours": 0.0,
+            "cross_aircraft_affected_task_count": 0,
+            "cross_aircraft_affected_aircraft_ids": [],
+        }
+
+    baseline_ready = baseline_material_ready_by_key or {}
+    target_keys = [str(key) for key in scenario.get("affected_task_keys", [])]
+    target_aircraft_ids = {int(scenario["aircraft_id"])}
+    actual_hit_keys = [
+        key
+        for key in target_keys
+        if key in task_records
+        and float(getattr(task_records[key], "material_ready_time", 0.0))
+        > float(baseline_ready.get(key, 0.0)) + tolerance
+    ]
+
+    added_wait = 0.0
+    for key in actual_hit_keys:
+        task = task_records[key]
+        actual_start = getattr(task, "actual_start", None)
+        baseline_start = baseline_start_by_key.get(key)
+        if actual_start is not None and baseline_start is not None:
+            added_wait += max(0.0, float(actual_start) - float(baseline_start))
+
+    cross_aircraft_keys: list[str] = []
+    for key, task in task_records.items():
+        if key in target_keys or int(task.aircraft_id) in target_aircraft_ids:
+            continue
+        actual_start = getattr(task, "actual_start", None)
+        baseline_start = baseline_start_by_key.get(key)
+        if (
+            actual_start is not None
+            and baseline_start is not None
+            and float(actual_start) > float(baseline_start) + tolerance
+        ):
+            cross_aircraft_keys.append(str(key))
+
+    cross_aircraft_ids = sorted({int(task_records[key].aircraft_id) for key in cross_aircraft_keys})
+    target_count = len(target_keys)
+    return {
+        "target_count": target_count,
+        "actual_hit_count": len(actual_hit_keys),
+        "actual_hit_rate": len(actual_hit_keys) / target_count if target_count else 0.0,
+        "actual_hit_task_keys": actual_hit_keys,
+        "observed_added_wait_hours": added_wait,
+        "cross_aircraft_affected_task_count": len(cross_aircraft_keys),
+        "cross_aircraft_affected_aircraft_ids": cross_aircraft_ids,
+    }
 
 
 def evaluate_single_trajectory(
@@ -200,6 +266,17 @@ def evaluate_single_trajectory(
         and termination_reason == "completed"
         and env._check_terminated()
     )
+    baseline = MultiAircraftBaseline.load_from_json(env.baseline_json_path)
+    baseline_start_by_key = {
+        task.task_key: float(task.baseline_start)
+        for task in baseline.tasks.values()
+    }
+    effect_report = summarize_disturbance_effects(
+        env.state.tasks,
+        scenario,
+        baseline_start_by_key=baseline_start_by_key,
+        tolerance=env.tolerance,
+    )
 
     return {
         "agent": agent_type,
@@ -224,7 +301,8 @@ def evaluate_single_trajectory(
         "termination_reason": termination_reason,
         "constraint_violations": constraint_violations,
         "constraint_violation_count": sum(constraint_violations.values()),
-        "actual_disturbance_hits": _count_actual_disturbance_hits(env, scenario),
+        "actual_disturbance_hits": effect_report["actual_hit_count"],
+        "disturbance_effects": effect_report,
         "postponed_count": postponed_total,
         "decisions": decisions,
         "transfers": len(env.state.transfer_history),
