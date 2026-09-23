@@ -818,7 +818,9 @@ class AirLineEnvWork3:
         self, station_id: int, team: Sequence[int], search_start: float, duration: float
     ) -> float:
         """寻找团队和站位资源同时可行的最早半开区间起点。"""
-        if duration < -self.tolerance:
+        if not math.isfinite(float(duration)):
+            raise ValueError(f"工时必须是有限数值: {duration}")
+        if duration < 0.0:
             raise ValueError(f"工时不能为负数: {duration}")
         if duration <= self.tolerance:
             return float(search_start)
