@@ -126,6 +126,11 @@ def test_full_14_cycles_pipeline_run() -> None:
     all_exited = all(ac.is_completed for ac in env.state.aircraft.values())
     assert all_exited, "存在飞机未离开末站出线"
 
+    from scripts.work3.evaluate_c_vs_d import _check_completed_trajectory_feasibility
+
+    feasible, violations = _check_completed_trajectory_feasibility(env)
+    assert feasible, f"独立轨迹检查发现约束违规: {violations}"
+
     # 3. 验证正好触发 14 次脉动转站
     assert len(env.state.transfer_history) == 14, (
         f"脉动转站次数不正确: 期望 14 次, 实际 {len(env.state.transfer_history)} 次"

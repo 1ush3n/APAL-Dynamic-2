@@ -511,6 +511,8 @@ class AirLineEnvWork3:
     def _advance_to_next_event(self) -> bool:
         """推进到单个下一个离散事件，不允许指定任意等待时长。"""
         self.process_due_events()
+        if self._check_terminated():
+            return False
         next_event = self.event_queue.peek()
         if next_event is None:
             return False
@@ -921,6 +923,8 @@ class AirLineEnvWork3:
 
     def process_due_events(self) -> None:
         """处理当前时刻全部事件，包含处理过程中生成的同刻事件。"""
+        if self._check_terminated():
+            return
         while True:
             event = self.event_queue.peek()
             if event is None or event.timestamp > self.state.current_time + self.tolerance:
@@ -935,6 +939,9 @@ class AirLineEnvWork3:
                 return
             self.state.current_time = event.timestamp
             self._dispatch_event(event)
+            if event.event_type in (EventType.TASK_FINISH, EventType.SYNCHRONOUS_TRANSFER):
+                if self._check_terminated():
+                    return
 
     def _dispatch_event(self, event: SimulationEvent) -> None:
         """执行一个已按时间和优先级取出的事件。"""
@@ -997,6 +1004,8 @@ class AirLineEnvWork3:
         """推进事件队列，直至产生新的实际开工决策或全线完工退出。"""
         while True:
             self.process_due_events()
+            if self._check_terminated():
+                return
             if self.get_ready_tasks():
                 return
             next_event = self.event_queue.peek()
