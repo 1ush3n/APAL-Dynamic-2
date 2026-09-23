@@ -95,6 +95,68 @@ def test_reserved_task_can_be_revised_and_old_start_event_is_invalidated() -> No
     assert task.assigned_team == list(second_team)
 
 
+def test_team_revision_recomputes_reserved_duration_calendar_and_finish_event() -> None:
+    """改队后预约占用与开工后完工事件使用新团队对应工时，基准工时不变。"""
+    env = _new_env()
+    task = next(
+        task
+        for task in env.state.tasks.values()
+        if task.current_station == 4 and task.skill >= 0 and task.demand == 1
+    )
+    eligible_workers = [
+        worker_id
+        for worker_id in env.state.station_worker_bindings[task.current_station]
+        if task.skill in env.worker_skills[worker_id]
+    ]
+    slow_worker = min(eligible_workers, key=env.worker_efficiencies.__getitem__)
+    fast_worker = max(eligible_workers, key=env.worker_efficiencies.__getitem__)
+    assert env.worker_efficiencies[slow_worker] < env.worker_efficiencies[fast_worker]
+
+    env.state.aircraft[task.aircraft_id].current_station = task.current_station
+    task.status = TaskStatus.READY
+    for predecessor_id in task.predecessors:
+        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
+        predecessor.status = TaskStatus.COMPLETED
+        predecessor.actual_end = 0.0
+
+    baseline_duration = task.duration
+    slow_duration = env.duration_for_team(task, [slow_worker])
+    fast_duration = env.duration_for_team(task, [fast_worker])
+    assert slow_duration > fast_duration
+
+    _reserve_at_future_time(env, task, (slow_worker,))
+    assert task.execution_duration == pytest.approx(slow_duration)
+
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": (fast_worker,),
+            "align": 1,
+        }
+    )
+
+    assert task.duration == baseline_duration
+    assert task.execution_duration == pytest.approx(fast_duration)
+    assert not any(
+        interval.task_key == task.task_key
+        for interval in env.state.workers[slow_worker].intervals
+    )
+    assert any(
+        interval.task_key == task.task_key
+        and interval.start == pytest.approx(20.0)
+        and interval.end == pytest.approx(20.0 + fast_duration)
+        for interval in env.state.workers[fast_worker].intervals
+    )
+
+    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+    finish_event = env.event_queue.peek()
+    assert task.status == TaskStatus.RUNNING
+    assert finish_event is not None
+    assert finish_event.event_type == EventType.TASK_FINISH
+    assert finish_event.timestamp == pytest.approx(20.0 + fast_duration)
+
+
 def test_a_to_b_to_a_records_two_revisions_and_final_team_matches_baseline() -> None:
     env = _new_env()
     task, teams = _task_with_two_teams(env)

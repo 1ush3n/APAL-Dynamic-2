@@ -295,12 +295,15 @@ class AirLineEnvWork3:
         self,
         task: TaskRuntimeState,
         selected_team: Sequence[int],
+        *,
+        station_id: int | None = None,
     ) -> list[int]:
-        """返回加入当前部分团队后仍可补全合法团队的本站工人。"""
+        """返回指定站位上加入部分团队后仍可补全合法团队的工人。"""
         selected = [int(worker_id) for worker_id in selected_team]
         if len(selected) > task.demand or len(selected) != len(set(selected)):
             return []
-        allowed = set(self.state.station_worker_bindings.get(task.current_station, []))
+        candidate_station = task.current_station if station_id is None else int(station_id)
+        allowed = set(self.state.station_worker_bindings.get(candidate_station, []))
         for worker_id in selected:
             if worker_id not in allowed or worker_id not in self.worker_efficiencies:
                 return []
@@ -309,7 +312,7 @@ class AirLineEnvWork3:
 
         candidates = [
             worker_id
-            for worker_id in self.state.station_worker_bindings.get(task.current_station, [])
+            for worker_id in self.state.station_worker_bindings.get(candidate_station, [])
             if worker_id not in selected
             and (task.skill < 0 or task.skill in self.worker_skills[worker_id])
         ]
@@ -524,6 +527,11 @@ class AirLineEnvWork3:
             return f"工序 {task.task_key} 的飞机实际不在当前站位，禁止后移"
 
         target_station = task.current_station + 1
+        if len(
+            self.valid_team_completion_workers(task, [], station_id=target_station)
+        ) < task.demand:
+            return f"工序 {task.task_key} 在目标站 {target_station} 无满足技能与人数要求的团队，禁止后移"
+
         if task.fixed_station is not None and target_station != task.fixed_station:
             return f"工序 {task.task_key} 受固定站位 {task.fixed_station + 1} 约束，禁止后移"
         if task.max_allowed_station is not None and target_station > task.max_allowed_station:
