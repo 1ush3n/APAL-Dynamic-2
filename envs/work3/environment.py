@@ -652,6 +652,9 @@ class AirLineEnvWork3:
         no_change_revision = False
         if explicit_advance:
             info["advanced"] = self._advance_to_next_event()
+            if not info["advanced"] and not self._check_terminated():
+                info["success"] = False
+                info["termination_reason"] = "deadlock"
         else:
             if task_key is None or task_key not in self.state.tasks:
                 raise KeyError(f"未找到工序: {task_key}")
@@ -831,7 +834,11 @@ class AirLineEnvWork3:
             self._advance_events_until_next_decision()
 
         self.step_count += 1
-        terminated = self._check_terminated()
+        natural_termination = self._check_terminated()
+        terminated = natural_termination or info.get("termination_reason") == "deadlock"
+        if natural_termination:
+            info["success"] = True
+            info["termination_reason"] = "completed"
         truncated = bool(
             self.max_steps_per_rollout is not None
             and self.step_count >= self.max_steps_per_rollout

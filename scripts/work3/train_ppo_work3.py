@@ -242,6 +242,8 @@ def run_training(
     scenario_log: list[dict[str, Any]] = []
     current_scenario: dict[str, Any] | None = None
     current_scenario_log: dict[str, Any] | None = None
+    episode_done = False
+    episode_termination_reason: str | None = None
 
     def start_episode() -> None:
         nonlocal episode_plan_index, current_scenario, current_scenario_log
@@ -258,6 +260,8 @@ def run_training(
             "aircraft_id": current_scenario["aircraft_id"],
             "actual_hit_count": None,
             "completed": False,
+            "success": None,
+            "termination_reason": None,
         }
         scenario_log.append(current_scenario_log)
         logger.info(
@@ -287,17 +291,23 @@ def run_training(
         # Rollout 数据采集循环
         # -------------------------
         for step in range(steps_per_iter):
-            if env._check_terminated():
+            if env._check_terminated() or episode_done:
+                episode_success = env._check_terminated()
+                final_reason = "completed" if episode_success else episode_termination_reason
                 pending_time_labels.discard_episode(episode_id)
                 if current_scenario_log is not None:
                     current_scenario_log["actual_hit_count"] = count_actual_scenario_hits(
                         env,
                         current_scenario or {},
                     )
-                    current_scenario_log["completed"] = True
-                if shaper is not None:
+                    current_scenario_log["completed"] = episode_success
+                    current_scenario_log["success"] = episode_success
+                    current_scenario_log["termination_reason"] = final_reason
+                if shaper is not None and episode_success:
                     shaper.update_snapshot(time_head, actor_critic)
                 episode_id += 1
+                episode_done = False
+                episode_termination_reason = None
                 start_episode()
 
             candidates = env.get_action_candidates()
@@ -312,6 +322,8 @@ def run_training(
                                 current_scenario or {},
                             )
                             current_scenario_log["completed"] = True
+                            current_scenario_log["success"] = True
+                            current_scenario_log["termination_reason"] = "completed"
                         if shaper is not None:
                             shaper.update_snapshot(time_head, actor_critic)
                         episode_id += 1
@@ -389,6 +401,21 @@ def run_training(
             obs, raw_reward, terminated, truncated, info = env.step(act)
             done = terminated or truncated
             last_terminated = bool(terminated)
+            if terminated:
+                episode_done = True
+                episode_termination_reason = str(
+                    info.get(
+                        "termination_reason",
+                        "completed" if env._check_terminated() else "deadlock",
+                    )
+                )
+                if current_scenario_log is not None:
+                    episode_success = env._check_terminated()
+                    current_scenario_log["completed"] = episode_success
+                    current_scenario_log["success"] = episode_success
+                    current_scenario_log["termination_reason"] = episode_termination_reason
+                if not env._check_terminated():
+                    pending_time_labels.discard_episode(episode_id)
 
             for offset, actual_transfer_time in enumerate(
                 env.state.transfer_history[transfer_count_before:]

@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 import torch
 
+from envs.work3.core_types import ActionBranch
 from envs.work3.environment import AirLineEnvWork3
+from envs.work3.event_queue import EventType
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
 from models.work3.train_time_head import StepResidualDataset
@@ -47,6 +49,17 @@ def test_truncated_rollout_bootstraps_instead_of_zeroing() -> None:
 
     assert buffer.advantages.tolist() == [3.5]
     assert buffer.target_values.tolist() == [4.5]
+
+
+def test_failed_terminal_transition_does_not_bootstrap_across_episode() -> None:
+    """失败终止与自然终止一样切断bootstrap，不能接到下一episode。"""
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.95, normalize_advantages=False)
+    buffer.add(_transition(terminated=True, truncated=False, done=True))
+
+    buffer.finish_trajectory(last_value=99.0)
+
+    assert buffer.advantages.tolist() == [-1.0]
+    assert buffer.target_values.tolist() == [0.0]
 
 
 def test_missing_transfer_label_is_explicitly_unavailable() -> None:
@@ -120,3 +133,60 @@ def test_heuristic_limit_has_no_fake_transfer_label(baseline_path: Path) -> None
         record["actual_transfer_time"] is None
         for record in result["step_records"]
     )
+
+
+def test_advance_without_valid_future_event_is_failed_termination(baseline_path: Path) -> None:
+    """仅有过期事件时显式推进应以deadlock失败终止，而不是停留在非终止状态。"""
+    env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
+    env.reset()
+    task = env.get_ready_tasks()[0]
+    env.event_queue.push(
+        event_type=EventType.TASK_START,
+        timestamp=20.0,
+        task_key=task.task_key,
+        generation=task.generation,
+    )
+    env.event_queue.invalidate_task_events(task.task_key, task.generation + 1)
+
+    _obs, _reward, terminated, truncated, info = env.step(
+        {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    )
+
+    assert terminated is True
+    assert truncated is False
+    assert env._check_terminated() is False
+    assert env.state.current_time == pytest.approx(0.0)
+    assert info["advanced"] is False
+    assert info["success"] is False
+    assert info["termination_reason"] == "deadlock"
+
+
+class _AlwaysAdvanceAgent:
+    def select_action(self, env: AirLineEnvWork3) -> dict[str, ActionBranch]:
+        return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+
+
+class _AlwaysAdvanceHeuristic(HeuristicAgentWork3):
+    def select_action(self, env: AirLineEnvWork3) -> dict[str, ActionBranch]:
+        return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+
+
+@pytest.mark.parametrize("entrypoint", ["evaluation", "heuristic"])
+def test_trajectory_entrypoints_report_advance_deadlock_as_failure(
+    baseline_path: Path,
+    entrypoint: str,
+) -> None:
+    env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
+    if entrypoint == "evaluation":
+        result = evaluate_single_trajectory(
+            env,
+            "Baseline-C",
+            _AlwaysAdvanceAgent(),
+            max_decisions=1,
+        )
+    else:
+        result = _AlwaysAdvanceHeuristic().run_trajectory(env, max_decisions=1)
+
+    assert result["success"] is False
+    assert result["termination_reason"] == "deadlock"
+    assert result["completed_tasks"] == 0

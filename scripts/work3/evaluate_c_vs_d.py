@@ -356,7 +356,12 @@ def evaluate_single_trajectory(
             obs, reward, terminated, truncated, info = env.step(action)
             decisions += 1
             if terminated:
-                termination_reason = "completed"
+                termination_reason = str(
+                    info.get(
+                        "termination_reason",
+                        "completed" if env._check_terminated() else "deadlock",
+                    )
+                )
                 break
             if truncated:
                 termination_reason = "rollout_truncated"

@@ -165,7 +165,12 @@ class HeuristicAgentWork3:
             step_records.append(step_record)
 
             if terminated:
-                termination_reason = "completed"
+                termination_reason = str(
+                    info.get(
+                        "termination_reason",
+                        "completed" if env._check_terminated() else "deadlock",
+                    )
+                )
                 break
 
         # 补充记录各周期最终实际达成的同步脉动转站时刻 P_q
