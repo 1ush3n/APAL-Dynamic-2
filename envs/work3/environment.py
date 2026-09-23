@@ -320,7 +320,7 @@ class AirLineEnvWork3:
         return candidates if len(candidates) >= required else []
 
     def _predecessor_release_time(self, task: TaskRuntimeState) -> float | None:
-        """返回前驱已完成或已预约时可证明的最早释放时刻。"""
+        """返回前驱已完成、预约或运行时可证明的最早释放时刻。"""
         release_time = self.state.current_time
         for predecessor_id in task.predecessors:
             predecessor = self.state.tasks.get(f"{task.aircraft_id}_{predecessor_id}")
@@ -329,18 +329,65 @@ class AirLineEnvWork3:
             if predecessor.status == TaskStatus.COMPLETED and predecessor.actual_end is not None:
                 release_time = max(release_time, float(predecessor.actual_end))
                 continue
-            if (
-                predecessor.status == TaskStatus.RESERVED
-                and predecessor.scheduled_start is not None
-                and predecessor.execution_duration is not None
-            ):
+            if predecessor.status == TaskStatus.RESERVED:
+                planned_start = predecessor.scheduled_start
+            elif predecessor.status == TaskStatus.RUNNING:
+                planned_start = predecessor.actual_start
+            else:
+                return None
+            if planned_start is not None and predecessor.execution_duration is not None:
                 release_time = max(
                     release_time,
-                    float(predecessor.scheduled_start + predecessor.execution_duration),
+                    float(planned_start + predecessor.execution_duration),
                 )
                 continue
             return None
         return release_time
+
+    def _invalidate_dependent_reservations(self, task: TaskRuntimeState) -> None:
+        """沿工艺后继检查预约下界，仅撤销失去有效前驱时序的后继预约。"""
+        successors = self._successors_map[task.aircraft_id][task.task_id]
+        if not successors:
+            return
+        pending = list(successors)
+        visited: set[int] = set()
+        while pending:
+            successor_id = pending.pop()
+            if successor_id in visited:
+                continue
+            visited.add(successor_id)
+            pending.extend(self._successors_map[task.aircraft_id][successor_id])
+
+            dependent = self.state.tasks[f"{task.aircraft_id}_{successor_id}"]
+            if dependent.status != TaskStatus.RESERVED or dependent.actual_start is not None:
+                continue
+
+            release_time = self._predecessor_release_time(dependent)
+            earliest_start = (
+                None
+                if release_time is None
+                else max(
+                    release_time,
+                    dependent.material_ready_time,
+                    self.state.current_time,
+                )
+            )
+            if (
+                earliest_start is not None
+                and dependent.scheduled_start is not None
+                and dependent.execution_duration is not None
+                and dependent.scheduled_start >= earliest_start - self.tolerance
+            ):
+                continue
+
+            self._release_reserved_resources(dependent)
+            dependent.cancel_reservation()
+            self.event_queue.invalidate_task_events(
+                dependent.task_key,
+                dependent.generation,
+            )
+            dependent.status = TaskStatus.UNREADY
+            self._check_and_update_task_readiness(dependent)
 
     def can_reserve(self, task: TaskRuntimeState) -> bool:
         """判断任务是否可以登记留站预约，不代表当前时刻可以实际开工。"""
@@ -723,6 +770,8 @@ class AirLineEnvWork3:
                     )
                     info["scheduled_status"] = "RESERVED"
                 self._station_occupied_tasks[task.current_station].add(task.task_key)
+                if was_reserved:
+                    self._invalidate_dependent_reservations(task)
                 info["revision_changed"] = was_reserved
                 info["cost_revision_inc"] = revision_cost_inc
                 info["scheduled_start"] = t_sched
@@ -742,6 +791,8 @@ class AirLineEnvWork3:
             previous_assignment = copy.deepcopy(task.current_assignment)
             task.postpone_to_next_station()
             self.event_queue.invalidate_task_events(task.task_key, task.generation)
+            if was_reserved:
+                self._invalidate_dependent_reservations(task)
             n_new = task.postpone_count
             penalty_delta = calculate_postpone_penalty(
                 n_new, self.weights.lambda_1, self.weights.lambda_2
@@ -990,6 +1041,7 @@ class AirLineEnvWork3:
             task.status = TaskStatus.UNREADY
             self.event_queue.invalidate_task_events(task.task_key, task.generation)
             self._check_and_update_task_readiness(task)
+            self._invalidate_dependent_reservations(task)
             return
 
         self._on_task_started(task, event.timestamp)
@@ -1063,6 +1115,7 @@ class AirLineEnvWork3:
                         task_key=task.task_key,
                         generation=task.generation,
                     )
+                    self._invalidate_dependent_reservations(task)
 
             elif task.status == TaskStatus.READY:
                 # 物料推迟到未来时刻到达，退回 UNREADY

@@ -47,6 +47,14 @@ def test_future_recovery_task_can_be_reserved_but_not_started_early() -> None:
     assert task.status == TaskStatus.RESERVED
     assert task.scheduled_start is not None
     assert task.scheduled_start >= 20.0 - 1e-5
+    assert all(
+        env.state.workers[worker_id].is_available(5.0, 20.0, tolerance=env.tolerance)
+        for worker_id in task.assigned_team
+    )
+
+    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+    assert task.actual_start is not None
+    assert task.actual_start >= 20.0 - env.tolerance
 
 
 def test_unplanned_predecessor_blocks_reservation_but_not_legal_postpone() -> None:
