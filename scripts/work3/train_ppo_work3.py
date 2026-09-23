@@ -1,7 +1,7 @@
 """工作三 条件分支 PPO 强化学习验证训练脚本 (Task 7.3)。
 
 核心功能与执行目标：
-1. 在最小数据集 (data/work3/real_283_k10_baseline.json, 10 架次基准产线) 上执行 PPO 训练验证；
+1. 在固定训练事件清单和 10 架次基准产线上执行正式 C/D PPO 训练验证；
 2. 验证计算图反向传播、显式时间紧迫度融合、条件分支动作截断、GAE 优势计算与势函数奖励塑形全链路闭环；
 3. 记录多轮 Iteration 损失曲线、KL 散度、梯度范数、策略熵以及累计回报，验证数值稳定性与初步收敛性；
 4. 保存训练完成的模型检查点至 models/work3/checkpoints/method_d_model.pt。
@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import logging
 import math
+import random
 from pathlib import Path
 import sys
 import time
@@ -32,12 +33,72 @@ from models.work3.potential_shaping import PotentialRewardShaper
 from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
 from models.work3.ppo_trainer import PPOTrainerWork3
 from models.work3.time_head import TimeResidualHead
+from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
+from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def load_training_scenarios(
+    scenarios_path: str | Path,
+    scenario_split_path: str | Path,
+) -> list[dict[str, Any]]:
+    """按固定训练清单加载有效扰动，不从现场状态重新选目标。"""
+    scenarios = load_scenarios_for_split(scenarios_path, scenario_split_path)
+    if not scenarios:
+        raise ValueError("正式扰动训练清单为空")
+    invalid = [item["scenario_id"] for item in scenarios if item.get("valid", True) is False]
+    if invalid:
+        raise ValueError(f"训练清单包含无效场景: {invalid}")
+    return scenarios
+
+
+def build_episode_scenario_plan(
+    scenarios: list[dict[str, Any]],
+    num_episodes: int,
+    *,
+    seed: int,
+) -> list[dict[str, Any]]:
+    """按固定种子循环打乱场景，生成可记录的episode事件计划。"""
+    if not scenarios:
+        raise ValueError("不能从空场景池生成episode计划")
+    if num_episodes < 1:
+        return []
+    rng = random.Random(int(seed))
+    pool = [dict(item) for item in scenarios]
+    plan: list[dict[str, Any]] = []
+    while len(plan) < num_episodes:
+        rng.shuffle(pool)
+        plan.extend(dict(item) for item in pool)
+    return plan[:num_episodes]
+
+
+def compute_heuristic_potential(
+    estimated_cmax: float,
+    last_transfer_time: float,
+    h0: float,
+    *,
+    a: float = 0.5,
+    b: float = 1.0,
+) -> float:
+    """计算正式C使用的启发式时间势函数。"""
+    h_est = max(0.0, float(estimated_cmax) - float(last_transfer_time))
+    h0_value = float(h0)
+    return -float(a) * (h_est / h0_value) - float(b) * max(0.0, h_est - h0_value) / h0_value
+
+
+def count_actual_scenario_hits(env: AirLineEnvWork3, scenario: dict[str, Any]) -> int:
+    """按实际物料恢复时间统计已揭示的目标工序数量。"""
+    return sum(
+        1
+        for task_key in scenario.get("affected_task_keys", [])
+        if task_key in env.state.tasks
+        and float(env.state.tasks[task_key].material_ready_time) > env.tolerance
+    )
 
 
 def compute_online_time_inputs(
@@ -86,15 +147,29 @@ def run_training(
     beta_shaping: float = 1.0,
     time_loss_coef: float = 1.0,
     seed: int = 42,
+    method_variant: str = "D",
     baseline_path: str = "data/work3/real_283_k10_baseline.json",
+    scenarios_path: str = "data/work3/scenarios_9class.json",
+    scenario_split_path: str = "data/work3/experiment_splits/train.json",
     time_head_ckpt: str = "models/work3/checkpoints/time_head_best.pt",
     output_ckpt: str = "models/work3/checkpoints/method_d_model.pt",
     device: str = "cpu",
 ) -> dict[str, Any]:
-    """执行小规模 PPO 验证训练流程。"""
+    """执行正式C/D分组下的扰动PPO训练流程。"""
+    profile = build_method_profile(method_variant)
     torch.manual_seed(seed)
     np.random.seed(seed)
+    random.seed(seed)
     torch_device = torch.device(device)
+
+    training_scenarios = load_training_scenarios(scenarios_path, scenario_split_path)
+    episode_plan = build_episode_scenario_plan(
+        training_scenarios,
+        max(1, num_iterations * 2),
+        seed=seed,
+    )
+    if profile.name == "C" and output_ckpt == "models/work3/checkpoints/method_d_model.pt":
+        output_ckpt = "models/work3/checkpoints/method_c_model.pt"
 
     Path(output_ckpt).parent.mkdir(parents=True, exist_ok=True)
 
@@ -110,8 +185,12 @@ def run_training(
         hidden_dim=64,
         max_station_workers=16,
     ).to(torch_device)
-    time_head = TimeResidualHead(in_dim=actor_critic.hidden_dim, hidden_dim=64).to(torch_device)
-    if Path(time_head_ckpt).is_file():
+    time_head = (
+        TimeResidualHead(in_dim=actor_critic.hidden_dim, hidden_dim=64).to(torch_device)
+        if profile.use_time_auxiliary
+        else None
+    )
+    if profile.use_time_auxiliary and time_head is not None and Path(time_head_ckpt).is_file():
         ckpt_data = torch.load(time_head_ckpt, map_location="cpu")
         if (
             ckpt_data.get("model_version") == "signed_residual_v1"
@@ -122,17 +201,19 @@ def run_training(
             logger.info(f"已成功载入有符号离线时间修正头: {time_head_ckpt}")
         else:
             logger.warning(f"检查点 {time_head_ckpt} 不是当前共享图有符号版本，本次不加载")
-    else:
+    elif profile.use_time_auxiliary:
         logger.warning(f"未找到预训练时间修正头 {time_head_ckpt}，使用随机初始化头")
 
-    shaper = PotentialRewardShaper(
-        time_head=time_head,
-        actor_critic=actor_critic,
-        a=0.5,
-        b=1.0,
-        beta=beta_shaping,
-        gamma=gamma,
-    )
+    shaper = None
+    if profile.use_learned_time_shaping and time_head is not None:
+        shaper = PotentialRewardShaper(
+            time_head=time_head,
+            actor_critic=actor_critic,
+            a=0.5,
+            b=1.0,
+            beta=beta_shaping,
+            gamma=gamma,
+        )
 
     # 3. 初始化条件分支自回归 PPO 训练器
     trainer = PPOTrainerWork3(
@@ -141,8 +222,8 @@ def run_training(
         clip_eps=clip_eps,
         vf_coef=vf_coef,
         ent_coef=ent_coef,
-        time_head=time_head,
-        time_loss_coef=time_loss_coef,
+        time_head=time_head if profile.use_time_auxiliary else None,
+        time_loss_coef=time_loss_coef if profile.use_time_auxiliary else 0.0,
         device=torch_device,
     )
 
@@ -157,6 +238,38 @@ def run_training(
     start_time = time.time()
     episode_id = 0
     pending_time_labels = PendingTimeLabelCache()
+    episode_plan_index = 0
+    scenario_log: list[dict[str, Any]] = []
+    current_scenario: dict[str, Any] | None = None
+    current_scenario_log: dict[str, Any] | None = None
+
+    def start_episode() -> None:
+        nonlocal episode_plan_index, current_scenario, current_scenario_log
+        env.reset()
+        current_scenario = dict(episode_plan[episode_plan_index % len(episode_plan)])
+        episode_plan_index += 1
+        env.load_scenario(current_scenario)
+        current_scenario_log = {
+            "episode_id": episode_id,
+            "scenario_id": current_scenario["scenario_id"],
+            "timing": current_scenario["timing"],
+            "intensity": current_scenario["intensity"],
+            "station_id": current_scenario["station_id"],
+            "aircraft_id": current_scenario["aircraft_id"],
+            "actual_hit_count": None,
+            "completed": False,
+        }
+        scenario_log.append(current_scenario_log)
+        logger.info(
+            "加载训练扰动 episode=%s scenario=%s timing=%s intensity=%s station=%s",
+            episode_id,
+            current_scenario["scenario_id"],
+            current_scenario["timing"],
+            current_scenario["intensity"],
+            current_scenario["station_id"],
+        )
+
+    start_episode()
 
     logger.info("=" * 80)
     logger.info(f"开始条件分支 PPO 训练验证 (共 {num_iterations} 轮, 每轮 {steps_per_iter} 步, 总计 ~{num_iterations * steps_per_iter} 步)")
@@ -176,38 +289,73 @@ def run_training(
         for step in range(steps_per_iter):
             if env._check_terminated():
                 pending_time_labels.discard_episode(episode_id)
-                env.reset()
+                if current_scenario_log is not None:
+                    current_scenario_log["actual_hit_count"] = count_actual_scenario_hits(
+                        env,
+                        current_scenario or {},
+                    )
+                    current_scenario_log["completed"] = True
+                if shaper is not None:
+                    shaper.update_snapshot(time_head, actor_critic)
                 episode_id += 1
-                shaper.update_snapshot(time_head, actor_critic)
+                start_episode()
 
             candidates = env.get_action_candidates()
             if not candidates:
-                env._advance_events_until_next_decision()
-                candidates = env.get_action_candidates()
-                if not candidates and env._check_terminated():
-                    env.reset()
+                    env._advance_events_until_next_decision()
                     candidates = env.get_action_candidates()
+                    if not candidates and env._check_terminated():
+                        pending_time_labels.discard_episode(episode_id)
+                        if current_scenario_log is not None:
+                            current_scenario_log["actual_hit_count"] = count_actual_scenario_hits(
+                                env,
+                                current_scenario or {},
+                            )
+                            current_scenario_log["completed"] = True
+                        if shaper is not None:
+                            shaper.update_snapshot(time_head, actor_critic)
+                        episode_id += 1
+                        start_episode()
+                        candidates = env.get_action_candidates()
 
             cmax_est = compute_cycle_heuristic_cmax(env.state)
             s_feat = extract_compact_state_features(env.state, cmax_est)
-            graph_snapshot, u_time, _ = compute_online_time_inputs(
-                actor_critic=actor_critic,
-                time_head=time_head,
-                env=env,
-                state_feat=s_feat,
-                estimated_cmax=cmax_est,
-            )
+            graph_snapshot = actor_critic.build_graph_snapshot(env)
+            if profile.use_corrected_time_input and time_head is not None:
+                graph_snapshot, u_time, _ = compute_online_time_inputs(
+                    actor_critic=actor_critic,
+                    time_head=time_head,
+                    env=env,
+                    state_feat=s_feat,
+                    estimated_cmax=cmax_est,
+                )
+            else:
+                estimated_r = max(0.0, cmax_est - float(env.state.current_time))
+                u_time = compute_time_urgency_vector(
+                    estimated_r=estimated_r,
+                    current_time=env.state.current_time,
+                    last_transfer_time=env.state.last_transfer_time,
+                    h0=env.state.h0,
+                    device=torch_device,
+                )
 
             # 计算当前状态势 Φ(s_t)
-            phi_current = shaper.compute_potential(
-                state_feat=s_feat,
-                estimated_cmax=cmax_est,
-                current_time=float(env.state.current_time),
-                h0=float(env.state.h0),
-                last_transfer_time=float(env.state.last_transfer_time),
-                is_terminal=False,
-                graph_data=graph_snapshot,
-            )
+            if shaper is not None:
+                phi_current = shaper.compute_potential(
+                    state_feat=s_feat,
+                    estimated_cmax=cmax_est,
+                    current_time=float(env.state.current_time),
+                    h0=float(env.state.h0),
+                    last_transfer_time=float(env.state.last_transfer_time),
+                    is_terminal=False,
+                    graph_data=graph_snapshot,
+                )
+            else:
+                phi_current = compute_heuristic_potential(
+                    cmax_est,
+                    env.state.last_transfer_time,
+                    env.state.h0,
+                )
 
             # 采样条件动作
             act, lp, v, rec = actor_critic.select_action(
@@ -223,17 +371,18 @@ def run_training(
                 continue
 
             cycle_id = int(env.state.current_cycle)
-            pending_time_labels.add(
-                episode_id=episode_id,
-                cycle_id=cycle_id,
-                state_feat=s_feat,
-                graph_snapshot=rec.get("graph_snapshot", graph_snapshot),
-                estimated_cmax=cmax_est,
-                current_time=float(env.state.current_time),
-                h0=float(env.state.h0),
-                predictor_version=shaper.snapshot_version,
-                time_urgency=u_time,
-            )
+            if profile.use_time_auxiliary and shaper is not None:
+                pending_time_labels.add(
+                    episode_id=episode_id,
+                    cycle_id=cycle_id,
+                    state_feat=s_feat,
+                    graph_snapshot=rec.get("graph_snapshot", graph_snapshot),
+                    estimated_cmax=cmax_est,
+                    current_time=float(env.state.current_time),
+                    h0=float(env.state.h0),
+                    predictor_version=shaper.snapshot_version,
+                    time_urgency=u_time,
+                )
 
             # 环境执行一步调度动作
             transfer_count_before = len(env.state.transfer_history)
@@ -256,28 +405,41 @@ def run_training(
             else:
                 next_cmax_est = compute_cycle_heuristic_cmax(env.state)
                 next_s_feat = extract_compact_state_features(env.state, next_cmax_est)
-                next_graph_snapshot, _, _ = compute_online_time_inputs(
-                    actor_critic=actor_critic,
-                    time_head=time_head,
-                    env=env,
-                    state_feat=next_s_feat,
-                    estimated_cmax=next_cmax_est,
-                )
-                phi_next = shaper.compute_potential(
-                    state_feat=next_s_feat,
-                    estimated_cmax=next_cmax_est,
-                    current_time=float(env.state.current_time),
-                    h0=float(env.state.h0),
-                    last_transfer_time=float(env.state.last_transfer_time),
-                    is_terminal=False,
-                    graph_data=next_graph_snapshot,
-                )
+                next_graph_snapshot = actor_critic.build_graph_snapshot(env)
+                if shaper is not None and profile.use_corrected_time_input and time_head is not None:
+                    next_graph_snapshot, _, _ = compute_online_time_inputs(
+                        actor_critic=actor_critic,
+                        time_head=time_head,
+                        env=env,
+                        state_feat=next_s_feat,
+                        estimated_cmax=next_cmax_est,
+                    )
+                    phi_next = shaper.compute_potential(
+                        state_feat=next_s_feat,
+                        estimated_cmax=next_cmax_est,
+                        current_time=float(env.state.current_time),
+                        h0=float(env.state.h0),
+                        last_transfer_time=float(env.state.last_transfer_time),
+                        is_terminal=False,
+                        graph_data=next_graph_snapshot,
+                    )
+                else:
+                    phi_next = compute_heuristic_potential(
+                        next_cmax_est,
+                        env.state.last_transfer_time,
+                        env.state.h0,
+                    )
 
-            shaped_reward = shaper.shape_reward(
-                actual_reward=raw_reward,
-                phi_current=phi_current,
-                phi_next=phi_next,
-            )
+            if shaper is not None:
+                shaped_reward = shaper.shape_reward(
+                    actual_reward=raw_reward,
+                    phi_current=phi_current,
+                    phi_next=phi_next,
+                )
+            else:
+                shaped_reward = float(raw_reward) + beta_shaping * (
+                    gamma * float(phi_next) - float(phi_current)
+                )
 
             buffer.add(PPOTransition(
                 state_feat=s_feat.cpu(),
@@ -297,6 +459,12 @@ def run_training(
             step_shaped_rewards.append(shaped_reward)
             total_env_steps += 1
 
+        if current_scenario_log is not None:
+            current_scenario_log["actual_hit_count"] = count_actual_scenario_hits(
+                env,
+                current_scenario or {},
+            )
+
         # -------------------------
         # GAE 与价值目标结算
         # -------------------------
@@ -304,15 +472,24 @@ def run_training(
         if len(buffer) > 0:
             last_cmax = compute_cycle_heuristic_cmax(env.state)
             last_s_feat = extract_compact_state_features(env.state, last_cmax)
-            _, last_u_time, _ = compute_online_time_inputs(
-                actor_critic=actor_critic,
-                time_head=time_head,
-                env=env,
-                state_feat=last_s_feat,
-                estimated_cmax=last_cmax,
-            )
+            last_graph = actor_critic.build_graph_snapshot(env)
+            if profile.use_corrected_time_input and time_head is not None:
+                last_graph, last_u_time, _ = compute_online_time_inputs(
+                    actor_critic=actor_critic,
+                    time_head=time_head,
+                    env=env,
+                    state_feat=last_s_feat,
+                    estimated_cmax=last_cmax,
+                )
+            else:
+                last_u_time = compute_time_urgency_vector(
+                    estimated_r=max(0.0, last_cmax - float(env.state.current_time)),
+                    current_time=env.state.current_time,
+                    last_transfer_time=env.state.last_transfer_time,
+                    h0=env.state.h0,
+                    device=torch_device,
+                )
             with torch.no_grad():
-                last_graph = actor_critic.build_graph_snapshot(env)
                 last_v, _ = actor_critic.encode_state(
                     last_s_feat.to(torch_device),
                     last_u_time.to(torch_device),
@@ -321,7 +498,11 @@ def run_training(
                 last_val = float(last_v.squeeze().item()) if not last_terminated else 0.0
 
             buffer.finish_trajectory(last_value=last_val)
-            time_auxiliary_batch = pending_time_labels.drain_ready()
+            time_auxiliary_batch = (
+                pending_time_labels.drain_ready()
+                if profile.use_time_auxiliary
+                else None
+            )
 
             # -------------------------
             # PPO 训练更新步
@@ -353,6 +534,9 @@ def run_training(
             "mean_raw_reward": mean_raw_r,
             "mean_shaped_reward": mean_shaped_r,
             "elapsed_seconds": iter_elapsed,
+            "method_variant": profile.name,
+            "scenario_ids": sorted({item["scenario_id"] for item in scenario_log}),
+            "scenario_log_count": len(scenario_log),
         }
         history.append(iter_log)
 
@@ -383,6 +567,8 @@ def run_training(
         "total_steps": total_env_steps,
         "total_elapsed_seconds": total_elapsed,
         "checkpoint_path": output_ckpt,
+        "method_variant": profile.name,
+        "scenario_log": scenario_log,
     }
 
 
@@ -393,6 +579,9 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=4, help="PPO 重放轮数 (默认 4)")
     parser.add_argument("--batch-size", type=int, default=64, help="Mini-batch 大小 (默认 64)")
     parser.add_argument("--lr", type=float, default=3e-4, help="学习率 (默认 3e-4)")
+    parser.add_argument("--method", choices=("C", "D"), default="D", help="正式方法分组")
+    parser.add_argument("--scenarios", type=str, default="data/work3/scenarios_9class.json")
+    parser.add_argument("--scenario-split", type=str, default="data/work3/experiment_splits/train.json")
     parser.add_argument("--device", type=str, default="cpu", help="设备 (cpu/cuda)")
     parser.add_argument("--output", type=str, default="models/work3/checkpoints/method_d_model.pt", help="检查点输出路径")
     args = parser.parse_args()
@@ -403,6 +592,9 @@ def main() -> None:
         ppo_epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,
+        method_variant=args.method,
+        scenarios_path=args.scenarios,
+        scenario_split_path=args.scenario_split,
         device=args.device,
         output_ckpt=args.output,
     )

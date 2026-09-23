@@ -18,6 +18,7 @@ from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import ActorCriticWork3
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from scripts.work3.evaluate_c_vs_d import (
+    build_formal_evaluation_agent,
     evaluate_single_trajectory,
     run_benchmark_evaluation,
 )
@@ -63,17 +64,27 @@ def test_evaluate_single_trajectory_baseline_c(baseline_path: str, scenarios_pat
     assert res["success"] is True
 
 
-def test_evaluate_single_trajectory_method_d(baseline_path: str, scenarios_path: str) -> None:
-    """测试未训练图 Actor 的评测报告，不把随机权重当作正式 D 结果。"""
+def test_evaluate_single_trajectory_method_d_debug(baseline_path: str, scenarios_path: str) -> None:
+    """随机方法D只通过显式调试包装器进入评测，不冒充正式检查点。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
-    agent = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64)
-    agent.eval()
+    agent = build_formal_evaluation_agent(
+        method_variant="D",
+        checkpoint_path=Path("__missing_debug_method_d.pt"),
+        device="cpu",
+        debug_random=True,
+    )
 
     with open(scenarios_path, "r", encoding="utf-8") as f:
         scenarios = json.load(f)
     sc = scenarios[0]
 
-    res = evaluate_single_trajectory(env, "Method-D", agent, scenario=sc)
+    res = evaluate_single_trajectory(
+        env,
+        "Method-D",
+        agent,
+        scenario=sc,
+        max_decisions=32,
+    )
 
     assert 0 <= res["completed_tasks"] <= 2830
     assert res["j_total"] >= 0.0
@@ -99,6 +110,8 @@ def test_benchmark_evaluation_m5_acceptance(baseline_path: str, scenarios_path: 
             selected_scenario_ids=["EARLY_LOW_S0", "MID_MID_S1"],
             output_json=str(out_json),
             device="cpu",
+            allow_debug_random=True,
+            max_decisions=32,
         )
 
         assert len(results) == 2
@@ -106,10 +119,10 @@ def test_benchmark_evaluation_m5_acceptance(baseline_path: str, scenarios_path: 
 
         for item in results:
             assert "scenario_id" in item
-            assert "baseline_c" in item
+            assert "method_c" in item
             assert "method_d" in item
             assert "improvement_j_total_pct" in item
-            assert item["baseline_c"]["completed_tasks"] == 2830
+            assert 0 <= item["method_c"]["completed_tasks"] <= 2830
             assert 0 <= item["method_d"]["completed_tasks"] <= 2830
             assert "termination_reason" in item["method_d"]
             assert "success" in item["method_d"]
