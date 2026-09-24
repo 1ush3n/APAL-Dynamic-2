@@ -201,12 +201,14 @@ def worker_completion_mask(
 
 **依赖：** 任务6；在AMP和完整批次试点前完成。
 
-- [ ] 先写`num_envs=2`训练入口测试：单一主进程Actor/Lightning优化器、两个spawn CPU环境worker；相同固定worker/episode场景计划可追踪。
-- [ ] 聚合预算精确计算所有worker实际`step()`，剩余预算按稳定顺序派发；worker/episode/segment独立缓存并正确bootstrap后合并PPO更新。
-- [ ] 对齐`runtime.num_envs`配置，不改变单环境FP32语义；C/D在相同worker/episode事件映射下执行。
-- [ ] 检查跨worker同一决策编号的时间标签键、episode势函数版本和worker异常清理；不把Lightning/DataLoader worker用于环境并行。
-- [ ] 使用两个环境跑FP32短段，验证实际environment step数、Lightning优化步数、快照掩码重放、GAE和进程CUDA状态；通过前不启用AMP。
-- [ ] 先观察新缺陷测试红灯，再修复并运行任务6回归；记录结果并独立提交代码/测试。
+- [x] 先写`num_envs=2`训练入口测试：单一主进程Actor/Lightning优化器、两个spawn CPU环境worker；相同固定worker/episode场景计划可追踪。
+- [x] 聚合预算精确计算所有worker实际`step()`，剩余预算按稳定顺序派发；worker/episode/segment独立缓存并正确bootstrap后合并PPO更新。
+- [x] 训练入口接收并记录`num_envs`，增加CLI参数；C/D按同一worker/episode事件映射可复现。YAML配置加载仍留在任务7，不在本任务声称已接通。
+- [x] 检查跨worker时间标签复合键、episode势函数版本和worker异常清理；环境并行仍由spawn worker承担，不使用Lightning/DataLoader worker。
+- [x] 使用两个环境运行FP32短段，核验聚合步数、Lightning更新、采样/重放样本、episode版本、GAE分段与worker CUDA状态；未启用AMP。
+- [x] 先观察新缺陷测试红灯，再修复并运行任务6回归；代码/测试已独立提交。
+
+**任务6B执行记录（2026-09-25）：** 首个双环境训练入口用例在旧入口上按预期以`TypeError: unexpected keyword argument 'num_envs'`失败。复核期间另发现入口收到worker错误后未关闭同批其他worker；新增异常回收反例先红（异常后`workers_alive=(True, True)`），入口关闭向量环境后通过。实现将采样按固定worker顺序批量派发，`steps_per_iter`及全局决策预算按所有worker实际step合计；每worker维护独立episode/标签/塑形版本，GAE按`(worker, episode, segment)`结算；报告记录固定事件计划指纹、worker实际步数和势函数版本。同步episode wave是有意简化：有worker先完成时会空闲至同wave其他worker结束，以换取事件映射和塑形版本边界简单可审计；若实测轨迹长度差导致吞吐明显损失，再单独改为异步补位。`run_training(num_envs=...)`和`--num-envs`现已接通，YAML加载仍属于任务7。验证：`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_train_ppo.py -q`为`4 passed in 64.49s`；`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -q`为`34 passed in 172.55s`；相关`py_compile`及`git diff --check`通过。双worker短测聚合3步为`[2, 1]`、完成1次Lightning优化更新；未运行完整批次、未启用AMP、未声称正式训练效果。实现/测试提交`baa4336`；用户既有`training/lightning_module.py`未修改、未暂存。
 
 ### 任务7：AMP一致精度路径、配置/profile检查点
 
