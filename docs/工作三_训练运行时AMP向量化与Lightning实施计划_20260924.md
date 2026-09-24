@@ -126,13 +126,13 @@ def worker_completion_mask(
 
 **协议：** worker命令为reset、snapshot、step、close；结果包含快照或完整step返回（观测、原始奖励、terminated、truncated、info/费用分项）。动作由主进程提供，worker不加载Actor、不初始化CUDA。测试适配器可以直接执行冻结的动作序列，不调用策略采样。
 
-- [ ] 写测试：从同一基线和同一场景分别构造旧直接环境路径与`num_envs=1`新路径，向双方逐步发送相同冻结动作序列。
-- [ ] 每一步比较：当前时刻、事件类型/次序、动作接受结果、原始奖励及分项费用、实际开完工、同步转站、终止/截断和观测关键字段；结束后使用既有独立轨迹检查器比较完整性与可行性。
-- [ ] 测试step计数把显式`ADVANCE_TO_NEXT_EVENT`和普通动作都计为一次，环境内部事件推进不虚增动作数。
-- [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k single_env -q`记录首轮差异；差异必须定位到定义的语义，不能通过放宽断言掩盖。
-- [ ] 实现一个worker的spawn协议、消息校验和关闭；保持FP32，不接Lightning/AMP。
-- [ ] 重跑固定动作逐步对照及`tests/work3/test_work3_same_timestamp_events.py`、`tests/work3/test_work3_actual_hit_counterexample.py`、`tests/work3/test_work3_f04_trajectory_checker.py`。
-- [ ] 对照未解释差异为零、worker关闭无遗留后更新任务表并提交；否则留在本任务修复。
+- [x] 写测试：从同一基线分别构造直接环境与`num_envs=1`spawn环境，冻结完整动作序列并逐步回放；明确覆盖普通动作与`ADVANCE_TO_NEXT_EVENT`。
+- [x] 每步比较观测、原始奖励、费用信息、终止/截断、事件顺序、完工记录和step计数；最终独立复核完整任务数、真实开工位置及轨迹可行性。
+- [x] 首轮反例记录：新worker缺失时单环境测试`1 failed, 19 deselected`；运行时团队候选逐次构造完整日历快照的性能边界测试`1 failed, 19 deselected`；另发现旧测试硬编码所选分支为留站，与现有合法分支掩码冲突，改为验证所选分支确实合法而非固定分支值。
+- [x] 独立位置校验反例：首轮审计测试暴露真实开工位置字段缺失（`KeyError: aircraft_station_at_start`）；确认即时开工不经过`TASK_START`事件，改在统一的`_on_task_started`回调采集。worker和直接环境的开工位置逐项相等后，独立检查器据此验证飞机位置，不再将计划站位复制为实际站位。
+- [x] 实现模块顶层spawn worker与reset/snapshot/step/close请求协议；子进程仅持CPU环境及图构造器，不创建Actor、不加载权重、不初始化CUDA。复用统一快照构造器，旧Actor入口适配同一实现。纯团队补全规则直接读技能/效率profile，避免每次候选扫描复制完整工人日历；日历快照仅在决策快照构造时生成。
+- [x] 定向验证：`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py tests/work3/test_work3_same_timestamp_events.py tests/work3/test_work3_actual_hit_counterexample.py tests/work3/test_work3_f04_trajectory_checker.py tests/work3/test_work3_worker_mask_replay.py tests/work3/test_actor_critic.py tests/work3/test_work3_f04_physical_constraints.py -q`，`61 passed in 158.60s`；`git diff --check`通过。完整基准实例的2830/2830项任务完成，直接路径与worker逐步输出、费用账本、事件轨迹和最终独立可行性一致；测试确认worker退出。
+- [x] 代码/测试提交`199ae8f`。本项仅完成单环境FP32语义对照；未启动双环境、AMP、Lightning、训练或正式性能试验。任务表记录另行提交。
 
 ### 任务4：双环境spawn同步采样、预算与在途结算
 
