@@ -419,6 +419,36 @@ def test_identical_resubmission_cannot_block_time_progress() -> None:
     assert len(env.step_rewards) == rewards_before + 1
 
 
+def test_advance_progresses_when_only_future_reservation_is_modifiable() -> None:
+    env = _new_env()
+    task = env.get_ready_tasks()[0]
+    team = _legal_teams(env, task)[0]
+    _reserve_at_future_time(env, task, team)
+    for other_task in env.state.tasks.values():
+        if other_task.task_key != task.task_key:
+            other_task.status = TaskStatus.COMPLETED
+            other_task.actual_end = 0.0
+
+    assert env.get_ready_tasks() == []
+    assert env.get_action_candidates() == [task]
+    next_event = env.event_queue.peek()
+    assert next_event is not None
+    assert next_event.event_type == EventType.TASK_START
+    assert next_event.task_key == task.task_key
+    assert next_event.timestamp == pytest.approx(20.0)
+
+    _, _, terminated, truncated, info = env.step(
+        {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    )
+
+    assert info["advanced"] is True
+    assert env.state.current_time == pytest.approx(20.0)
+    assert task.status == TaskStatus.RUNNING
+    assert task.actual_start == pytest.approx(20.0)
+    assert not terminated
+    assert not truncated
+
+
 def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> None:
     env = _new_env()
     task, teams = _task_with_two_teams(env)
