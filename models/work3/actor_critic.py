@@ -374,6 +374,50 @@ class ActorCriticWork3(nn.Module):
         zero_task = torch.zeros(self.hidden_dim, dtype=context.dtype, device=context.device)
         return self.branch_head(torch.cat([context, zero_task], dim=-1))
 
+    def _worker_selection_mask(
+        self,
+        env: AirLineEnvWork3,
+        task: TaskRuntimeState,
+        station_workers: list[int],
+        chosen_worker_indices: list[int],
+        device: torch.device,
+    ) -> torch.Tensor:
+        """构造当前指针步的固定长度布尔可选工人掩码。"""
+        if len(station_workers) > self.max_station_workers:
+            raise ValueError(
+                f"工序 {task.task_key} 所在站有 {len(station_workers)} 名工人，"
+                f"超过Actor上限 {self.max_station_workers}"
+            )
+        selected_workers = [station_workers[index] for index in chosen_worker_indices]
+        valid_workers = set(env.valid_team_completion_workers(task, selected_workers))
+        values = [worker_id in valid_workers for worker_id in station_workers]
+        values.extend([False] * (self.max_station_workers - len(values)))
+        mask = torch.tensor(values, dtype=torch.bool, device=device)
+        if not bool(mask.any().item()):
+            raise ValueError(
+                f"工序 {task.task_key} 的工人指针无合法补全："
+                f"已选工人={selected_workers}"
+            )
+        return mask
+
+    @staticmethod
+    def _apply_worker_selection_mask(
+        logits: torch.Tensor,
+        mask: torch.Tensor,
+        *,
+        task_key: str,
+        step_index: int,
+    ) -> torch.Tensor:
+        """掩码在图偏置加入后应用；拒绝全屏蔽或形状不匹配的分布。"""
+        if mask.dtype != torch.bool or mask.shape != logits.shape:
+            raise ValueError(
+                f"工序 {task_key} 第{step_index}步工人掩码形状/类型无效："
+                f"mask={tuple(mask.shape)} {mask.dtype}, logits={tuple(logits.shape)}"
+            )
+        if not bool(mask.any().item()):
+            raise ValueError(f"工序 {task_key} 第{step_index}步工人掩码全空")
+        return logits.masked_fill(~mask, -torch.inf)
+
     @torch.no_grad()
     def select_action(
         self,
@@ -430,6 +474,7 @@ class ActorCriticWork3(nn.Module):
                     state_value,
                     {
                         "action_type": "advance_to_next_event",
+                        "sample_record_version": 2,
                         "advance_available": True,
                         "advance_choice": 1,
                         "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
@@ -489,6 +534,7 @@ class ActorCriticWork3(nn.Module):
         # -------------------------------------------------------------
         sample_record = {
             "action_type": "schedule",
+            "sample_record_version": 2,
             "advance_available": revision_available,
             "advance_choice": advance_choice,
             "task_idx": task_idx,
@@ -525,32 +571,31 @@ class ActorCriticWork3(nn.Module):
 
         # 5. Head 3: 站内工人指针自回归选择
         chosen_worker_indices: list[int] = []
+        worker_valid_masks: list[tuple[bool, ...]] = []
         log_prob_workers = torch.tensor(0.0, device=device)
         worker_mask_tracker = torch.zeros(self.max_station_workers, dtype=torch.float, device=device)
 
         for step_w in range(demand):
             ptr_input = torch.cat([e_fused, chosen_task_embed, worker_mask_tracker], dim=-1)
             w_logits = self.worker_score_fc(ptr_input).clone()
-
-            # 掩码: 超出本站工人数量的位置置 -1e4
-            if self.max_station_workers > num_st_workers:
-                w_logits[num_st_workers:] = -1e4
-            # 掩码: 已选取的工人置 -1e4
-            for prev_idx in chosen_worker_indices:
-                w_logits[prev_idx] = -1e4
             if worker_nodes is not None and worker_node_indices:
                 worker_graph_ids = torch.as_tensor(worker_node_indices, device=device)
                 worker_bias = self.worker_graph_score(worker_nodes[worker_graph_ids]).squeeze(-1)
                 w_logits[:num_st_workers] = w_logits[:num_st_workers] + worker_bias
-            valid_global_workers = set(
-                env.valid_team_completion_workers(
-                    chosen_task,
-                    [st_workers[index] for index in chosen_worker_indices],
-                )
+            worker_mask = self._worker_selection_mask(
+                env,
+                chosen_task,
+                st_workers,
+                chosen_worker_indices,
+                device,
             )
-            for worker_index, worker_id in enumerate(st_workers[:num_st_workers]):
-                if worker_id not in valid_global_workers:
-                    w_logits[worker_index] = -1e4
+            worker_valid_masks.append(tuple(bool(value) for value in worker_mask.cpu().tolist()))
+            w_logits = self._apply_worker_selection_mask(
+                w_logits,
+                worker_mask,
+                task_key=chosen_task.task_key,
+                step_index=step_w,
+            )
 
             dist_w = Categorical(logits=w_logits)
             if deterministic:
@@ -583,6 +628,7 @@ class ActorCriticWork3(nn.Module):
 
         sample_record["chosen_team"] = chosen_team
         sample_record["chosen_worker_indices"] = tuple(chosen_worker_indices)
+        sample_record["worker_valid_masks"] = tuple(worker_valid_masks)
         sample_record["align"] = align_act
 
         action_dict = {
@@ -689,6 +735,18 @@ class ActorCriticWork3(nn.Module):
 
             # 4. STAY 分支：重放选人与对齐
             chosen_worker_indices = rec.get("chosen_worker_indices", ())
+            if rec.get("sample_record_version") != 2:
+                raise ValueError(
+                    f"工序 {rec.get('task_key', '<unknown>')} 的采样记录版本不支持正式PPO重放；"
+                    "请重新采样，不允许静默按全体工人合法处理"
+                )
+            worker_valid_masks = rec.get("worker_valid_masks")
+            if not isinstance(worker_valid_masks, (tuple, list)) or len(worker_valid_masks) != len(
+                chosen_worker_indices
+            ):
+                raise ValueError(
+                    f"工序 {rec.get('task_key', '<unknown>')} 缺少逐步工人合法掩码快照"
+                )
             num_st_workers = rec.get("num_st_workers", self.max_station_workers)
             lp_workers = torch.zeros((), device=device)
             ent_workers = torch.zeros((), device=device)
@@ -705,14 +763,27 @@ class ActorCriticWork3(nn.Module):
             for step_w, w_idx in enumerate(chosen_worker_indices):
                 ptr_input = torch.cat([e_ctx, chosen_task_embed, worker_mask], dim=-1)
                 w_logits = self.worker_score_fc(ptr_input).clone()
-                # 掩码超出本站工人数的位置
-                if self.max_station_workers > num_st_workers:
-                    w_logits[num_st_workers:] = -1e4
                 if worker_bias is not None:
                     w_logits[:num_st_workers] = w_logits[:num_st_workers] + worker_bias
-                # 屏蔽已选
-                for prev in chosen_worker_indices[:step_w]:
-                    w_logits[prev] = -1e4
+                saved_mask = torch.as_tensor(
+                    worker_valid_masks[step_w], dtype=torch.bool, device=device
+                )
+                if saved_mask.numel() != self.max_station_workers:
+                    raise ValueError(
+                        f"工序 {rec.get('task_key', '<unknown>')} 第{step_w}步掩码长度"
+                        f"{saved_mask.numel()}与Actor输出长度{self.max_station_workers}不符"
+                    )
+                if not 0 <= int(w_idx) < self.max_station_workers or not bool(saved_mask[int(w_idx)]):
+                    raise ValueError(
+                        f"工序 {rec.get('task_key', '<unknown>')} 第{step_w}步所选工人"
+                        f"索引{w_idx}不在采样时合法掩码中"
+                    )
+                w_logits = self._apply_worker_selection_mask(
+                    w_logits,
+                    saved_mask,
+                    task_key=str(rec.get("task_key", "<unknown>")),
+                    step_index=step_w,
+                )
                 dist_w = Categorical(logits=w_logits)
                 lp_workers = lp_workers + dist_w.log_prob(torch.as_tensor(w_idx, device=device))
                 ent_workers = ent_workers + dist_w.entropy()
