@@ -162,17 +162,17 @@ def worker_completion_mask(
 
 - 修改：`models/work3/ppo_buffer.py`
 - 修改：`models/work3/potential_shaping.py`或新增紧邻的episode预测器版本注册器（仅在现有塑形器无法持有版本引用时新增）
-- 修改：`training/work3_vector_env.py`
+- 复核：`training/work3_vector_env.py`（无需改动：`DecisionSnapshot`已携带worker/episode标识；segment由采样协调器编号；未结清step仍返回缺失结果）
 - 测试：`tests/work3/test_work3_training_runtime.py`
 
-- [ ] 写测试：两个worker、两个episode及两个采样段交错加入奖励；GAE不得跨任一键串接。正常采样段用其合法后继value bootstrap；成功和真实失败终止不接到reset后的状态。
-- [ ] 写测试：待补标签缓存跨至少两个rollout清理仍保留，直至其真实cycle transfer后才出现训练样本；任务截断/失败时未揭示周期保持无标签。
-- [ ] 写测试：环境A结束并刷新latest预测器时，运行中的环境B仍使用episode启动时版本；只有新episode使用新版本，最后一个旧版本引用释放后才清理旧副本。
-- [ ] 写测试：transition中的图/时间输入、掩码和标签是采样时CPU副本，不因后续环境变化/重置而变更。
-- [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k 'gae or label_cache or predictor_version' -q`先跑新测试并记录。
-- [ ] 最小实现按复合键隔离rollout和待补标签；按episode绑定不可变塑形预测器版本；墙钟未结清请求不生成转移/标签/价值。
-- [ ] 重跑`tests/work3/test_ppo_trainer.py`、`tests/work3/test_work3_f07_time_integration.py`、`tests/work3/test_work3_f11_termination_reporting.py`与新测试。
-- [ ] 更新任务表记录关键边界及提交号。
+- [x] 写测试：两个worker、两个episode及两个采样段交错加入奖励；GAE不跨任一复合键串接。非终止段使用对应bootstrap value；成功/失败真实终止均不接到reset状态。
+- [x] 写测试：待补标签缓存与PPO rollout buffer独立，跨rollout清理仍保留，真实cycle transfer后才产生训练样本；未揭示周期可按worker/episode丢弃且不生成伪标签。
+- [x] 写测试：一个episode结束并刷新latest预测器时，另一个运行中episode继续使用原版本；新episode使用新版本；旧版本最后一个引用释放后回收。
+- [x] 写测试：PPO transition的图、状态/时间张量、掩码与记录内标签在加入时复制到CPU，不受后续源对象修改影响。
+- [x] TDD红灯：`-k "gae or label_cache or predictor_version"`首轮`2 failed`，复现PPO转移缺worker/segment键和标签缓存不接受worker标识；episode版本/样本副本组`2 failed`，复现缺少episode版本绑定且buffer持有可变输入；补充worker限定discard后`1 failed`，复现标签清理接口未隔离worker。
+- [x] 最小实现：按`(worker_id, episode_id, segment_id)`分别计算GAE并要求非终止段提供匹配bootstrap；PPO缓冲区与待补标签缓存各自持有递归CPU副本；缓存按worker/episode/cycle隔离；塑形器按episode引用冻结的Actor/时间头版本，最后引用释放后回收旧版本。现有快照已含worker/episode标识，segment由采样协调器编号；故核查后未改向量运行时文件。
+- [x] 定向验证：新增4项`4 passed, 25 deselected in 8.39s`；任务5主回归`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py tests/work3/test_ppo_trainer.py tests/work3/test_work3_f07_time_integration.py tests/work3/test_work3_f11_termination_reporting.py tests/work3/test_potential_shaping.py -q`为`54 passed in 171.34s`；R08复现`10 passed in 38.23s`；F06签名残差回归`5 passed in 10.40s`。
+- [x] 代码/测试提交`056e314`；任务表随文档提交回填。未运行多环境训练或完整批次实验；当前训练入口尚未消费多worker复合键，向量化PPO整合留待任务6 Lightning生命周期。
 
 ### 任务6：工作三Lightning生命周期与PPO优化器所有权
 
