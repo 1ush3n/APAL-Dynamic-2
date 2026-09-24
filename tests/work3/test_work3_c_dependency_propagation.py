@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from itertools import combinations
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,18 @@ def _new_env() -> AirLineEnvWork3:
     return env
 
 
+def _team_is_valid(
+    env: AirLineEnvWork3,
+    task: TaskRuntimeState,
+    team: tuple[int, ...],
+) -> bool:
+    try:
+        env._validate_team_for_task(task, team)
+    except ValueError:
+        return False
+    return True
+
+
 def _reserve_with_event(
     env: AirLineEnvWork3,
     task: TaskRuntimeState,
@@ -32,6 +45,7 @@ def _reserve_with_event(
     start: float,
     duration: float,
     excluded_workers: set[int],
+    selected_team: tuple[int, ...] | None = None,
 ) -> tuple[int, ...]:
     candidates = env.valid_team_completion_workers(
         task,
@@ -40,7 +54,9 @@ def _reserve_with_event(
     )
     workers = [worker_id for worker_id in candidates if worker_id not in excluded_workers]
     assert len(workers) >= task.demand
-    team = tuple(workers[: task.demand])
+    team = tuple(workers[: task.demand]) if selected_team is None else selected_team
+    assert len(team) == task.demand
+    assert set(team).issubset(workers)
     task.reserve(team=team, scheduled_start=start)
     task.execution_duration = duration
     for worker_id in team:
@@ -189,6 +205,160 @@ def test_parent_delay_propagates_through_chain_but_preserves_unrelated_booking()
         worker_id: tuple(env.state.workers[worker_id].intervals)
         for worker_id in unrelated_team
     } == unrelated_intervals
+
+
+def test_parent_team_duration_change_revalidates_child_but_preserves_unrelated_booking() -> None:
+    """父任务换队延长工时后撤销过早子预约，保留无关预约与资源。"""
+    env = _new_env()
+    parent = env.state.tasks["0_165"]
+    child = env.state.tasks["0_166"]
+    unrelated = env.state.tasks["0_24"]
+    chain_keys = {parent.task_key, child.task_key}
+    _complete_non_chain_predecessors(env, parent, chain_keys)
+    _complete_non_chain_predecessors(env, child, chain_keys)
+    _complete_non_chain_predecessors(env, unrelated, set())
+
+    parent_workers = env.valid_team_completion_workers(
+        parent, [], station_id=parent.current_station
+    )
+    parent_teams = [
+        team
+        for team in combinations(parent_workers, parent.demand)
+        if _team_is_valid(env, parent, team)
+    ]
+    team_fast = min(
+        parent_teams, key=lambda team: env.duration_for_team(parent, team)
+    )
+    team_slow = max(
+        parent_teams, key=lambda team: env.duration_for_team(parent, team)
+    )
+    fast_duration = env.duration_for_team(parent, team_fast)
+    slow_duration = env.duration_for_team(parent, team_slow)
+    assert slow_duration > fast_duration
+
+    all_parent_workers = set(team_fast) | set(team_slow)
+    child_workers = env.valid_team_completion_workers(
+        child, [], station_id=child.current_station
+    )
+    child_team = next(
+        tuple(team)
+        for team in combinations(child_workers, child.demand)
+        if not set(team) & all_parent_workers and _team_is_valid(env, child, team)
+    )
+    unrelated_workers = env.valid_team_completion_workers(
+        unrelated, [], station_id=unrelated.current_station
+    )
+    unrelated_team = next(
+        tuple(team)
+        for team in combinations(unrelated_workers, unrelated.demand)
+        if not set(team) & (all_parent_workers | set(child_team))
+        and _team_is_valid(env, unrelated, team)
+    )
+
+    parent_start = 8.0
+    parent.in_station_offset = parent_start
+    parent.base_team = tuple(team_fast)
+    parent.baseline_assignment = {
+        "station": parent.current_station,
+        "team": list(team_fast),
+        "position": parent_start,
+    }
+    parent.last_published_assignment = parent.baseline_assignment.copy()
+    _reserve_with_event(
+        env,
+        parent,
+        start=parent_start,
+        duration=fast_duration,
+        excluded_workers=set(),
+        selected_team=tuple(team_fast),
+    )
+    child_start = parent_start + fast_duration
+    _reserve_with_event(
+        env,
+        child,
+        start=child_start,
+        duration=env.duration_for_team(child, child_team),
+        excluded_workers=all_parent_workers,
+        selected_team=child_team,
+    )
+    _reserve_with_event(
+        env,
+        unrelated,
+        start=20.0,
+        duration=env.duration_for_team(unrelated, unrelated_team),
+        excluded_workers=all_parent_workers | set(child_team),
+        selected_team=unrelated_team,
+    )
+
+    unrelated_snapshot = (
+        unrelated.status,
+        unrelated.generation,
+        tuple(unrelated.assigned_team),
+        unrelated.scheduled_start,
+        unrelated.execution_duration,
+        tuple(unrelated.revision_history),
+    )
+    unrelated_intervals_before = {
+        worker_id: tuple(env.state.workers[worker_id].intervals)
+        for worker_id in unrelated_team
+    }
+    unrelated_event_before = [
+        (event.timestamp, event.event_type, event.task_key, event.generation)
+        for event in env.event_queue._heap
+        if event.task_key == unrelated.task_key
+        and env.event_queue._is_event_valid(event)
+    ]
+    child_generation_before = child.generation
+    unaffected_costs_before = (
+        env.cost_takt,
+        env.cost_time,
+        env.cost_team,
+        env.cost_postpone,
+    )
+
+    env.step(
+        {
+            "task_key": parent.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": tuple(team_slow),
+            "align": 1,
+        }
+    )
+
+    assert parent.scheduled_start == pytest.approx(parent_start)
+    assert parent.execution_duration == pytest.approx(slow_duration)
+    assert child_start < parent.scheduled_start + parent.execution_duration
+    assert child.status == TaskStatus.UNREADY
+    assert child.generation > child_generation_before
+    _assert_task_resources_released(env, child)
+    assert not any(
+        event.task_key == child.task_key and env.event_queue._is_event_valid(event)
+        for event in env.event_queue._heap
+    )
+    assert (
+        unrelated.status,
+        unrelated.generation,
+        tuple(unrelated.assigned_team),
+        unrelated.scheduled_start,
+        unrelated.execution_duration,
+        tuple(unrelated.revision_history),
+    ) == unrelated_snapshot
+    assert {
+        worker_id: tuple(env.state.workers[worker_id].intervals)
+        for worker_id in unrelated_team
+    } == unrelated_intervals_before
+    assert [
+        (event.timestamp, event.event_type, event.task_key, event.generation)
+        for event in env.event_queue._heap
+        if event.task_key == unrelated.task_key
+        and env.event_queue._is_event_valid(event)
+    ] == unrelated_event_before
+    assert (
+        env.cost_takt,
+        env.cost_time,
+        env.cost_team,
+        env.cost_postpone,
+    ) == unaffected_costs_before
 
 
 def test_reserved_parent_completes_before_child_same_time_start() -> None:
