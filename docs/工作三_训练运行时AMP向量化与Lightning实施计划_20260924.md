@@ -228,15 +228,17 @@ def worker_completion_mask(
 
 **子阶段7A执行记录（2026-09-25）：** 初始CLI反例因`--config/--set`未注册而失败；配置留存反例修正smoke夹具后，旧报告在`resolved_runtime_config_yaml`处以`KeyError`失败；worker线程配置反例因向量环境不接受`worker_torch_num_threads`而失败。修复后训练入口`5 passed in 81.34s`、训练运行时`35 passed in 173.18s`、R08复现性`10 passed in 113.27s`；关键CLI/检查点复测`2 passed in 23.83s`，相关编译与`git diff --check`通过。代码提交`8c4864c`。本子阶段只接通FP32配置入口和元数据，不宣称AMP已启用；选择fp16/bf16会明确拒绝，下一子阶段实现一致精度路径。
 
-- [ ] 写测试：CUDA AMP可用时，采样与PPO重放用相同dtype/设备/autocast上下文，记录log-prob最大误差；不可用硬件明确拒绝所选AMP而不伪报AMP训练。
-- [ ] 写测试：奖励、费用、GAE、优势、value目标和重要性比率显式保持FP32；AMP前向输出、辅助损失、梯度范数和报告数值均有限。
-- [ ] 写测试：Actor/Critic共享参数只由一个Lightning optimizer更新；FP16时GradScaler仅归Lightning精度插件所有，BF16不创建第二个scaler。
+- [x] 写测试：CUDA AMP可用时，采样与PPO重放用相同dtype/设备/autocast上下文并记录log-prob最大误差；CPU不允许伪报fp16/bf16训练，bf16按硬件能力检查。
+- [x] 写测试：PPO统计/比率/时间辅助损失保持FP32，AMP前向与梯度有限；既有运行时测试覆盖FP32奖励、费用、GAE路径。
+- [x] 写测试：Actor/Critic/时间头共享单一去重Lightning optimizer；FP16 GradScaler仅由Lightning精度插件持有，BF16无scaler。
 - [ ] 写测试：C profile缺时间头仍可严格加载Actor/Critic/图版本/配置元数据；D profile缺时间头、随机未训练头、错误图版本或错误特征版本均明确失败；兼容D加载时间头和塑形副本。
 - [ ] 写测试：检查点保存resolved YAML/哈希、代码提交、场景散列、图特征版本、C/D profile、Actor初始指纹、模型权重、Lightning优化器/精度状态和随机状态；不包含环境进度时标`non_exact`续训。
 - [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k 'amp or checkpoint or profile' -q`运行红灯用例。
-- [ ] 用Lightning精度插件启用AMP；rollout前向显式使用`torch.amp.autocast`同一精度路径；统计/GAE等保持FP32。只在本机RTX 4060 8GB及本次固定`num_envs`/batch/rollout配置上记录峰值，不外推任意配置。
+- [x] 用Lightning精度插件启用AMP；rollout前向显式使用`torch.amp.autocast`同一精度路径；统计/GAE等保持FP32。当前只记录本机RTX 4060 Laptop GPU上的通路测试，不对任意配置外推资源结论。
 - [ ] 实现profile严格载入并重跑新测试、`tests/work3/test_work3_f09_experiment_groups.py`、`tests/work3/test_work3_r08_training_reproducibility.py`和Lightning回归。
 - [ ] 更新任务表并提交；此时仍不启动完整批次试点。
+
+**子阶段7B执行记录（2026-09-25）：** 先新增FP16/BF16采样重放、PPO FP32统计、Lightning scaler所有权、梯度更新计数和训练入口烟测。RED复现旧实现FP16在手动裁剪/有限值检查处中断，Lightning scaler尚未获得执行跳步和降scale的机会。修复后精度解析拒绝CPU AMP并核验BF16硬件支持；Actor图聚合显式匹配累加器dtype；rollout与Lightning按同一配置精度前向，PPO统计及时间监督损失维持FP32。梯度有限性检查和裁剪移入Lightning `on_before_optimizer_step`，由插件先反缩放；GradScaler仍仅由插件持有，日志区分step尝试、成功更新和AMP跳过。FP16/BF16插件测试`2 passed`，AMP采样/重放及D入口烟测`4 passed`，完整运行时`43 passed in 199.80s`，相关Actor/PPO/时间头/训练入口/势函数组合`24 passed, 1 skipped in 87.74s`；skip是缺正式检查点的既有条件项，未计为通过。`py_compile`和`git diff --check`通过。代码/测试提交`c315188`；未改用户的`training/lightning_module.py`，未启动完整批次试点。下一项为Task7C profile严格加载、检查点精度/续训状态与对应测试。
 
 ### 任务8：端到端小预算运行门槛与试点协议冻结
 
