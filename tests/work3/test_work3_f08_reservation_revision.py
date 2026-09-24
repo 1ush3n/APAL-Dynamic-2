@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from itertools import combinations
 from pathlib import Path
 
@@ -271,11 +272,63 @@ def test_actor_can_select_advance_action_and_replay_its_probability() -> None:
 def test_identical_resubmission_cannot_block_time_progress() -> None:
     env = _new_env()
     task = env.get_ready_tasks()[0]
-    _reserve_at_future_time(env, task, _legal_teams(env, task)[0])
-    team = tuple(task.assigned_team)
-    history_size = len(task.revision_history)
+    team = _legal_teams(env, task)[0]
+    task.base_team = tuple(team)
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team),
+        "position": 20.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+    _reserve_at_future_time(env, task, team)
 
-    env.step(
+    def effective_event_ledger() -> list[tuple[float, str, str | None, int]]:
+        return sorted(
+            (
+                event.timestamp,
+                event.event_type.name,
+                event.task_key,
+                event.generation,
+            )
+            for event in env.event_queue._heap
+            if env.event_queue._is_event_valid(event)
+        )
+
+    assert len(env.event_queue._heap) == 1
+    event_ledger_before = effective_event_ledger()
+    assert event_ledger_before == [
+        (20.0, EventType.TASK_START.name, task.task_key, task.generation)
+    ]
+    task_snapshot_before = (
+        task.generation,
+        task.scheduled_start,
+        task.execution_duration,
+        tuple(task.assigned_team),
+        deepcopy(task.last_published_assignment),
+        deepcopy(task.revision_history),
+    )
+    worker_calendars_before = {
+        worker_id: tuple(
+            (interval.start, interval.end, interval.task_key)
+            for interval in worker.intervals
+        )
+        for worker_id, worker in env.state.workers.items()
+    }
+    station_occupancy_before = {
+        station_id: frozenset(task_keys)
+        for station_id, task_keys in env._station_occupied_tasks.items()
+    }
+    fee_ledger_before = (
+        env.cumulative_cost,
+        env.cost_takt,
+        env.cost_time,
+        env.cost_team,
+        env.cost_postpone,
+        env.cost_revision,
+    )
+    rewards_before = len(env.step_rewards)
+
+    _, reward, terminated, truncated, _ = env.step(
         {
             "task_key": task.task_key,
             "branch": ActionBranch.STATION_EXECUTE,
@@ -286,7 +339,46 @@ def test_identical_resubmission_cannot_block_time_progress() -> None:
 
     assert env.state.current_time == pytest.approx(20.0)
     assert task.status == TaskStatus.RUNNING
-    assert len(task.revision_history) == history_size
+    assert not terminated
+    assert not truncated
+    assert reward == pytest.approx(0.0)
+    assert task.actual_start == pytest.approx(20.0)
+    assert (
+        task.generation,
+        task.scheduled_start,
+        task.execution_duration,
+        tuple(task.assigned_team),
+        task.last_published_assignment,
+        task.revision_history,
+    ) == task_snapshot_before
+    assert {
+        worker_id: tuple(
+            (interval.start, interval.end, interval.task_key)
+            for interval in worker.intervals
+        )
+        for worker_id, worker in env.state.workers.items()
+    } == worker_calendars_before
+    assert {
+        station_id: frozenset(task_keys)
+        for station_id, task_keys in env._station_occupied_tasks.items()
+    } == station_occupancy_before
+    assert effective_event_ledger() == [
+        (
+            20.0 + float(task.execution_duration),
+            EventType.TASK_FINISH.name,
+            task.task_key,
+            task.generation,
+        )
+    ]
+    assert fee_ledger_before == (
+        env.cumulative_cost,
+        env.cost_takt,
+        env.cost_time,
+        env.cost_team,
+        env.cost_postpone,
+        env.cost_revision,
+    )
+    assert len(env.step_rewards) == rewards_before + 1
 
 
 def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> None:
