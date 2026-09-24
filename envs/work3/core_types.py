@@ -147,7 +147,7 @@ class TaskRuntimeState:
     cycle_start_time: float | None = None  # 实际开工所在周期的转站时刻 P_{q-1}
     start_cost_confirmed: bool = False     # 是否已确认并结算开工偏差与团队替换费用
     baseline_assignment: dict[str, Any] = field(default_factory=dict)
-    current_assignment: dict[str, Any] = field(default_factory=dict)
+    last_published_assignment: dict[str, Any] = field(default_factory=dict)
     revision_history: list[dict[str, Any]] = field(default_factory=list)
     _state_ref: Any = field(default=None, repr=False, compare=False)
 
@@ -159,8 +159,8 @@ class TaskRuntimeState:
                 "team": list(self.base_team),
                 "position": float(self.in_station_offset),
             }
-        if not self.current_assignment:
-            self.current_assignment = copy.deepcopy(self.baseline_assignment)
+        if not self.last_published_assignment:
+            self.last_published_assignment = copy.deepcopy(self.baseline_assignment)
 
     def can_physically_start(self, current_time: float, tolerance: float = 1e-5) -> bool:
         """检查任务是否满足物理开工硬条件（到料到达且时刻到达）。"""
@@ -253,7 +253,7 @@ class TaskRuntimeState:
             cycle_start_time=self.cycle_start_time,
             start_cost_confirmed=self.start_cost_confirmed,
             baseline_assignment=copy.deepcopy(self.baseline_assignment),
-            current_assignment=copy.deepcopy(self.current_assignment),
+            last_published_assignment=copy.deepcopy(self.last_published_assignment),
             revision_history=copy.deepcopy(self.revision_history),
         )
         copied._state_ref = getattr(self, "_state_ref", None)

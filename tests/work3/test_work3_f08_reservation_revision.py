@@ -73,6 +73,7 @@ def test_reserved_task_can_be_revised_and_old_start_event_is_invalidated() -> No
     second_team = teams[1]
 
     _reserve_at_future_time(env, task, first_team)
+    history_size = len(task.revision_history)
     old_generation = task.generation
 
     env.step(
@@ -87,7 +88,9 @@ def test_reserved_task_can_be_revised_and_old_start_event_is_invalidated() -> No
     assert task.status == TaskStatus.RESERVED
     assert task.generation > old_generation
     assert task.assigned_team == list(second_team)
-    assert len(task.revision_history) == (0 if second_team == first_team else 1)
+    assert len(task.revision_history) == history_size + int(
+        set(second_team) != set(first_team)
+    )
 
     env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
     assert task.status == TaskStatus.RUNNING
@@ -168,6 +171,7 @@ def test_a_to_b_to_a_records_two_revisions_and_final_team_matches_baseline() -> 
         pytest.skip("当前实例该任务没有第二个合法团队")
 
     _reserve_at_future_time(env, task, first_team)
+    history_size = len(task.revision_history)
     for team in (second_team, first_team):
         env.step(
             {
@@ -178,19 +182,19 @@ def test_a_to_b_to_a_records_two_revisions_and_final_team_matches_baseline() -> 
             }
         )
 
-    assert [entry["after"]["team"] for entry in task.revision_history] == [
+    assert [entry["after"]["team"] for entry in task.revision_history[-2:]] == [
         list(second_team),
         list(first_team),
     ]
-    assert len(task.revision_history) == 2
-    assert all(entry["revision_cost"] > 0.0 for entry in task.revision_history)
+    assert len(task.revision_history) == history_size + 2
+    assert all(entry["revision_cost"] > 0.0 for entry in task.revision_history[-2:])
 
     env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
     assert task.status == TaskStatus.RUNNING
     assert set(task.assigned_team) == set(first_team)
 
     breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    assert breakdown.num_revisions == 2
+    assert breakdown.num_revisions == history_size + 2
     assert breakdown.j_revision == pytest.approx(env.cost_revision)
     assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
 
@@ -269,6 +273,7 @@ def test_identical_resubmission_cannot_block_time_progress() -> None:
     task = env.get_ready_tasks()[0]
     _reserve_at_future_time(env, task, _legal_teams(env, task)[0])
     team = tuple(task.assigned_team)
+    history_size = len(task.revision_history)
 
     env.step(
         {
@@ -281,7 +286,254 @@ def test_identical_resubmission_cannot_block_time_progress() -> None:
 
     assert env.state.current_time == pytest.approx(20.0)
     assert task.status == TaskStatus.RUNNING
+    assert len(task.revision_history) == history_size
+
+
+def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> None:
+    env = _new_env()
+    task, teams = _task_with_two_teams(env)
+    first_team = tuple(task.base_team)
+    if first_team not in teams:
+        first_team = teams[0]
+    second_team = next(team for team in teams if team != first_team)
+
+    _reserve_at_future_time(env, task, first_team)
+    previous_assignment = task.last_published_assignment.copy()
+    history_size = len(task.revision_history)
+    old_start = task.scheduled_start
+
+    env._handle_disturbance_event(
+        1.0,
+        {"recovery_time": 30.0, "affected_task_keys": [task.task_key]},
+    )
+    assert task.status == TaskStatus.UNREADY
+    assert task.last_published_assignment == previous_assignment
+
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": second_team,
+            "align": 0,
+        }
+    )
+
+    assert task.scheduled_start is not None
+    assert task.scheduled_start >= 30.0
+    assert len(task.revision_history) == history_size + 1
+    revision = task.revision_history[-1]
+    assert revision["before"]["team"] == list(first_team)
+    assert revision["after"]["team"] == list(second_team)
+    assert revision["team_change"] == pytest.approx(1.0 / task.demand)
+
+    env.state.current_time = float(old_start)
+    env.process_due_events()
+    assert task.status == TaskStatus.RESERVED
+    assert task.actual_start is None
+
+
+def test_postpone_preserves_last_published_team_and_position_as_pending_reference() -> None:
+    env = _new_env()
+    task = next(task for task in env.state.tasks.values() if env.can_postpone(task))
+    for predecessor_id in task.predecessors:
+        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
+        predecessor.status = TaskStatus.COMPLETED
+        predecessor.actual_end = 0.0
+    task.status = TaskStatus.READY
+    team = _legal_teams(env, task)[0]
+    _reserve_at_future_time(env, task, team)
+    previous_assignment = task.last_published_assignment.copy()
+    revision_cost_before = env.cost_revision
+
+    env.step({"task_key": task.task_key, "branch": ActionBranch.POSTPONE})
+
+    assert task.current_station == previous_assignment["station"] + 1
+    assert task.last_published_assignment["team"] == previous_assignment["team"]
+    assert task.last_published_assignment["position"] == pytest.approx(
+        previous_assignment["position"]
+    )
+    assert env.cost_revision == pytest.approx(revision_cost_before)
+    assert env.cost_postpone > 0.0
+
+
+def test_team_member_order_is_not_a_formal_revision() -> None:
+    env = _new_env()
+    task = next(
+        task
+        for task in env.get_ready_tasks()
+        if task.demand >= 2 and _legal_teams(env, task)
+    )
+    team = _legal_teams(env, task)[0]
+    _reserve_at_future_time(env, task, team)
+    history_size = len(task.revision_history)
+    revision_cost_before = env.cost_revision
+
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": tuple(reversed(team)),
+            "align": 1,
+        }
+    )
+
+    assert len(task.revision_history) == history_size
+    assert env.cost_revision == pytest.approx(revision_cost_before)
+
+
+def test_exact_baseline_publication_has_no_phantom_time_revision() -> None:
+    env = _new_env()
+    task = env.get_ready_tasks()[0]
+    team = _legal_teams(env, task)[0]
+    task.base_team = tuple(team)
+    task.in_station_offset = 0.0
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team),
+        "position": 0.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team,
+            "align": 0,
+        }
+    )
+
+    assert task.scheduled_start == pytest.approx(0.0)
     assert task.revision_history == []
+    assert env.cost_revision == pytest.approx(0.0)
+
+
+def test_first_deviating_publication_is_compared_with_p0() -> None:
+    env = _new_env()
+    task, teams = _task_with_two_teams(env)
+    first_team = tuple(task.base_team)
+    if first_team not in teams:
+        first_team = teams[0]
+    second_team = next(team for team in teams if team != first_team)
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(first_team),
+        "position": float(task.in_station_offset),
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": second_team,
+            "align": 1,
+        }
+    )
+
+    assert len(task.revision_history) == 1
+    revision = task.revision_history[0]
+    assert revision["before"]["team"] == list(first_team)
+    assert revision["after"]["team"] == list(second_team)
+    assert revision["team_change"] == pytest.approx(1.0 / task.demand)
+
+
+def test_three_person_a_to_b_to_a_charges_one_third_per_publication() -> None:
+    env = _new_env()
+    task = env.state.tasks["0_34"]
+    env.state.aircraft[task.aircraft_id].current_station = task.current_station
+    for predecessor_id in task.predecessors:
+        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
+        predecessor.status = TaskStatus.COMPLETED
+        predecessor.actual_end = 0.0
+    task.status = TaskStatus.READY
+
+    assert task.demand == 3
+    team_a = _legal_teams(env, task)[0]
+    task.base_team = team_a
+    team_b = next(
+        team
+        for team in _legal_teams(env, task)
+        if len(set(team_a) & set(team)) == 2
+    )
+    task.in_station_offset = 20.0
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team_a),
+        "position": 20.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+
+    _reserve_at_future_time(env, task, team_a)
+    assert task.revision_history == []
+    for team in (team_b, team_a):
+        env.step(
+            {
+                "task_key": task.task_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": team,
+                "align": 1,
+            }
+        )
+
+    assert len(task.revision_history) == 2
+    assert [revision["team_change"] for revision in task.revision_history] == pytest.approx(
+        [1.0 / 3.0, 1.0 / 3.0]
+    )
+    assert set(task.last_published_assignment["team"]) == set(team_a)
+    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
+    assert breakdown.j_revision == pytest.approx(env.cost_revision)
+    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
+
+
+def test_postponement_keeps_team_anchor_until_target_station_publication() -> None:
+    env = _new_env()
+    task = env.state.tasks["0_16"]
+    env.state.aircraft[task.aircraft_id].current_station = task.current_station
+    for predecessor_id in task.predecessors:
+        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
+        predecessor.status = TaskStatus.COMPLETED
+        predecessor.actual_end = 0.0
+    task.status = TaskStatus.READY
+    team_a = _legal_teams(env, task)[0]
+    _reserve_at_future_time(env, task, team_a)
+    history_size = len(task.revision_history)
+    previous_cost_revision = env.cost_revision
+
+    env.step({"task_key": task.task_key, "branch": ActionBranch.POSTPONE})
+    assert env.cost_revision == pytest.approx(previous_cost_revision)
+    assert task.last_published_assignment["team"] == list(team_a)
+    assert task.last_published_assignment["position"] == pytest.approx(20.0)
+
+    for station_id in range(env.state.num_stations):
+        for other_task in env.state.get_tasks_for_station(station_id):
+            if other_task.task_key != task.task_key:
+                other_task.status = TaskStatus.COMPLETED
+                other_task.actual_end = 0.0
+    env._check_and_schedule_transfer()
+    env.process_due_events()
+    assert env.state.aircraft[task.aircraft_id].current_station == task.current_station
+    assert task.status == TaskStatus.READY
+
+    team_b = _legal_teams(env, task)[0]
+    replacement = 1.0 - len(set(team_a) & set(team_b)) / task.demand
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team_b,
+            "align": 1,
+        }
+    )
+    assert len(task.revision_history) == history_size + 2
+    revision = task.revision_history[-1]
+    assert revision["before"]["team"] == list(team_a)
+    assert revision["before"]["position"] == pytest.approx(20.0)
+    assert revision["after"]["team"] == list(team_b)
+    assert revision["team_change"] == pytest.approx(replacement)
+    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
+    assert breakdown.j_revision == pytest.approx(env.cost_revision)
+    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
 
 
 @pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.COMPLETED])

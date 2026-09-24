@@ -492,7 +492,7 @@ class AirLineEnvWork3:
         additional_cost: float = 0.0,
     ) -> float:
         """提交一次正式修订并计入相邻安排的增量账本。"""
-        before = dict(task.current_assignment or task.baseline_assignment)
+        before = dict(task.last_published_assignment or task.baseline_assignment)
         time_change, team_change, station_changed = self._revision_cost_components(
             before, after, task
         )
@@ -500,10 +500,8 @@ class AirLineEnvWork3:
             station_changed
             or time_change > self.tolerance
             or team_change > self.tolerance
-            or before.get("team") != after.get("team")
-            or before.get("scheduled_start") != after.get("scheduled_start")
         )
-        task.current_assignment = dict(after)
+        task.last_published_assignment = dict(after)
         if not changed:
             return 0.0
 
@@ -710,7 +708,7 @@ class AirLineEnvWork3:
                 raise
 
             unchanged = was_reserved and (
-                old_team == team
+                set(old_team) == set(team)
                 and old_start is not None
                 and abs(float(old_start) - t_sched) <= self.tolerance
                 and old_duration is not None
@@ -737,15 +735,12 @@ class AirLineEnvWork3:
                     team=team,
                     scheduled_start=t_sched,
                 )
-                revision_cost_inc = 0.0
-                if was_reserved:
-                    revision_cost_inc = self._record_formal_revision(
-                        task,
-                        after_assignment,
-                        reason="reservation_revision",
-                    )
-                else:
-                    task.current_assignment = after_assignment
+                revision_history_size = len(task.revision_history)
+                revision_cost_inc = self._record_formal_revision(
+                    task,
+                    after_assignment,
+                    reason="reservation_revision",
+                )
 
                 for w in team:
                     self.state.workers[w].add_interval(
@@ -775,7 +770,7 @@ class AirLineEnvWork3:
                 self._station_occupied_tasks[task.current_station].add(task.task_key)
                 if was_reserved:
                     self._invalidate_dependent_reservations(task)
-                info["revision_changed"] = was_reserved
+                info["revision_changed"] = len(task.revision_history) > revision_history_size
                 info["cost_revision_inc"] = revision_cost_inc
                 info["scheduled_start"] = t_sched
 
@@ -791,7 +786,9 @@ class AirLineEnvWork3:
             if was_reserved:
                 self._release_reserved_resources(task)
             n_old = task.postpone_count
-            previous_assignment = copy.deepcopy(task.current_assignment)
+            previous_assignment = copy.deepcopy(
+                task.last_published_assignment or task.baseline_assignment
+            )
             task.postpone_to_next_station()
             self.event_queue.invalidate_task_events(task.task_key, task.generation)
             if was_reserved:
@@ -806,12 +803,8 @@ class AirLineEnvWork3:
             self.cost_postpone += cost_postpone_inc
             self.cumulative_cost += cost_postpone_inc
 
-            after_assignment = self._assignment_snapshot(
-                task,
-                station=task.current_station,
-                team=previous_assignment.get("team"),
-                scheduled_start=None,
-            )
+            after_assignment = dict(previous_assignment)
+            after_assignment["station"] = int(task.current_station)
             revision_total_inc = self._record_formal_revision(
                 task,
                 after_assignment,

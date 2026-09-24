@@ -238,7 +238,7 @@ def test_failed_reservation_search_restores_old_reservation_transaction(
         task.execution_duration,
         task.generation,
         copy.deepcopy(task.revision_history),
-        copy.deepcopy(task.current_assignment),
+        copy.deepcopy(task.last_published_assignment),
     )
     calendars_before = {
         worker_id: tuple(calendar.intervals)
@@ -284,7 +284,7 @@ def test_failed_reservation_search_restores_old_reservation_transaction(
         task.execution_duration,
         task.generation,
         copy.deepcopy(task.revision_history),
-        copy.deepcopy(task.current_assignment),
+        copy.deepcopy(task.last_published_assignment),
     )
     assert calendars_before == {
         worker_id: tuple(calendar.intervals)
