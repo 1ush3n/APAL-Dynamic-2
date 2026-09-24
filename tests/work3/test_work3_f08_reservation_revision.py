@@ -238,6 +238,82 @@ def test_a_to_b_to_a_records_two_revisions_and_final_team_matches_baseline() -> 
     assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
 
 
+def test_repeated_team_round_trips_keep_progress_exit_and_charge_every_revision() -> None:
+    env = _new_env()
+    task, teams = _task_with_two_teams(env)
+    team_a, team_b = tuple(teams[0]), tuple(teams[1])
+    task.base_team = team_a
+    task.in_station_offset = 20.0
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team_a),
+        "position": 20.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+    _reserve_at_future_time(env, task, team_a)
+
+    team_change = 1.0 - len(set(team_a) & set(team_b)) / task.demand
+    scale = 1.0 / len(env.state.tasks)
+    revision_team_weight = (
+        env.weights.w_w
+        if env.weights.w_revision_team is None
+        else env.weights.w_revision_team
+    )
+    expected_revision_cost = revision_team_weight * team_change * scale
+    generation_before = task.generation
+    history_before = len(task.revision_history)
+    cost_revision_before = env.cost_revision
+    team_cost_before = env.cost_team
+
+    for index, team in enumerate((team_b, team_a, team_b, team_a), start=1):
+        _, reward, terminated, truncated, _ = env.step(
+            {
+                "task_key": task.task_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": team,
+                "align": 1,
+            }
+        )
+        assert env.state.current_time == pytest.approx(0.0)
+        assert task.status == TaskStatus.RESERVED
+        assert task.scheduled_start == pytest.approx(20.0)
+        assert task.generation == generation_before + index
+        assert len(task.revision_history) == history_before + index
+        assert env.cost_revision == pytest.approx(
+            cost_revision_before + index * expected_revision_cost
+        )
+        assert reward == pytest.approx(-expected_revision_cost)
+        assert not terminated
+        assert not truncated
+
+    active_task_events = [
+        event
+        for event in env.event_queue._heap
+        if event.task_key == task.task_key and env.event_queue._is_event_valid(event)
+    ]
+    assert len(active_task_events) == 1
+    assert active_task_events[0].event_type == EventType.TASK_START
+    assert active_task_events[0].timestamp == pytest.approx(20.0)
+    assert active_task_events[0].generation == task.generation
+
+    _, _, terminated, truncated, info = env.step(
+        {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    )
+
+    assert info["advanced"] is True
+    assert env.state.current_time == pytest.approx(20.0)
+    assert task.status == TaskStatus.RUNNING
+    assert set(task.assigned_team) == set(team_a)
+    assert env.cost_team == pytest.approx(team_cost_before)
+    assert not terminated
+    assert not truncated
+    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
+    assert breakdown.num_revisions == history_before + 4
+    assert breakdown.d_team == pytest.approx(0.0)
+    assert breakdown.j_revision == pytest.approx(env.cost_revision)
+    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
+
+
 def test_advance_action_moves_to_next_event_without_arbitrary_wait() -> None:
     env = _new_env()
     task = env.get_ready_tasks()[0]
