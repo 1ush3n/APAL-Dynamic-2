@@ -186,18 +186,31 @@ def worker_completion_mask(
 - 测试：`tests/work3/test_work3_training_runtime.py`
 - 不修改：`training/lightning_module.py`
 
-- [ ] 写测试：工作三Lightning模块由`Trainer.fit()`驱动至少一个PPO优化步，报告的Lightning optimization step与environment step分别计数。
-- [ ] 写测试：`configure_optimizers()`是Actor、Critic、共享图编码器和时间头参数的唯一优化器所有者；参数去重，不允许共享图参数进入两个优化器。
-- [ ] 写测试：PPO损失纯计算路径不创建optimizer、不调用`backward()`/`step()`；Lightning手动优化路径用Lightning管理的优化器/`manual_backward`完成更新，梯度裁剪和有限值检查有效。
-- [ ] 写测试：DataModule的DataLoader `num_workers=0`，采样只由独立CPU环境worker池并行。
-- [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k lightning -q`记录红灯。
-- [ ] 从`PPOTrainerWork3`提取PPO/时间监督损失与重放计算，保留原损失公式/条件熵语义；Lightning模块拥有唯一优化器和更新步骤，训练入口改为配置化`Trainer.fit()`编排。
-- [ ] 用CPU FP32跑至少一次Lightning更新，重放概率与采样概率一致；运行原`test_ppo_trainer.py`和训练入口回归。
-- [ ] 任务表记录未改旧Lightning文件、参数所有权检查、CPU更新结果和提交号。
+- [x] 写测试：工作三Lightning模块由`Trainer.fit()`驱动至少一个PPO优化步，报告的Lightning optimization step与environment step分别计数。
+- [x] 写测试：`configure_optimizers()`是Actor、Critic、共享图编码器和时间头参数的唯一优化器所有者；参数去重，不允许共享图参数进入两个优化器。
+- [x] 写测试：PPO损失纯计算路径不创建optimizer、不调用`backward()`/`step()`；Lightning手动优化路径用Lightning管理的优化器/`manual_backward`完成更新，梯度裁剪和有限值检查有效。
+- [x] 写测试：DataModule的DataLoader `num_workers=0`；训练入口通过独立spawn CPU环境worker取快照、执行动作（本任务实际入口为`num_envs=1`）。
+- [x] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k lightning -q`记录红灯；完整runtime文件的最终回归见任务记录。
+- [x] 从`PPOTrainerWork3`提取PPO/时间监督损失与重放计算，保留原损失公式/条件熵语义；Lightning模块拥有唯一优化器和更新步骤，训练入口改为`Trainer.fit()`编排。
+- [x] 用CPU FP32跑至少一次Lightning更新，重放概率与采样概率一致；运行原`test_ppo_trainer.py`和训练入口回归。
+- [x] 任务表记录旧Lightning文件边界、优化器所有权检查、CPU更新结果和提交号。
+
+**任务6验收边界：** 完成的是Lightning FP32生命周期及单环境训练入口。双worker协调器、预算、GAE和episode版本此前已分别在任务4/5验收；但`train_ppo_work3.run_training()`尚未消费`runtime.num_envs`，不能据此声称训练入口已完成多环境采样。AMP前增加任务6B，将多worker FP32采样接入同一个Lightning更新入口。
+
+### 任务6B：多环境FP32训练入口接线（AMP前置）
+
+**依赖：** 任务6；在AMP和完整批次试点前完成。
+
+- [ ] 先写`num_envs=2`训练入口测试：单一主进程Actor/Lightning优化器、两个spawn CPU环境worker；相同固定worker/episode场景计划可追踪。
+- [ ] 聚合预算精确计算所有worker实际`step()`，剩余预算按稳定顺序派发；worker/episode/segment独立缓存并正确bootstrap后合并PPO更新。
+- [ ] 对齐`runtime.num_envs`配置，不改变单环境FP32语义；C/D在相同worker/episode事件映射下执行。
+- [ ] 检查跨worker同一决策编号的时间标签键、episode势函数版本和worker异常清理；不把Lightning/DataLoader worker用于环境并行。
+- [ ] 使用两个环境跑FP32短段，验证实际environment step数、Lightning优化步数、快照掩码重放、GAE和进程CUDA状态；通过前不启用AMP。
+- [ ] 先观察新缺陷测试红灯，再修复并运行任务6回归；记录结果并独立提交代码/测试。
 
 ### 任务7：AMP一致精度路径、配置/profile检查点
 
-**依赖：** 任务6 FP32通过；双环境阶段此前已通过。
+**依赖：** 任务6与任务6B FP32通过；在双环境训练入口验收前不得启用AMP。
 
 **文件：**
 
@@ -251,5 +264,5 @@ def worker_completion_mask(
 - 第6节Lightning唯一优化器和工作三模块：任务6覆盖。
 - 第7节AMP精度边界、线程/资源：任务7、8覆盖。
 - 第8节配置、种子、profile检查点：任务1、7覆盖。
-- 第10节阶段顺序与试点门槛：任务3→4→5→6→7→8严格覆盖。
+- 第10节阶段顺序与试点门槛：任务3→4→5→6→6B→7→8严格覆盖。
 - 非目标/用户工作区边界和逐任务提交：全局约束与提交规则覆盖。
