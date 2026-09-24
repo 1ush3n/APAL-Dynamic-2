@@ -29,6 +29,11 @@ from envs.work3.core_types import (
     TaskStatus,
     initialize_multi_aircraft_state,
 )
+from envs.work3.decision_snapshot import (
+    TeamCompletionContext,
+    WorkerSnapshot,
+    team_completion_worker_ids,
+)
 from envs.work3.event_queue import DiscreteEventQueue, EventType, SimulationEvent
 from utils.work3.objective_evaluator import ObjectiveWeights, calculate_postpone_penalty
 
@@ -299,25 +304,62 @@ class AirLineEnvWork3:
         station_id: int | None = None,
     ) -> list[int]:
         """返回指定站位上加入部分团队后仍可补全合法团队的工人。"""
-        selected = [int(worker_id) for worker_id in selected_team]
-        if len(selected) > task.demand or len(selected) != len(set(selected)):
-            return []
-        candidate_station = task.current_station if station_id is None else int(station_id)
-        allowed = set(self.state.station_worker_bindings.get(candidate_station, []))
-        for worker_id in selected:
-            if worker_id not in allowed or worker_id not in self.worker_efficiencies:
-                return []
-            if task.skill >= 0 and task.skill not in self.worker_skills[worker_id]:
-                return []
+        return list(
+            team_completion_worker_ids(
+                self._team_completion_context(
+                    task,
+                    station_id=station_id,
+                    include_calendars=False,
+                ),
+                tuple(int(worker_id) for worker_id in selected_team),
+            )
+        )
 
-        candidates = [
-            worker_id
-            for worker_id in self.state.station_worker_bindings.get(candidate_station, [])
-            if worker_id not in selected
-            and (task.skill < 0 or task.skill in self.worker_skills[worker_id])
-        ]
-        required = task.demand - len(selected)
-        return candidates if len(candidates) >= required else []
+    def get_team_completion_context(
+        self,
+        task: TaskRuntimeState,
+        *,
+        station_id: int | None = None,
+    ) -> TeamCompletionContext:
+        """导出独立于现场对象的只读团队技能、效率及日历快照。"""
+        return self._team_completion_context(
+            task,
+            station_id=station_id,
+            include_calendars=True,
+        )
+
+    def _team_completion_context(
+        self,
+        task: TaskRuntimeState,
+        *,
+        station_id: int | None,
+        include_calendars: bool,
+    ) -> TeamCompletionContext:
+        """共享团队资格规则；常规候选检查不复制可能很长的资源日历。"""
+        candidate_station = task.current_station if station_id is None else int(station_id)
+        worker_ids = tuple(self.state.station_worker_bindings.get(candidate_station, ()))
+        snapshots: list[WorkerSnapshot] = []
+        for worker_id in worker_ids:
+            calendar = self.state.workers.get(worker_id)
+            intervals = () if calendar is None or not include_calendars else tuple(
+                (float(interval.start), float(interval.end), str(interval.task_key))
+                for interval in calendar.intervals
+            )
+            snapshots.append(
+                WorkerSnapshot(
+                    worker_id=int(worker_id),
+                    skills=tuple(sorted(self.worker_skills.get(worker_id, ()))),
+                    efficiency=self.worker_efficiencies.get(worker_id),
+                    calendar_intervals=intervals,
+                )
+            )
+        return TeamCompletionContext(
+            task_key=task.task_key,
+            station_id=candidate_station,
+            required_skill=int(task.skill),
+            demand=int(task.demand),
+            workers=tuple(snapshots),
+        )
 
     def _predecessor_release_time(self, task: TaskRuntimeState) -> float | None:
         """返回前驱已完成、预约或运行时可证明的最早释放时刻。"""

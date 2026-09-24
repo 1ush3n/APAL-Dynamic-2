@@ -37,6 +37,12 @@ from torch.distributions import Categorical
 from torch_geometric.data import HeteroData
 
 from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskRuntimeState, TaskStatus
+from envs.work3.decision_snapshot import (
+    DecisionSnapshot,
+    TeamCompletionContext,
+    WorkerSnapshot,
+    worker_completion_mask,
+)
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
 from models.hb_gat_pn import FeatureEmbedder, HeteroGATEncoder
@@ -442,27 +448,20 @@ class ActorCriticWork3(nn.Module):
 
     def _worker_selection_mask(
         self,
-        env: AirLineEnvWork3,
-        task: TaskRuntimeState,
-        station_workers: list[int],
-        chosen_worker_indices: list[int],
+        context: TeamCompletionContext,
+        selected_worker_ids: tuple[int, ...],
         device: torch.device,
     ) -> torch.Tensor:
         """构造当前指针步的固定长度布尔可选工人掩码。"""
-        if len(station_workers) > self.max_station_workers:
-            raise ValueError(
-                f"工序 {task.task_key} 所在站有 {len(station_workers)} 名工人，"
-                f"超过Actor上限 {self.max_station_workers}"
-            )
-        selected_workers = [station_workers[index] for index in chosen_worker_indices]
-        valid_workers = set(env.valid_team_completion_workers(task, selected_workers))
-        values = [worker_id in valid_workers for worker_id in station_workers]
-        values.extend([False] * (self.max_station_workers - len(values)))
-        mask = torch.tensor(values, dtype=torch.bool, device=device)
+        mask = torch.tensor(
+            worker_completion_mask(context, selected_worker_ids, self.max_station_workers),
+            dtype=torch.bool,
+            device=device,
+        )
         if not bool(mask.any().item()):
             raise ValueError(
-                f"工序 {task.task_key} 的工人指针无合法补全："
-                f"已选工人={selected_workers}"
+                f"工序 {context.task_key} 的工人指针无合法补全："
+                f"已选工人={selected_worker_ids}"
             )
         return mask
 
@@ -484,6 +483,72 @@ class ActorCriticWork3(nn.Module):
             raise ValueError(f"工序 {task_key} 第{step_index}步工人掩码全空")
         return logits.masked_fill(~mask, -torch.inf)
 
+    def make_decision_snapshot(
+        self,
+        env: AirLineEnvWork3,
+        state_feat: torch.Tensor,
+        time_urgency: torch.Tensor,
+        *,
+        worker_id: int = 0,
+        episode_id: int = -1,
+        episode_index: int | None = None,
+        estimated_cmax: float | None = None,
+    ) -> DecisionSnapshot:
+        """兼容单环境入口：从当前现场生成不含环境引用的CPU决策快照。"""
+        candidates = env.get_action_candidates()
+        graph_builder = self._get_graph_builder(env)
+        graph_snapshot = self.build_graph_snapshot(env)
+        task_keys = tuple(task.task_key for task in candidates)
+        worker_contexts_by_station: dict[int, tuple[WorkerSnapshot, ...]] = {}
+        contexts_list: list[TeamCompletionContext] = []
+        for task in candidates:
+            station_id = int(task.current_station)
+            station_workers = worker_contexts_by_station.get(station_id)
+            if station_workers is None:
+                station_workers = env.get_team_completion_context(task).workers
+                worker_contexts_by_station[station_id] = station_workers
+            contexts_list.append(
+                TeamCompletionContext(
+                    task_key=task.task_key,
+                    station_id=station_id,
+                    required_skill=int(task.skill),
+                    demand=int(task.demand),
+                    workers=station_workers,
+                )
+            )
+        contexts = tuple(contexts_list)
+        task_indices = tuple(graph_builder.task_key_to_idx[key] for key in task_keys)
+        worker_indices = tuple(
+            tuple(graph_builder.worker_id_to_idx[worker.worker_id] for worker in context.workers)
+            for context in contexts
+        )
+        branch_masks = tuple(env.get_action_branch_mask(task) for task in candidates)
+        return DecisionSnapshot(
+            worker_id=int(worker_id),
+            episode_id=int(episode_id),
+            episode_index=env.step_count if episode_index is None else int(episode_index),
+            state_features=state_feat,
+            time_features=time_urgency,
+            graph_snapshot=graph_snapshot,
+            candidate_task_keys=task_keys,
+            candidate_task_features=extract_candidate_task_features(env.state, candidates),
+            branch_masks=branch_masks,
+            team_contexts=contexts,
+            candidate_task_node_indices=task_indices,
+            worker_node_indices=worker_indices,
+            reserved_flags=tuple(task.status == TaskStatus.RESERVED for task in candidates),
+            advance_available=any(
+                task.status == TaskStatus.RESERVED and any(mask)
+                for task, mask in zip(candidates, branch_masks, strict=True)
+            ),
+            current_time=float(env.state.current_time),
+            cycle_id=int(env.state.current_cycle),
+            estimated_cmax=estimated_cmax,
+            h0=float(env.state.h0),
+            last_transfer_time=float(env.state.last_transfer_time),
+            graph_version=GRAPH_FEATURE_VERSION,
+        )
+
     @torch.no_grad()
     def select_action(
         self,
@@ -492,52 +557,64 @@ class ActorCriticWork3(nn.Module):
         time_urgency: torch.Tensor,
         deterministic: bool = False,
     ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
-        """与仿真环境交互采样单步条件动作。
+        """兼容旧调用者，先冻结现场快照，再走纯快照策略入口。"""
+        snapshot = self.make_decision_snapshot(env, state_feat, time_urgency)
+        return self.select_snapshot(snapshot, deterministic=deterministic)
 
-        Returns:
-            (action_dict, log_prob, state_value, sample_record)
-        """
+    @torch.no_grad()
+    def select_snapshot(
+        self,
+        snapshot: DecisionSnapshot,
+        deterministic: bool = False,
+    ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
+        """只依据独立CPU快照采样动作；不读取环境对象或可变现场状态。"""
+        if snapshot.graph_version != GRAPH_FEATURE_VERSION:
+            raise ValueError(
+                f"快照图版本{snapshot.graph_version!r}与Actor要求的"
+                f"{GRAPH_FEATURE_VERSION!r}不匹配"
+            )
         device = next(self.parameters()).device
-        state_feat = state_feat.to(device)
-        time_urgency = time_urgency.to(device)
-
-        candidate_tasks = env.get_action_candidates()
-        # 1. 状态编码
-        graph_snapshot = self.build_graph_snapshot(env)
-        graph_builder = self._get_graph_builder(env)
+        state_feat = snapshot.state_features.to(device)
+        time_urgency = snapshot.time_features.to(device)
+        graph_snapshot = snapshot.graph_snapshot
         v, e_fused, task_nodes, worker_nodes = self._encode_state_components(
             state_feat,
             time_urgency,
             graph_snapshot,
         )
         state_value = float(v.item())
+        candidate_count = len(snapshot.candidate_task_keys)
+        sample_common = {
+            "sample_record_version": 2,
+            "decision_snapshot_id": (
+                snapshot.worker_id,
+                snapshot.episode_id,
+                snapshot.episode_index,
+            ),
+            "graph_snapshot": graph_snapshot.clone(),
+            "graph_version": snapshot.graph_version,
+            "candidate_task_keys": snapshot.candidate_task_keys,
+            "candidate_branch_masks": snapshot.branch_masks,
+            "candidate_task_node_indices": snapshot.candidate_task_node_indices,
+            "worker_node_indices": (),
+        }
 
-        if not candidate_tasks:
-            # 无合法调度动作时，推进是环境的唯一可行动作，概率为1且不产生策略熵。
+        if candidate_count == 0:
             return (
                 {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT},
                 0.0,
                 state_value,
                 {
+                    **sample_common,
                     "action_type": "forced_advance",
-                    "sample_record_version": 2,
                     "advance_available": False,
                     "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
-                    "graph_snapshot": graph_snapshot,
-                    "graph_version": GRAPH_FEATURE_VERSION,
-                    "candidate_task_node_indices": (),
-                    "worker_node_indices": (),
                 },
             )
 
-        revision_available = any(
-            task.status == TaskStatus.RESERVED
-            and any(env.get_action_branch_mask(task))
-            for task in candidate_tasks
-        )
         advance_log_prob = torch.zeros((), device=device)
         advance_choice = 0
-        if revision_available:
+        if snapshot.advance_available:
             advance_logits = self._advance_logits(e_fused)
             dist_advance = Categorical(logits=advance_logits)
             advance_choice = (
@@ -554,171 +631,147 @@ class ActorCriticWork3(nn.Module):
                     float(advance_log_prob.item()),
                     state_value,
                     {
+                        **sample_common,
                         "action_type": "advance_to_next_event",
-                        "sample_record_version": 2,
                         "advance_available": True,
                         "advance_choice": 1,
                         "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
-                        "graph_snapshot": graph_snapshot,
-                        "graph_version": GRAPH_FEATURE_VERSION,
-                        "candidate_task_node_indices": (),
-                        "worker_node_indices": (),
                     },
                 )
 
-        # 2. Head 1: 工序选择
-        cand_feats = extract_candidate_task_features(env.state, candidate_tasks).to(device)
-        cand_embed = self.task_proj(cand_feats)  # (N, hidden_dim)
-        candidate_task_node_indices = [
-            graph_builder.task_key_to_idx[task.task_key] for task in candidate_tasks
-        ]
+        cand_feats = snapshot.candidate_task_features.to(device)
+        cand_embed = self.task_proj(cand_feats)
+        candidate_task_node_indices = snapshot.candidate_task_node_indices
         if task_nodes is not None:
             node_indices = torch.as_tensor(candidate_task_node_indices, device=device)
             cand_embed = cand_embed + self.task_graph_proj(task_nodes[node_indices])
-
-        e_ctx_expanded = e_fused.unsqueeze(0).expand(len(candidate_tasks), -1)  # (N, hidden_dim)
+        e_ctx_expanded = e_fused.unsqueeze(0).expand(candidate_count, -1)
         task_pair = torch.cat([e_ctx_expanded, cand_embed], dim=-1)
-        task_logits = self.task_score_fc(task_pair).squeeze(-1)  # (N,)
-
+        task_logits = self.task_score_fc(task_pair).squeeze(-1)
         dist_task = Categorical(logits=task_logits)
-        if deterministic:
-            task_idx = int(torch.argmax(task_logits).item())
-        else:
-            task_idx = int(dist_task.sample().item())
-
-        chosen_task = candidate_tasks[task_idx]
+        task_idx = (
+            int(torch.argmax(task_logits).item())
+            if deterministic
+            else int(dist_task.sample().item())
+        )
+        task_key = snapshot.candidate_task_keys[task_idx]
         log_prob_task = dist_task.log_prob(torch.tensor(task_idx, device=device))
         chosen_task_embed = cand_embed[task_idx]
 
-        # 3. Head 2: 站位分支二选一 (STAY vs POSTPONE)
         branch_input = torch.cat([e_fused, chosen_task_embed], dim=-1)
         branch_logits = self.branch_head(branch_input).clone()
-
-        # 物理硬掩码：环境与Actor共用同一套后移合法性规则。
-        can_reserve, can_postpone = env.get_action_branch_mask(chosen_task)
-
+        can_reserve, can_postpone = snapshot.branch_masks[task_idx]
         if not can_postpone:
             branch_logits[1] = -1e4
         if not can_reserve:
             branch_logits[0] = -1e4
-
         dist_branch = Categorical(logits=branch_logits)
-        if deterministic:
-            branch_act = int(torch.argmax(branch_logits).item())
-        else:
-            branch_act = int(dist_branch.sample().item())
-
+        branch_act = (
+            int(torch.argmax(branch_logits).item())
+            if deterministic
+            else int(dist_branch.sample().item())
+        )
         log_prob_branch = dist_branch.log_prob(torch.tensor(branch_act, device=device))
-
-        # -------------------------------------------------------------
-        # 4. 条件分支判定与动作截断 (Conditional Branch Truncation)
-        # -------------------------------------------------------------
+        context = snapshot.team_contexts[task_idx]
+        chosen_worker_ids: list[int] = []
         sample_record = {
+            **sample_common,
             "action_type": "schedule",
-            "sample_record_version": 2,
-            "advance_available": revision_available,
+            "advance_available": snapshot.advance_available,
             "advance_choice": advance_choice,
             "task_idx": task_idx,
-            "task_key": chosen_task.task_key,
+            "task_key": task_key,
             "branch": branch_act,
-            "cand_feats": cand_feats.cpu(),
+            "cand_feats": cand_feats.detach().cpu().clone(),
             "can_reserve": can_reserve,
             "can_postpone": can_postpone,
             "num_st_workers": self.max_station_workers,
             "chosen_team": (),
             "align": 0,
-            "graph_snapshot": graph_snapshot,
-            "graph_version": GRAPH_FEATURE_VERSION,
-            "candidate_task_node_indices": tuple(candidate_task_node_indices),
-            "worker_node_indices": (),
         }
 
-        if branch_act == 1:
-            # 分支 B: POSTPONE 后移 —— 动作严格截断！
+        if branch_act == int(ActionBranch.POSTPONE):
             total_log_prob = advance_log_prob + log_prob_task + log_prob_branch
-            action_dict = {
-                "task_key": chosen_task.task_key,
-                "branch": ActionBranch.POSTPONE,
-            }
-            return action_dict, float(total_log_prob.item()), state_value, sample_record
+            return (
+                {"task_key": task_key, "branch": ActionBranch.POSTPONE},
+                float(total_log_prob.item()),
+                state_value,
+                sample_record,
+            )
 
-        # 分支 A: STAY 留站执行 —— 继续解码站内团队与对齐
-        st_workers = env.state.station_worker_bindings.get(chosen_task.current_station, [])
-        num_st_workers = len(st_workers)
-        sample_record["num_st_workers"] = num_st_workers
-        worker_node_indices = [graph_builder.worker_id_to_idx[w] for w in st_workers]
-        sample_record["worker_node_indices"] = tuple(worker_node_indices)
-        demand = chosen_task.demand
-
-        # 5. Head 3: 站内工人指针自回归选择
-        chosen_worker_indices: list[int] = []
+        num_station_workers = len(context.workers)
+        worker_node_indices = snapshot.worker_node_indices[task_idx]
+        sample_record["num_st_workers"] = num_station_workers
+        sample_record["worker_node_indices"] = worker_node_indices
+        sample_record["station_worker_ids"] = tuple(
+            worker.worker_id for worker in context.workers
+        )
         worker_valid_masks: list[tuple[bool, ...]] = []
-        log_prob_workers = torch.tensor(0.0, device=device)
-        worker_mask_tracker = torch.zeros(self.max_station_workers, dtype=torch.float, device=device)
+        chosen_worker_indices: list[int] = []
+        log_prob_workers = torch.zeros((), device=device)
+        worker_mask_tracker = torch.zeros(
+            self.max_station_workers, dtype=torch.float, device=device
+        )
+        worker_graph_bias = None
+        if worker_nodes is not None and worker_node_indices:
+            worker_graph_ids = torch.as_tensor(worker_node_indices, device=device)
+            worker_graph_bias = self.worker_graph_score(
+                worker_nodes[worker_graph_ids]
+            ).squeeze(-1)
 
-        for step_w in range(demand):
+        for step_w in range(context.demand):
             ptr_input = torch.cat([e_fused, chosen_task_embed, worker_mask_tracker], dim=-1)
-            w_logits = self.worker_score_fc(ptr_input).clone()
-            if worker_nodes is not None and worker_node_indices:
-                worker_graph_ids = torch.as_tensor(worker_node_indices, device=device)
-                worker_bias = self.worker_graph_score(worker_nodes[worker_graph_ids]).squeeze(-1)
-                w_logits[:num_st_workers] = w_logits[:num_st_workers] + worker_bias
+            worker_logits = self.worker_score_fc(ptr_input).clone()
+            if worker_graph_bias is not None:
+                worker_logits[:num_station_workers] += worker_graph_bias
             worker_mask = self._worker_selection_mask(
-                env,
-                chosen_task,
-                st_workers,
-                chosen_worker_indices,
+                context,
+                tuple(chosen_worker_ids),
                 device,
             )
             worker_valid_masks.append(tuple(bool(value) for value in worker_mask.cpu().tolist()))
-            w_logits = self._apply_worker_selection_mask(
-                w_logits,
+            worker_logits = self._apply_worker_selection_mask(
+                worker_logits,
                 worker_mask,
-                task_key=chosen_task.task_key,
+                task_key=task_key,
                 step_index=step_w,
             )
+            dist_worker = Categorical(logits=worker_logits)
+            worker_index = (
+                int(torch.argmax(worker_logits).item())
+                if deterministic
+                else int(dist_worker.sample().item())
+            )
+            chosen_worker_indices.append(worker_index)
+            chosen_worker_ids.append(context.workers[worker_index].worker_id)
+            log_prob_workers += dist_worker.log_prob(
+                torch.tensor(worker_index, device=device)
+            )
+            worker_mask_tracker[worker_index] = 1.0
 
-            dist_w = Categorical(logits=w_logits)
-            if deterministic:
-                w_idx = int(torch.argmax(w_logits).item())
-            else:
-                w_idx = int(dist_w.sample().item())
-
-            chosen_worker_indices.append(w_idx)
-            log_prob_workers = log_prob_workers + dist_w.log_prob(torch.tensor(w_idx, device=device))
-            worker_mask_tracker[w_idx] = 1.0
-
-        chosen_team = tuple(st_workers[idx] for idx in chosen_worker_indices)
-
-        # 6. Head 4: 二元对齐选择
         align_input = torch.cat([e_fused, chosen_task_embed, worker_mask_tracker], dim=-1)
         align_logits = self.align_head(align_input)
         dist_align = Categorical(logits=align_logits)
-
-        if deterministic:
-            align_act = int(torch.argmax(align_logits).item())
-        else:
-            align_act = int(dist_align.sample().item())
-
+        align_act = (
+            int(torch.argmax(align_logits).item())
+            if deterministic
+            else int(dist_align.sample().item())
+        )
         log_prob_align = dist_align.log_prob(torch.tensor(align_act, device=device))
-
-        # 7. 全量对数概率求和
         total_log_prob = (
             advance_log_prob + log_prob_task + log_prob_branch + log_prob_workers + log_prob_align
         )
-
-        sample_record["chosen_team"] = chosen_team
+        sample_record["chosen_team"] = tuple(chosen_worker_ids)
         sample_record["chosen_worker_indices"] = tuple(chosen_worker_indices)
         sample_record["worker_valid_masks"] = tuple(worker_valid_masks)
         sample_record["align"] = align_act
-
-        action_dict = {
-            "task_key": chosen_task.task_key,
+        action = {
+            "task_key": task_key,
             "branch": ActionBranch.STATION_EXECUTE,
-            "team": chosen_team,
+            "team": tuple(chosen_worker_ids),
             "align": align_act,
         }
-        return action_dict, float(total_log_prob.item()), state_value, sample_record
+        return action, float(total_log_prob.item()), state_value, sample_record
 
     def evaluate_action_log_probs(
         self,
@@ -735,6 +788,13 @@ class ActorCriticWork3(nn.Module):
         state_feats = state_feats.to(device)
         time_urgencies = time_urgencies.to(device)
         batch_size = len(sample_records)
+        for record in sample_records:
+            graph_version = record.get("graph_version")
+            if graph_version is not None and graph_version != GRAPH_FEATURE_VERSION:
+                raise ValueError(
+                    f"PPO样本图版本{graph_version!r}与Actor要求的"
+                    f"{GRAPH_FEATURE_VERSION!r}不匹配"
+                )
 
         values_list: list[torch.Tensor] = []
         context_list: list[torch.Tensor] = []
@@ -801,8 +861,28 @@ class ActorCriticWork3(nn.Module):
             chosen_task_embed = cand_embed[task_idx]
             branch_input = torch.cat([e_ctx, chosen_task_embed], dim=-1)
             branch_logits = self.branch_head(branch_input).clone()
-            can_reserve = rec.get("can_reserve", True)
-            can_postpone = rec.get("can_postpone", True)
+            candidate_masks = rec.get("candidate_branch_masks")
+            if candidate_masks is not None:
+                if len(candidate_masks) != len(cand_feats) or not 0 <= task_idx < len(candidate_masks):
+                    raise ValueError("PPO样本中的候选分支掩码与工序特征数量不匹配")
+                candidate_keys = rec.get("candidate_task_keys", ())
+                if candidate_keys and (
+                    len(candidate_keys) != len(candidate_masks)
+                    or candidate_keys[task_idx] != rec.get("task_key")
+                ):
+                    raise ValueError("PPO样本的工序键与快照候选顺序不匹配")
+                can_reserve, can_postpone = candidate_masks[task_idx]
+                branch = int(rec.get("branch", -1))
+                if branch not in (0, 1) or not candidate_masks[task_idx][branch]:
+                    raise ValueError("PPO样本选择了快照掩码禁止的动作分支")
+                if (
+                    bool(can_reserve) != bool(rec.get("can_reserve"))
+                    or bool(can_postpone) != bool(rec.get("can_postpone"))
+                ):
+                    raise ValueError("PPO样本的分支掩码与所选工序掩码不一致")
+            else:
+                can_reserve = rec.get("can_reserve", True)
+                can_postpone = rec.get("can_postpone", True)
             if not can_reserve:
                 branch_logits[0] = -1e4
             if not can_postpone:
