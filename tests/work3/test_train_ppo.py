@@ -100,3 +100,34 @@ def test_training_starts_new_episode_after_advance_deadlock(
     assert [entry["episode_id"] for entry in result["scenario_log"]] == [0, 1]
     assert all(entry["success"] is False for entry in result["scenario_log"])
     assert all(entry["termination_reason"] == "deadlock" for entry in result["scenario_log"])
+
+
+def test_training_records_forced_advance_when_no_legal_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """无候选环境转移必须进入PPO rollout并正常记录deadlock。"""
+    scenario = {
+        "scenario_id": "NO_CANDIDATE_TEST",
+        "timing": "middle",
+        "intensity": "light",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "affected_task_keys": [],
+    }
+    monkeypatch.setattr(train_module, "load_training_scenarios", lambda *_args: [scenario])
+    monkeypatch.setattr(AirLineEnvWork3, "load_scenario", lambda self, _scenario: None)
+    monkeypatch.setattr(AirLineEnvWork3, "get_action_candidates", lambda self: [])
+
+    result = run_training(
+        num_iterations=1,
+        steps_per_iter=1,
+        ppo_epochs=0,
+        batch_size=1,
+        method_variant="C",
+        output_ckpt=str(tmp_path / "forced_advance.pt"),
+    )
+
+    assert result["history"][0]["total_steps"] == 1
+    assert result["scenario_log"][0]["success"] is False
+    assert result["scenario_log"][0]["termination_reason"] == "deadlock"

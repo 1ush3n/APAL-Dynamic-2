@@ -436,9 +436,6 @@ class ActorCriticWork3(nn.Module):
         time_urgency = time_urgency.to(device)
 
         candidate_tasks = env.get_action_candidates()
-        if not candidate_tasks:
-            return None, 0.0, 0.0, {}
-
         # 1. 状态编码
         graph_snapshot = self.build_graph_snapshot(env)
         graph_builder = self._get_graph_builder(env)
@@ -448,6 +445,24 @@ class ActorCriticWork3(nn.Module):
             graph_snapshot,
         )
         state_value = float(v.item())
+
+        if not candidate_tasks:
+            # 无合法调度动作时，推进是环境的唯一可行动作，概率为1且不产生策略熵。
+            return (
+                {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT},
+                0.0,
+                state_value,
+                {
+                    "action_type": "forced_advance",
+                    "sample_record_version": 2,
+                    "advance_available": False,
+                    "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
+                    "graph_snapshot": graph_snapshot,
+                    "graph_version": "work3_graph_v1",
+                    "candidate_task_node_indices": (),
+                    "worker_node_indices": (),
+                },
+            )
 
         revision_available = any(
             task.status == TaskStatus.RESERVED
@@ -678,6 +693,11 @@ class ActorCriticWork3(nn.Module):
         for i in range(batch_size):
             rec = sample_records[i]
             e_ctx = e_fused[i]
+
+            if rec.get("action_type") == "forced_advance":
+                log_probs.append(torch.zeros((), device=device))
+                entropies.append(torch.zeros((), device=device))
+                continue
 
             if rec.get("action_type") == "advance_to_next_event":
                 dist_advance = Categorical(logits=self._advance_logits(e_ctx))

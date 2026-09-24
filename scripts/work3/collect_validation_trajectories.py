@@ -29,7 +29,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from envs.work3.core_types import MultiAircraftState, TaskStatus
+from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import extract_compact_state_features
 from models.work3.heuristic_agent import HeuristicAgentWork3
@@ -101,12 +101,12 @@ def collect_single_trajectory(
         if not candidates:
             if env._check_terminated():
                 break
-            env._advance_events_until_next_decision()
-            candidates = env.get_action_candidates()
-            if not candidates and env._check_terminated():
+            _obs, _reward, terminated, truncated, _info = env.step(
+                {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+            )
+            if terminated or truncated:
                 break
-            if not candidates and env.event_queue.is_empty():
-                break
+            continue
 
         current_time = float(env.state.current_time)
         current_cycle = int(env.state.current_cycle)
@@ -115,6 +115,11 @@ def collect_single_trajectory(
 
         action = agent.select_action(env)
         if action is None:
+            _obs, _reward, terminated, truncated, _info = env.step(
+                {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+            )
+            if terminated or truncated:
+                break
             continue
 
         step_record = {

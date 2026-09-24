@@ -310,26 +310,6 @@ def run_training(
                 episode_termination_reason = None
                 start_episode()
 
-            candidates = env.get_action_candidates()
-            if not candidates:
-                    env._advance_events_until_next_decision()
-                    candidates = env.get_action_candidates()
-                    if not candidates and env._check_terminated():
-                        pending_time_labels.discard_episode(episode_id)
-                        if current_scenario_log is not None:
-                            current_scenario_log["actual_hit_count"] = count_actual_scenario_hits(
-                                env,
-                                current_scenario or {},
-                            )
-                            current_scenario_log["completed"] = True
-                            current_scenario_log["success"] = True
-                            current_scenario_log["termination_reason"] = "completed"
-                        if shaper is not None:
-                            shaper.update_snapshot(time_head, actor_critic)
-                        episode_id += 1
-                        start_episode()
-                        candidates = env.get_action_candidates()
-
             cmax_est = compute_cycle_heuristic_cmax(env.state)
             s_feat = extract_compact_state_features(env.state, cmax_est)
             graph_snapshot = actor_critic.build_graph_snapshot(env)
@@ -378,9 +358,7 @@ def run_training(
             )
 
             if act is None:
-                # 极端异常推进
-                env._advance_events_until_next_decision()
-                continue
+                raise RuntimeError("Actor未返回动作；无候选状态应通过强制推进动作进入env.step()")
 
             cycle_id = int(env.state.current_cycle)
             if profile.use_time_auxiliary and shaper is not None:

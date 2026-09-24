@@ -554,7 +554,7 @@ def test_pulse_boundary_disturbance_keeps_aircraft_task_identity() -> None:
     ) == other_before
 
 
-def test_real_action_accounts_for_costs_during_multiple_no_decision_events() -> None:
+def test_real_action_accounts_for_costs_and_stops_at_legal_unready_postpone() -> None:
     env = _new_env()
     target = env.get_ready_tasks()[0]
     team = _valid_team(env, target)
@@ -608,9 +608,16 @@ def test_real_action_accounts_for_costs_during_multiple_no_decision_events() -> 
     assert len(env.step_rewards) == 1
     assert target.actual_end == 5.0
     assert env.state.transfer_history == [5.0]
-    assert env.state.current_time == 10.0
+    # 未到料任务可以合法后移，已出现动作时不应继续空等到其恢复时刻。
+    assert env.state.current_time == 5.0
     assert env.state.aircraft[target.aircraft_id].current_station == 1
     assert env.cost_takt == 1.5
+    assert any(
+        task.status == TaskStatus.UNREADY
+        and task.material_ready_time == 10.0
+        and env.get_action_branch_mask(task)[1]
+        for task in env.get_action_candidates()
+    )
     assert info["step_cost"] == env.cumulative_cost - cost_before
     assert reward == -info["step_cost"]
     assert env.step_rewards[-1] == reward

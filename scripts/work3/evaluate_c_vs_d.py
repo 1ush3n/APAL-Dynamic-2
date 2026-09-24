@@ -31,7 +31,7 @@ if str(ROOT_DIR) not in sys.path:
 
 import torch
 
-from envs.work3.core_types import TaskStatus
+from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
@@ -327,14 +327,16 @@ def evaluate_single_trajectory(
                 if env._check_terminated():
                     termination_reason = "completed"
                     break
-                env._advance_events_until_next_decision()
-                candidates = env.get_action_candidates()
-                if not candidates and env._check_terminated():
-                    termination_reason = "completed"
+                _obs, _reward, terminated, truncated, info = env.step(
+                    {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+                )
+                if terminated:
+                    termination_reason = str(info.get("termination_reason", "deadlock"))
                     break
-                if not candidates and env.event_queue.is_empty():
-                    termination_reason = "deadlock"
+                if truncated:
+                    termination_reason = "rollout_truncated"
                     break
+                continue
 
             if agent_type in {"Baseline-C", "Heuristic-Debug"}:
                 action = agent.select_action(env)
@@ -347,10 +349,15 @@ def evaluate_single_trajectory(
                 raise ValueError(f"未知智能体类型: {agent_type}")
 
             if action is None:
-                if env.event_queue.is_empty():
-                    termination_reason = "deadlock"
+                _obs, _reward, terminated, truncated, info = env.step(
+                    {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+                )
+                if terminated:
+                    termination_reason = str(info.get("termination_reason", "deadlock"))
                     break
-                env._advance_events_until_next_decision()
+                if truncated:
+                    termination_reason = "rollout_truncated"
+                    break
                 continue
 
             obs, reward, terminated, truncated, info = env.step(action)

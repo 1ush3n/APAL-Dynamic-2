@@ -131,14 +131,16 @@ class HeuristicAgentWork3:
                 if env._check_terminated():
                     termination_reason = "completed"
                     break
-                env._advance_events_until_next_decision()
-                candidates = env.get_action_candidates()
-                if not candidates and env._check_terminated():
-                    termination_reason = "completed"
+                _obs, _reward, terminated, truncated, info = env.step(
+                    {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+                )
+                if terminated:
+                    termination_reason = str(info.get("termination_reason", "deadlock"))
                     break
-                if not candidates and env.event_queue.is_empty():
-                    termination_reason = "deadlock"
+                if truncated:
+                    termination_reason = "rollout_truncated"
                     break
+                continue
 
             # 记录当前状态与启发式估计值
             current_cycle = env.state.current_cycle
@@ -146,6 +148,15 @@ class HeuristicAgentWork3:
 
             action = self.select_action(env)
             if action is None:
+                _obs, _reward, terminated, truncated, info = env.step(
+                    {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+                )
+                if terminated:
+                    termination_reason = str(info.get("termination_reason", "deadlock"))
+                    break
+                if truncated:
+                    termination_reason = "rollout_truncated"
+                    break
                 continue
 
             # 抓取当前决策步数据快照

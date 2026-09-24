@@ -829,9 +829,15 @@ class AirLineEnvWork3:
 
         # 没有任何合法调度动作时自动推进；存在 RESERVED 修订候选时交给显式推进动作决定。
         if not explicit_advance and no_change_revision:
-            self._advance_to_next_event()
+            info["advanced"] = self._advance_to_next_event()
+            if not info["advanced"] and not self._check_terminated():
+                info["success"] = False
+                info["termination_reason"] = "deadlock"
         elif not explicit_advance and len(self.get_action_candidates()) == 0:
             self._advance_events_until_next_decision()
+            if not self.get_action_candidates() and not self._check_terminated():
+                info["success"] = False
+                info["termination_reason"] = "deadlock"
 
         self.step_count += 1
         natural_termination = self._check_terminated()
@@ -1060,12 +1066,12 @@ class AirLineEnvWork3:
         )
 
     def _advance_events_until_next_decision(self) -> None:
-        """推进事件队列，直至产生新的实际开工决策或全线完工退出。"""
+        """在当前step内推进，直至出现合法动作、批次完成或事件耗尽。"""
         while True:
             self.process_due_events()
             if self._check_terminated():
                 return
-            if self.get_ready_tasks():
+            if self.get_action_candidates():
                 return
             next_event = self.event_queue.peek()
             if next_event is None:
