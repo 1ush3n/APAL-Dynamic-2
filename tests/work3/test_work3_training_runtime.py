@@ -817,3 +817,198 @@ def test_vector_expired_wall_clock_deadline_stops_dispatch_without_fake_result()
     finally:
         vector.close()
     assert vector.workers_alive == (False,)
+
+
+def test_gae_is_partitioned_by_worker_episode_and_segment() -> None:
+    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+
+    buffer = RolloutBufferWork3(gamma=1.0, gae_lambda=1.0, normalize_advantages=False)
+    dummy_feat = torch.zeros(32)
+    dummy_time = torch.zeros(2)
+
+    def add(
+        reward: float,
+        *,
+        worker_id: int,
+        episode_id: int,
+        segment_id: int,
+        terminated: bool = False,
+        truncated: bool = False,
+    ) -> None:
+        buffer.add(
+            PPOTransition(
+                state_feat=dummy_feat,
+                time_urgency=dummy_time,
+                sample_record={},
+                reward=reward,
+                raw_reward=reward,
+                value=0.0,
+                log_prob=0.0,
+                worker_id=worker_id,
+                episode_id=episode_id,
+                segment_id=segment_id,
+                terminated=terminated,
+                truncated=truncated,
+            )
+        )
+
+    add(1.0, worker_id=0, episode_id=10, segment_id=0)
+    add(2.0, worker_id=1, episode_id=10, segment_id=0, terminated=True)
+    add(3.0, worker_id=0, episode_id=11, segment_id=0, terminated=True)
+    add(1.0, worker_id=0, episode_id=10, segment_id=0)
+    add(4.0, worker_id=0, episode_id=10, segment_id=1, truncated=True)
+    add(5.0, worker_id=1, episode_id=11, segment_id=1, truncated=True)
+
+    buffer.finish_trajectories(
+        last_values_by_segment={
+            (0, 10, 0): 5.0,
+            (0, 10, 1): 6.0,
+            (1, 11, 1): 7.0,
+        }
+    )
+
+    assert buffer.advantages.tolist() == pytest.approx([7.0, 2.0, 3.0, 6.0, 10.0, 12.0])
+    assert buffer.target_values.tolist() == pytest.approx([7.0, 2.0, 3.0, 6.0, 10.0, 12.0])
+
+
+def test_time_label_cache_is_worker_scoped_and_outlives_rollout_clear() -> None:
+    from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
+
+    cache = PendingTimeLabelCache()
+    rollout = RolloutBufferWork3(normalize_advantages=False)
+    for worker_id, estimated_cmax in ((0, 10.0), (1, 20.0)):
+        cache.add(
+            worker_id=worker_id,
+            episode_id=3,
+            cycle_id=2,
+            decision_id=0,
+            state_feat=torch.full((32,), float(worker_id)),
+            graph_snapshot={"worker": worker_id},
+            estimated_cmax=estimated_cmax,
+            current_time=5.0,
+            h0=5.0,
+            predictor_version=worker_id,
+        )
+
+    rollout.add(
+        PPOTransition(
+            state_feat=torch.zeros(32),
+            time_urgency=torch.zeros(2),
+            sample_record={},
+            reward=0.0,
+            raw_reward=0.0,
+            value=0.0,
+            log_prob=0.0,
+        )
+    )
+    rollout.clear()
+    assert cache.pending_cycle_counts(worker_id=0, episode_id=3) == {2: 1}
+    assert cache.pending_cycle_counts(worker_id=1, episode_id=3) == {2: 1}
+    assert cache.drain_ready() is None
+
+    assert cache.attach_transfer(
+        worker_id=0,
+        episode_id=3,
+        cycle_id=2,
+        actual_transfer_time=15.0,
+    )
+    ready = cache.drain_ready()
+    assert ready is not None
+    assert ready["worker_ids"] == [0]
+    assert ready["episode_ids"] == [3]
+    assert ready["target_residuals"].tolist() == pytest.approx([1.0])
+    assert cache.pending_cycle_counts(worker_id=1, episode_id=3) == {2: 1}
+    assert cache.drain_ready() is None
+    cache.discard_episode(worker_id=1, episode_id=3)
+    assert cache.pending_cycle_counts(worker_id=1, episode_id=3) == {}
+    assert cache.drain_ready() is None
+
+
+def test_episode_potential_versions_survive_overlapping_worker_episodes() -> None:
+    from models.work3.potential_shaping import PotentialRewardShaper
+    from models.work3.time_head import TimeResidualHead
+
+    initial_head = TimeResidualHead(in_dim=32, hidden_dim=16, use_layer_norm=False)
+    for parameter in initial_head.parameters():
+        torch.nn.init.zeros_(parameter)
+    initial_head.reg_fc[-1].bias.data.fill_(0.0)
+    shaper = PotentialRewardShaper(time_head=initial_head)
+
+    worker_a_version = shaper.begin_episode(worker_id=0, episode_id=7)
+    worker_b_version = shaper.begin_episode(worker_id=1, episode_id=7)
+    assert worker_a_version == worker_b_version == 0
+    potential_kwargs = {
+        "state_feat": torch.zeros(32),
+        "estimated_cmax": 100.0,
+        "current_time": 0.0,
+        "h0": 10.0,
+        "last_transfer_time": 0.0,
+        "episode_id": 7,
+    }
+    phi_before = shaper.compute_potential(**potential_kwargs, worker_id=0)
+
+    updated_head = TimeResidualHead(in_dim=32, hidden_dim=16, use_layer_norm=False)
+    for parameter in updated_head.parameters():
+        torch.nn.init.zeros_(parameter)
+    updated_head.reg_fc[-1].bias.data.fill_(-0.5)
+    new_version = shaper.update_snapshot(updated_head)
+
+    assert new_version == 1
+    assert shaper.compute_potential(**potential_kwargs, worker_id=0) == phi_before
+    assert shaper.compute_potential(**potential_kwargs, worker_id=1) == phi_before
+    assert shaper.retained_snapshot_versions == (0, 1)
+    assert shaper.end_episode(worker_id=0, episode_id=7) is True
+    assert shaper.retained_snapshot_versions == (0, 1)
+    assert shaper.end_episode(worker_id=1, episode_id=7) is True
+    assert shaper.retained_snapshot_versions == (1,)
+
+    new_episode_version = shaper.begin_episode(worker_id=0, episode_id=8)
+    assert new_episode_version == 1
+    assert shaper.compute_potential(
+        **{**potential_kwargs, "episode_id": 8}, worker_id=0
+    ) != phi_before
+    assert shaper.end_episode(worker_id=0, episode_id=8) is True
+
+
+def test_rollout_buffer_stores_immutable_cpu_feature_mask_and_graph_snapshots() -> None:
+    from torch_geometric.data import HeteroData
+
+    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+
+    state_feat = torch.arange(32, dtype=torch.float32)
+    time_urgency = torch.tensor([1.0, 2.0])
+    worker_mask = torch.tensor([True, False])
+    graph = HeteroData()
+    graph["task"].x = torch.ones((1, 3))
+    record = {
+        "worker_valid_mask": worker_mask,
+        "graph_snapshot": graph,
+        "target_residual": torch.tensor(-0.25),
+    }
+    buffer = RolloutBufferWork3(normalize_advantages=False)
+    buffer.add(
+        PPOTransition(
+            state_feat=state_feat,
+            time_urgency=time_urgency,
+            sample_record=record,
+            reward=0.0,
+            raw_reward=0.0,
+            value=0.0,
+            log_prob=0.0,
+        )
+    )
+
+    state_feat.zero_()
+    time_urgency.zero_()
+    worker_mask.fill_(False)
+    graph["task"].x.zero_()
+    record["target_residual"].fill_(9.0)
+
+    stored = buffer.transitions[0]
+    assert stored.state_feat.device.type == "cpu"
+    assert torch.equal(stored.state_feat, torch.arange(32, dtype=torch.float32))
+    assert torch.equal(stored.time_urgency, torch.tensor([1.0, 2.0]))
+    assert torch.equal(stored.sample_record["worker_valid_mask"], torch.tensor([True, False]))
+    assert stored.sample_record["graph_snapshot"] is not graph
+    assert torch.equal(stored.sample_record["graph_snapshot"]["task"].x, torch.ones((1, 3)))
+    assert stored.sample_record["target_residual"].item() == pytest.approx(-0.25)

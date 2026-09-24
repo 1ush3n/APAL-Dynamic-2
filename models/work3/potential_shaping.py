@@ -21,12 +21,20 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import dataclass
 from typing import Any
 
 import torch
 import torch.nn as nn
 
 from models.work3.time_head import TimeResidualHead
+
+
+@dataclass(slots=True)
+class _PredictorSnapshot:
+    head: TimeResidualHead
+    actor: Any | None
+    references: int = 0
 
 
 class PotentialRewardShaper:
@@ -66,19 +74,68 @@ class PotentialRewardShaper:
             self.frozen_actor.eval()
             for p in self.frozen_actor.parameters():
                 p.requires_grad = False
+        self._snapshots: dict[int, _PredictorSnapshot] = {
+            self.snapshot_version: _PredictorSnapshot(
+                head=self.frozen_head,
+                actor=self.frozen_actor,
+            )
+        }
+        self._episode_versions: dict[tuple[int, int], int] = {}
 
-    def update_snapshot(self, new_head: TimeResidualHead, new_actor: Any | None = None) -> None:
+    @property
+    def retained_snapshot_versions(self) -> tuple[int, ...]:
+        return tuple(sorted(self._snapshots))
+
+    def begin_episode(self, *, worker_id: int, episode_id: int) -> int:
+        """将生产episode绑定到启动时的不可变势函数预测器版本。"""
+        key = (int(worker_id), int(episode_id))
+        if key in self._episode_versions:
+            raise ValueError(f"episode已绑定势函数版本：{key}")
+        version = self.snapshot_version
+        snapshot = self._snapshots[version]
+        snapshot.references += 1
+        self._episode_versions[key] = version
+        return version
+
+    def end_episode(self, *, worker_id: int, episode_id: int) -> bool:
+        """释放episode的版本引用；旧版本在最后一个引用结束后回收。"""
+        version = self._episode_versions.pop((int(worker_id), int(episode_id)), None)
+        if version is None:
+            return False
+        self._snapshots[version].references -= 1
+        self._prune_snapshots()
+        return True
+
+    def _prune_snapshots(self) -> None:
+        for version, snapshot in tuple(self._snapshots.items()):
+            if version != self.snapshot_version and snapshot.references == 0:
+                del self._snapshots[version]
+
+    def update_snapshot(
+        self,
+        new_head: TimeResidualHead,
+        new_actor: Any | None = None,
+    ) -> int:
         """在新的训练 episode/轨迹开始前，同步最新的在线预测头权重副本。"""
-        self.frozen_head = copy.deepcopy(new_head)
-        self.frozen_head.eval()
-        for p in self.frozen_head.parameters():
+        frozen_head = copy.deepcopy(new_head)
+        frozen_head.eval()
+        for p in frozen_head.parameters():
             p.requires_grad = False
+        frozen_actor = self.frozen_actor
         if new_actor is not None:
-            self.frozen_actor = copy.deepcopy(new_actor)
-            self.frozen_actor.eval()
-            for p in self.frozen_actor.parameters():
+            frozen_actor = copy.deepcopy(new_actor)
+            frozen_actor.eval()
+            for p in frozen_actor.parameters():
                 p.requires_grad = False
         self.snapshot_version += 1
+        self.frozen_head = frozen_head
+        self.frozen_actor = frozen_actor
+        self._snapshots[self.snapshot_version] = _PredictorSnapshot(
+            head=frozen_head,
+            actor=frozen_actor,
+        )
+        self._prune_snapshots()
+        return self.snapshot_version
 
     def compute_potential(
         self,
@@ -89,6 +146,8 @@ class PotentialRewardShaper:
         last_transfer_time: float,
         is_terminal: bool = False,
         graph_data: Any | None = None,
+        worker_id: int = 0,
+        episode_id: int | None = None,
     ) -> float:
         """计算指定状态下的势能值 Φ(s)。
 
@@ -107,7 +166,16 @@ class PotentialRewardShaper:
         if is_terminal:
             return 0.0
 
-        device = next(self.frozen_head.parameters()).device
+        if episode_id is None:
+            snapshot = self._snapshots[self.snapshot_version]
+        else:
+            episode_key = (int(worker_id), int(episode_id))
+            version = self._episode_versions.get(episode_key)
+            if version is None:
+                raise ValueError(f"episode尚未绑定势函数预测器版本：{episode_key}")
+            snapshot = self._snapshots[version]
+
+        device = next(snapshot.head.parameters()).device
         if not isinstance(state_feat, torch.Tensor):
             feat_tensor = torch.tensor(state_feat, dtype=torch.float, device=device)
         else:
@@ -117,16 +185,16 @@ class PotentialRewardShaper:
             feat_tensor = feat_tensor.unsqueeze(0)
 
         with torch.no_grad():
-            if self.frozen_actor is not None:
+            if snapshot.actor is not None:
                 if graph_data is None:
                     raise ValueError("图预测器塑形必须提供当前状态图快照")
-                shared_feat = self.frozen_actor.encode_shared_representation(
+                shared_feat = snapshot.actor.encode_shared_representation(
                     feat_tensor.squeeze(0),
                     graph_data,
                 ).unsqueeze(0)
             else:
                 shared_feat = feat_tensor
-            _, _, h_est_tensor = self.frozen_head.predict_corrected_time(
+            _, _, h_est_tensor = snapshot.head.predict_corrected_time(
                 state_feat=shared_feat,
                 estimated_cmax=estimated_cmax,
                 current_time=current_time,

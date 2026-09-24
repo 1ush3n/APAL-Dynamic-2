@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any, Iterator, Mapping
 
 import torch
 
@@ -38,6 +38,9 @@ class PPOTransition:
     raw_reward: float                 # 原始物理步步奖励
     value: float                      # Critic 估计的 V(s_t)
     log_prob: float                   # 采样时刻的动作对数概率 log π_old
+    worker_id: int = 0
+    episode_id: int = 0
+    segment_id: int = 0
     done: bool = False                # 旧接口兼容字段
     action_dict: dict[str, Any] = field(default_factory=dict)
     terminated: bool | None = None   # 真实终止；None 时回退到旧 done 语义
@@ -48,6 +51,7 @@ class PPOTransition:
 class PendingTimeLabel:
     """等待真实转站时刻揭示的决策级时间监督样本。"""
 
+    worker_id: int
     episode_id: int
     cycle_id: int
     decision_id: int
@@ -64,21 +68,26 @@ class PendingTimeLabelCache:
     """跨PPO采样段保存周期样本，直到真实转站事件补齐标签。"""
 
     def __init__(self) -> None:
-        self._pending: dict[tuple[int, int], list[PendingTimeLabel]] = {}
+        self._pending: dict[tuple[int, int, int], list[PendingTimeLabel]] = {}
         self._ready: list[dict[str, Any]] = []
-        self._last_decision_id = -1
+        self._last_decision_ids: dict[tuple[int, int], int] = {}
 
     @property
     def pending_count(self) -> int:
         return sum(len(samples) for samples in self._pending.values())
 
-    def pending_cycle_counts(self, episode_id: int) -> dict[int, int]:
+    def pending_cycle_counts(
+        self,
+        episode_id: int,
+        worker_id: int = 0,
+    ) -> dict[int, int]:
         """返回指定episode中尚未获得真实转站标签的周期样本数。"""
         episode = int(episode_id)
+        worker = int(worker_id)
         return {
             cycle_id: len(samples)
-            for (pending_episode, cycle_id), samples in self._pending.items()
-            if pending_episode == episode
+            for (pending_worker, pending_episode, cycle_id), samples in self._pending.items()
+            if pending_worker == worker and pending_episode == episode
         }
 
     def add(
@@ -93,22 +102,28 @@ class PendingTimeLabelCache:
         current_time: float,
         h0: float,
         predictor_version: int,
+        worker_id: int = 0,
         time_urgency: torch.Tensor | None = None,
     ) -> bool:
-        """保存周期内每个决策状态；decision_id必须在缓存生命周期内递增。"""
-        key = (int(episode_id), int(cycle_id))
+        """保存周期内每个决策状态；编号在对应worker/episode内递增。"""
+        worker = int(worker_id)
+        episode = int(episode_id)
+        key = (worker, episode, int(cycle_id))
+        decision_scope = (worker, episode)
         unique_decision_id = int(decision_id)
-        if unique_decision_id <= self._last_decision_id:
+        previous_id = self._last_decision_ids.get(decision_scope, -1)
+        if unique_decision_id <= previous_id:
             raise ValueError(
                 f"decision_id必须唯一递增：收到{unique_decision_id}，"
-                f"上一编号为{self._last_decision_id}"
+                f"上一编号为{previous_id}"
             )
         sample = PendingTimeLabel(
-            episode_id=key[0],
-            cycle_id=key[1],
+            worker_id=worker,
+            episode_id=episode,
+            cycle_id=key[2],
             decision_id=unique_decision_id,
             state_feat=state_feat.detach().cpu().clone(),
-            graph_snapshot=copy.deepcopy(graph_snapshot),
+            graph_snapshot=_copy_to_cpu(graph_snapshot),
             estimated_cmax=float(estimated_cmax),
             current_time=float(current_time),
             h0=float(h0),
@@ -116,7 +131,7 @@ class PendingTimeLabelCache:
             time_urgency=None if time_urgency is None else time_urgency.detach().cpu().clone(),
         )
         self._pending.setdefault(key, []).append(sample)
-        self._last_decision_id = unique_decision_id
+        self._last_decision_ids[decision_scope] = unique_decision_id
         return True
 
     def attach_transfer(
@@ -125,15 +140,17 @@ class PendingTimeLabelCache:
         episode_id: int,
         cycle_id: int,
         actual_transfer_time: float,
+        worker_id: int = 0,
     ) -> bool:
         """用真实转站时刻补齐一个周期的归一化残差。"""
-        key = (int(episode_id), int(cycle_id))
+        key = (int(worker_id), int(episode_id), int(cycle_id))
         samples = self._pending.pop(key, None)
         if not samples:
             return False
         for sample in samples:
             label_y = (float(actual_transfer_time) - sample.estimated_cmax) / sample.h0
             self._ready.append({
+                "worker_id": sample.worker_id,
                 "episode_id": sample.episode_id,
                 "cycle_id": sample.cycle_id,
                 "decision_id": sample.decision_id,
@@ -156,6 +173,7 @@ class PendingTimeLabelCache:
         ready = self._ready
         self._ready = []
         result: dict[str, Any] = {
+            "worker_ids": [item["worker_id"] for item in ready],
             "episode_ids": [item["episode_id"] for item in ready],
             "cycle_ids": [item["cycle_id"] for item in ready],
             "decision_ids": [item["decision_id"] for item in ready],
@@ -172,13 +190,35 @@ class PendingTimeLabelCache:
             result["time_urgencies"] = torch.stack([item["time_urgency"] for item in ready])
         return result
 
-    def discard_episode(self, episode_id: int) -> None:
-        """丢弃未发生真实转站的旧生产轨迹标签，避免跨episode污染。"""
+    def discard_episode(self, episode_id: int, worker_id: int | None = None) -> None:
+        """丢弃失败episode未揭示的标签；可限定worker以隔离并行轨迹。"""
         episode = int(episode_id)
         self._pending = {
             key: samples for key, samples in self._pending.items()
-            if key[0] != episode
+            if not (key[1] == episode and (worker_id is None or key[0] == int(worker_id)))
         }
+        self._last_decision_ids = {
+            key: decision_id
+            for key, decision_id in self._last_decision_ids.items()
+            if not (key[1] == episode and (worker_id is None or key[0] == int(worker_id)))
+        }
+
+
+def _copy_to_cpu(value: Any) -> Any:
+    """递归复制回放状态；PyG图副本及其中张量都留在CPU。"""
+    if isinstance(value, torch.Tensor):
+        return value.detach().to("cpu").clone()
+    if isinstance(value, dict):
+        return {key: _copy_to_cpu(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_copy_to_cpu(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_copy_to_cpu(item) for item in value)
+    if value.__class__.__module__.startswith("torch_geometric."):
+        copied = value.clone()
+        copied.to("cpu")
+        return copied
+    return copy.deepcopy(value)
 
 
 class RolloutBufferWork3:
@@ -200,8 +240,25 @@ class RolloutBufferWork3:
         self.is_finalized: bool = False
 
     def add(self, transition: PPOTransition) -> None:
-        """向缓冲区追加一个决策转移样本。"""
-        self.transitions.append(transition)
+        """以独立CPU副本追加决策样本，避免后续状态变更污染回放。"""
+        self.transitions.append(
+            PPOTransition(
+                state_feat=_copy_to_cpu(transition.state_feat),
+                time_urgency=_copy_to_cpu(transition.time_urgency),
+                sample_record=_copy_to_cpu(transition.sample_record),
+                reward=float(transition.reward),
+                raw_reward=float(transition.raw_reward),
+                value=float(transition.value),
+                log_prob=float(transition.log_prob),
+                worker_id=int(transition.worker_id),
+                episode_id=int(transition.episode_id),
+                segment_id=int(transition.segment_id),
+                done=bool(transition.done),
+                action_dict=_copy_to_cpu(transition.action_dict),
+                terminated=transition.terminated,
+                truncated=bool(transition.truncated),
+            )
+        )
         self.is_finalized = False
 
     def finish_trajectory(self, last_value: float = 0.0) -> None:
@@ -210,6 +267,23 @@ class RolloutBufferWork3:
         Args:
             last_value: 轨迹末尾状态的估计价值 V(s_T)。真实终止时应传 0.0。
         """
+        keys = {
+            (transition.worker_id, transition.episode_id, transition.segment_id)
+            for transition in self.transitions
+        }
+        if len(keys) > 1:
+            raise ValueError(
+                "混合worker/episode/segment样本必须调用finish_trajectories"
+            )
+        last_values = {next(iter(keys)): float(last_value)} if keys else {}
+        self.finish_trajectories(last_values_by_segment=last_values)
+
+    def finish_trajectories(
+        self,
+        *,
+        last_values_by_segment: Mapping[tuple[int, int, int], float],
+    ) -> None:
+        """按复合轨迹键计算GAE；段尾bootstrap值必须与对应worker/episode一致。"""
         n = len(self.transitions)
         if n == 0:
             return
@@ -217,20 +291,41 @@ class RolloutBufferWork3:
         advantages = torch.zeros(n, dtype=torch.float)
         target_values = torch.zeros(n, dtype=torch.float)
 
-        gae = 0.0
-        next_value = float(last_value)
+        indices_by_segment: dict[tuple[int, int, int], list[int]] = {}
+        for index, transition in enumerate(self.transitions):
+            key = (transition.worker_id, transition.episode_id, transition.segment_id)
+            indices_by_segment.setdefault(key, []).append(index)
 
-        # 逆序计算 GAE
-        for t in reversed(range(n)):
-            trans = self.transitions[t]
-            # 只有真实终止切断 bootstrap；truncated 仍存在合法后继状态。
-            is_terminal = trans.done if trans.terminated is None else trans.terminated
-            non_terminal = 1.0 - float(is_terminal)
-            delta = trans.reward + (self.gamma * next_value * non_terminal) - trans.value
-            gae = delta + (self.gamma * self.gae_lambda * non_terminal * gae)
-            advantages[t] = gae
-            target_values[t] = gae + trans.value
-            next_value = trans.value
+        for key, indices in indices_by_segment.items():
+            last_transition = self.transitions[indices[-1]]
+            is_terminal = (
+                last_transition.done
+                if last_transition.terminated is None
+                else last_transition.terminated
+            )
+            if not is_terminal and key not in last_values_by_segment:
+                raise ValueError(f"非终止轨迹段缺少bootstrap value：{key}")
+            next_value = 0.0 if is_terminal else float(last_values_by_segment[key])
+            gae = 0.0
+
+            # 每个复合键独立逆序；worker交错插入不改变其时间顺序。
+            for index in reversed(indices):
+                transition = self.transitions[index]
+                is_step_terminal = (
+                    transition.done
+                    if transition.terminated is None
+                    else transition.terminated
+                )
+                non_terminal = 1.0 - float(is_step_terminal)
+                delta = (
+                    transition.reward
+                    + self.gamma * next_value * non_terminal
+                    - transition.value
+                )
+                gae = delta + self.gamma * self.gae_lambda * non_terminal * gae
+                advantages[index] = gae
+                target_values[index] = gae + transition.value
+                next_value = transition.value
 
         # 优势值标准化
         if self.normalize_advantages and n > 1:
