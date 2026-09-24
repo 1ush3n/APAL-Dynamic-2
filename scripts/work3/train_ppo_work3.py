@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -53,11 +53,30 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def create_work3_single_env_runtime(baseline_path: str | Path) -> Work3VectorEnv:
-    """构造FP32单spawn环境入口；策略与PPO优化器仍由调用方持有。"""
+@dataclass(slots=True)
+class _TrainingWorkerEpisode:
+    worker_id: int
+    episode_id: int
+    episode_index: int
+    scenario: dict[str, Any]
+    scenario_status: dict[str, Any]
+    snapshot: DecisionSnapshot
+    scenario_log: dict[str, Any]
+    done: bool = False
+    success: bool | None = None
+    termination_reason: str | None = None
+    predictor_version: int | None = None
+
+
+def create_work3_single_env_runtime(
+    baseline_path: str | Path,
+    *,
+    num_envs: int = 1,
+) -> Work3VectorEnv:
+    """构造FP32 spawn环境worker池；策略与PPO优化器仍由调用方持有。"""
     return Work3VectorEnv(
         env_kwargs={"baseline_json_path": str(Path(baseline_path))},
-        num_envs=1,
+        num_envs=num_envs,
         start_method="spawn",
     )
 
@@ -160,18 +179,35 @@ def _compare_training_reports(
         "max_rollout_iterations",
         "ppo_epochs",
         "batch_size",
+        "num_envs",
     )
     current_config = current.get("training_config", {})
     paired_config = paired.get("training_config", {})
     current_hits = {
-        (item.get("episode_id"), item.get("scenario_id")): int(item.get("actual_hit_count") or 0)
+        (
+            item.get("worker_id"),
+            item.get("episode_id"),
+            item.get("scenario_id"),
+        ): int(item.get("actual_hit_count") or 0)
         for item in current.get("scenario_log", [])
     }
     paired_hits = {
-        (item.get("episode_id"), item.get("scenario_id")): int(item.get("actual_hit_count") or 0)
+        (
+            item.get("worker_id"),
+            item.get("episode_id"),
+            item.get("scenario_id"),
+        ): int(item.get("actual_hit_count") or 0)
         for item in paired.get("scenario_log", [])
     }
-    same_event_plan = current.get("event_plan_fingerprint") == paired.get("event_plan_fingerprint")
+    current_event_fingerprint = current.get(
+        "worker_event_plan_fingerprint",
+        current.get("event_plan_fingerprint"),
+    )
+    paired_event_fingerprint = paired.get(
+        "worker_event_plan_fingerprint",
+        paired.get("event_plan_fingerprint"),
+    )
+    same_event_plan = current_event_fingerprint == paired_event_fingerprint
     return {
         "paired_method_variant": paired.get("method_variant"),
         "same_method_variant": current.get("method_variant") == paired.get("method_variant"),
@@ -381,12 +417,20 @@ def run_training(
     report_path: str | Path | None = None,
     paired_report_path: str | Path | None = None,
     device: str = "cpu",
+    num_envs: int = 1,
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
     if run_mode not in {"smoke", "pilot"}:
         raise ValueError("run_mode必须是'smoke'或'pilot'；正式训练预算尚未定义")
-    if (num_iterations is not None and num_iterations < 1) or steps_per_iter < 1 or ppo_epochs < 0 or batch_size < 1:
+    if (
+        (num_iterations is not None and num_iterations < 1)
+        or steps_per_iter < 1
+        or type(num_envs) is not int
+        or num_envs < 1
+        or ppo_epochs < 0
+        or batch_size < 1
+    ):
         raise ValueError("迭代、采样步数、PPO轮数和批量参数不合法")
     if run_mode == "smoke":
         if num_iterations not in (None, 1) or ppo_epochs != 1 or steps_per_iter > 64:
@@ -433,6 +477,13 @@ def run_training(
             len(training_scenarios),
             seed=seed,
         )
+    worker_scenario_source = training_scenarios if run_mode == "pilot" else episode_plan
+    worker_event_plan = build_worker_scenario_plan(
+        worker_scenario_source,
+        num_workers=num_envs,
+        episodes_per_worker=len(episode_plan),
+        seed=seed,
+    )
     if Path(output_ckpt).as_posix() == "models/work3/checkpoints/method_d_model.pt":
         mode_name = "smoke" if run_mode == "smoke" else "pilot"
         output_ckpt = Path("models/work3/checkpoints") / f"{mode_name}_method_{profile.name.lower()}_weights.pt"
@@ -447,7 +498,7 @@ def run_training(
 
     # 1. 初始化仿真环境
     logger.info(f"初始化环境: {baseline_path}")
-    env = create_work3_single_env_runtime(baseline_path)
+    env = create_work3_single_env_runtime(baseline_path, num_envs=num_envs)
 
     # 2. 初始化Actor与共享图表征上的时间预测头
     actor_critic = ActorCriticWork3(
@@ -524,6 +575,7 @@ def run_training(
             else None
         ),
         "event_plan_sha256": _json_fingerprint(event_plan),
+        "worker_event_plan_sha256": _json_fingerprint(worker_event_plan),
     }
     config = {
         "run_mode": run_mode,
@@ -541,6 +593,7 @@ def run_training(
         "seed_role": "training_initialization_and_episode_schedule",
         "max_rollout_iterations": num_iterations,
         "rollout_steps": int(steps_per_iter),
+        "num_envs": int(num_envs),
         "ppo_epochs": int(ppo_epochs),
         "batch_size": int(batch_size),
         "lr": float(lr),
@@ -576,89 +629,109 @@ def run_training(
     history: list[dict[str, Any]] = []
     total_env_steps = 0
     start_time = run_started
-    episode_id = 0
     pending_time_labels = PendingTimeLabelCache()
-    episode_plan_index = 0
     scenario_log: list[dict[str, Any]] = []
     cycle_time_labels: list[dict[str, Any]] = []
     lightning_fit_calls = 0
     stop_reason: str | None = None
-    current_scenario: dict[str, Any] | None = None
-    current_scenario_log: dict[str, Any] | None = None
-    current_snapshot: DecisionSnapshot | None = None
-    current_scenario_status: dict[str, Any] = {}
-    current_episode_success: bool | None = None
-    episode_done = False
-    episode_termination_reason: str | None = None
+    worker_states: list[_TrainingWorkerEpisode] = []
+    episode_wave_index = 0
 
-    def update_current_scenario_effect_log() -> None:
-        if current_scenario_log is None or current_scenario is None:
-            return
-        current_scenario_log["disturbance_triggered"] = bool(
-            current_scenario_status.get("event_triggered", False)
+    def update_scenario_effect_log(state: _TrainingWorkerEpisode) -> None:
+        state.scenario_log["disturbance_triggered"] = bool(
+            state.scenario_status.get("event_triggered", False)
         )
-        hit_keys = list(current_scenario_status.get("actual_hit_task_keys", ()))
-        current_scenario_log["actual_hit_task_keys"] = hit_keys
-        current_scenario_log["actual_hit_count"] = len(hit_keys)
+        hit_keys = list(state.scenario_status.get("actual_hit_task_keys", ()))
+        state.scenario_log["actual_hit_task_keys"] = hit_keys
+        state.scenario_log["actual_hit_count"] = len(hit_keys)
 
-    def start_episode() -> None:
-        nonlocal episode_plan_index, current_scenario, current_scenario_log
-        nonlocal current_snapshot, current_scenario_status, current_episode_success
-        current_scenario = dict(episode_plan[episode_plan_index % len(episode_plan)])
-        current_episode_index = episode_plan_index
-        episode_plan_index += 1
-        reset_result = env.reset_all(
-            scenarios=[current_scenario if run_mode == "pilot" else None],
-            episode_ids=[episode_id],
-            episode_indices=[current_episode_index],
-        )[0]
-        current_snapshot = env.snapshot(worker_id=0)
-        current_scenario_status = reset_result.scenario_status
-        current_episode_success = None
-        current_scenario_log = {
-            "episode_id": episode_id,
-            "scenario_id": current_scenario["scenario_id"],
-            "timing": current_scenario["timing"],
-            "intensity": current_scenario["intensity"],
-            "station_id": current_scenario["station_id"],
-            "aircraft_id": current_scenario["aircraft_id"],
-            "disturbance_scheduled": run_mode == "pilot",
-            "scheduled_tau": current_scenario.get("tau") if run_mode == "pilot" else None,
-            "scheduled_recovery_time": current_scenario.get("recovery_time") if run_mode == "pilot" else None,
-            "scheduled_affected_task_keys": list(current_scenario.get("affected_task_keys", [])) if run_mode == "pilot" else [],
-            "scheduled_target_count": (
-                len(current_scenario.get("affected_task_keys", []))
-                if run_mode == "pilot"
-                else 0
-            ),
-            "disturbance_triggered": False,
-            "actual_hit_task_keys": [],
-            "actual_hit_count": 0,
-            "actual_transfer_times": [],
-            "completed": False,
-            "success": None,
-            "truncated": False,
-            "termination_reason": None,
-        }
-        scenario_log.append(current_scenario_log)
-        update_current_scenario_effect_log()
-        logger.info(
-            "加载训练episode=%s scenario=%s disturbance=%s timing=%s intensity=%s station=%s",
-            episode_id,
-            current_scenario["scenario_id"],
-            run_mode == "pilot",
-            current_scenario["timing"],
-            current_scenario["intensity"],
-            current_scenario["station_id"],
+    def start_episode_wave() -> None:
+        nonlocal worker_states
+        wave = episode_wave_index
+        plan_offset = (wave % len(episode_plan)) * num_envs
+        plan_entries = worker_event_plan[plan_offset : plan_offset + num_envs]
+        if len(plan_entries) != num_envs:
+            raise RuntimeError("固定worker/episode事件计划没有覆盖当前episode wave")
+        scenarios = [dict(item["scenario"]) for item in plan_entries]
+        episode_ids = [wave * num_envs + worker_id for worker_id in range(num_envs)]
+        reset_results = env.reset_all(
+            scenarios=[scenario if run_mode == "pilot" else None for scenario in scenarios],
+            episode_ids=episode_ids,
+            episode_indices=[wave] * num_envs,
         )
+        snapshots = env.snapshots()
+        worker_states = []
+        for worker_id, (scenario, reset_result, snapshot) in enumerate(
+            zip(scenarios, reset_results, snapshots, strict=True)
+        ):
+            episode_id = episode_ids[worker_id]
+            scenario_log_entry = {
+                "worker_id": worker_id,
+                "episode_index": wave,
+                "episode_id": episode_id,
+                "scenario_id": scenario["scenario_id"],
+                "timing": scenario["timing"],
+                "intensity": scenario["intensity"],
+                "station_id": scenario["station_id"],
+                "aircraft_id": scenario["aircraft_id"],
+                "disturbance_scheduled": run_mode == "pilot",
+                "scheduled_tau": scenario.get("tau") if run_mode == "pilot" else None,
+                "scheduled_recovery_time": scenario.get("recovery_time") if run_mode == "pilot" else None,
+                "scheduled_affected_task_keys": list(scenario.get("affected_task_keys", [])) if run_mode == "pilot" else [],
+                "scheduled_target_count": (
+                    len(scenario.get("affected_task_keys", []))
+                    if run_mode == "pilot"
+                    else 0
+                ),
+                "disturbance_triggered": False,
+                "actual_hit_task_keys": [],
+                "actual_hit_count": 0,
+                "actual_transfer_times": [],
+                "completed": False,
+                "success": None,
+                "truncated": False,
+                "termination_reason": None,
+            }
+            state = _TrainingWorkerEpisode(
+                worker_id=worker_id,
+                episode_id=episode_id,
+                episode_index=wave,
+                scenario=scenario,
+                scenario_status=dict(reset_result.scenario_status),
+                snapshot=snapshot,
+                scenario_log=scenario_log_entry,
+            )
+            if shaper is not None:
+                state.predictor_version = shaper.begin_episode(
+                    worker_id=worker_id,
+                    episode_id=episode_id,
+                )
+            scenario_log_entry["potential_snapshot_version"] = state.predictor_version
+            worker_states.append(state)
+            scenario_log.append(scenario_log_entry)
+            update_scenario_effect_log(state)
+            logger.info(
+                "加载训练worker=%s episode=%s scenario=%s disturbance=%s timing=%s intensity=%s station=%s",
+                worker_id,
+                episode_id,
+                scenario["scenario_id"],
+                run_mode == "pilot",
+                scenario["timing"],
+                scenario["intensity"],
+                scenario["station_id"],
+            )
 
-    def record_unlabelled_cycles(target_episode_id: int) -> None:
+    def record_unlabelled_cycles(worker_id: int, target_episode_id: int) -> None:
         if not profile.use_time_auxiliary:
             return
         for pending_cycle_id, count in sorted(
-            pending_time_labels.pending_cycle_counts(target_episode_id).items()
+            pending_time_labels.pending_cycle_counts(
+                target_episode_id,
+                worker_id=worker_id,
+            ).items()
         ):
             cycle_time_labels.append({
+                "worker_id": int(worker_id),
                 "episode_id": int(target_episode_id),
                 "cycle_id": int(pending_cycle_id),
                 "actual_transfer_time": None,
@@ -670,20 +743,40 @@ def run_training(
     def mark_budget_truncated(reason: str) -> None:
         nonlocal stop_reason
         stop_reason = reason
-        update_current_scenario_effect_log()
-        if current_scenario_log is not None and current_scenario_log["success"] is None:
-            current_scenario_log.update({
+        for state in worker_states:
+            if state.done:
+                continue
+            update_scenario_effect_log(state)
+            state.scenario_log.update({
                 "completed": False,
                 "success": False,
                 "truncated": True,
                 "termination_reason": reason,
-                "actual_hit_count": int(current_scenario_log.get("actual_hit_count", 0)),
             })
-            record_unlabelled_cycles(episode_id)
-            pending_time_labels.discard_episode(episode_id)
-        if buffer.transitions and not buffer.transitions[-1].terminated:
-            buffer.transitions[-1].done = True
-            buffer.transitions[-1].truncated = True
+            state.done = True
+            state.success = False
+            state.termination_reason = reason
+            record_unlabelled_cycles(state.worker_id, state.episode_id)
+            pending_time_labels.discard_episode(
+                state.episode_id,
+                worker_id=state.worker_id,
+            )
+            if shaper is not None and state.predictor_version is not None:
+                shaper.end_episode(
+                    worker_id=state.worker_id,
+                    episode_id=state.episode_id,
+                )
+                state.predictor_version = None
+            for transition in reversed(buffer.transitions):
+                if (
+                    transition.worker_id == state.worker_id
+                    and transition.episode_id == state.episode_id
+                    and transition.segment_id == iter_idx
+                ):
+                    if not transition.terminated:
+                        transition.done = True
+                        transition.truncated = True
+                    break
 
     def current_budget_reason() -> str | None:
         if max_decisions is not None and total_env_steps >= max_decisions:
@@ -692,7 +785,7 @@ def run_training(
             return "wall_time_limit"
         return None
 
-    start_episode()
+    start_episode_wave()
 
     logger.info("=" * 80)
     logger.info(
@@ -723,25 +816,14 @@ def run_training(
 
         step_raw_rewards: list[float] = []
         step_shaped_rewards: list[float] = []
-        last_terminated = False
 
         # -------------------------
         # Rollout 数据采集循环
         # -------------------------
-        for step in range(steps_per_iter):
-            if episode_done:
-                episode_success = bool(current_episode_success)
-                final_reason = "completed" if episode_success else episode_termination_reason
-                update_current_scenario_effect_log()
-                if not episode_success:
-                    record_unlabelled_cycles(episode_id)
-                pending_time_labels.discard_episode(episode_id)
-                if current_scenario_log is not None:
-                    current_scenario_log["completed"] = episode_success
-                    current_scenario_log["success"] = episode_success
-                    current_scenario_log["termination_reason"] = final_reason
-                if shaper is not None and episode_success:
-                    shaper.update_snapshot(time_head, actor_critic)
+        steps_this_rollout = 0
+        while steps_this_rollout < steps_per_iter and stop_reason is None:
+            # ponytail: 同步episode wave简化事件配对与势函数版本引用；轨迹时长差异明显时再改为异步补位。
+            if all(state.done for state in worker_states):
                 if (
                     run_mode == "pilot"
                     and sum(item.get("success") is True for item in scenario_log)
@@ -749,228 +831,289 @@ def run_training(
                 ):
                     stop_reason = "successful_batch_target_reached"
                     break
-                budget_reason = current_budget_reason()
-                if budget_reason is not None:
-                    stop_reason = budget_reason
-                    break
-                episode_id += 1
-                episode_done = False
-                episode_termination_reason = None
-                start_episode()
+                if shaper is not None and any(state.success for state in worker_states):
+                    shaper.update_snapshot(time_head, actor_critic)
+                episode_wave_index += 1
+                start_episode_wave()
 
             budget_reason = current_budget_reason()
             if budget_reason is not None:
                 mark_budget_truncated(budget_reason)
                 break
 
-            if current_snapshot is None:
-                raise RuntimeError("环境worker没有提供当前决策快照")
-            action_snapshot = current_snapshot
-            cmax_est = current_snapshot.estimated_cmax
-            if cmax_est is None:
-                raise RuntimeError("环境worker快照缺少启发式完工预测")
-            s_feat = current_snapshot.state_features
-            graph_snapshot = current_snapshot.graph_snapshot
-            if profile.use_corrected_time_input and time_head is not None:
-                graph_snapshot, u_time, _ = compute_online_snapshot_time_inputs(
-                    actor_critic=actor_critic,
-                    time_head=time_head,
-                    snapshot=current_snapshot,
-                )
-                action_snapshot = replace(current_snapshot, time_features=u_time)
-            else:
-                u_time = current_snapshot.time_features
-
-            # 计算当前状态势 Φ(s_t)
-            if shaper is not None:
-                phi_current = shaper.compute_potential(
-                    state_feat=s_feat,
-                    estimated_cmax=cmax_est,
-                    current_time=current_snapshot.current_time,
-                    h0=current_snapshot.h0,
-                    last_transfer_time=current_snapshot.last_transfer_time,
-                    is_terminal=False,
-                    graph_data=graph_snapshot,
-                )
-            else:
-                phi_current = compute_heuristic_potential(
-                    cmax_est,
-                    current_snapshot.last_transfer_time,
-                    current_snapshot.h0,
-                )
-
-            # 采样条件动作
-            act, lp, v, rec = actor_critic.select_snapshot(
-                action_snapshot,
-                deterministic=False,
+            remaining_global_steps = (
+                max_decisions - total_env_steps
+                if max_decisions is not None
+                else num_envs
             )
-
-            if act is None:
-                raise RuntimeError("Actor未返回动作；无候选状态应通过强制推进动作进入env.step()")
-
-            cycle_id = int(current_snapshot.cycle_id)
-            if profile.use_time_auxiliary and shaper is not None:
-                pending_time_labels.add(
-                    episode_id=episode_id,
-                    cycle_id=cycle_id,
-                    decision_id=total_env_steps,
-                    state_feat=s_feat,
-                    graph_snapshot=rec.get("graph_snapshot", graph_snapshot),
-                    estimated_cmax=cmax_est,
-                    current_time=current_snapshot.current_time,
-                    h0=current_snapshot.h0,
-                    predictor_version=shaper.snapshot_version,
-                    worker_id=0,
-                    time_urgency=u_time,
-                )
-
-            # 环境执行一步调度动作
-            result = env.step(act, worker_id=0)
-            current_snapshot = env.snapshot(worker_id=0)
-            current_scenario_status = result.scenario_status
-            raw_reward = result.raw_reward
-            terminated = result.terminated
-            truncated = result.truncated
-            info = result.info
-            update_current_scenario_effect_log()
-            done = terminated or truncated
-            last_terminated = bool(terminated)
-            discard_unlabelled_time_samples = False
-            if terminated:
-                episode_done = True
-                episode_termination_reason = str(
-                    info.get(
-                        "termination_reason",
-                        "completed" if info.get("success", False) else "deadlock",
-                    )
-                )
-                current_episode_success = bool(info.get("success", False))
-                if current_scenario_log is not None:
-                    episode_success = current_episode_success
-                    current_scenario_log["completed"] = episode_success
-                    current_scenario_log["success"] = episode_success
-                    current_scenario_log["truncated"] = False
-                    current_scenario_log["termination_reason"] = episode_termination_reason
-                if not current_episode_success:
-                    discard_unlabelled_time_samples = True
-
-            elif truncated:
-                episode_done = True
-                episode_termination_reason = "truncated"
-                discard_unlabelled_time_samples = True
-                if current_scenario_log is not None:
-                    current_scenario_log["completed"] = False
-                    current_scenario_log["success"] = False
-                    current_scenario_log["truncated"] = True
-                    current_scenario_log["termination_reason"] = "truncated"
-
-            actual_transfers = [
-                float(event[0])
-                for event in result.processed_events
-                if event[1] == "SYNCHRONOUS_TRANSFER"
+            dispatch_limit = min(
+                num_envs,
+                steps_per_iter - steps_this_rollout,
+                remaining_global_steps,
+            )
+            selected_states = [state for state in worker_states if not state.done][
+                :dispatch_limit
             ]
-            for offset, actual_transfer_time in enumerate(actual_transfers):
-                transfer_cycle_id = cycle_id + offset
-                label_count = pending_time_labels.pending_cycle_counts(episode_id).get(
-                    transfer_cycle_id,
-                    0,
-                )
-                label_available = pending_time_labels.attach_transfer(
-                    episode_id=episode_id,
-                    cycle_id=transfer_cycle_id,
-                    actual_transfer_time=float(actual_transfer_time),
-                )
-                if profile.use_time_auxiliary:
-                    cycle_time_labels.append({
-                        "episode_id": episode_id,
-                        "cycle_id": transfer_cycle_id,
-                        "actual_transfer_time": float(actual_transfer_time),
-                        "label_count": int(label_count) if label_available else 0,
-                        "pending_decision_count": 0,
-                        "label_available": bool(label_available),
-                    })
-                if current_scenario_log is not None:
-                    current_scenario_log["actual_transfer_times"].append(
-                        float(actual_transfer_time)
-                    )
-            if discard_unlabelled_time_samples:
-                record_unlabelled_cycles(episode_id)
-                pending_time_labels.discard_episode(episode_id)
-
-            # 计算下一状态势 Φ(s_{t+1}) 与塑形奖励
-            if terminated:
-                phi_next = 0.0
-            else:
-                if current_snapshot is None or current_snapshot.estimated_cmax is None:
-                    raise RuntimeError("环境worker下一状态快照缺少时间预测")
-                next_cmax_est = current_snapshot.estimated_cmax
-                next_s_feat = current_snapshot.state_features
-                next_graph_snapshot = current_snapshot.graph_snapshot
-                if shaper is not None and profile.use_corrected_time_input and time_head is not None:
-                    next_graph_snapshot, next_u_time, _ = compute_online_snapshot_time_inputs(
+            actions: list[dict[str, Any] | None] = [None] * num_envs
+            action_contexts: dict[int, dict[str, Any]] = {}
+            for action_offset, state in enumerate(selected_states):
+                snapshot = state.snapshot
+                cmax_est = snapshot.estimated_cmax
+                if cmax_est is None:
+                    raise RuntimeError("环境worker快照缺少启发式完工预测")
+                state_features = snapshot.state_features
+                graph_snapshot = snapshot.graph_snapshot
+                action_snapshot = snapshot
+                if profile.use_corrected_time_input and time_head is not None:
+                    graph_snapshot, time_urgency, _ = compute_online_snapshot_time_inputs(
                         actor_critic=actor_critic,
                         time_head=time_head,
-                        snapshot=current_snapshot,
+                        snapshot=snapshot,
                     )
-                    phi_next = shaper.compute_potential(
-                        state_feat=next_s_feat,
-                        estimated_cmax=next_cmax_est,
-                        current_time=current_snapshot.current_time,
-                        h0=current_snapshot.h0,
-                        last_transfer_time=current_snapshot.last_transfer_time,
+                    action_snapshot = replace(snapshot, time_features=time_urgency)
+                else:
+                    time_urgency = snapshot.time_features
+
+                if shaper is not None:
+                    if state.predictor_version is None:
+                        raise RuntimeError("势函数episode没有绑定预测器版本")
+                    phi_current = shaper.compute_potential(
+                        state_feat=state_features,
+                        estimated_cmax=cmax_est,
+                        current_time=snapshot.current_time,
+                        h0=snapshot.h0,
+                        last_transfer_time=snapshot.last_transfer_time,
                         is_terminal=False,
-                        graph_data=next_graph_snapshot,
+                        graph_data=graph_snapshot,
+                        worker_id=state.worker_id,
+                        episode_id=state.episode_id,
                     )
                 else:
-                    next_u_time = current_snapshot.time_features
-                    phi_next = compute_heuristic_potential(
-                        next_cmax_est,
-                        current_snapshot.last_transfer_time,
-                        current_snapshot.h0,
+                    phi_current = compute_heuristic_potential(
+                        cmax_est,
+                        snapshot.last_transfer_time,
+                        snapshot.h0,
                     )
 
-            if truncated:
-                with torch.no_grad():
-                    truncated_value, _ = actor_critic.encode_state(
-                        next_s_feat.to(torch_device),
-                        next_u_time.to(torch_device),
-                        graph_data=next_graph_snapshot,
+                action, log_prob, value, sample_record = actor_critic.select_snapshot(
+                    action_snapshot,
+                    deterministic=False,
+                )
+                if action is None:
+                    raise RuntimeError(
+                        "Actor未返回动作；无候选状态应通过强制推进动作进入env.step()"
                     )
-                rollout_bootstraps[(0, episode_id, iter_idx)] = float(
-                    truncated_value.squeeze().item()
-                )
+                if profile.use_time_auxiliary and shaper is not None:
+                    pending_time_labels.add(
+                        episode_id=state.episode_id,
+                        cycle_id=int(snapshot.cycle_id),
+                        decision_id=total_env_steps + action_offset,
+                        state_feat=state_features,
+                        graph_snapshot=sample_record.get("graph_snapshot", graph_snapshot),
+                        estimated_cmax=cmax_est,
+                        current_time=snapshot.current_time,
+                        h0=snapshot.h0,
+                        predictor_version=state.predictor_version,
+                        worker_id=state.worker_id,
+                        time_urgency=time_urgency,
+                    )
+                actions[state.worker_id] = action
+                action_contexts[state.worker_id] = {
+                    "state_features": state_features,
+                    "time_urgency": time_urgency,
+                    "sample_record": sample_record,
+                    "value": value,
+                    "log_prob": log_prob,
+                    "phi_current": phi_current,
+                    "cycle_id": int(snapshot.cycle_id),
+                }
 
-            if shaper is not None:
-                shaped_reward = shaper.shape_reward(
-                    actual_reward=raw_reward,
-                    phi_current=phi_current,
-                    phi_next=phi_next,
+            deadline = (
+                None if max_wall_seconds is None else start_time + max_wall_seconds
+            )
+            step_batch = env.step_all(
+                actions=actions,
+                max_total_steps=max_decisions,
+                wall_clock_deadline=deadline,
+            )
+            if step_batch.worker_errors or step_batch.interrupted_worker_ids:
+                env.close()
+                raise RuntimeError(
+                    "向量环境step未完整结算："
+                    f"errors={step_batch.worker_errors}, "
+                    f"interrupted={step_batch.interrupted_worker_ids}"
                 )
-            else:
-                shaped_reward = float(raw_reward) + beta_shaping * (
-                    gamma * float(phi_next) - float(phi_current)
+            if not step_batch.dispatched_worker_ids:
+                reason = current_budget_reason() or "no_worker_dispatched"
+                mark_budget_truncated(reason)
+                break
+            if any(
+                step_batch.results[worker_id] is None
+                for worker_id in step_batch.dispatched_worker_ids
+            ):
+                raise RuntimeError("向量环境step缺少已派发worker的结果")
+            next_snapshots = env.snapshots()
+
+            for worker_id in step_batch.dispatched_worker_ids:
+                state = worker_states[worker_id]
+                context = action_contexts[worker_id]
+                snapshot = next_snapshots[worker_id]
+                result = step_batch.results[worker_id]
+                if result is None:
+                    raise RuntimeError("向量环境worker未返回有效执行结果")
+                state.snapshot = snapshot
+                state.scenario_status = dict(result.scenario_status)
+                update_scenario_effect_log(state)
+                raw_reward = float(result.raw_reward)
+                terminated = bool(result.terminated)
+                truncated = bool(result.truncated)
+                done = terminated or truncated
+                if terminated:
+                    state.done = True
+                    state.success = bool(result.info.get("success", False))
+                    state.termination_reason = str(
+                        result.info.get(
+                            "termination_reason",
+                            "completed" if state.success else "deadlock",
+                        )
+                    )
+                    state.scenario_log.update({
+                        "completed": state.success,
+                        "success": state.success,
+                        "truncated": False,
+                        "termination_reason": state.termination_reason,
+                    })
+                elif truncated:
+                    state.done = True
+                    state.success = False
+                    state.termination_reason = "truncated"
+                    state.scenario_log.update({
+                        "completed": False,
+                        "success": False,
+                        "truncated": True,
+                        "termination_reason": "truncated",
+                    })
+
+                actual_transfers = [
+                    float(event[0])
+                    for event in result.processed_events
+                    if event[1] == "SYNCHRONOUS_TRANSFER"
+                ]
+                for offset, actual_transfer_time in enumerate(actual_transfers):
+                    transfer_cycle_id = context["cycle_id"] + offset
+                    label_count = pending_time_labels.pending_cycle_counts(
+                        state.episode_id,
+                        worker_id=worker_id,
+                    ).get(transfer_cycle_id, 0)
+                    label_available = pending_time_labels.attach_transfer(
+                        episode_id=state.episode_id,
+                        worker_id=worker_id,
+                        cycle_id=transfer_cycle_id,
+                        actual_transfer_time=actual_transfer_time,
+                    )
+                    if profile.use_time_auxiliary:
+                        cycle_time_labels.append({
+                            "worker_id": worker_id,
+                            "episode_id": state.episode_id,
+                            "cycle_id": transfer_cycle_id,
+                            "actual_transfer_time": actual_transfer_time,
+                            "label_count": int(label_count) if label_available else 0,
+                            "pending_decision_count": 0,
+                            "label_available": bool(label_available),
+                        })
+                    state.scenario_log["actual_transfer_times"].append(
+                        actual_transfer_time
+                    )
+
+                if terminated:
+                    phi_next = 0.0
+                else:
+                    next_cmax_est = snapshot.estimated_cmax
+                    if next_cmax_est is None:
+                        raise RuntimeError("环境worker下一状态快照缺少时间预测")
+                    if profile.use_corrected_time_input and time_head is not None:
+                        next_graph, next_time_urgency, _ = compute_online_snapshot_time_inputs(
+                            actor_critic=actor_critic,
+                            time_head=time_head,
+                            snapshot=snapshot,
+                        )
+                    else:
+                        next_graph = snapshot.graph_snapshot
+                        next_time_urgency = snapshot.time_features
+                    if shaper is not None:
+                        phi_next = shaper.compute_potential(
+                            state_feat=snapshot.state_features,
+                            estimated_cmax=next_cmax_est,
+                            current_time=snapshot.current_time,
+                            h0=snapshot.h0,
+                            last_transfer_time=snapshot.last_transfer_time,
+                            is_terminal=False,
+                            graph_data=next_graph,
+                            worker_id=worker_id,
+                            episode_id=state.episode_id,
+                        )
+                    else:
+                        phi_next = compute_heuristic_potential(
+                            next_cmax_est,
+                            snapshot.last_transfer_time,
+                            snapshot.h0,
+                        )
+
+                if truncated:
+                    with torch.no_grad():
+                        truncated_value, _ = actor_critic.encode_state(
+                            snapshot.state_features.to(torch_device),
+                            next_time_urgency.to(torch_device),
+                            graph_data=next_graph,
+                        )
+                    rollout_bootstraps[(worker_id, state.episode_id, iter_idx)] = float(
+                        truncated_value.squeeze().item()
+                    )
+
+                shaped_reward = (
+                    shaper.shape_reward(
+                        actual_reward=raw_reward,
+                        phi_current=context["phi_current"],
+                        phi_next=phi_next,
+                    )
+                    if shaper is not None
+                    else raw_reward + beta_shaping * (
+                        gamma * float(phi_next) - float(context["phi_current"])
+                    )
                 )
+                if done:
+                    record_unlabelled_cycles(worker_id, state.episode_id)
+                    pending_time_labels.discard_episode(
+                        state.episode_id,
+                        worker_id=worker_id,
+                    )
+                    if shaper is not None and state.predictor_version is not None:
+                        shaper.end_episode(
+                            worker_id=worker_id,
+                            episode_id=state.episode_id,
+                        )
+                        state.predictor_version = None
 
-            buffer.add(PPOTransition(
-                state_feat=s_feat.cpu(),
-                time_urgency=u_time.cpu(),
-                sample_record=rec,
-                reward=shaped_reward,
-                raw_reward=raw_reward,
-                value=v,
-                log_prob=lp,
-                done=done,
-                action_dict=act,
-                terminated=terminated,
-                truncated=truncated,
-                worker_id=0,
-                episode_id=episode_id,
-                segment_id=iter_idx,
-            ))
-
-            step_raw_rewards.append(raw_reward)
-            step_shaped_rewards.append(shaped_reward)
-            total_env_steps += 1
+                buffer.add(PPOTransition(
+                    state_feat=context["state_features"].cpu(),
+                    time_urgency=context["time_urgency"].cpu(),
+                    sample_record=context["sample_record"],
+                    reward=shaped_reward,
+                    raw_reward=raw_reward,
+                    value=context["value"],
+                    log_prob=context["log_prob"],
+                    done=done,
+                    action_dict=actions[worker_id] or {},
+                    terminated=terminated,
+                    truncated=truncated,
+                    worker_id=worker_id,
+                    episode_id=state.episode_id,
+                    segment_id=iter_idx,
+                ))
+                step_raw_rewards.append(raw_reward)
+                step_shaped_rewards.append(shaped_reward)
+                total_env_steps += 1
+                steps_this_rollout += 1
 
             if (
                 run_mode == "pilot"
@@ -979,52 +1122,54 @@ def run_training(
             ):
                 stop_reason = "successful_batch_target_reached"
                 break
+
+        if stop_reason is None:
             budget_reason = current_budget_reason()
             if budget_reason is not None:
-                if not terminated and not truncated:
-                    mark_budget_truncated(budget_reason)
-                else:
-                    stop_reason = budget_reason
-                break
+                mark_budget_truncated(budget_reason)
 
-        if current_scenario_log is not None:
-            update_current_scenario_effect_log()
+        for state in worker_states:
+            if not state.done:
+                update_scenario_effect_log(state)
 
         # -------------------------
         # GAE 与价值目标结算
         # -------------------------
-        # 末尾 Bootstrap 状态值
+        # 对每条worker/episode/segment独立补齐段尾bootstrap。
         if len(buffer) > 0:
-            if current_snapshot is None or current_snapshot.estimated_cmax is None:
-                raise RuntimeError("rollout结束时环境worker快照缺少时间预测")
-            last_cmax = current_snapshot.estimated_cmax
-            last_s_feat = current_snapshot.state_features
-            last_graph = current_snapshot.graph_snapshot
-            if profile.use_corrected_time_input and time_head is not None:
-                last_graph, last_u_time, _ = compute_online_snapshot_time_inputs(
-                    actor_critic=actor_critic,
-                    time_head=time_head,
-                    snapshot=current_snapshot,
+            last_transitions: dict[tuple[int, int, int], PPOTransition] = {}
+            for transition in buffer.transitions:
+                key = (
+                    transition.worker_id,
+                    transition.episode_id,
+                    transition.segment_id,
                 )
-            else:
-                last_u_time = current_snapshot.time_features
-            with torch.no_grad():
-                last_v, _ = actor_critic.encode_state(
-                    last_s_feat.to(torch_device),
-                    last_u_time.to(torch_device),
-                    graph_data=last_graph,
-                )
-                last_val = float(last_v.squeeze().item()) if not last_terminated else 0.0
-
-            if not last_terminated:
-                last_transition = buffer.transitions[-1]
-                rollout_bootstraps[
-                    (
-                        last_transition.worker_id,
-                        last_transition.episode_id,
-                        last_transition.segment_id,
+                last_transitions[key] = transition
+            for key, last_transition in last_transitions.items():
+                if last_transition.terminated or key in rollout_bootstraps:
+                    continue
+                state = worker_states[key[0]]
+                if state.episode_id != key[1]:
+                    raise RuntimeError(f"rollout段尾状态与episode不一致：{key}")
+                snapshot = state.snapshot
+                if snapshot.estimated_cmax is None:
+                    raise RuntimeError("rollout结束时环境worker快照缺少时间预测")
+                if profile.use_corrected_time_input and time_head is not None:
+                    graph_snapshot, last_time_urgency, _ = compute_online_snapshot_time_inputs(
+                        actor_critic=actor_critic,
+                        time_head=time_head,
+                        snapshot=snapshot,
                     )
-                ] = last_val
+                else:
+                    graph_snapshot = snapshot.graph_snapshot
+                    last_time_urgency = snapshot.time_features
+                with torch.no_grad():
+                    last_value, _ = actor_critic.encode_state(
+                        snapshot.state_features.to(torch_device),
+                        last_time_urgency.to(torch_device),
+                        graph_data=graph_snapshot,
+                    )
+                rollout_bootstraps[key] = float(last_value.squeeze().item())
             buffer.finish_trajectories(
                 last_values_by_segment=rollout_bootstraps,
             )
@@ -1124,10 +1269,11 @@ def run_training(
 
     if stop_reason is None:
         stop_reason = "iteration_limit"
-    if current_scenario_log is not None and current_scenario_log["success"] is None:
+    if any(not state.done for state in worker_states):
         mark_budget_truncated(stop_reason)
     environment_worker_pids = list(env.worker_pids)
     environment_worker_cuda_initialized = list(env.worker_cuda_initialized)
+    worker_step_counts = list(env.worker_step_counts)
     trajectory_audit = env.close()
 
     total_elapsed = time.monotonic() - run_started
@@ -1185,6 +1331,8 @@ def run_training(
         "data_fingerprint": data_fingerprint,
         "event_plan": event_plan,
         "event_plan_fingerprint": data_fingerprint["event_plan_sha256"],
+        "worker_event_plan": worker_event_plan,
+        "worker_event_plan_fingerprint": data_fingerprint["worker_event_plan_sha256"],
         "planned_scenario_ids": [item["scenario_id"] for item in event_plan],
         "initial_actor_fingerprint": initial_actor_fingerprint,
         "initial_parameter_fingerprint": initial_parameter_fingerprint,
@@ -1192,6 +1340,7 @@ def run_training(
         "environment_worker_pids": environment_worker_pids,
         "environment_worker_cuda_initialized": environment_worker_cuda_initialized,
         "environment_worker_start_method": "spawn",
+        "worker_step_counts": worker_step_counts,
         "trajectory_audit": trajectory_audit,
         "device_name": device_name,
         "runtime_versions": {
@@ -1209,7 +1358,10 @@ def run_training(
         "total_decisions": total_env_steps,
         "lightning_optimization_steps": int(lightning_module.optimization_steps),
         "lightning_fit_calls": lightning_fit_calls,
-        "independent_episode_count": len({item["episode_id"] for item in scenario_log}),
+        "independent_episode_count": len({
+            (item["worker_id"], item["episode_id"])
+            for item in scenario_log
+        }),
         "successful_batch_count": int(successful_batch_count),
         "failure_reasons": failure_reasons,
         "actual_disturbance_hit_count": sum(
@@ -1285,6 +1437,7 @@ def run_training(
         "history": history,
         "total_steps": total_env_steps,
         "total_elapsed_seconds": total_elapsed,
+        "worker_step_counts": worker_step_counts,
         "checkpoint_path": output_ckpt,
         "report_path": report_path,
     }
@@ -1301,6 +1454,7 @@ def main() -> None:
         help="可选rollout段数上限；smoke固定为1，pilot默认由成功目标/预算终止",
     )
     parser.add_argument("--steps", type=int, default=32, help="每个rollout段的最大决策步数")
+    parser.add_argument("--num-envs", type=int, default=1, help="spawn CPU环境worker数")
     parser.add_argument("--epochs", type=int, default=1, help="PPO重放轮数；smoke固定为1")
     parser.add_argument("--batch-size", type=int, default=64, help="Mini-batch 大小 (默认 64)")
     parser.add_argument("--successful-batch-target", type=int, default=None)
@@ -1333,6 +1487,7 @@ def main() -> None:
     run_training(
         num_iterations=args.iterations,
         steps_per_iter=args.steps,
+        num_envs=args.num_envs,
         ppo_epochs=args.epochs,
         batch_size=args.batch_size,
         time_auxiliary_epochs=args.time_auxiliary_epochs,

@@ -12,6 +12,7 @@ import math
 import os
 from pathlib import Path
 import tempfile
+from typing import Any
 import pytest
 import torch
 
@@ -113,3 +114,116 @@ def test_training_records_forced_advance_from_spawn_worker(
     assert result["scenario_log"][0]["disturbance_triggered"] is True
     assert result["trajectory_audit"]["step_count"] == 1
     assert result["lightning_fit_calls"] == 1
+
+
+def test_training_entry_uses_two_spawn_workers_with_aggregate_budget(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """双环境训练入口按总交互步预算采样并在同一Lightning模块更新。"""
+    labels: list[tuple[int, int, int]] = []
+    original_add = train_module.PendingTimeLabelCache.add
+
+    def record_label(
+        cache: train_module.PendingTimeLabelCache,
+        **kwargs: Any,
+    ) -> bool:
+        labels.append((
+            int(kwargs["worker_id"]),
+            int(kwargs["episode_id"]),
+            int(kwargs["decision_id"]),
+        ))
+        return original_add(cache, **kwargs)
+
+    monkeypatch.setattr(
+        train_module.PendingTimeLabelCache,
+        "add",
+        record_label,
+    )
+    result = run_training(
+        run_mode="smoke",
+        num_iterations=1,
+        steps_per_iter=3,
+        max_decisions=3,
+        ppo_epochs=1,
+        batch_size=3,
+        seed=17,
+        method_variant="D",
+        num_envs=2,
+        time_head_ckpt=str(tmp_path / "missing_time_head.pt"),
+        output_ckpt=str(tmp_path / "two_workers.pt"),
+    )
+
+    assert result["training_config"]["num_envs"] == 2
+    assert len(result["environment_worker_pids"]) == 2
+    assert all(pid != os.getpid() for pid in result["environment_worker_pids"])
+    assert result["environment_worker_cuda_initialized"] == [False, False]
+    assert result["worker_step_counts"] == [2, 1]
+    assert sum(result["worker_step_counts"]) == 3
+    assert result["history"][0]["environment_steps"] == 3
+    assert result["history"][0]["total_steps"] == 3
+    assert result["history"][0]["lightning_optimization_steps"] > 0
+    assert result["history"][0]["sampling_replay_sample_count"] == 3
+    assert len(result["scenario_log"]) == 2
+    assert {item["worker_id"] for item in result["scenario_log"]} == {0, 1}
+    assert {item["potential_snapshot_version"] for item in result["scenario_log"]} == {0}
+    assert {
+        (item["worker_id"], item["episode_id"])
+        for item in result["scenario_log"]
+    } == {(item["worker_id"], item["episode_id"]) for item in result["worker_event_plan"]}
+    assert {worker_id for worker_id, _episode_id, _decision_id in labels} == {0, 1}
+    assert len(labels) == len(set(labels)) == 3
+
+
+def test_training_entry_closes_other_workers_after_worker_error(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """一个worker报告错误时，训练入口也必须回收同批其他worker。"""
+    from dataclasses import replace
+
+    from training.work3_vector_env import Work3VectorEnv
+
+    created_envs: list[Work3VectorEnv] = []
+    original_create = train_module.create_work3_single_env_runtime
+    original_step_all = Work3VectorEnv.step_all
+
+    def capture_environment(*args: Any, **kwargs: Any) -> Work3VectorEnv:
+        environment = original_create(*args, **kwargs)
+        created_envs.append(environment)
+        return environment
+
+    def report_worker_error(
+        environment: Work3VectorEnv,
+        **kwargs: Any,
+    ) -> Any:
+        batch = original_step_all(environment, **kwargs)
+        return replace(
+            batch,
+            worker_errors=((0, "simulated worker failure"),),
+            interrupted_worker_ids=(0,),
+        )
+
+    monkeypatch.setattr(
+        train_module,
+        "create_work3_single_env_runtime",
+        capture_environment,
+    )
+    monkeypatch.setattr(Work3VectorEnv, "step_all", report_worker_error)
+
+    with pytest.raises(RuntimeError, match="step未完整结算"):
+        run_training(
+            run_mode="smoke",
+            num_iterations=1,
+            steps_per_iter=1,
+            max_decisions=1,
+            ppo_epochs=1,
+            batch_size=1,
+            seed=23,
+            method_variant="C",
+            num_envs=2,
+            output_ckpt=str(tmp_path / "worker_error.pt"),
+        )
+
+    assert len(created_envs) == 1
+    assert created_envs[0].workers_alive == (False, False)

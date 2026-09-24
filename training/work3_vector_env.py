@@ -817,14 +817,16 @@ class Work3VectorEnv:
         self,
         *,
         actions: Sequence[dict[str, Any] | None],
-        max_total_steps: int,
+        max_total_steps: int | None,
         settle_timeout_seconds: float | None = None,
         wall_clock_deadline: float | None = None,
     ) -> Work3VectorStepBatch:
         if len(actions) != self._num_envs:
             raise ValueError("step_all动作数必须与worker数相同")
-        if type(max_total_steps) is not int or max_total_steps < 1:
-            raise ValueError("max_total_steps必须为正整数")
+        if max_total_steps is not None and (
+            type(max_total_steps) is not int or max_total_steps < 1
+        ):
+            raise ValueError("max_total_steps必须为正整数或None")
         if settle_timeout_seconds is not None and settle_timeout_seconds <= 0:
             raise ValueError("settle_timeout_seconds必须为正数")
         if wall_clock_deadline is not None and not math.isfinite(wall_clock_deadline):
@@ -833,7 +835,11 @@ class Work3VectorEnv:
             wall_clock_deadline is not None
             and time.monotonic() >= wall_clock_deadline
         )
-        remaining = max_total_steps - self._budget_reserved_steps
+        remaining = (
+            self._num_envs
+            if max_total_steps is None
+            else max_total_steps - self._budget_reserved_steps
+        )
         eligible = (
             [
                 worker_id

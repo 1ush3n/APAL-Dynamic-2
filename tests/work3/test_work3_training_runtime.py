@@ -677,6 +677,20 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
         assert vector.budget_reserved_steps == 17
         assert len(observed) == 17
         assert vector.worker_step_counts == (9, 8)
+
+        snapshots = vector.snapshots()
+        unbounded_actions = tuple(
+            actor.select_snapshot(snapshot, deterministic=True)[0]
+            for snapshot in snapshots
+        )
+        assert all(action is not None for action in unbounded_actions)
+        unbounded_batch = vector.step_all(
+            actions=unbounded_actions,
+            max_total_steps=None,
+        )
+        assert unbounded_batch.dispatched_worker_ids == (0, 1)
+        assert vector.total_env_steps == 19
+        assert vector.budget_reserved_steps == 19
     finally:
         vector.close()
     assert vector.workers_alive == (False, False)
