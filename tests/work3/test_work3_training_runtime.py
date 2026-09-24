@@ -82,6 +82,59 @@ def test_runtime_config_loads_smoke_defaults_and_hashes_resolved_yaml() -> None:
     assert set(fingerprint) <= set("0123456789abcdef")
 
 
+def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import sys
+
+    from scripts.work3 import train_ppo_work3
+
+    runtime_config_module = _runtime_config_module()
+    overrides = (
+        "runtime.seed=31415",
+        "runtime.num_envs=2",
+        "ppo.steps_per_iter=8",
+    )
+    resolved_config = runtime_config_module.load_work3_runtime_config(
+        DEFAULT_CONFIG,
+        overrides=overrides,
+    )
+    resolved_yaml, fingerprint = runtime_config_module.resolved_config_fingerprint(
+        resolved_config
+    )
+    captured: dict[str, object] = {}
+
+    def capture_training_call(**kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(train_ppo_work3, "run_training", capture_training_call)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_ppo_work3",
+            "--config",
+            DEFAULT_CONFIG.as_posix(),
+            *[argument for value in overrides for argument in ("--set", value)],
+        ],
+    )
+
+    train_ppo_work3.main()
+
+    assert captured["seed"] == 31415
+    assert captured["num_envs"] == 2
+    assert captured["steps_per_iter"] == 8
+    assert captured["run_mode"] == "smoke"
+    assert captured["method_variant"] == "C"
+    assert captured["max_decisions"] == 8
+    assert captured["deterministic"] is True
+    assert captured["main_num_threads"] == 1
+    assert captured["env_num_threads"] == 1
+    assert captured["settle_timeout_seconds"] == 2.0
+    assert captured["resolved_config_yaml"] == resolved_yaml
+    assert captured["resolved_config_sha256"] == fingerprint
+
+
 def test_runtime_config_overrides_change_resolved_values_and_fingerprint() -> None:
     module = _runtime_config_module()
 
@@ -641,6 +694,7 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
     vector = Work3VectorEnv(
         env_kwargs={"baseline_json_path": str(baseline_path)},
         num_envs=2,
+        worker_torch_num_threads=2,
         start_method="spawn",
     )
     actor = ActorCriticWork3(hidden_dim=32)
@@ -650,6 +704,7 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
         assert all(pid != os.getpid() for pid in vector.worker_pids)
         assert vector.workers_alive == (True, True)
         assert vector.worker_cuda_initialized == (False, False)
+        assert vector.worker_torch_num_threads == (2, 2)
 
         resets = vector.reset_all(
             scenarios=(None, None),

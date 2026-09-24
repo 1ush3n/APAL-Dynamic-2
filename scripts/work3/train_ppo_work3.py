@@ -45,6 +45,12 @@ from scripts.work3.collect_validation_trajectories import load_scenarios_for_spl
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
 from training.work3_vector_env import Work3VectorEnv
 from training.work3_lightning import Work3PPODataModule, Work3LightningModule, Work3TrainingUpdate
+from training.work3_runtime_config import (
+    apply_work3_runtime_overrides,
+    load_work3_runtime_config,
+    resolved_config_fingerprint,
+    seed_work3_runtime,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,26 +78,20 @@ def create_work3_single_env_runtime(
     baseline_path: str | Path,
     *,
     num_envs: int = 1,
+    worker_torch_num_threads: int = 1,
 ) -> Work3VectorEnv:
     """构造FP32 spawn环境worker池；策略与PPO优化器仍由调用方持有。"""
     return Work3VectorEnv(
         env_kwargs={"baseline_json_path": str(Path(baseline_path))},
         num_envs=num_envs,
+        worker_torch_num_threads=worker_torch_num_threads,
         start_method="spawn",
     )
 
 
-def _seed_everything(seed: int) -> None:
+def _seed_everything(seed: int, *, deterministic: bool = True) -> None:
     """锁定本次训练用到的Python、NumPy、PyTorch及CUDA随机源。"""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-    torch.use_deterministic_algorithms(True)
-    if hasattr(torch.backends, "cudnn"):
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    seed_work3_runtime(seed, deterministic=deterministic)
 
 
 def _json_fingerprint(value: Any) -> str:
@@ -418,6 +418,12 @@ def run_training(
     paired_report_path: str | Path | None = None,
     device: str = "cpu",
     num_envs: int = 1,
+    env_num_threads: int = 1,
+    deterministic: bool = True,
+    main_num_threads: int = 1,
+    settle_timeout_seconds: float | None = None,
+    resolved_config_yaml: str | None = None,
+    resolved_config_sha256: str | None = None,
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
@@ -428,6 +434,11 @@ def run_training(
         or steps_per_iter < 1
         or type(num_envs) is not int
         or num_envs < 1
+        or type(env_num_threads) is not int
+        or env_num_threads < 1
+        or type(deterministic) is not bool
+        or type(main_num_threads) is not int
+        or main_num_threads < 1
         or ppo_epochs < 0
         or batch_size < 1
     ):
@@ -455,9 +466,20 @@ def run_training(
         not math.isfinite(max_wall_seconds) or max_wall_seconds <= 0.0
     ):
         raise ValueError("max_wall_seconds必须为有限正数")
+    if settle_timeout_seconds is not None and (
+        not math.isfinite(settle_timeout_seconds) or settle_timeout_seconds <= 0.0
+    ):
+        raise ValueError("settle_timeout_seconds必须为有限正数")
+    if (resolved_config_yaml is None) != (resolved_config_sha256 is None):
+        raise ValueError("resolved_config_yaml与resolved_config_sha256必须同时提供")
+    if resolved_config_yaml is not None:
+        observed_hash = hashlib.sha256(resolved_config_yaml.encode("utf-8")).hexdigest()
+        if observed_hash != resolved_config_sha256:
+            raise ValueError("解析后YAML与其SHA256不匹配")
 
     profile = build_method_profile(method_variant)
-    _seed_everything(seed)
+    torch.set_num_threads(main_num_threads)
+    _seed_everything(seed, deterministic=deterministic)
     torch_device = torch.device(device)
 
     training_scenarios = load_training_scenarios(scenarios_path, scenario_split_path)
@@ -498,7 +520,11 @@ def run_training(
 
     # 1. 初始化仿真环境
     logger.info(f"初始化环境: {baseline_path}")
-    env = create_work3_single_env_runtime(baseline_path, num_envs=num_envs)
+    env = create_work3_single_env_runtime(
+        baseline_path,
+        num_envs=num_envs,
+        worker_torch_num_threads=env_num_threads,
+    )
 
     # 2. 初始化Actor与共享图表征上的时间预测头
     actor_critic = ActorCriticWork3(
@@ -594,6 +620,8 @@ def run_training(
         "max_rollout_iterations": num_iterations,
         "rollout_steps": int(steps_per_iter),
         "num_envs": int(num_envs),
+        "main_num_threads": int(main_num_threads),
+        "env_num_threads": int(env_num_threads),
         "ppo_epochs": int(ppo_epochs),
         "batch_size": int(batch_size),
         "lr": float(lr),
@@ -609,6 +637,9 @@ def run_training(
         "successful_batch_target": successful_batch_target,
         "max_decisions": max_decisions,
         "max_wall_seconds": max_wall_seconds,
+        "deterministic": deterministic,
+        "settle_timeout_seconds": settle_timeout_seconds,
+        "resolved_config_sha256": resolved_config_sha256,
         "baseline_path": str(Path(baseline_path)),
         "scenarios_path": str(Path(scenarios_path)),
         "scenario_split_path": str(Path(scenario_split_path)),
@@ -934,6 +965,7 @@ def run_training(
             step_batch = env.step_all(
                 actions=actions,
                 max_total_steps=max_decisions,
+                settle_timeout_seconds=settle_timeout_seconds,
                 wall_clock_deadline=deadline,
             )
             if step_batch.worker_errors or step_batch.interrupted_worker_ids:
@@ -1273,6 +1305,7 @@ def run_training(
         mark_budget_truncated(stop_reason)
     environment_worker_pids = list(env.worker_pids)
     environment_worker_cuda_initialized = list(env.worker_cuda_initialized)
+    environment_worker_torch_num_threads = list(env.worker_torch_num_threads)
     worker_step_counts = list(env.worker_step_counts)
     trajectory_audit = env.close()
 
@@ -1328,6 +1361,8 @@ def run_training(
         "source_sha": source_sha,
         "source_tree_dirty": source_tree_dirty,
         "training_config": config,
+        "resolved_runtime_config_yaml": resolved_config_yaml,
+        "resolved_runtime_config_sha256": resolved_config_sha256,
         "data_fingerprint": data_fingerprint,
         "event_plan": event_plan,
         "event_plan_fingerprint": data_fingerprint["event_plan_sha256"],
@@ -1339,6 +1374,7 @@ def run_training(
         "device": str(torch_device),
         "environment_worker_pids": environment_worker_pids,
         "environment_worker_cuda_initialized": environment_worker_cuda_initialized,
+        "environment_worker_torch_num_threads": environment_worker_torch_num_threads,
         "environment_worker_start_method": "spawn",
         "worker_step_counts": worker_step_counts,
         "trajectory_audit": trajectory_audit,
@@ -1407,6 +1443,8 @@ def run_training(
         "source_sha": source_sha,
         "source_tree_dirty": source_tree_dirty,
         "training_config": config,
+        "resolved_runtime_config_yaml": resolved_config_yaml,
+        "resolved_runtime_config_sha256": resolved_config_sha256,
         "data_fingerprint": data_fingerprint,
         "event_plan_fingerprint": data_fingerprint["event_plan_sha256"],
         "termination_reason": stop_reason,
@@ -1445,68 +1483,139 @@ def run_training(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="工作三烟测/训练试点入口（不生成正式实验结论）")
-    parser.add_argument("--mode", choices=("smoke", "pilot"), default="smoke")
-    parser.add_argument("--seed", type=int, default=42, help="训练初始化及episode计划种子")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=ROOT_DIR / "conf" / "work3" / "train_pilot.yaml",
+        help="工作三OmegaConf YAML配置",
+    )
+    parser.add_argument(
+        "--set",
+        dest="config_overrides",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="OmegaConf点式覆盖，可重复指定",
+    )
+    parser.add_argument("--mode", choices=("smoke", "pilot"), default=None)
+    parser.add_argument("--seed", type=int, default=None, help="训练初始化及episode计划种子")
     parser.add_argument(
         "--iterations",
         type=int,
         default=None,
         help="可选rollout段数上限；smoke固定为1，pilot默认由成功目标/预算终止",
     )
-    parser.add_argument("--steps", type=int, default=32, help="每个rollout段的最大决策步数")
-    parser.add_argument("--num-envs", type=int, default=1, help="spawn CPU环境worker数")
-    parser.add_argument("--epochs", type=int, default=1, help="PPO重放轮数；smoke固定为1")
-    parser.add_argument("--batch-size", type=int, default=64, help="Mini-batch 大小 (默认 64)")
+    parser.add_argument("--steps", type=int, default=None, help="每个rollout段的最大决策步数")
+    parser.add_argument("--num-envs", type=int, default=None, help="spawn CPU环境worker数")
+    parser.add_argument("--epochs", type=int, default=None, help="PPO重放轮数")
+    parser.add_argument("--batch-size", type=int, default=None, help="PPO mini-batch大小")
     parser.add_argument("--successful-batch-target", type=int, default=None)
     parser.add_argument("--max-decisions", type=int, default=None)
     parser.add_argument("--max-wall-seconds", type=float, default=None)
-    parser.add_argument(
-        "--time-auxiliary-epochs",
-        type=int,
-        default=1,
-        help="每次PPO采样段中已补真实标签的独立监督轮数 (默认 1)",
-    )
-    parser.add_argument(
-        "--time-auxiliary-batch-size",
-        type=int,
-        default=64,
-        help="时间辅助监督 mini-batch 大小 (默认 64)",
-    )
-    parser.add_argument("--lr", type=float, default=3e-4, help="学习率 (默认 3e-4)")
-    parser.add_argument("--method", choices=("C", "D"), default="D", help="待验证的方法配置，不代表正式结果")
-    parser.add_argument("--baseline", type=Path, default=Path("data/work3/real_283_k10_baseline.json"))
-    parser.add_argument("--scenarios", type=Path, default=Path("data/work3/scenarios_9class.json"))
-    parser.add_argument("--scenario-split", type=Path, default=Path("data/work3/experiment_splits/train.json"))
-    parser.add_argument("--time-head-checkpoint", type=Path, default=Path("models/work3/checkpoints/time_head_best.pt"))
-    parser.add_argument("--device", type=str, default="cpu", help="设备 (cpu/cuda)")
-    parser.add_argument("--output", type=Path, default=Path("models/work3/checkpoints/method_d_model.pt"), help="模型权重检查点路径")
+    parser.add_argument("--time-auxiliary-epochs", type=int, default=None)
+    parser.add_argument("--time-auxiliary-batch-size", type=int, default=None)
+    parser.add_argument("--lr", type=float, default=None, help="学习率")
+    parser.add_argument("--method", choices=("C", "D"), default=None, help="C/D方法配置")
+    parser.add_argument("--baseline", type=Path, default=None)
+    parser.add_argument("--scenarios", type=Path, default=None)
+    parser.add_argument("--scenario-split", type=Path, default=None)
+    parser.add_argument("--time-head-checkpoint", type=Path, default=None)
+    parser.add_argument("--device", type=str, default=None, help="设备 (cpu/cuda)")
+    parser.add_argument("--main-num-threads", type=int, default=None)
+    parser.add_argument("--env-num-threads", type=int, default=None)
+    parser.add_argument("--settle-timeout-seconds", type=float, default=None)
+    parser.add_argument("--output", type=Path, default=None, help="模型权重检查点路径")
     parser.add_argument("--report", type=Path, default=None, help="运行报告路径；默认与检查点同名.run.json")
     parser.add_argument("--paired-report", type=Path, default=None, help="另一组C/D训练报告路径，用于核对事件、预算及实际命中")
     args = parser.parse_args()
 
+    runtime_config = load_work3_runtime_config(
+        args.config,
+        overrides=args.config_overrides,
+    )
+    cli_overrides = {
+        "runtime.run_mode": args.mode,
+        "runtime.seed": args.seed,
+        "runtime.num_envs": args.num_envs,
+        "runtime.successful_batch_target": args.successful_batch_target,
+        "runtime.total_env_steps": args.max_decisions,
+        "runtime.max_wall_seconds": args.max_wall_seconds,
+        "runtime.method_profile": args.method,
+        "runtime.device": args.device,
+        "runtime.main_num_threads": args.main_num_threads,
+        "runtime.env_num_threads": args.env_num_threads,
+        "runtime.settle_timeout_seconds": args.settle_timeout_seconds,
+        "paths.baseline": None if args.baseline is None else str(args.baseline),
+        "runtime.scenario_pool_path": None if args.scenarios is None else str(args.scenarios),
+        "runtime.scenario_split_path": None if args.scenario_split is None else str(args.scenario_split),
+        "paths.time_head_checkpoint": (
+            None if args.time_head_checkpoint is None else str(args.time_head_checkpoint)
+        ),
+        "ppo.steps_per_iter": args.steps,
+        "ppo.epochs": args.epochs,
+        "ppo.batch_size": args.batch_size,
+        "ppo.learning_rate": args.lr,
+        "ppo.time_auxiliary_epochs": args.time_auxiliary_epochs,
+        "ppo.time_auxiliary_batch_size": args.time_auxiliary_batch_size,
+    }
+    runtime_config = apply_work3_runtime_overrides(
+        runtime_config,
+        {key: value for key, value in cli_overrides.items() if value is not None},
+    )
+    resolved_yaml, config_sha256 = resolved_config_fingerprint(runtime_config)
+    if runtime_config.runtime.amp_dtype != "fp32":
+        raise ValueError("当前训练入口尚未接入AMP；请先使用runtime.amp_dtype=fp32")
+
+    run_mode = str(runtime_config.runtime.run_mode)
+    method_profile = str(runtime_config.runtime.method_profile)
+    steps_per_iter = int(runtime_config.ppo.steps_per_iter)
+    max_decisions = int(runtime_config.runtime.total_env_steps)
+    if run_mode == "smoke":
+        max_decisions = min(max_decisions, steps_per_iter)
+    output_path = args.output or (
+        Path(runtime_config.paths.checkpoint_dir)
+        / f"{run_mode}_method_{method_profile.lower()}_weights.pt"
+    )
+    report_path = args.report or (
+        Path(runtime_config.paths.report_dir)
+        / f"{run_mode}_method_{method_profile.lower()}.run.json"
+    )
     run_training(
         num_iterations=args.iterations,
-        steps_per_iter=args.steps,
-        num_envs=args.num_envs,
-        ppo_epochs=args.epochs,
-        batch_size=args.batch_size,
-        time_auxiliary_epochs=args.time_auxiliary_epochs,
-        time_auxiliary_batch_size=args.time_auxiliary_batch_size,
-        lr=args.lr,
-        seed=args.seed,
-        run_mode=args.mode,
-        successful_batch_target=args.successful_batch_target,
-        max_decisions=args.max_decisions,
-        max_wall_seconds=args.max_wall_seconds,
-        method_variant=args.method,
-        baseline_path=args.baseline,
-        scenarios_path=args.scenarios,
-        scenario_split_path=args.scenario_split,
-        time_head_ckpt=args.time_head_checkpoint,
-        device=args.device,
-        output_ckpt=args.output,
-        report_path=args.report,
+        steps_per_iter=steps_per_iter,
+        num_envs=int(runtime_config.runtime.num_envs),
+        env_num_threads=int(runtime_config.runtime.env_num_threads),
+        ppo_epochs=int(runtime_config.ppo.epochs),
+        batch_size=int(runtime_config.ppo.batch_size),
+        time_auxiliary_epochs=int(runtime_config.ppo.time_auxiliary_epochs),
+        time_auxiliary_batch_size=int(runtime_config.ppo.time_auxiliary_batch_size),
+        lr=float(runtime_config.ppo.learning_rate),
+        clip_eps=float(runtime_config.ppo.clip_epsilon),
+        vf_coef=float(runtime_config.ppo.value_coefficient),
+        ent_coef=float(runtime_config.ppo.entropy_coefficient),
+        gamma=float(runtime_config.ppo.gamma),
+        gae_lambda=float(runtime_config.ppo.gae_lambda),
+        beta_shaping=float(runtime_config.ppo.shaping_coefficient),
+        time_loss_coef=float(runtime_config.ppo.time_loss_coefficient),
+        seed=int(runtime_config.runtime.seed),
+        deterministic=bool(runtime_config.runtime.deterministic),
+        main_num_threads=int(runtime_config.runtime.main_num_threads),
+        settle_timeout_seconds=float(runtime_config.runtime.settle_timeout_seconds),
+        run_mode=run_mode,
+        successful_batch_target=runtime_config.runtime.successful_batch_target,
+        max_decisions=max_decisions,
+        max_wall_seconds=float(runtime_config.runtime.max_wall_seconds),
+        method_variant=method_profile,
+        baseline_path=Path(runtime_config.paths.baseline),
+        scenarios_path=Path(runtime_config.runtime.scenario_pool_path),
+        scenario_split_path=Path(runtime_config.runtime.scenario_split_path),
+        time_head_ckpt=Path(runtime_config.paths.time_head_checkpoint),
+        device=str(runtime_config.runtime.device),
+        output_ckpt=output_path,
+        report_path=report_path,
         paired_report_path=args.paired_report,
+        resolved_config_yaml=resolved_yaml,
+        resolved_config_sha256=config_sha256,
     )
 
 

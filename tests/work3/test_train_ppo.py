@@ -116,6 +116,33 @@ def test_training_records_forced_advance_from_spawn_worker(
     assert result["lightning_fit_calls"] == 1
 
 
+def test_resolved_yaml_and_fingerprint_are_saved_in_report_and_checkpoint(
+    tmp_path: Path,
+) -> None:
+    import hashlib
+
+    resolved_yaml = "runtime:\n  seed: 31\n  method_profile: C\n"
+    fingerprint = hashlib.sha256(resolved_yaml.encode("utf-8")).hexdigest()
+    result = run_training(
+        run_mode="smoke",
+        num_iterations=1,
+        steps_per_iter=1,
+        max_decisions=1,
+        ppo_epochs=1,
+        batch_size=1,
+        method_variant="C",
+        output_ckpt=tmp_path / "resolved_config.pt",
+        resolved_config_yaml=resolved_yaml,
+        resolved_config_sha256=fingerprint,
+    )
+
+    assert result["resolved_runtime_config_yaml"] == resolved_yaml
+    assert result["resolved_runtime_config_sha256"] == fingerprint
+    checkpoint = torch.load(result["checkpoint_path"], map_location="cpu", weights_only=False)
+    assert checkpoint["run_metadata"]["resolved_runtime_config_yaml"] == resolved_yaml
+    assert checkpoint["run_metadata"]["resolved_runtime_config_sha256"] == fingerprint
+
+
 def test_training_entry_uses_two_spawn_workers_with_aggregate_budget(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

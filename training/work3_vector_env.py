@@ -197,11 +197,15 @@ def _scenario_status(
     }
 
 
-def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
+def _worker_main(
+    connection: Connection,
+    env_kwargs: dict[str, Any],
+    torch_num_threads: int,
+) -> None:
     """spawn入口：只初始化CPU环境与图构造器，不构造Actor或载入权重。"""
     env: AirLineEnvWork3 | None = None
     try:
-        torch.set_num_threads(1)
+        torch.set_num_threads(torch_num_threads)
         normalized_kwargs = {
             key: Path(value) if key.endswith("_path") else value
             for key, value in env_kwargs.items()
@@ -273,6 +277,7 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
                 "result": {
                     "pid": mp.current_process().pid,
                     "cuda_initialized": torch.cuda.is_initialized(),
+                    "torch_num_threads": torch.get_num_threads(),
                 },
             }
         )
@@ -418,12 +423,15 @@ class Work3VectorEnv:
         *,
         env_kwargs: dict[str, Any] | None = None,
         num_envs: int = 1,
+        worker_torch_num_threads: int = 1,
         start_method: str = "spawn",
         startup_timeout_seconds: float = 60.0,
         request_timeout_seconds: float = 300.0,
     ) -> None:
         if type(num_envs) is not int or num_envs < 1:
             raise ValueError("num_envs必须为正整数")
+        if type(worker_torch_num_threads) is not int or worker_torch_num_threads < 1:
+            raise ValueError("worker_torch_num_threads必须为正整数")
         if start_method != "spawn":
             raise ValueError("工作三环境worker必须使用spawn启动")
         if startup_timeout_seconds <= 0 or request_timeout_seconds <= 0:
@@ -448,7 +456,11 @@ class Work3VectorEnv:
                 parent_connection, child_connection = context.Pipe(duplex=True)
                 process = context.Process(
                     target=_worker_main,
-                    args=(child_connection, dict(env_kwargs or {})),
+                    args=(
+                        child_connection,
+                        dict(env_kwargs or {}),
+                        worker_torch_num_threads,
+                    ),
                     name=f"work3-env-{worker_id}",
                 )
                 try:
@@ -493,6 +505,10 @@ class Work3VectorEnv:
     @property
     def worker_cuda_initialized(self) -> tuple[bool, ...]:
         return tuple(bool(item["cuda_initialized"]) for item in self._worker_metadata)
+
+    @property
+    def worker_torch_num_threads(self) -> tuple[int, ...]:
+        return tuple(int(item["torch_num_threads"]) for item in self._worker_metadata)
 
     @property
     def workers_alive(self) -> tuple[bool, ...]:

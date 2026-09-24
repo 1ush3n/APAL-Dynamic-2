@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import math
 import random
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -45,6 +45,8 @@ _REQUIRED_CONFIG_KEYS = (
     "ppo.gae_lambda",
     "ppo.shaping_coefficient",
     "ppo.time_loss_coefficient",
+    "ppo.time_auxiliary_epochs",
+    "ppo.time_auxiliary_batch_size",
 )
 
 
@@ -128,6 +130,8 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
     _positive_int(config, "ppo.steps_per_iter")
     _positive_int(config, "ppo.epochs", allow_zero=True)
     _positive_int(config, "ppo.batch_size")
+    _positive_int(config, "ppo.time_auxiliary_epochs", allow_zero=True)
+    _positive_int(config, "ppo.time_auxiliary_batch_size")
     for key in (
         "ppo.learning_rate",
         "ppo.clip_epsilon",
@@ -161,6 +165,20 @@ def load_work3_runtime_config(
     config = OmegaConf.merge(base_config, override_config)
     validate_work3_runtime_config(config)
     return config
+
+
+def apply_work3_runtime_overrides(
+    config: DictConfig,
+    overrides: Mapping[str, object],
+) -> DictConfig:
+    """将显式CLI值写入配置副本并重新执行完整边界校验。"""
+    if not isinstance(config, DictConfig):
+        raise TypeError("工作三运行配置必须是OmegaConf DictConfig")
+    resolved = OmegaConf.create(OmegaConf.to_container(config, resolve=True))
+    for key, value in overrides.items():
+        OmegaConf.update(resolved, key, value, merge=False)
+    validate_work3_runtime_config(resolved)
+    return resolved
 
 
 def resolved_config_fingerprint(config: DictConfig) -> tuple[str, str]:
