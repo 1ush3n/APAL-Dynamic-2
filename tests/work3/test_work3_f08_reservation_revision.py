@@ -356,7 +356,74 @@ def test_postpone_preserves_last_published_team_and_position_as_pending_referenc
     assert env.cost_postpone > 0.0
 
 
-def test_team_member_order_is_not_a_formal_revision() -> None:
+@pytest.mark.parametrize(
+    ("replacement_count", "expected_replacement"),
+    [(1, 1.0 / 3.0), (3, 1.0)],
+)
+def test_three_person_team_replacement_ratio_updates_revision_and_final_cost(
+    replacement_count: int, expected_replacement: float
+) -> None:
+    env = _new_env()
+    task = env.state.tasks["0_34"]
+    env.state.aircraft[task.aircraft_id].current_station = task.current_station
+    for predecessor_id in task.predecessors:
+        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
+        predecessor.status = TaskStatus.COMPLETED
+        predecessor.actual_end = 0.0
+    task.status = TaskStatus.READY
+    task.skill = -1  # 隔离团队替换比例账本；技能合法性由D组独立验收。
+
+    workers = env.state.station_worker_bindings[task.current_station]
+    team_a = tuple(workers[: task.demand])
+    team_b = next(
+        team
+        for team in _legal_teams(env, task)
+        if len(set(team_a) & set(team)) == task.demand - replacement_count
+    )
+    assert task.demand == 3
+    assert len(env.state.tasks) == 2830
+    task.base_team = team_a
+    task.in_station_offset = 20.0
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team_a),
+        "position": 20.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+    scale = 1.0 / 2830.0
+    team_cost_before = env.cost_team
+    revision_cost_before = env.cost_revision
+
+    _reserve_at_future_time(env, task, team_a)
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team_b,
+            "align": 1,
+        }
+    )
+
+    assert len(task.revision_history) == 1
+    assert task.revision_history[0]["team_change"] == pytest.approx(
+        expected_replacement
+    )
+    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+
+    assert task.status == TaskStatus.RUNNING
+    assert env.cost_team - team_cost_before == pytest.approx(
+        env.weights.w_w * expected_replacement * scale
+    )
+    assert env.cost_revision - revision_cost_before == pytest.approx(
+        env.weights.w_w * expected_replacement * scale
+    )
+    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
+    assert breakdown.d_team == pytest.approx(expected_replacement * scale)
+    assert breakdown.j_revision == pytest.approx(env.cost_revision)
+    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
+
+
+def test_team_member_order_is_not_a_formal_revision_or_team_deviation() -> None:
     env = _new_env()
     task = next(
         task
@@ -364,9 +431,17 @@ def test_team_member_order_is_not_a_formal_revision() -> None:
         if task.demand >= 2 and _legal_teams(env, task)
     )
     team = _legal_teams(env, task)[0]
+    task.base_team = tuple(team)
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team),
+        "position": 20.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
     _reserve_at_future_time(env, task, team)
     history_size = len(task.revision_history)
     revision_cost_before = env.cost_revision
+    team_cost_before = env.cost_team
 
     env.step(
         {
@@ -379,6 +454,11 @@ def test_team_member_order_is_not_a_formal_revision() -> None:
 
     assert len(task.revision_history) == history_size
     assert env.cost_revision == pytest.approx(revision_cost_before)
+    assert task.status == TaskStatus.RUNNING
+    assert set(task.assigned_team) == set(team)
+    assert env.cost_team == pytest.approx(team_cost_before)
+    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
+    assert breakdown.d_team == pytest.approx(0.0)
 
 
 def test_exact_baseline_publication_has_no_phantom_time_revision() -> None:
