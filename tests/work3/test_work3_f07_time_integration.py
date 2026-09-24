@@ -12,9 +12,10 @@ from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from models.work3.potential_shaping import PotentialRewardShaper
-from models.work3.ppo_buffer import PendingTimeLabelCache
+from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
 from models.work3.ppo_trainer import PPOTrainerWork3
 from models.work3.time_head import TimeResidualHead
+from models.work3.action_fusion import compute_time_urgency_vector
 from scripts.work3.train_ppo_work3 import compute_online_time_inputs
 
 
@@ -68,6 +69,7 @@ def test_pending_time_labels_survive_rollout_buffer_boundary() -> None:
     cache.add(
         episode_id=3,
         cycle_id=2,
+        decision_id=0,
         state_feat=torch.ones(32),
         graph_snapshot="graph-snapshot",
         estimated_cmax=10.0,
@@ -91,7 +93,183 @@ def test_pending_time_labels_survive_rollout_buffer_boundary() -> None:
     assert batch["graph_snapshots"] == ["graph-snapshot"]
     assert batch["target_residuals"].tolist() == pytest.approx([1.0])
     assert batch["predictor_versions"] == [7]
+    assert batch["decision_ids"] == [0]
     assert cache.pending_count == 0
+
+
+def test_all_decision_states_receive_their_own_cycle_label_without_episode_mixing() -> None:
+    cache = PendingTimeLabelCache()
+    snapshots = [
+        {"feature": torch.tensor([float(index)])}
+        for index in range(4)
+    ]
+    for index, estimated_cmax in enumerate((12.0, 15.0, 18.0)):
+        cache.add(
+            episode_id=3,
+            cycle_id=2,
+            decision_id=index,
+            state_feat=torch.full((32,), float(index)),
+            graph_snapshot=snapshots[index],
+            estimated_cmax=estimated_cmax,
+            current_time=float(index),
+            h0=10.0,
+            predictor_version=7,
+        )
+        snapshots[index]["feature"].fill_(-1.0)
+    cache.add(
+        episode_id=4,
+        cycle_id=2,
+        decision_id=3,
+        state_feat=torch.full((32,), 3.0),
+        graph_snapshot=snapshots[3],
+        estimated_cmax=8.0,
+        current_time=4.0,
+        h0=10.0,
+        predictor_version=8,
+    )
+    snapshots[3]["feature"].fill_(-1.0)
+
+    assert cache.pending_count == 4
+    assert cache.drain_ready() is None
+    assert cache.attach_transfer(
+        episode_id=3,
+        cycle_id=2,
+        actual_transfer_time=20.0,
+    )
+    assert cache.attach_transfer(
+        episode_id=4,
+        cycle_id=2,
+        actual_transfer_time=25.0,
+    )
+    batch = cache.drain_ready()
+
+    assert batch is not None
+    assert batch["episode_ids"] == [3, 3, 3, 4]
+    assert batch["cycle_ids"] == [2, 2, 2, 2]
+    assert batch["decision_ids"] == [0, 1, 2, 3]
+    assert batch["target_residuals"].tolist() == pytest.approx([0.8, 0.5, 0.2, 1.7])
+    assert [float(graph["feature"][0]) for graph in batch["graph_snapshots"]] == [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+    ]
+
+
+def test_discard_episode_drops_only_unlabelled_samples() -> None:
+    cache = PendingTimeLabelCache()
+    for decision_id, cycle_id in enumerate((1, 2)):
+        cache.add(
+            episode_id=8,
+            cycle_id=cycle_id,
+            decision_id=decision_id,
+            state_feat=torch.zeros(32),
+            graph_snapshot=f"graph-{cycle_id}",
+            estimated_cmax=10.0,
+            current_time=0.0,
+            h0=10.0,
+            predictor_version=1,
+        )
+    cache.attach_transfer(episode_id=8, cycle_id=1, actual_transfer_time=12.0)
+    cache.discard_episode(8)
+
+    assert cache.pending_count == 0
+    batch = cache.drain_ready()
+    assert batch is not None
+    assert batch["decision_ids"] == [0]
+    assert batch["target_residuals"].tolist() == pytest.approx([0.2])
+
+
+def test_pending_cache_copies_pyg_graph_snapshot(env: AirLineEnvWork3) -> None:
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
+    graph = actor.build_graph_snapshot(env)
+    original_task_feature = graph["task"].x[0, 0].clone()
+    cache = PendingTimeLabelCache()
+    cache.add(
+        episode_id=1,
+        cycle_id=1,
+        decision_id=0,
+        state_feat=torch.zeros(32),
+        graph_snapshot=graph,
+        estimated_cmax=10.0,
+        current_time=0.0,
+        h0=10.0,
+        predictor_version=1,
+    )
+    graph["task"].x[0, 0] = original_task_feature + 1.0
+    cache.attach_transfer(episode_id=1, cycle_id=1, actual_transfer_time=10.0)
+
+    batch = cache.drain_ready()
+    assert batch is not None
+    stored_graph = batch["graph_snapshots"][0]
+    assert stored_graph is not graph
+    assert torch.equal(stored_graph["task"].x[0, 0], original_task_feature)
+
+
+def test_auxiliary_supervision_calls_do_not_scale_with_ppo_batch_size(
+    env: AirLineEnvWork3,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    call_counts: list[int] = []
+    cmax = compute_cycle_heuristic_cmax(env.state)
+    state_feat = extract_compact_state_features(env.state, cmax)
+    urgency = compute_time_urgency_vector(
+        estimated_r=max(0.0, cmax - float(env.state.current_time)),
+        current_time=env.state.current_time,
+        last_transfer_time=env.state.last_transfer_time,
+        h0=env.state.h0,
+    )
+
+    for ppo_batch_size in (1, 4):
+        actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
+        head = TimeResidualHead(in_dim=16, hidden_dim=16)
+        trainer = PPOTrainerWork3(actor_critic=actor, time_head=head, time_loss_coef=1.0)
+        action, log_prob, value, record = actor.select_action(
+            env, state_feat, urgency, deterministic=True
+        )
+        buffer = RolloutBufferWork3(normalize_advantages=False)
+        for index in range(4):
+            buffer.add(PPOTransition(
+                state_feat=state_feat,
+                time_urgency=urgency,
+                sample_record=record,
+                reward=float(index),
+                raw_reward=float(index),
+                value=value,
+                log_prob=log_prob,
+                action_dict=action,
+                terminated=index == 3,
+            ))
+        buffer.finish_trajectory()
+        auxiliary_batch = {
+            "state_feats": torch.stack([state_feat] * 3),
+            "graph_snapshots": [record["graph_snapshot"]] * 3,
+            "target_residuals": torch.tensor([0.8, 0.5, 0.2]),
+            "episode_ids": [1, 1, 1],
+            "cycle_ids": [1, 1, 1],
+            "decision_ids": [10, 11, 12],
+        }
+        count = 0
+
+        def counted_loss(_: dict[str, object]) -> torch.Tensor:
+            nonlocal count
+            count += 1
+            return head.reg_fc[-1].bias.square().mean()
+
+        monkeypatch.setattr(trainer, "compute_time_auxiliary_loss", counted_loss)
+        metrics = trainer.train_step(
+            buffer,
+            ppo_epochs=1,
+            batch_size=ppo_batch_size,
+            time_auxiliary_batch=auxiliary_batch,
+            time_auxiliary_epochs=1,
+            time_auxiliary_batch_size=2,
+        )
+        assert metrics["time_label_count"] == 3
+        assert metrics["time_supervision_steps"] == 2
+        call_counts.append(count)
+
+    assert call_counts == [2, 2]
 
 
 def test_shaping_snapshot_freezes_graph_and_time_head_until_update(env: AirLineEnvWork3) -> None:

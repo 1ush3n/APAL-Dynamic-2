@@ -146,6 +146,8 @@ def run_training(
     gae_lambda: float = 0.95,
     beta_shaping: float = 1.0,
     time_loss_coef: float = 1.0,
+    time_auxiliary_epochs: int = 1,
+    time_auxiliary_batch_size: int = 64,
     seed: int = 42,
     method_variant: str = "D",
     baseline_path: str = "data/work3/real_283_k10_baseline.json",
@@ -365,6 +367,7 @@ def run_training(
                 pending_time_labels.add(
                     episode_id=episode_id,
                     cycle_id=cycle_id,
+                    decision_id=total_env_steps,
                     state_feat=s_feat,
                     graph_snapshot=rec.get("graph_snapshot", graph_snapshot),
                     estimated_cmax=cmax_est,
@@ -379,6 +382,7 @@ def run_training(
             obs, raw_reward, terminated, truncated, info = env.step(act)
             done = terminated or truncated
             last_terminated = bool(terminated)
+            discard_unlabelled_time_samples = False
             if terminated:
                 episode_done = True
                 episode_termination_reason = str(
@@ -393,7 +397,16 @@ def run_training(
                     current_scenario_log["success"] = episode_success
                     current_scenario_log["termination_reason"] = episode_termination_reason
                 if not env._check_terminated():
-                    pending_time_labels.discard_episode(episode_id)
+                    discard_unlabelled_time_samples = True
+
+            elif truncated:
+                episode_done = True
+                episode_termination_reason = "truncated"
+                discard_unlabelled_time_samples = True
+                if current_scenario_log is not None:
+                    current_scenario_log["completed"] = False
+                    current_scenario_log["success"] = False
+                    current_scenario_log["termination_reason"] = "truncated"
 
             for offset, actual_transfer_time in enumerate(
                 env.state.transfer_history[transfer_count_before:]
@@ -403,6 +416,8 @@ def run_training(
                     cycle_id=cycle_id + offset,
                     actual_transfer_time=float(actual_transfer_time),
                 )
+            if discard_unlabelled_time_samples:
+                pending_time_labels.discard_episode(episode_id)
 
             # 计算下一状态势 Φ(s_{t+1}) 与塑形奖励
             if terminated:
@@ -517,6 +532,8 @@ def run_training(
                 ppo_epochs=ppo_epochs,
                 batch_size=batch_size,
                 time_auxiliary_batch=time_auxiliary_batch,
+                time_auxiliary_epochs=time_auxiliary_epochs,
+                time_auxiliary_batch_size=time_auxiliary_batch_size,
             )
         else:
             metrics = {}
@@ -536,6 +553,10 @@ def run_training(
             "clip_fraction": metrics.get("clip_fraction", 0.0),
             "grad_norm": metrics.get("grad_norm", 0.0),
             "time_loss": metrics.get("time_loss", 0.0),
+            "time_label_count": metrics.get("time_label_count", 0),
+            "time_supervision_steps": metrics.get("time_supervision_steps", 0),
+            "time_supervision_epochs": metrics.get("time_supervision_epochs", 0),
+            "ppo_updates": metrics.get("num_updates", 0),
             "mean_raw_reward": mean_raw_r,
             "mean_shaped_reward": mean_shaped_r,
             "elapsed_seconds": iter_elapsed,
@@ -583,6 +604,18 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=256, help="每轮采集步数 (默认 256)")
     parser.add_argument("--epochs", type=int, default=4, help="PPO 重放轮数 (默认 4)")
     parser.add_argument("--batch-size", type=int, default=64, help="Mini-batch 大小 (默认 64)")
+    parser.add_argument(
+        "--time-auxiliary-epochs",
+        type=int,
+        default=1,
+        help="每次PPO采样段中已补真实标签的独立监督轮数 (默认 1)",
+    )
+    parser.add_argument(
+        "--time-auxiliary-batch-size",
+        type=int,
+        default=64,
+        help="时间辅助监督 mini-batch 大小 (默认 64)",
+    )
     parser.add_argument("--lr", type=float, default=3e-4, help="学习率 (默认 3e-4)")
     parser.add_argument("--method", choices=("C", "D"), default="D", help="正式方法分组")
     parser.add_argument("--scenarios", type=str, default="data/work3/scenarios_9class.json")
@@ -596,6 +629,8 @@ def main() -> None:
         steps_per_iter=args.steps,
         ppo_epochs=args.epochs,
         batch_size=args.batch_size,
+        time_auxiliary_epochs=args.time_auxiliary_epochs,
+        time_auxiliary_batch_size=args.time_auxiliary_batch_size,
         lr=args.lr,
         method_variant=args.method,
         scenarios_path=args.scenarios,

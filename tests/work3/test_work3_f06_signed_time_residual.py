@@ -117,6 +117,9 @@ def test_time_auxiliary_loss_reaches_shared_graph_encoder(env: AirLineEnvWork3) 
         "time_urgencies": urgency.unsqueeze(0),
         "graph_snapshots": [graph_snapshot],
         "target_residuals": torch.tensor([-0.25]),
+        "episode_ids": [1],
+        "cycle_ids": [1],
+        "decision_ids": [1],
     }
 
     trainer.optimizer.zero_grad()
@@ -130,8 +133,10 @@ def test_time_auxiliary_loss_reaches_shared_graph_encoder(env: AirLineEnvWork3) 
     assert time_parameters and any(p.grad is not None for p in time_parameters)
 
 
-def test_ppo_total_loss_reports_time_auxiliary_term(env: AirLineEnvWork3) -> None:
-    """PPO更新应把可选时间辅助损失纳入总损失统计。"""
+def test_time_auxiliary_update_is_reported_separately_from_ppo_loss(
+    env: AirLineEnvWork3,
+) -> None:
+    """时间辅助监督独立更新，并报告标签数、监督步数和时间损失。"""
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
     time_head = TimeResidualHead(in_dim=16, hidden_dim=16)
     trainer = PPOTrainerWork3(
@@ -165,6 +170,11 @@ def test_ppo_total_loss_reports_time_auxiliary_term(env: AirLineEnvWork3) -> Non
             "state_feats": state_feat.unsqueeze(0),
             "graph_snapshots": [record["graph_snapshot"]],
             "target_residuals": torch.tensor([-0.25]),
+            "episode_ids": [1],
+            "cycle_ids": [1],
+            "decision_ids": [1],
         },
     )
     assert metrics["time_loss"] > 0.0
+    assert metrics["time_label_count"] == 1
+    assert metrics["time_supervision_steps"] == 1

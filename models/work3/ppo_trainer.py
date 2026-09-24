@@ -81,9 +81,16 @@ class PPOTrainerWork3:
         state_feats = batch["state_feats"].to(self.device)
         graph_snapshots = batch["graph_snapshots"]
         targets = batch["target_residuals"].to(self.device)
+        episode_ids = batch["episode_ids"]
+        cycle_ids = batch["cycle_ids"]
+        decision_ids = batch["decision_ids"]
         assert state_feats.ndim == 2
         assert len(graph_snapshots) == state_feats.size(0)
         assert targets.shape == (state_feats.size(0),)
+        assert len(episode_ids) == state_feats.size(0)
+        assert len(cycle_ids) == state_feats.size(0)
+        assert len(decision_ids) == state_feats.size(0)
+        assert len(set(decision_ids)) == len(decision_ids)
 
         shared_features = torch.stack([
             self.actor_critic.encode_shared_representation(
@@ -94,7 +101,13 @@ class PPOTrainerWork3:
         ])
         predictions = self.time_head(shared_features)
         assert predictions.shape == targets.shape
-        return F.smooth_l1_loss(predictions, targets, beta=0.01)
+        per_sample_loss = F.smooth_l1_loss(
+            predictions,
+            targets,
+            beta=0.01,
+            reduction="none",
+        )
+        return per_sample_loss.mean()
 
     def train_step(
         self,
@@ -102,6 +115,8 @@ class PPOTrainerWork3:
         ppo_epochs: int = 4,
         batch_size: int = 64,
         time_auxiliary_batch: dict[str, Any] | None = None,
+        time_auxiliary_epochs: int = 1,
+        time_auxiliary_batch_size: int = 64,
     ) -> dict[str, float]:
         """使用缓冲区的 Rollout 经验执行一轮多 Epoch PPO 更新。
 
@@ -124,8 +139,11 @@ class PPOTrainerWork3:
         total_kl = 0.0
         total_clip_frac = 0.0
         total_grad_norm = 0.0
-        total_time_loss = 0.0
         num_updates = 0
+        if time_auxiliary_epochs < 0:
+            raise ValueError("time_auxiliary_epochs不能为负数")
+        if time_auxiliary_batch_size <= 0:
+            raise ValueError("time_auxiliary_batch_size必须为正数")
 
         for epoch in range(ppo_epochs):
             for batch in buffer.get_batches(batch_size=batch_size, shuffle=True):
@@ -159,17 +177,11 @@ class PPOTrainerWork3:
                 entropy = entropies.mean()
                 entropy_loss = -entropy
 
-                if time_auxiliary_batch is not None:
-                    time_loss = self.compute_time_auxiliary_loss(time_auxiliary_batch)
-                else:
-                    time_loss = policy_loss.new_zeros(())
-
                 # 6. 综合损失
                 loss = (
                     policy_loss
                     + (self.vf_coef * value_loss)
                     + (self.ent_coef * entropy_loss)
-                    + (self.time_loss_coef * time_loss)
                 )
 
                 # 7. 反向传播与梯度裁剪
@@ -200,8 +212,61 @@ class PPOTrainerWork3:
                 total_kl += approx_kl
                 total_clip_frac += clip_frac
                 total_grad_norm += float(grad_norm.item() if isinstance(grad_norm, torch.Tensor) else grad_norm)
-                total_time_loss += float(time_loss.item())
                 num_updates += 1
+
+        time_label_count = 0
+        time_supervision_steps = 0
+        total_time_loss = 0.0
+        if time_auxiliary_batch is not None:
+            if self.time_head is None:
+                raise RuntimeError("收到时间标签批次，但训练器未配置时间头")
+            time_label_count = int(time_auxiliary_batch["target_residuals"].numel())
+            if time_label_count and self.time_loss_coef > 0.0:
+                graph_snapshots = time_auxiliary_batch["graph_snapshots"]
+                episode_ids = time_auxiliary_batch["episode_ids"]
+                cycle_ids = time_auxiliary_batch["cycle_ids"]
+                decision_ids = time_auxiliary_batch["decision_ids"]
+                if not (
+                    len(graph_snapshots)
+                    == len(episode_ids)
+                    == len(cycle_ids)
+                    == len(decision_ids)
+                    == time_label_count
+                ):
+                    raise ValueError("时间监督批次的图与标签元数据长度不一致")
+                if len(set(decision_ids)) != len(decision_ids):
+                    raise ValueError("时间监督批次含重复decision_id")
+
+                for _ in range(time_auxiliary_epochs):
+                    indices = torch.randperm(time_label_count)
+                    for start in range(0, time_label_count, time_auxiliary_batch_size):
+                        batch_indices = indices[
+                            start : start + time_auxiliary_batch_size
+                        ].tolist()
+                        auxiliary_minibatch = {
+                            "state_feats": time_auxiliary_batch["state_feats"][batch_indices],
+                            "graph_snapshots": [graph_snapshots[index] for index in batch_indices],
+                            "target_residuals": time_auxiliary_batch["target_residuals"][batch_indices],
+                            "episode_ids": [episode_ids[index] for index in batch_indices],
+                            "cycle_ids": [cycle_ids[index] for index in batch_indices],
+                            "decision_ids": [decision_ids[index] for index in batch_indices],
+                        }
+                        self.optimizer.zero_grad()
+                        time_loss = self.compute_time_auxiliary_loss(auxiliary_minibatch)
+                        auxiliary_loss = self.time_loss_coef * time_loss
+                        auxiliary_loss.backward()
+                        grad_norm = nn.utils.clip_grad_norm_(
+                            self.optimized_parameters,
+                            self.max_grad_norm,
+                        )
+                        if torch.isnan(grad_norm) or torch.isinf(grad_norm):
+                            logger.warning(
+                                "时间辅助梯度异常，跳过本辅助 mini-batch 更新！"
+                            )
+                            continue
+                        self.optimizer.step()
+                        total_time_loss += float(time_loss.item())
+                        time_supervision_steps += 1
 
         k = max(1, num_updates)
         return {
@@ -212,7 +277,12 @@ class PPOTrainerWork3:
             "approx_kl": total_kl / k,
             "clip_fraction": total_clip_frac / k,
             "grad_norm": total_grad_norm / k,
-            "time_loss": total_time_loss / k,
+            "time_loss": total_time_loss / max(1, time_supervision_steps),
+            "time_label_count": time_label_count,
+            "time_supervision_steps": time_supervision_steps,
+            "time_supervision_epochs": (
+                time_auxiliary_epochs if time_supervision_steps else 0
+            ),
             "num_updates": num_updates,
         }
 

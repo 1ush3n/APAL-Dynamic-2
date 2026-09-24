@@ -45,6 +45,7 @@ def test_ppo_training_pipeline_sanity() -> None:
             assert not math.isnan(log["value_loss"])
             assert not math.isnan(log["entropy"])
             assert not math.isnan(log["grad_norm"])
+            assert log["ppo_updates"] > 0
 
         # 检查点有效性检验
         assert out_ckpt.is_file()

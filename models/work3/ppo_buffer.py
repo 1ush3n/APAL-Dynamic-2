@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Any, Iterator
 
@@ -43,12 +44,13 @@ class PPOTransition:
     truncated: bool = False           # 采样截断，不代表生产终止
 
 
-@dataclass
+@dataclass(frozen=True)
 class PendingTimeLabel:
-    """等待真实转站时刻揭示的周期级时间监督样本。"""
+    """等待真实转站时刻揭示的决策级时间监督样本。"""
 
     episode_id: int
     cycle_id: int
+    decision_id: int
     state_feat: torch.Tensor
     graph_snapshot: Any
     estimated_cmax: float
@@ -62,18 +64,20 @@ class PendingTimeLabelCache:
     """跨PPO采样段保存周期样本，直到真实转站事件补齐标签。"""
 
     def __init__(self) -> None:
-        self._pending: dict[tuple[int, int], PendingTimeLabel] = {}
+        self._pending: dict[tuple[int, int], list[PendingTimeLabel]] = {}
         self._ready: list[dict[str, Any]] = []
+        self._last_decision_id = -1
 
     @property
     def pending_count(self) -> int:
-        return len(self._pending)
+        return sum(len(samples) for samples in self._pending.values())
 
     def add(
         self,
         *,
         episode_id: int,
         cycle_id: int,
+        decision_id: int,
         state_feat: torch.Tensor,
         graph_snapshot: Any,
         estimated_cmax: float,
@@ -82,21 +86,28 @@ class PendingTimeLabelCache:
         predictor_version: int,
         time_urgency: torch.Tensor | None = None,
     ) -> bool:
-        """登记周期首个状态；同一周期重复状态不扩大缓存。"""
+        """保存周期内每个决策状态；decision_id必须在缓存生命周期内递增。"""
         key = (int(episode_id), int(cycle_id))
-        if key in self._pending:
-            return False
-        self._pending[key] = PendingTimeLabel(
+        unique_decision_id = int(decision_id)
+        if unique_decision_id <= self._last_decision_id:
+            raise ValueError(
+                f"decision_id必须唯一递增：收到{unique_decision_id}，"
+                f"上一编号为{self._last_decision_id}"
+            )
+        sample = PendingTimeLabel(
             episode_id=key[0],
             cycle_id=key[1],
+            decision_id=unique_decision_id,
             state_feat=state_feat.detach().cpu().clone(),
-            graph_snapshot=graph_snapshot,
+            graph_snapshot=copy.deepcopy(graph_snapshot),
             estimated_cmax=float(estimated_cmax),
             current_time=float(current_time),
             h0=float(h0),
             predictor_version=int(predictor_version),
             time_urgency=None if time_urgency is None else time_urgency.detach().cpu().clone(),
         )
+        self._pending.setdefault(key, []).append(sample)
+        self._last_decision_id = unique_decision_id
         return True
 
     def attach_transfer(
@@ -108,23 +119,25 @@ class PendingTimeLabelCache:
     ) -> bool:
         """用真实转站时刻补齐一个周期的归一化残差。"""
         key = (int(episode_id), int(cycle_id))
-        sample = self._pending.pop(key, None)
-        if sample is None:
+        samples = self._pending.pop(key, None)
+        if not samples:
             return False
-        label_y = (float(actual_transfer_time) - sample.estimated_cmax) / sample.h0
-        self._ready.append({
-            "episode_id": sample.episode_id,
-            "cycle_id": sample.cycle_id,
-            "state_feat": sample.state_feat,
-            "graph_snapshot": sample.graph_snapshot,
-            "estimated_cmax": sample.estimated_cmax,
-            "current_time": sample.current_time,
-            "h0": sample.h0,
-            "predictor_version": sample.predictor_version,
-            "time_urgency": sample.time_urgency,
-            "actual_transfer_time": float(actual_transfer_time),
-            "target_residual": float(label_y),
-        })
+        for sample in samples:
+            label_y = (float(actual_transfer_time) - sample.estimated_cmax) / sample.h0
+            self._ready.append({
+                "episode_id": sample.episode_id,
+                "cycle_id": sample.cycle_id,
+                "decision_id": sample.decision_id,
+                "state_feat": sample.state_feat,
+                "graph_snapshot": sample.graph_snapshot,
+                "estimated_cmax": sample.estimated_cmax,
+                "current_time": sample.current_time,
+                "h0": sample.h0,
+                "predictor_version": sample.predictor_version,
+                "time_urgency": sample.time_urgency,
+                "actual_transfer_time": float(actual_transfer_time),
+                "target_residual": float(label_y),
+            })
         return True
 
     def drain_ready(self) -> dict[str, Any] | None:
@@ -136,6 +149,7 @@ class PendingTimeLabelCache:
         result: dict[str, Any] = {
             "episode_ids": [item["episode_id"] for item in ready],
             "cycle_ids": [item["cycle_id"] for item in ready],
+            "decision_ids": [item["decision_id"] for item in ready],
             "state_feats": torch.stack([item["state_feat"] for item in ready]),
             "graph_snapshots": [item["graph_snapshot"] for item in ready],
             "estimated_cmax": torch.tensor([item["estimated_cmax"] for item in ready]),
@@ -153,8 +167,8 @@ class PendingTimeLabelCache:
         """丢弃未发生真实转站的旧生产轨迹标签，避免跨episode污染。"""
         episode = int(episode_id)
         self._pending = {
-            key: value for key, value in self._pending.items()
-            if value.episode_id != episode
+            key: samples for key, samples in self._pending.items()
+            if key[0] != episode
         }
 
 
