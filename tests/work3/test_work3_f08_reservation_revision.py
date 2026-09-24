@@ -5,6 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from itertools import combinations
 from pathlib import Path
+from typing import Any
 
 import pytest
 import torch
@@ -65,6 +66,43 @@ def _reserve_at_future_time(env: AirLineEnvWork3, task, team: tuple[int, ...]) -
     )
     assert task.status == TaskStatus.RESERVED
     assert task.scheduled_start == pytest.approx(20.0)
+
+
+def _revision_attempt_snapshot(env: AirLineEnvWork3) -> tuple[Any, ...]:
+    return (
+        env.state.snapshot(),
+        {
+            station_id: frozenset(task_keys)
+            for station_id, task_keys in env._station_occupied_tasks.items()
+        },
+        tuple(
+            (
+                event.timestamp,
+                event.priority,
+                event.event_id,
+                event.event_type,
+                event.task_key,
+                event.generation,
+                deepcopy(event.payload),
+                event.is_cancelled,
+            )
+            for event in env.event_queue._heap
+        ),
+        env.event_queue._event_counter,
+        env.event_queue._current_time,
+        dict(env.event_queue._task_generations),
+        (
+            env.cumulative_cost,
+            env.cost_takt,
+            env.cost_time,
+            env.cost_team,
+            env.cost_postpone,
+            env.cost_revision,
+        ),
+        env.step_count,
+        tuple(env.step_rewards),
+        env._transfer_scheduled_for_cycle,
+    )
 
 
 def test_reserved_task_can_be_revised_and_old_start_event_is_invalidated() -> None:
@@ -738,23 +776,43 @@ def test_postponement_keeps_team_anchor_until_target_station_publication() -> No
 
 
 @pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.COMPLETED])
-def test_running_or_completed_task_cannot_be_revised(status: TaskStatus) -> None:
+def test_running_or_completed_task_revisions_are_rejected_without_side_effects(
+    status: TaskStatus,
+) -> None:
     env = _new_env()
     task = env.get_ready_tasks()[0]
+    team = _legal_teams(env, task)[0]
+    duration = env.duration_for_team(task, team)
+    task.assigned_team = list(team)
+    task.scheduled_start = 0.0
+    task.execution_duration = duration
+    task.start_cost_confirmed = True
+    task.actual_start = 0.0
+    for worker_id in team:
+        env.state.workers[worker_id].add_interval(
+            start=0.0,
+            end=duration,
+            task_key=task.task_key,
+        )
     task.status = status
     if status == TaskStatus.RUNNING:
-        task.actual_start = 0.0
+        env._station_occupied_tasks[task.current_station].add(task.task_key)
+        env.event_queue.push(
+            event_type=EventType.TASK_FINISH,
+            timestamp=duration,
+            task_key=task.task_key,
+            generation=task.generation,
+        )
     else:
-        task.actual_end = 1.0
+        task.actual_end = duration
 
     assert env.can_reserve(task) is False
     assert env.can_postpone(task) is False
-    with pytest.raises(ValueError):
-        env.step(
-            {
-                "task_key": task.task_key,
-                "branch": ActionBranch.STATION_EXECUTE,
-                "team": _legal_teams(env, task)[0],
-                "align": 0,
-            }
-        )
+    for branch in (ActionBranch.STATION_EXECUTE, ActionBranch.POSTPONE):
+        before = _revision_attempt_snapshot(env)
+        action = {"task_key": task.task_key, "branch": branch}
+        if branch == ActionBranch.STATION_EXECUTE:
+            action.update({"team": team, "align": 0})
+        with pytest.raises(ValueError):
+            env.step(action)
+        assert _revision_attempt_snapshot(env) == before
