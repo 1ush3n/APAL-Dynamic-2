@@ -231,14 +231,16 @@ def worker_completion_mask(
 - [x] 写测试：CUDA AMP可用时，采样与PPO重放用相同dtype/设备/autocast上下文并记录log-prob最大误差；CPU不允许伪报fp16/bf16训练，bf16按硬件能力检查。
 - [x] 写测试：PPO统计/比率/时间辅助损失保持FP32，AMP前向与梯度有限；既有运行时测试覆盖FP32奖励、费用、GAE路径。
 - [x] 写测试：Actor/Critic/时间头共享单一去重Lightning optimizer；FP16 GradScaler仅由Lightning精度插件持有，BF16无scaler。
-- [ ] 写测试：C profile缺时间头仍可严格加载Actor/Critic/图版本/配置元数据；D profile缺时间头、随机未训练头、错误图版本或错误特征版本均明确失败；兼容D加载时间头和塑形副本。
-- [ ] 写测试：检查点保存resolved YAML/哈希、代码提交、场景散列、图特征版本、C/D profile、Actor初始指纹、模型权重、Lightning优化器/精度状态和随机状态；不包含环境进度时标`non_exact`续训。
-- [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k 'amp or checkpoint or profile' -q`运行红灯用例。
+- [x] 写测试：C profile缺时间头仍可严格加载Actor/Critic/图版本/配置元数据；D profile未训练时间头、跨profile、错误配置哈希及缺失/格式错误指纹均明确失败；D加载有符号时间头并校验冻结塑形预测器快照。
+- [x] 写测试：检查点保存resolved YAML/哈希、代码提交、场景散列、图特征版本、C/D profile、Actor初始指纹、模型权重、Lightning优化器/精度状态和随机状态；不包含环境进度时标`non_exact`续训。
+- [x] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k 'amp or checkpoint or profile' -q`及新增指纹反例运行红灯用例；红灯实际分别记录在子阶段7B/7C执行记录。
 - [x] 用Lightning精度插件启用AMP；rollout前向显式使用`torch.amp.autocast`同一精度路径；统计/GAE等保持FP32。当前只记录本机RTX 4060 Laptop GPU上的通路测试，不对任意配置外推资源结论。
-- [ ] 实现profile严格载入并重跑新测试、`tests/work3/test_work3_f09_experiment_groups.py`、`tests/work3/test_work3_r08_training_reproducibility.py`和Lightning回归。
-- [ ] 更新任务表并提交；此时仍不启动完整批次试点。
+- [x] 实现profile严格载入并重跑新测试、`tests/work3/test_work3_f09_experiment_groups.py`、`tests/work3/test_work3_r08_training_reproducibility.py`和Lightning回归。
+- [x] 更新任务表并提交；此时仍不启动完整批次试点。
 
 **子阶段7B执行记录（2026-09-25）：** 先新增FP16/BF16采样重放、PPO FP32统计、Lightning scaler所有权、梯度更新计数和训练入口烟测。RED复现旧实现FP16在手动裁剪/有限值检查处中断，Lightning scaler尚未获得执行跳步和降scale的机会。修复后精度解析拒绝CPU AMP并核验BF16硬件支持；Actor图聚合显式匹配累加器dtype；rollout与Lightning按同一配置精度前向，PPO统计及时间监督损失维持FP32。梯度有限性检查和裁剪移入Lightning `on_before_optimizer_step`，由插件先反缩放；GradScaler仍仅由插件持有，日志区分step尝试、成功更新和AMP跳过。FP16/BF16插件测试`2 passed`，AMP采样/重放及D入口烟测`4 passed`，完整运行时`43 passed in 199.80s`，相关Actor/PPO/时间头/训练入口/势函数组合`24 passed, 1 skipped in 87.74s`；skip是缺正式检查点的既有条件项，未计为通过。`py_compile`和`git diff --check`通过。代码/测试提交`c315188`；未改用户的`training/lightning_module.py`，未启动完整批次试点。下一项为Task7C profile严格加载、检查点精度/续训状态与对应测试。
+
+**子阶段7C执行记录（2026-09-25）：** 新增正式检查点契约测试后，旧评测器先被复现为接受未训练D时间头、跨C/D profile和错误resolved-config哈希；复核加载边界时又补出三种非法运行指纹反例，旧实现均未拒绝（`3 failed`）：Actor初始指纹含非十六进制字符、事件计划哈希缺失、worker事件哈希格式错误。实现后，训练检查点保存profile、Actor初始指纹、来源提交、完整场景/事件计划指纹、成功批次与评测资格；同时保存Lightning优化器状态、精度和GradScaler状态、随机数状态、更新计数、总环境步数及worker事件计划位置。继续明确标记`resume_capability=non_exact`，不声称可恢复环境进度。D的在线时间头状态仅在真实转站标签存在且辅助优化器成功更新后标为`trained_online`；AMP跳过不计入成功更新。正式加载校验C/D profile与配置哈希、源/初始/数据/事件指纹、训练状态及AMP精度一致性；C允许无时间头，D必须有兼容的有符号时间头和冻结塑形预测器快照，错误检查点只有显式debug模式可退化为随机策略。绿灯：`test_work3_f09_experiment_groups.py`为`13 passed in 35.38s`；完整训练运行时`44 passed in 201.21s`；相关训练/检查点回归组合`42 passed in 214.47s`；`py_compile`与`git diff --check`通过。代码/测试提交`901796f`，任务表与本计划随后单独提交。未修改用户的`training/lightning_module.py`，未启动完整批次训练或C/D性能实验；下一项为Task8小预算端到端运行门槛。
 
 ### 任务8：端到端小预算运行门槛与试点协议冻结
 
