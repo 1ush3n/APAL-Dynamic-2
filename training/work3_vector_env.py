@@ -531,6 +531,11 @@ class Work3VectorEnv:
         """已派发step数；在途/中断请求也占用预算，防止超发。"""
         return self._budget_reserved_steps
 
+    @property
+    def step_settlement_requests(self) -> int:
+        """已发送并等待worker回执的step请求数，包含超时或中断请求。"""
+        return self._budget_reserved_steps
+
     def _next_request_id(self) -> int:
         self._request_id += 1
         return self._request_id

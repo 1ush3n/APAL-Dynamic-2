@@ -187,6 +187,7 @@ def test_training_entry_uses_two_spawn_workers_with_aggregate_budget(
     assert result["environment_worker_cuda_initialized"] == [False, False]
     assert result["worker_step_counts"] == [2, 1]
     assert sum(result["worker_step_counts"]) == 3
+    assert result["worker_step_settlement_requests"] == 3
     assert result["history"][0]["environment_steps"] == 3
     assert result["history"][0]["total_steps"] == 3
     assert result["history"][0]["lightning_optimization_steps"] > 0

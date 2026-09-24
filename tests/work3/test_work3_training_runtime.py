@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import json
 import os
 import random
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
@@ -1608,3 +1610,238 @@ def test_lightning_counts_only_successful_real_time_label_updates(tmp_path: Path
     assert module.last_metrics["time_supervision_optimizer_updates"] == 1
     assert module.time_supervision_optimizer_updates == 1
     assert module.optimization_steps == 2
+
+
+def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
+    tmp_path: Path,
+) -> None:
+    """有限C/D配对保留同一命中事件，并如实标记截断及缺失时间标签。"""
+    from scripts.work3.train_ppo_work3 import run_training
+
+    scenario = {
+        "scenario_id": "TASK8_FIXED_TAU_ZERO_HIT",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "delta": 1.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenarios_path = tmp_path / "task8_scenarios.json"
+    split_path = tmp_path / "task8_train.json"
+    scenarios_path.write_text(json.dumps([scenario]), encoding="utf-8")
+    split_path.write_text(json.dumps([scenario]), encoding="utf-8")
+
+    common = {
+        "run_mode": "pilot",
+        "successful_batch_target": 1,
+        "max_decisions": 1,
+        "num_iterations": 1,
+        "steps_per_iter": 1,
+        "ppo_epochs": 1,
+        "batch_size": 1,
+        "seed": 42,
+        "baseline_path": "data/work3/real_283_k10_baseline.json",
+        "scenarios_path": scenarios_path,
+        "scenario_split_path": split_path,
+        "device": "cpu",
+        "num_envs": 1,
+    }
+    c_report_path = tmp_path / "task8_c.json"
+    c_report = run_training(
+        **common,
+        method_variant="C",
+        output_ckpt=tmp_path / "task8_c.pt",
+        report_path=c_report_path,
+    )
+    d_report = run_training(
+        **common,
+        method_variant="D",
+        output_ckpt=tmp_path / "task8_d.pt",
+        report_path=tmp_path / "task8_d.json",
+        paired_report_path=c_report_path,
+    )
+
+    assert c_report["initial_actor_fingerprint"] == d_report["initial_actor_fingerprint"]
+    assert d_report["paired_run_check"]["same_event_plan"] is True
+    assert d_report["paired_run_check"]["same_interaction_budget"] is True
+    assert d_report["paired_run_check"]["same_actual_hit_pattern"] is True
+    for report in (c_report, d_report):
+        assert report["research_result_eligible"] is False
+        assert report["total_decisions"] == 1
+        assert report["scenario_log"][0]["disturbance_triggered"] is True
+        assert report["scenario_log"][0]["actual_hit_task_keys"] == ["0_15"]
+        assert report["scenario_log"][0]["actual_hit_count"] == 1
+        assert report["scenario_log"][0]["success"] is False
+        assert report["scenario_log"][0]["truncated"] is True
+        expected_snapshot_version = 0 if report["method_variant"] == "D" else None
+        assert report["scenario_log"][0]["potential_snapshot_version"] == expected_snapshot_version
+        assert report["training_config"]["main_num_threads"] == 1
+        assert report["training_config"]["env_num_threads"] == 1
+        assert report["training_config"]["num_envs"] == 1
+        assert report["training_config"]["rollout_steps"] == 1
+        assert report["training_config"]["batch_size"] == 1
+        assert report["amp_dtype"] == "fp32"
+        assert report["device"] == "cpu"
+        assert report["memory_peak_kind"]
+        assert report["elapsed_seconds"] > 0.0
+        assert report["worker_step_settlement_requests"] == sum(report["worker_step_counts"])
+        audit = report["trajectory_audit"]
+        assert audit["cost_breakdown"] == {
+            "cost_takt": 0.0,
+            "cost_time": 0.0,
+            "cost_team": 0.0,
+            "cost_postpone": 0.0,
+            "cost_revision": 0.0,
+        }
+        assert audit["success"] is False
+        assert audit["termination_reason"] == "incomplete"
+        feasibility = report["independent_feasibility"][0]
+        assert feasibility["status"] == "incomplete_not_assessed"
+        assert feasibility["feasible"] is None
+
+    assert d_report["cycle_time_labels"]
+    assert all(label["label_available"] is False for label in d_report["cycle_time_labels"])
+    assert d_report["time_head_training_status"] == "untrained_no_successful_online_update"
+    assert d_report["time_supervision_optimizer_updates"] == 0
+    assert d_report["checkpoint_evaluation_eligible"] is False
+
+
+def test_training_audit_feasibility_uses_independent_execution_records() -> None:
+    from scripts.work3.train_ppo_work3 import _independent_feasibility_from_audit
+
+    audit = {
+        "success": True,
+        "completed_tasks": 1,
+        "total_tasks": 1,
+        "execution_records": [{
+            "aircraft_id": 0,
+            "task_id": 0,
+            "station_id": 0,
+            "team": [1],
+            "start": 1.0,
+            "end": 2.0,
+            "material_ready_time": 0.0,
+            "station_entry_time": 0.0,
+            "aircraft_station_at_start": 0,
+        }],
+        "task_constraints": {
+            0: {
+                "demand": 1,
+                "required_skill": 0,
+                "predecessors": (),
+                "fixed_station": 0,
+                "max_allowed_station": 0,
+            },
+        },
+        "worker_skills": {1: (0,)},
+        "worker_station_bindings": {1: 0},
+        "station_capacities": {0: 1},
+    }
+
+    valid = _independent_feasibility_from_audit(audit)[0]
+    invalid = _independent_feasibility_from_audit({
+        **audit,
+        "worker_skills": {1: ()},
+    })[0]
+    incomplete = _independent_feasibility_from_audit({
+        **audit,
+        "success": False,
+        "completed_tasks": 0,
+        "execution_records": [],
+    })[0]
+
+    assert valid["status"] == "feasible" and valid["feasible"] is True
+    assert invalid["status"] == "violations" and invalid["feasible"] is False
+    assert invalid["violations"]["skill"] == 1
+    assert incomplete["status"] == "incomplete_not_assessed"
+    assert incomplete["feasible"] is None
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="工作三CUDA试点验收需要GPU")
+def test_work3_cuda_bf16_two_worker_pilot_records_real_hits_and_resource_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """从YAML覆写入口验证CUDA BF16、spawn环境、真实命中和预算记账。"""
+    if not torch.cuda.is_bf16_supported():
+        pytest.skip("当前CUDA设备不支持bfloat16")
+
+    from scripts.work3 import train_ppo_work3
+
+    scenario = {
+        "scenario_id": "TASK8_CUDA_TWO_WORKER_HIT",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "delta": 1.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenarios_path = tmp_path / "cuda_scenarios.json"
+    split_path = tmp_path / "cuda_train.json"
+    scenarios_path.write_text(json.dumps([scenario]), encoding="utf-8")
+    split_path.write_text(json.dumps([scenario]), encoding="utf-8")
+
+    checkpoint_path = tmp_path / "cuda_d_bf16.pt"
+    report_path = tmp_path / "cuda_d_bf16.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_ppo_work3.py",
+            "--mode", "pilot",
+            "--seed", "20260925",
+            "--steps", "2",
+            "--num-envs", "2",
+            "--epochs", "1",
+            "--batch-size", "2",
+            "--successful-batch-target", "1",
+            "--max-decisions", "2",
+            "--method", "D",
+            "--baseline", str(ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"),
+            "--scenarios", str(scenarios_path),
+            "--scenario-split", str(split_path),
+            "--device", "cuda",
+            "--output", str(checkpoint_path),
+            "--report", str(report_path),
+            "--set", "runtime.amp_dtype=bf16",
+            "--set", "runtime.max_wall_seconds=120.0",
+        ],
+    )
+    train_ppo_work3.main()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert report["amp_dtype"] == "bf16"
+    assert report["lightning_precision"] == "bf16-mixed"
+    assert report["lightning_grad_scaler_enabled"] is False
+    assert report["device"] == "cuda"
+    assert report["memory_peak_kind"] == "cuda_max_memory_allocated"
+    assert report["memory_peak_bytes"] > 0
+    assert report["training_config"]["num_envs"] == 2
+    assert report["environment_worker_cuda_initialized"] == [False, False]
+    assert report["total_decisions"] == 2
+    assert report["worker_step_counts"] == [1, 1]
+    assert report["worker_step_settlement_requests"] == 2
+    assert report["actual_disturbance_hit_count"] == 2
+    assert all(
+        entry["disturbance_triggered"] is True
+        and entry["actual_hit_task_keys"] == ["0_15"]
+        and entry["truncated"] is True
+        and entry["success"] is False
+        for entry in report["scenario_log"]
+    )
+    assert report["time_head_training_status"] == "untrained_no_successful_online_update"
+    assert report["checkpoint_evaluation_eligible"] is False
+    assert report["research_result_eligible"] is False
+    assert report["history"][0]["lightning_optimization_steps"] == 1
+    assert all(
+        item["status"] == "incomplete_not_assessed" and item["feasible"] is None
+        for item in report["independent_feasibility"]
+    )

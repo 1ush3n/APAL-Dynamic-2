@@ -54,6 +54,11 @@ from training.work3_runtime_config import (
     resolve_work3_precision,
     seed_work3_runtime,
 )
+from utils.work3.trajectory_feasibility import (
+    TaskConstraintRecord,
+    TrajectoryExecutionRecord,
+    validate_trajectory,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -176,6 +181,114 @@ def _module_fingerprint(modules: dict[str, torch.nn.Module | None]) -> str:
             digest.update(f"{module_name}.{name}".encode("utf-8"))
             digest.update(tensor.detach().cpu().contiguous().numpy().tobytes())
     return digest.hexdigest()
+
+
+def _independent_feasibility_from_audit(audit: Any) -> list[dict[str, Any]]:
+    """只从worker导出的执行审计重建完成轨迹并独立核验。"""
+    audits = (audit,) if isinstance(audit, dict) else audit
+    if not isinstance(audits, (tuple, list)):
+        raise TypeError("轨迹审计必须是worker审计字典或其序列")
+
+    results: list[dict[str, Any]] = []
+    for worker_id, worker_audit in enumerate(audits):
+        if worker_audit is None:
+            results.append({
+                "worker_id": worker_id,
+                "status": "audit_unavailable",
+                "batch_complete": False,
+                "feasible": None,
+                "execution_record_count": 0,
+                "violations": {},
+            })
+            continue
+        if not isinstance(worker_audit, dict):
+            raise TypeError("worker轨迹审计必须是字典或None")
+
+        records_data = worker_audit.get("execution_records", ())
+        completed = (
+            worker_audit.get("success") is True
+            and int(worker_audit.get("completed_tasks", -1))
+            == int(worker_audit.get("total_tasks", -2))
+        )
+        if not completed:
+            results.append({
+                "worker_id": worker_id,
+                "status": "incomplete_not_assessed",
+                "batch_complete": False,
+                "feasible": None,
+                "execution_record_count": len(records_data),
+                "violations": {},
+            })
+            continue
+        if len(records_data) != int(worker_audit["total_tasks"]):
+            results.append({
+                "worker_id": worker_id,
+                "status": "audit_inconsistent",
+                "batch_complete": True,
+                "feasible": False,
+                "execution_record_count": len(records_data),
+                "violations": {"execution_record_count_mismatch": 1},
+            })
+            continue
+
+        constraints = {
+            int(task_id): TaskConstraintRecord(
+                demand=int(item["demand"]),
+                required_skill=int(item["required_skill"]),
+                predecessors=tuple(int(value) for value in item["predecessors"]),
+                fixed_station=(
+                    None if item["fixed_station"] is None
+                    else int(item["fixed_station"])
+                ),
+                max_allowed_station=(
+                    None if item["max_allowed_station"] is None
+                    else int(item["max_allowed_station"])
+                ),
+            )
+            for task_id, item in worker_audit["task_constraints"].items()
+        }
+        execution_records = [
+            TrajectoryExecutionRecord(
+                aircraft_id=int(item["aircraft_id"]),
+                task_id=int(item["task_id"]),
+                station_id=int(item["station_id"]),
+                team=tuple(int(value) for value in item["team"]),
+                start=float(item["start"]),
+                end=float(item["end"]),
+                material_ready_time=float(item["material_ready_time"]),
+                station_entry_time=(
+                    None if item["station_entry_time"] is None
+                    else float(item["station_entry_time"])
+                ),
+                aircraft_station_at_start=int(item["aircraft_station_at_start"]),
+            )
+            for item in records_data
+        ]
+        feasibility = validate_trajectory(
+            execution_records,
+            task_constraints=constraints,
+            worker_skills={
+                int(worker): tuple(int(skill) for skill in skills)
+                for worker, skills in worker_audit["worker_skills"].items()
+            },
+            worker_station_bindings={
+                int(worker): int(station)
+                for worker, station in worker_audit["worker_station_bindings"].items()
+            },
+            station_capacities={
+                int(station): int(capacity)
+                for station, capacity in worker_audit["station_capacities"].items()
+            },
+        )
+        results.append({
+            "worker_id": worker_id,
+            "status": "feasible" if feasibility.is_feasible else "violations",
+            "batch_complete": True,
+            "feasible": feasibility.is_feasible,
+            "execution_record_count": len(execution_records),
+            "violations": dict(feasibility.violations),
+        })
+    return results
 
 
 def _cpu_state_dict(module: torch.nn.Module) -> dict[str, torch.Tensor]:
@@ -1376,6 +1489,7 @@ def run_training(
     environment_worker_torch_num_threads = list(env.worker_torch_num_threads)
     worker_step_counts = list(env.worker_step_counts)
     trajectory_audit = env.close()
+    independent_feasibility = _independent_feasibility_from_audit(trajectory_audit)
 
     total_elapsed = time.monotonic() - run_started
     successful_batch_count = sum(item.get("success") is True for item in scenario_log)
@@ -1490,7 +1604,9 @@ def run_training(
         "environment_worker_torch_num_threads": environment_worker_torch_num_threads,
         "environment_worker_start_method": "spawn",
         "worker_step_counts": worker_step_counts,
+        "worker_step_settlement_requests": int(env.step_settlement_requests),
         "trajectory_audit": trajectory_audit,
+        "independent_feasibility": independent_feasibility,
         "device_name": device_name,
         "amp_dtype": amp_dtype,
         "lightning_precision": lightning_precision,
