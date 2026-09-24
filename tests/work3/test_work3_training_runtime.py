@@ -11,6 +11,7 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import numpy as np
 import pytest
@@ -1711,6 +1712,86 @@ def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
     assert d_report["time_head_training_status"] == "untrained_no_successful_online_update"
     assert d_report["time_supervision_optimizer_updates"] == 0
     assert d_report["checkpoint_evaluation_eligible"] is False
+
+
+def test_work3_d_pilot_trains_from_both_signed_residuals_after_real_transfer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """真实周期转站补齐两种符号残差，并触发D的辅助优化更新。"""
+    from models.work3.ppo_buffer import PendingTimeLabelCache
+    from scripts.work3.train_ppo_work3 import run_training
+
+    scenario = {
+        "scenario_id": "TASK8_SIGNED_RESIDUAL_TRANSFER",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "delta": 1.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenarios_path = tmp_path / "signed_scenarios.json"
+    split_path = tmp_path / "signed_train.json"
+    scenarios_path.write_text(json.dumps([scenario]), encoding="utf-8")
+    split_path.write_text(json.dumps([scenario]), encoding="utf-8")
+
+    observed_residuals: list[float] = []
+    original_drain_ready = PendingTimeLabelCache.drain_ready
+
+    def capture_residuals(cache: PendingTimeLabelCache) -> dict[str, Any] | None:
+        batch = original_drain_ready(cache)
+        if batch is not None:
+            observed_residuals.extend(batch["target_residuals"].tolist())
+        return batch
+
+    monkeypatch.setattr(PendingTimeLabelCache, "drain_ready", capture_residuals)
+    report = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=64,
+        max_wall_seconds=300.0,
+        num_iterations=1,
+        steps_per_iter=64,
+        ppo_epochs=1,
+        batch_size=64,
+        seed=42,
+        method_variant="D",
+        baseline_path="data/work3/real_283_k10_baseline.json",
+        scenarios_path=scenarios_path,
+        scenario_split_path=split_path,
+        device="cpu",
+        num_envs=1,
+        output_ckpt=tmp_path / "signed_d.pt",
+    )
+
+    assert report["actual_disturbance_hit_count"] > 0
+    assert report["time_label_count"] > 0
+    assert any(value < 0.0 for value in observed_residuals)
+    assert any(value > 0.0 for value in observed_residuals)
+    assert report["time_supervision_optimizer_updates"] > 0
+    assert report["lightning_optimization_steps"] > 0
+    assert report["time_head_training_status"] == "trained_online"
+    available_labels = [
+        item for item in report["cycle_time_labels"] if item["label_available"]
+    ]
+    unavailable_labels = [
+        item for item in report["cycle_time_labels"] if not item["label_available"]
+    ]
+    assert available_labels
+    assert all(
+        item["label_count"] > 0 and item["actual_transfer_time"] is not None
+        for item in available_labels
+    )
+    assert all(
+        item["label_count"] == 0 and item["actual_transfer_time"] is None
+        for item in unavailable_labels
+    )
+    assert {item["potential_snapshot_version"] for item in report["scenario_log"]} == {0}
+    assert report["research_result_eligible"] is False
 
 
 def test_training_audit_feasibility_uses_independent_execution_records() -> None:
