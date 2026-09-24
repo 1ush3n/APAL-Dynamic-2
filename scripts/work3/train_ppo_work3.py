@@ -486,6 +486,7 @@ def run_training(
         "paired_report_path": None if paired_report_path is None else str(paired_report_path),
         "device": str(torch_device),
     }
+    initial_actor_fingerprint = _module_fingerprint({"actor_critic": actor_critic})
     initial_parameter_fingerprint = _module_fingerprint({
         "actor_critic": actor_critic,
         "time_head": time_head,
@@ -1055,6 +1056,7 @@ def run_training(
         "event_plan": event_plan,
         "event_plan_fingerprint": data_fingerprint["event_plan_sha256"],
         "planned_scenario_ids": [item["scenario_id"] for item in event_plan],
+        "initial_actor_fingerprint": initial_actor_fingerprint,
         "initial_parameter_fingerprint": initial_parameter_fingerprint,
         "device": str(torch_device),
         "device_name": device_name,

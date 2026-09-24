@@ -58,6 +58,29 @@ def test_seeded_smoke_runs_repeat_initialization_and_event_plan(tmp_path: Path) 
     assert report["memory_peak_bytes"] is None or report["memory_peak_bytes"] > 0
 
 
+def test_c_and_d_same_seed_report_identical_initial_actor_fingerprint(
+    tmp_path: Path,
+) -> None:
+    """同种子C/D必须报告相同Actor初值，综合指纹仍区分D时间头。"""
+    reports = {
+        variant: run_training(
+            run_mode="smoke",
+            num_iterations=1,
+            steps_per_iter=1,
+            ppo_epochs=1,
+            batch_size=1,
+            seed=42,
+            method_variant=variant,
+            output_ckpt=str(tmp_path / f"{variant}.pt"),
+            report_path=str(tmp_path / f"{variant}.json"),
+        )
+        for variant in ("C", "D")
+    }
+
+    assert reports["C"]["initial_actor_fingerprint"] == reports["D"]["initial_actor_fingerprint"]
+    assert reports["C"]["initial_parameter_fingerprint"] != reports["D"]["initial_parameter_fingerprint"]
+
+
 def test_pilot_decision_cap_marks_incomplete_batch_truncated(tmp_path: Path) -> None:
     """决策预算耗尽时未完成批次必须失败/截断，不得登记为生产成功。"""
     result = run_training(
