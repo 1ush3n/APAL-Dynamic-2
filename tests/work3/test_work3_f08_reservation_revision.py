@@ -265,26 +265,20 @@ def test_advance_action_moves_to_next_event_without_arbitrary_wait() -> None:
     assert task.status == TaskStatus.RUNNING
 
 
-def test_actor_can_select_advance_action_and_replay_its_probability() -> None:
+def test_actor_can_end_mixed_revision_round_and_replay_progress_probability() -> None:
     env = _new_env()
-    task = env.get_ready_tasks()[0]
-    team = _legal_teams(env, task)[0]
-    duration = env.duration_for_team(task, team)
-    task.execution_duration = duration
-    task.reserve(team=team, scheduled_start=20.0)
-    for worker_id in team:
-        env.state.workers[worker_id].add_interval(
-            start=20.0,
-            end=20.0 + duration,
-            task_key=task.task_key,
-        )
-    env._station_occupied_tasks[task.current_station].add(task.task_key)
-    env.event_queue.push(
-        event_type=EventType.TASK_START,
-        timestamp=20.0,
-        task_key=task.task_key,
-        generation=task.generation,
+    task, legal_teams = _task_with_two_teams(env)
+    _reserve_at_future_time(env, task, legal_teams[0])
+    new_task = next(
+        candidate
+        for candidate in env.get_ready_tasks()
+        if candidate.task_key != task.task_key
     )
+    assert env.can_reserve(task)
+    candidates = env.get_action_candidates()
+    assert len(legal_teams) >= 2
+    assert candidates.count(task) == 1
+    assert new_task in candidates
 
     actor = ActorCriticWork3()
     with torch.no_grad():
@@ -305,6 +299,16 @@ def test_actor_can_select_advance_action_and_replay_its_probability() -> None:
     assert record["action_type"] == "advance_to_next_event"
     assert record["advance_choice"] == 1
     assert abs(float(replay_log_prob[0]) - log_prob) < 1e-6
+
+    _, _, terminated, truncated, info = env.step(action)
+
+    assert info["advanced"] is True
+    assert env.state.current_time == pytest.approx(20.0)
+    assert task.status == TaskStatus.RUNNING
+    assert task.actual_start == pytest.approx(20.0)
+    assert new_task.status == TaskStatus.READY
+    assert not terminated
+    assert not truncated
 
 
 def test_identical_resubmission_cannot_block_time_progress() -> None:
