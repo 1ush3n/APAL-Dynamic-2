@@ -18,9 +18,9 @@ import pytest
 import torch
 
 from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import ActorCriticWork3
+from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
 from models.work3.heuristic_agent import HeuristicAgentWork3
-from scripts.work3.evaluate_c_vs_d import evaluate_single_trajectory
+from scripts.work3.evaluate_c_vs_d import build_formal_evaluation_agent, evaluate_single_trajectory
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 BASELINE_JSON = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
@@ -81,14 +81,15 @@ def heuristic_agent():
 
 @pytest.fixture(scope="module")
 def method_d_agent():
-    agent = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64)
     if not METHOD_D_CKPT.is_file():
         pytest.skip(f"方法 D 检查点不存在: {METHOD_D_CKPT}")
     ckpt = torch.load(str(METHOD_D_CKPT), map_location="cpu")
-    state_dict = ckpt.get("actor_critic_state", ckpt)
-    agent.load_state_dict(state_dict)
-    agent.eval()
-    return agent
+    if (
+        ckpt.get("graph_feature_version") != GRAPH_FEATURE_VERSION
+        or dict(ckpt.get("graph_feature_dims") or {}) != dict(GRAPH_FEATURE_DIMS)
+    ):
+        pytest.skip("仓库中的方法D权重是旧版检查点，不满足当前正式图策略契约")
+    return build_formal_evaluation_agent("D", METHOD_D_CKPT, device="cpu")
 
 
 @pytest.mark.parametrize("sc_id", CANONICAL_SCENARIOS)
@@ -126,7 +127,7 @@ def test_baseline_c_completion_and_ledger_consistency(sc_id: str, baseline_eval_
 
 @pytest.mark.parametrize("sc_id", ["EARLY_LOW_S0", "EARLY_MID_S0"])
 def test_method_d_completion_and_ledger_consistency(sc_id: str, baseline_eval_map, scenarios_map, airline_env, method_d_agent):
-    """验证方法 D 能完成代表性场景且分项账本自洽，不锁死旧工时标尺。"""
+    """仅用当前完整正式D检查点验证代表性场景与账本，不以裸Actor冒充正式方法。"""
     sc = scenarios_map[sc_id]
 
     t0 = time.perf_counter()
