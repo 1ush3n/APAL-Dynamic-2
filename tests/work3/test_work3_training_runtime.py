@@ -51,6 +51,12 @@ def _decision_snapshot_module() -> ModuleType:
     return importlib.import_module("envs.work3.decision_snapshot")
 
 
+def _work3_vector_env_module() -> ModuleType:
+    if importlib.util.find_spec("training.work3_vector_env") is None:
+        pytest.fail("工作三spawn环境运行时尚未实现", pytrace=False)
+    return importlib.import_module("training.work3_vector_env")
+
+
 def test_runtime_config_loads_smoke_defaults_and_hashes_resolved_yaml() -> None:
     module = _runtime_config_module()
 
@@ -226,6 +232,25 @@ def test_environment_team_context_is_an_independent_cpu_snapshot() -> None:
     assert context.workers[0].calendar_intervals == original_intervals
 
 
+def test_live_team_eligibility_does_not_construct_full_calendar_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from envs.work3.environment import AirLineEnvWork3
+
+    env = AirLineEnvWork3(
+        baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    )
+    env.reset()
+    task = env.get_ready_tasks()[0]
+
+    def reject_snapshot_construction(*args: object, **kwargs: object) -> None:
+        raise AssertionError("普通团队资格查询不应构造日历快照DTO")
+
+    monkeypatch.setattr(env, "_team_completion_context", reject_snapshot_construction)
+    valid_workers = env.valid_team_completion_workers(task, [])
+    assert len(valid_workers) >= task.demand
+
+
 def test_decision_snapshot_clones_tensor_and_graph_payloads_to_cpu() -> None:
     from torch_geometric.data import HeteroData
 
@@ -345,8 +370,209 @@ def test_snapshot_masks_match_environment_and_actor_replay_probability() -> None
     assert snapshot_result[1] == pytest.approx(live_result[1], abs=1e-6)
     record = snapshot_result[3]
     assert record["candidate_branch_masks"] == snapshot.branch_masks
-    assert snapshot_result[0]["branch"] == 0
+    selected_task_index = snapshot.candidate_task_keys.index(
+        snapshot_result[0]["task_key"]
+    )
+    selected_branch = int(snapshot_result[0]["branch"])
+    assert snapshot.branch_masks[selected_task_index][selected_branch]
     _, replay_log_probs, _ = actor.evaluate_action_log_probs(
         state_features.unsqueeze(0), time_features.unsqueeze(0), [record]
     )
     assert float(replay_log_probs[0]) == pytest.approx(snapshot_result[1], abs=1e-6)
+
+
+def test_single_env_worker_matches_direct_environment_for_frozen_actions() -> None:
+    from copy import deepcopy
+
+    from envs.work3.core_types import ActionBranch, TaskRuntimeState
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.heuristic_agent import HeuristicAgentWork3
+    from scripts.work3.train_ppo_work3 import create_work3_single_env_runtime
+    from scripts.work3.evaluate_c_vs_d import _check_completed_trajectory_feasibility
+    from utils.work3.trajectory_feasibility import (
+        TaskConstraintRecord,
+        TrajectoryExecutionRecord,
+        validate_trajectory,
+    )
+
+    _work3_vector_env_module()
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    if not baseline_path.is_file():
+        pytest.skip(f"固定动作对照实例不存在: {baseline_path}")
+
+    planning_env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    planning_env.reset()
+    agent = HeuristicAgentWork3(name="SingleEnvParityFixture")
+    frozen_actions: list[dict[str, object]] = []
+    for _ in range(12000):
+        if planning_env._check_terminated():
+            break
+        action = agent.select_action(planning_env)
+        if action is None:
+            action = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+        frozen_actions.append(deepcopy(action))
+        _obs, _reward, terminated, truncated, info = planning_env.step(action)
+        assert not truncated
+        assert not (terminated and info.get("termination_reason") == "deadlock")
+    assert planning_env._check_terminated()
+    assert len(frozen_actions) < 12000
+    action_branches = tuple(
+        ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
+        for action in frozen_actions
+    )
+    assert ActionBranch.ADVANCE_TO_NEXT_EVENT in action_branches
+    assert ActionBranch.STATION_EXECUTE in action_branches
+
+    direct_env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    direct_env.reset()
+    direct_event_trace: list[tuple[float, str, int, str | None, int]] = []
+    direct_start_station_by_task: dict[str, int] = {}
+    original_pop = direct_env.event_queue.pop
+
+    def traced_pop() -> object:
+        event = original_pop()
+        if event is not None:
+            direct_event_trace.append(
+                (
+                    float(event.timestamp),
+                    event.event_type.name,
+                    int(event.event_id),
+                    event.task_key,
+                    int(event.generation),
+                )
+            )
+        return event
+
+    direct_env.event_queue.pop = traced_pop  # type: ignore[method-assign]
+    original_started = direct_env._on_task_started
+
+    def traced_started(task: TaskRuntimeState, start_time: float) -> None:
+        original_started(task, start_time)
+        if task.actual_start is not None:
+            direct_start_station_by_task[task.task_key] = int(
+                direct_env.state.aircraft[task.aircraft_id].current_station
+            )
+
+    direct_env._on_task_started = traced_started  # type: ignore[method-assign]
+    direct_completed: set[str] = set()
+    direct_steps = 0
+    worker = create_work3_single_env_runtime(baseline_path)
+    try:
+        initial_observation = worker.reset(scenario=None, episode_id=21, episode_index=0)
+        snapshot = worker.snapshot()
+        assert snapshot.current_time == direct_env.state.current_time
+        assert snapshot.state_features.device.type == "cpu"
+        assert all(value.device.type == "cpu" for value in snapshot.graph_snapshot.x_dict.values())
+
+        for action in frozen_actions:
+            trace_start = len(direct_event_trace)
+            _obs, expected_reward, expected_terminated, expected_truncated, expected_info = (
+                direct_env.step(action)
+            )
+            expected_trace = tuple(direct_event_trace[trace_start:])
+            expected_new_completions = []
+            for task in direct_env.state.tasks.values():
+                if task.actual_end is None or task.task_key in direct_completed:
+                    continue
+                direct_completed.add(task.task_key)
+                station_id = int(task.last_published_assignment["station"])
+                expected_new_completions.append(
+                    (
+                        task.task_key,
+                        int(task.aircraft_id),
+                        int(task.task_id),
+                        station_id,
+                        tuple(task.assigned_team),
+                        float(task.actual_start),
+                        float(task.actual_end),
+                        direct_start_station_by_task[task.task_key],
+                    )
+                )
+
+            actual = worker.step(action)
+            direct_steps += 1
+            assert actual.step_count == direct_steps
+            assert actual.observation == _obs
+            assert actual.raw_reward == pytest.approx(expected_reward, abs=1e-9)
+            assert actual.terminated is expected_terminated
+            assert actual.truncated is expected_truncated
+            assert actual.info == expected_info
+            assert actual.processed_events == expected_trace
+            actual_new_completions = tuple(
+                (
+                    item["task_key"],
+                    item["aircraft_id"],
+                    item["task_id"],
+                    item["station_id"],
+                    tuple(item["team"]),
+                    item["start"],
+                    item["end"],
+                    item["aircraft_station_at_start"],
+                )
+                for item in actual.completed_execution_records
+            )
+            assert actual_new_completions == tuple(expected_new_completions)
+            if actual.terminated:
+                break
+
+        assert direct_steps == len(frozen_actions)
+        assert direct_env._check_terminated()
+        audit = worker.close()
+        assert not worker.is_alive
+    finally:
+        if worker.is_alive:
+            worker.close()
+
+    assert initial_observation["current_time"] == 0.0
+    assert audit["success"] is True
+    assert audit["completed_tasks"] == audit["total_tasks"] == len(direct_env.state.tasks)
+    assert audit["step_count"] == direct_env.step_count == direct_steps
+    assert list(audit["transfer_history"]) == direct_env.state.transfer_history
+    assert audit["cost_breakdown"] == {
+        "cost_takt": direct_env.cost_takt,
+        "cost_time": direct_env.cost_time,
+        "cost_team": direct_env.cost_team,
+        "cost_postpone": direct_env.cost_postpone,
+        "cost_revision": direct_env.cost_revision,
+    }
+
+    def independently_check(serialized_audit: dict[str, object]) -> object:
+        constraints = {
+            int(task_id): TaskConstraintRecord(
+                demand=int(value["demand"]),
+                required_skill=int(value["required_skill"]),
+                predecessors=tuple(value["predecessors"]),
+                fixed_station=value["fixed_station"],
+                max_allowed_station=value["max_allowed_station"],
+            )
+            for task_id, value in serialized_audit["task_constraints"].items()
+        }
+        records = [
+            TrajectoryExecutionRecord(
+                aircraft_id=int(item["aircraft_id"]),
+                task_id=int(item["task_id"]),
+                station_id=int(item["station_id"]),
+                team=tuple(item["team"]),
+                start=float(item["start"]),
+                end=float(item["end"]),
+                material_ready_time=float(item["material_ready_time"]),
+                station_entry_time=item["station_entry_time"],
+                aircraft_station_at_start=int(item["aircraft_station_at_start"]),
+            )
+            for item in serialized_audit["execution_records"]
+        ]
+        return validate_trajectory(
+            records,
+            task_constraints=constraints,
+            worker_skills=serialized_audit["worker_skills"],
+            worker_station_bindings=serialized_audit["worker_station_bindings"],
+            station_capacities=serialized_audit["station_capacities"],
+        )
+
+    report = independently_check(audit)
+    assert report.is_feasible
+    assert not report.violations
+    direct_feasible, direct_violations = _check_completed_trajectory_feasibility(direct_env)
+    assert direct_feasible == report.is_feasible
+    assert direct_violations == report.violations
+    assert len(direct_completed) == len(direct_env.state.tasks)

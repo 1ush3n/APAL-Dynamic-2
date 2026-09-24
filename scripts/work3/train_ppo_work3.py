@@ -41,12 +41,22 @@ from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION, PPOTrainerWork3
 from models.work3.time_head import TimeResidualHead
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
+from training.work3_vector_env import Work3VectorEnv
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def create_work3_single_env_runtime(baseline_path: str | Path) -> Work3VectorEnv:
+    """构造FP32单spawn环境入口；策略与PPO优化器仍由调用方持有。"""
+    return Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(Path(baseline_path))},
+        num_envs=1,
+        start_method="spawn",
+    )
 
 
 def _seed_everything(seed: int) -> None:

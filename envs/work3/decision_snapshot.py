@@ -4,11 +4,19 @@ from __future__ import annotations
 
 import copy
 import math
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import torch
 from torch import Tensor
 from torch_geometric.data import HeteroData
+
+from envs.work3.core_types import TaskStatus
+
+if TYPE_CHECKING:
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.graph_builder import MultiAircraftGraphBuilder
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,29 +164,64 @@ def team_completion_worker_ids(
     selected_worker_ids: tuple[int, ...],
 ) -> tuple[int, ...]:
     """按环境团队资格规则返回当前前缀后仍可选的工人ID。"""
-    selected = tuple(int(worker_id) for worker_id in selected_worker_ids)
-    if len(selected) > context.demand or len(selected) != len(set(selected)):
-        return ()
+    return team_completion_worker_ids_from_profiles(
+        tuple(worker.worker_id for worker in context.workers),
+        {worker.worker_id: worker.skills for worker in context.workers},
+        {
+            worker.worker_id: worker.efficiency
+            for worker in context.workers
+            if worker.efficiency is not None
+        },
+        required_skill=context.required_skill,
+        demand=context.demand,
+        selected_worker_ids=selected_worker_ids,
+    )
 
-    workers_by_id = {worker.worker_id: worker for worker in context.workers}
+
+def team_completion_worker_ids_from_profiles(
+    worker_ids: Sequence[int],
+    worker_skills: Mapping[int, Iterable[int]],
+    worker_efficiencies: Mapping[int, float],
+    *,
+    required_skill: int,
+    demand: int,
+    selected_worker_ids: Sequence[int],
+) -> tuple[int, ...]:
+    """不复制日历的共享团队补全规则，供高频环境候选扫描调用。"""
+    selected = tuple(int(worker_id) for worker_id in selected_worker_ids)
+    ordered_workers = tuple(int(worker_id) for worker_id in worker_ids)
+    if (
+        demand < 1
+        or len(selected) > demand
+        or len(selected) != len(set(selected))
+    ):
+        return ()
+    station_workers = set(ordered_workers)
     for worker_id in selected:
-        worker = workers_by_id.get(worker_id)
-        if worker is None or worker.efficiency is None:
+        efficiency = worker_efficiencies.get(worker_id)
+        if (
+            worker_id not in station_workers
+            or efficiency is None
+            or not math.isfinite(float(efficiency))
+            or float(efficiency) <= 0.0
+        ):
             return ()
-        if context.required_skill >= 0 and context.required_skill not in worker.skills:
+        if required_skill >= 0 and required_skill not in worker_skills.get(worker_id, ()):
             return ()
 
     candidates = tuple(
-        worker.worker_id
-        for worker in context.workers
-        if worker.worker_id not in selected
-        and worker.efficiency is not None
+        worker_id
+        for worker_id in ordered_workers
+        if worker_id not in selected
+        and worker_id in worker_efficiencies
+        and math.isfinite(float(worker_efficiencies[worker_id]))
+        and float(worker_efficiencies[worker_id]) > 0.0
         and (
-            context.required_skill < 0
-            or context.required_skill in worker.skills
+            required_skill < 0
+            or required_skill in worker_skills.get(worker_id, ())
         )
     )
-    remaining_demand = context.demand - len(selected)
+    remaining_demand = demand - len(selected)
     return candidates if len(candidates) >= remaining_demand else ()
 
 
@@ -197,3 +240,70 @@ def worker_completion_mask(
     values.extend([False] * (max_station_workers - len(values)))
     assert len(values) == max_station_workers
     return tuple(values)
+
+
+def build_decision_snapshot(
+    env: AirLineEnvWork3,
+    graph_builder: MultiAircraftGraphBuilder,
+    state_features: Tensor,
+    time_features: Tensor,
+    *,
+    worker_id: int,
+    episode_id: int,
+    episode_index: int,
+    estimated_cmax: float | None,
+) -> DecisionSnapshot:
+    """由CPU环境进程或兼容入口构造一致的策略决策快照。"""
+    from models.work3.actor_critic import extract_candidate_task_features
+    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
+
+    candidates = env.get_action_candidates()
+    candidate_keys = tuple(task.task_key for task in candidates)
+    workers_by_station: dict[int, tuple[WorkerSnapshot, ...]] = {}
+    contexts: list[TeamCompletionContext] = []
+    for task in candidates:
+        station_id = int(task.current_station)
+        station_workers = workers_by_station.get(station_id)
+        if station_workers is None:
+            station_workers = env.get_team_completion_context(task).workers
+            workers_by_station[station_id] = station_workers
+        contexts.append(
+            TeamCompletionContext(
+                task_key=task.task_key,
+                station_id=station_id,
+                required_skill=int(task.skill),
+                demand=int(task.demand),
+                workers=station_workers,
+            )
+        )
+    branch_masks = tuple(env.get_action_branch_mask(task) for task in candidates)
+    return DecisionSnapshot(
+        worker_id=int(worker_id),
+        episode_id=int(episode_id),
+        episode_index=int(episode_index),
+        state_features=state_features,
+        time_features=time_features,
+        graph_snapshot=graph_builder.build_graph(env),
+        candidate_task_keys=candidate_keys,
+        candidate_task_features=extract_candidate_task_features(env.state, candidates),
+        branch_masks=branch_masks,
+        team_contexts=tuple(contexts),
+        candidate_task_node_indices=tuple(
+            graph_builder.task_key_to_idx[key] for key in candidate_keys
+        ),
+        worker_node_indices=tuple(
+            tuple(graph_builder.worker_id_to_idx[worker.worker_id] for worker in context.workers)
+            for context in contexts
+        ),
+        reserved_flags=tuple(task.status == TaskStatus.RESERVED for task in candidates),
+        advance_available=any(
+            task.status == TaskStatus.RESERVED and any(mask)
+            for task, mask in zip(candidates, branch_masks, strict=True)
+        ),
+        current_time=float(env.state.current_time),
+        cycle_id=int(env.state.current_cycle),
+        estimated_cmax=estimated_cmax,
+        h0=float(env.state.h0),
+        last_transfer_time=float(env.state.last_transfer_time),
+        graph_version=GRAPH_FEATURE_VERSION,
+    )

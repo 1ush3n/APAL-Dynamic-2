@@ -32,7 +32,7 @@ from envs.work3.core_types import (
 from envs.work3.decision_snapshot import (
     TeamCompletionContext,
     WorkerSnapshot,
-    team_completion_worker_ids,
+    team_completion_worker_ids_from_profiles,
 )
 from envs.work3.event_queue import DiscreteEventQueue, EventType, SimulationEvent
 from utils.work3.objective_evaluator import ObjectiveWeights, calculate_postpone_penalty
@@ -304,14 +304,15 @@ class AirLineEnvWork3:
         station_id: int | None = None,
     ) -> list[int]:
         """返回指定站位上加入部分团队后仍可补全合法团队的工人。"""
+        candidate_station = task.current_station if station_id is None else int(station_id)
         return list(
-            team_completion_worker_ids(
-                self._team_completion_context(
-                    task,
-                    station_id=station_id,
-                    include_calendars=False,
-                ),
-                tuple(int(worker_id) for worker_id in selected_team),
+            team_completion_worker_ids_from_profiles(
+                self.state.station_worker_bindings.get(candidate_station, ()),
+                self.worker_skills,
+                self.worker_efficiencies,
+                required_skill=int(task.skill),
+                demand=int(task.demand),
+                selected_worker_ids=tuple(int(worker_id) for worker_id in selected_team),
             )
         )
 
@@ -325,7 +326,6 @@ class AirLineEnvWork3:
         return self._team_completion_context(
             task,
             station_id=station_id,
-            include_calendars=True,
         )
 
     def _team_completion_context(
@@ -333,15 +333,14 @@ class AirLineEnvWork3:
         task: TaskRuntimeState,
         *,
         station_id: int | None,
-        include_calendars: bool,
     ) -> TeamCompletionContext:
-        """共享团队资格规则；常规候选检查不复制可能很长的资源日历。"""
+        """构造策略快照；高频资格检查直接使用纯技能/效率字典规则。"""
         candidate_station = task.current_station if station_id is None else int(station_id)
         worker_ids = tuple(self.state.station_worker_bindings.get(candidate_station, ()))
         snapshots: list[WorkerSnapshot] = []
         for worker_id in worker_ids:
             calendar = self.state.workers.get(worker_id)
-            intervals = () if calendar is None or not include_calendars else tuple(
+            intervals = () if calendar is None else tuple(
                 (float(interval.start), float(interval.end), str(interval.task_key))
                 for interval in calendar.intervals
             )

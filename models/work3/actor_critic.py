@@ -40,7 +40,7 @@ from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskRuntimeS
 from envs.work3.decision_snapshot import (
     DecisionSnapshot,
     TeamCompletionContext,
-    WorkerSnapshot,
+    build_decision_snapshot,
     worker_completion_mask,
 )
 from envs.work3.environment import AirLineEnvWork3
@@ -495,58 +495,15 @@ class ActorCriticWork3(nn.Module):
         estimated_cmax: float | None = None,
     ) -> DecisionSnapshot:
         """兼容单环境入口：从当前现场生成不含环境引用的CPU决策快照。"""
-        candidates = env.get_action_candidates()
-        graph_builder = self._get_graph_builder(env)
-        graph_snapshot = self.build_graph_snapshot(env)
-        task_keys = tuple(task.task_key for task in candidates)
-        worker_contexts_by_station: dict[int, tuple[WorkerSnapshot, ...]] = {}
-        contexts_list: list[TeamCompletionContext] = []
-        for task in candidates:
-            station_id = int(task.current_station)
-            station_workers = worker_contexts_by_station.get(station_id)
-            if station_workers is None:
-                station_workers = env.get_team_completion_context(task).workers
-                worker_contexts_by_station[station_id] = station_workers
-            contexts_list.append(
-                TeamCompletionContext(
-                    task_key=task.task_key,
-                    station_id=station_id,
-                    required_skill=int(task.skill),
-                    demand=int(task.demand),
-                    workers=station_workers,
-                )
-            )
-        contexts = tuple(contexts_list)
-        task_indices = tuple(graph_builder.task_key_to_idx[key] for key in task_keys)
-        worker_indices = tuple(
-            tuple(graph_builder.worker_id_to_idx[worker.worker_id] for worker in context.workers)
-            for context in contexts
-        )
-        branch_masks = tuple(env.get_action_branch_mask(task) for task in candidates)
-        return DecisionSnapshot(
-            worker_id=int(worker_id),
-            episode_id=int(episode_id),
-            episode_index=env.step_count if episode_index is None else int(episode_index),
-            state_features=state_feat,
-            time_features=time_urgency,
-            graph_snapshot=graph_snapshot,
-            candidate_task_keys=task_keys,
-            candidate_task_features=extract_candidate_task_features(env.state, candidates),
-            branch_masks=branch_masks,
-            team_contexts=contexts,
-            candidate_task_node_indices=task_indices,
-            worker_node_indices=worker_indices,
-            reserved_flags=tuple(task.status == TaskStatus.RESERVED for task in candidates),
-            advance_available=any(
-                task.status == TaskStatus.RESERVED and any(mask)
-                for task, mask in zip(candidates, branch_masks, strict=True)
-            ),
-            current_time=float(env.state.current_time),
-            cycle_id=int(env.state.current_cycle),
+        return build_decision_snapshot(
+            env,
+            self._get_graph_builder(env),
+            state_feat,
+            time_urgency,
+            worker_id=worker_id,
+            episode_id=episode_id,
+            episode_index=env.step_count if episode_index is None else episode_index,
             estimated_cmax=estimated_cmax,
-            h0=float(env.state.h0),
-            last_transfer_time=float(env.state.last_transfer_time),
-            graph_version=GRAPH_FEATURE_VERSION,
         )
 
     @torch.no_grad()
