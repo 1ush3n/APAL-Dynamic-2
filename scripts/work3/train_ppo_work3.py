@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -30,18 +31,20 @@ if str(ROOT_DIR) not in sys.path:
 
 import numpy as np
 import torch
+import lightning.pytorch as pl
 
 from envs.work3.environment import AirLineEnvWork3
+from envs.work3.decision_snapshot import DecisionSnapshot
 from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from models.work3.actor_critic import ActorCriticWork3
 from models.work3.potential_shaping import PotentialRewardShaper
 from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
-from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION, PPOTrainerWork3
+from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
 from models.work3.time_head import TimeResidualHead
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
 from training.work3_vector_env import Work3VectorEnv
+from training.work3_lightning import Work3PPODataModule, Work3LightningModule, Work3TrainingUpdate
 
 logging.basicConfig(
     level=logging.INFO,
@@ -315,6 +318,40 @@ def compute_online_time_inputs(
     return graph_snapshot, urgency, predicted_transfer.squeeze(0)
 
 
+def compute_online_snapshot_time_inputs(
+    actor_critic: ActorCriticWork3,
+    time_head: TimeResidualHead,
+    snapshot: DecisionSnapshot,
+) -> tuple[Any, torch.Tensor, torch.Tensor]:
+    """只依赖CPU决策快照生成修正预测，不访问worker内环境对象。"""
+    device = next(actor_critic.parameters()).device
+    state_features = snapshot.state_features.to(device)
+    graph_snapshot = snapshot.graph_snapshot
+    estimated_cmax = snapshot.estimated_cmax
+    if estimated_cmax is None:
+        raise ValueError("时间修正要求决策快照包含启发式完工预测")
+    with torch.no_grad():
+        shared_feature = actor_critic.encode_shared_representation(
+            state_features,
+            graph_snapshot,
+        ).unsqueeze(0)
+        predicted_transfer, remaining, _ = time_head.predict_corrected_time(
+            state_feat=shared_feature,
+            estimated_cmax=estimated_cmax,
+            current_time=snapshot.current_time,
+            h0=snapshot.h0,
+            last_transfer_time=snapshot.last_transfer_time,
+        )
+        urgency = compute_time_urgency_vector(
+            estimated_r=remaining.squeeze(0),
+            current_time=snapshot.current_time,
+            last_transfer_time=snapshot.last_transfer_time,
+            h0=snapshot.h0,
+            device=device,
+        )
+    return graph_snapshot, urgency, predicted_transfer.squeeze(0)
+
+
 def run_training(
     num_iterations: int | None = None,
     steps_per_iter: int = 32,
@@ -410,8 +447,7 @@ def run_training(
 
     # 1. 初始化仿真环境
     logger.info(f"初始化环境: {baseline_path}")
-    env = AirLineEnvWork3(baseline_json_path=baseline_path)
-    env.reset()
+    env = create_work3_single_env_runtime(baseline_path)
 
     # 2. 初始化Actor与共享图表征上的时间预测头
     actor_critic = ActorCriticWork3(
@@ -454,17 +490,21 @@ def run_training(
             gamma=gamma,
         )
 
-    # 3. 初始化条件分支自回归 PPO 训练器
-    trainer = PPOTrainerWork3(
+    # 3. Lightning持有唯一优化器；PPO对象只提供纯损失和检查点接口。
+    lightning_module = Work3LightningModule(
         actor_critic=actor_critic,
-        lr=lr,
+        time_head=time_head if profile.use_time_auxiliary else None,
+        learning_rate=lr,
         clip_eps=clip_eps,
         vf_coef=vf_coef,
         ent_coef=ent_coef,
-        time_head=time_head if profile.use_time_auxiliary else None,
         time_loss_coef=time_loss_coef if profile.use_time_auxiliary else 0.0,
-        device=torch_device,
+        ppo_epochs=ppo_epochs,
+        batch_size=batch_size,
+        time_auxiliary_epochs=time_auxiliary_epochs,
+        time_auxiliary_batch_size=time_auxiliary_batch_size,
     )
+    trainer = lightning_module.objective
 
     buffer = RolloutBufferWork3(
         gamma=gamma,
@@ -541,31 +581,40 @@ def run_training(
     episode_plan_index = 0
     scenario_log: list[dict[str, Any]] = []
     cycle_time_labels: list[dict[str, Any]] = []
+    lightning_fit_calls = 0
     stop_reason: str | None = None
     current_scenario: dict[str, Any] | None = None
     current_scenario_log: dict[str, Any] | None = None
+    current_snapshot: DecisionSnapshot | None = None
+    current_scenario_status: dict[str, Any] = {}
+    current_episode_success: bool | None = None
     episode_done = False
     episode_termination_reason: str | None = None
 
     def update_current_scenario_effect_log() -> None:
         if current_scenario_log is None or current_scenario is None:
             return
-        tau = current_scenario.get("tau") if run_mode == "pilot" else None
         current_scenario_log["disturbance_triggered"] = bool(
-            tau is not None
-            and env.state.current_time >= float(tau) - env.tolerance
+            current_scenario_status.get("event_triggered", False)
         )
-        hit_keys = actual_scenario_hit_task_keys(env, current_scenario)
+        hit_keys = list(current_scenario_status.get("actual_hit_task_keys", ()))
         current_scenario_log["actual_hit_task_keys"] = hit_keys
         current_scenario_log["actual_hit_count"] = len(hit_keys)
 
     def start_episode() -> None:
         nonlocal episode_plan_index, current_scenario, current_scenario_log
-        env.reset()
+        nonlocal current_snapshot, current_scenario_status, current_episode_success
         current_scenario = dict(episode_plan[episode_plan_index % len(episode_plan)])
+        current_episode_index = episode_plan_index
         episode_plan_index += 1
-        if run_mode == "pilot":
-            env.load_scenario(current_scenario)
+        reset_result = env.reset_all(
+            scenarios=[current_scenario if run_mode == "pilot" else None],
+            episode_ids=[episode_id],
+            episode_indices=[current_episode_index],
+        )[0]
+        current_snapshot = env.snapshot(worker_id=0)
+        current_scenario_status = reset_result.scenario_status
+        current_episode_success = None
         current_scenario_log = {
             "episode_id": episode_id,
             "scenario_id": current_scenario["scenario_id"],
@@ -628,7 +677,7 @@ def run_training(
                 "success": False,
                 "truncated": True,
                 "termination_reason": reason,
-                "actual_hit_count": count_actual_scenario_hits(env, current_scenario or {}),
+                "actual_hit_count": int(current_scenario_log.get("actual_hit_count", 0)),
             })
             record_unlabelled_cycles(episode_id)
             pending_time_labels.discard_episode(episode_id)
@@ -670,6 +719,7 @@ def run_training(
         iter_idx += 1
         iter_start = time.monotonic()
         buffer.clear()
+        rollout_bootstraps: dict[tuple[int, int, int], float] = {}
 
         step_raw_rewards: list[float] = []
         step_shaped_rewards: list[float] = []
@@ -679,18 +729,14 @@ def run_training(
         # Rollout 数据采集循环
         # -------------------------
         for step in range(steps_per_iter):
-            if env._check_terminated() or episode_done:
-                episode_success = env._check_terminated()
+            if episode_done:
+                episode_success = bool(current_episode_success)
                 final_reason = "completed" if episode_success else episode_termination_reason
                 update_current_scenario_effect_log()
                 if not episode_success:
                     record_unlabelled_cycles(episode_id)
                 pending_time_labels.discard_episode(episode_id)
                 if current_scenario_log is not None:
-                    current_scenario_log["actual_hit_count"] = count_actual_scenario_hits(
-                        env,
-                        current_scenario or {},
-                    )
                     current_scenario_log["completed"] = episode_success
                     current_scenario_log["success"] = episode_success
                     current_scenario_log["termination_reason"] = final_reason
@@ -717,57 +763,52 @@ def run_training(
                 mark_budget_truncated(budget_reason)
                 break
 
-            cmax_est = compute_cycle_heuristic_cmax(env.state)
-            s_feat = extract_compact_state_features(env.state, cmax_est)
-            graph_snapshot = actor_critic.build_graph_snapshot(env)
+            if current_snapshot is None:
+                raise RuntimeError("环境worker没有提供当前决策快照")
+            action_snapshot = current_snapshot
+            cmax_est = current_snapshot.estimated_cmax
+            if cmax_est is None:
+                raise RuntimeError("环境worker快照缺少启发式完工预测")
+            s_feat = current_snapshot.state_features
+            graph_snapshot = current_snapshot.graph_snapshot
             if profile.use_corrected_time_input and time_head is not None:
-                graph_snapshot, u_time, _ = compute_online_time_inputs(
+                graph_snapshot, u_time, _ = compute_online_snapshot_time_inputs(
                     actor_critic=actor_critic,
                     time_head=time_head,
-                    env=env,
-                    state_feat=s_feat,
-                    estimated_cmax=cmax_est,
+                    snapshot=current_snapshot,
                 )
+                action_snapshot = replace(current_snapshot, time_features=u_time)
             else:
-                estimated_r = max(0.0, cmax_est - float(env.state.current_time))
-                u_time = compute_time_urgency_vector(
-                    estimated_r=estimated_r,
-                    current_time=env.state.current_time,
-                    last_transfer_time=env.state.last_transfer_time,
-                    h0=env.state.h0,
-                    device=torch_device,
-                )
+                u_time = current_snapshot.time_features
 
             # 计算当前状态势 Φ(s_t)
             if shaper is not None:
                 phi_current = shaper.compute_potential(
                     state_feat=s_feat,
                     estimated_cmax=cmax_est,
-                    current_time=float(env.state.current_time),
-                    h0=float(env.state.h0),
-                    last_transfer_time=float(env.state.last_transfer_time),
+                    current_time=current_snapshot.current_time,
+                    h0=current_snapshot.h0,
+                    last_transfer_time=current_snapshot.last_transfer_time,
                     is_terminal=False,
                     graph_data=graph_snapshot,
                 )
             else:
                 phi_current = compute_heuristic_potential(
                     cmax_est,
-                    env.state.last_transfer_time,
-                    env.state.h0,
+                    current_snapshot.last_transfer_time,
+                    current_snapshot.h0,
                 )
 
             # 采样条件动作
-            act, lp, v, rec = actor_critic.select_action(
-                env=env,
-                state_feat=s_feat,
-                time_urgency=u_time,
+            act, lp, v, rec = actor_critic.select_snapshot(
+                action_snapshot,
                 deterministic=False,
             )
 
             if act is None:
                 raise RuntimeError("Actor未返回动作；无候选状态应通过强制推进动作进入env.step()")
 
-            cycle_id = int(env.state.current_cycle)
+            cycle_id = int(current_snapshot.cycle_id)
             if profile.use_time_auxiliary and shaper is not None:
                 pending_time_labels.add(
                     episode_id=episode_id,
@@ -776,15 +817,21 @@ def run_training(
                     state_feat=s_feat,
                     graph_snapshot=rec.get("graph_snapshot", graph_snapshot),
                     estimated_cmax=cmax_est,
-                    current_time=float(env.state.current_time),
-                    h0=float(env.state.h0),
+                    current_time=current_snapshot.current_time,
+                    h0=current_snapshot.h0,
                     predictor_version=shaper.snapshot_version,
+                    worker_id=0,
                     time_urgency=u_time,
                 )
 
             # 环境执行一步调度动作
-            transfer_count_before = len(env.state.transfer_history)
-            obs, raw_reward, terminated, truncated, info = env.step(act)
+            result = env.step(act, worker_id=0)
+            current_snapshot = env.snapshot(worker_id=0)
+            current_scenario_status = result.scenario_status
+            raw_reward = result.raw_reward
+            terminated = result.terminated
+            truncated = result.truncated
+            info = result.info
             update_current_scenario_effect_log()
             done = terminated or truncated
             last_terminated = bool(terminated)
@@ -794,16 +841,17 @@ def run_training(
                 episode_termination_reason = str(
                     info.get(
                         "termination_reason",
-                        "completed" if env._check_terminated() else "deadlock",
+                        "completed" if info.get("success", False) else "deadlock",
                     )
                 )
+                current_episode_success = bool(info.get("success", False))
                 if current_scenario_log is not None:
-                    episode_success = env._check_terminated()
+                    episode_success = current_episode_success
                     current_scenario_log["completed"] = episode_success
                     current_scenario_log["success"] = episode_success
                     current_scenario_log["truncated"] = False
                     current_scenario_log["termination_reason"] = episode_termination_reason
-                if not env._check_terminated():
+                if not current_episode_success:
                     discard_unlabelled_time_samples = True
 
             elif truncated:
@@ -816,7 +864,11 @@ def run_training(
                     current_scenario_log["truncated"] = True
                     current_scenario_log["termination_reason"] = "truncated"
 
-            actual_transfers = env.state.transfer_history[transfer_count_before:]
+            actual_transfers = [
+                float(event[0])
+                for event in result.processed_events
+                if event[1] == "SYNCHRONOUS_TRANSFER"
+            ]
             for offset, actual_transfer_time in enumerate(actual_transfers):
                 transfer_cycle_id = cycle_id + offset
                 label_count = pending_time_labels.pending_cycle_counts(episode_id).get(
@@ -849,32 +901,44 @@ def run_training(
             if terminated:
                 phi_next = 0.0
             else:
-                next_cmax_est = compute_cycle_heuristic_cmax(env.state)
-                next_s_feat = extract_compact_state_features(env.state, next_cmax_est)
-                next_graph_snapshot = actor_critic.build_graph_snapshot(env)
+                if current_snapshot is None or current_snapshot.estimated_cmax is None:
+                    raise RuntimeError("环境worker下一状态快照缺少时间预测")
+                next_cmax_est = current_snapshot.estimated_cmax
+                next_s_feat = current_snapshot.state_features
+                next_graph_snapshot = current_snapshot.graph_snapshot
                 if shaper is not None and profile.use_corrected_time_input and time_head is not None:
-                    next_graph_snapshot, _, _ = compute_online_time_inputs(
+                    next_graph_snapshot, next_u_time, _ = compute_online_snapshot_time_inputs(
                         actor_critic=actor_critic,
                         time_head=time_head,
-                        env=env,
-                        state_feat=next_s_feat,
-                        estimated_cmax=next_cmax_est,
+                        snapshot=current_snapshot,
                     )
                     phi_next = shaper.compute_potential(
                         state_feat=next_s_feat,
                         estimated_cmax=next_cmax_est,
-                        current_time=float(env.state.current_time),
-                        h0=float(env.state.h0),
-                        last_transfer_time=float(env.state.last_transfer_time),
+                        current_time=current_snapshot.current_time,
+                        h0=current_snapshot.h0,
+                        last_transfer_time=current_snapshot.last_transfer_time,
                         is_terminal=False,
                         graph_data=next_graph_snapshot,
                     )
                 else:
+                    next_u_time = current_snapshot.time_features
                     phi_next = compute_heuristic_potential(
                         next_cmax_est,
-                        env.state.last_transfer_time,
-                        env.state.h0,
+                        current_snapshot.last_transfer_time,
+                        current_snapshot.h0,
                     )
+
+            if truncated:
+                with torch.no_grad():
+                    truncated_value, _ = actor_critic.encode_state(
+                        next_s_feat.to(torch_device),
+                        next_u_time.to(torch_device),
+                        graph_data=next_graph_snapshot,
+                    )
+                rollout_bootstraps[(0, episode_id, iter_idx)] = float(
+                    truncated_value.squeeze().item()
+                )
 
             if shaper is not None:
                 shaped_reward = shaper.shape_reward(
@@ -899,6 +963,9 @@ def run_training(
                 action_dict=act,
                 terminated=terminated,
                 truncated=truncated,
+                worker_id=0,
+                episode_id=episode_id,
+                segment_id=iter_idx,
             ))
 
             step_raw_rewards.append(raw_reward)
@@ -928,25 +995,19 @@ def run_training(
         # -------------------------
         # 末尾 Bootstrap 状态值
         if len(buffer) > 0:
-            last_cmax = compute_cycle_heuristic_cmax(env.state)
-            last_s_feat = extract_compact_state_features(env.state, last_cmax)
-            last_graph = actor_critic.build_graph_snapshot(env)
+            if current_snapshot is None or current_snapshot.estimated_cmax is None:
+                raise RuntimeError("rollout结束时环境worker快照缺少时间预测")
+            last_cmax = current_snapshot.estimated_cmax
+            last_s_feat = current_snapshot.state_features
+            last_graph = current_snapshot.graph_snapshot
             if profile.use_corrected_time_input and time_head is not None:
-                last_graph, last_u_time, _ = compute_online_time_inputs(
+                last_graph, last_u_time, _ = compute_online_snapshot_time_inputs(
                     actor_critic=actor_critic,
                     time_head=time_head,
-                    env=env,
-                    state_feat=last_s_feat,
-                    estimated_cmax=last_cmax,
+                    snapshot=current_snapshot,
                 )
             else:
-                last_u_time = compute_time_urgency_vector(
-                    estimated_r=max(0.0, last_cmax - float(env.state.current_time)),
-                    current_time=env.state.current_time,
-                    last_transfer_time=env.state.last_transfer_time,
-                    h0=env.state.h0,
-                    device=torch_device,
-                )
+                last_u_time = current_snapshot.time_features
             with torch.no_grad():
                 last_v, _ = actor_critic.encode_state(
                     last_s_feat.to(torch_device),
@@ -955,24 +1016,48 @@ def run_training(
                 )
                 last_val = float(last_v.squeeze().item()) if not last_terminated else 0.0
 
-            buffer.finish_trajectory(last_value=last_val)
+            if not last_terminated:
+                last_transition = buffer.transitions[-1]
+                rollout_bootstraps[
+                    (
+                        last_transition.worker_id,
+                        last_transition.episode_id,
+                        last_transition.segment_id,
+                    )
+                ] = last_val
+            buffer.finish_trajectories(
+                last_values_by_segment=rollout_bootstraps,
+            )
             time_auxiliary_batch = (
                 pending_time_labels.drain_ready()
                 if profile.use_time_auxiliary
                 else None
             )
 
-            # -------------------------
-            # PPO 训练更新步
-            # -------------------------
-            metrics = trainer.train_step(
+            update = Work3TrainingUpdate(
                 buffer=buffer,
-                ppo_epochs=ppo_epochs,
-                batch_size=batch_size,
+                environment_steps=len(buffer),
                 time_auxiliary_batch=time_auxiliary_batch,
-                time_auxiliary_epochs=time_auxiliary_epochs,
-                time_auxiliary_batch_size=time_auxiliary_batch_size,
             )
+            data_module = Work3PPODataModule(
+                update_factory=lambda update=update: iter((update,))
+            )
+            lightning_trainer = pl.Trainer(
+                accelerator="gpu" if torch_device.type == "cuda" else "cpu",
+                devices=1,
+                precision="32-true",
+                max_epochs=1,
+                limit_train_batches=1,
+                num_sanity_val_steps=0,
+                logger=False,
+                enable_checkpointing=False,
+                enable_model_summary=False,
+                enable_progress_bar=False,
+                default_root_dir=report_path.parent / ".work3_lightning",
+            )
+            lightning_trainer.fit(lightning_module, datamodule=data_module)
+            lightning_fit_calls += 1
+            metrics = lightning_module.last_metrics
         else:
             metrics = {}
 
@@ -994,6 +1079,9 @@ def run_training(
             "time_label_count": metrics.get("time_label_count", 0),
             "time_supervision_steps": metrics.get("time_supervision_steps", 0),
             "time_supervision_epochs": metrics.get("time_supervision_epochs", 0),
+            "environment_steps": len(buffer),
+            "lightning_optimization_steps": int(lightning_module.optimization_steps),
+            "lightning_fit_calls": lightning_fit_calls,
             "time_supervision_status": (
                 "not_applicable_method_c" if not profile.use_time_auxiliary
                 else "updated" if metrics.get("time_supervision_steps", 0) > 0
@@ -1002,7 +1090,7 @@ def run_training(
             "sampling_replay_max_abs_error": metrics.get("sampling_replay_max_abs_error"),
             "sampling_replay_sample_count": metrics.get("sampling_replay_sample_count", 0),
             "sampling_replay_scope": "first_pre_update_minibatch_per_rollout",
-            "ppo_updates": metrics.get("num_updates", 0),
+            "ppo_updates": metrics.get("ppo_updates", 0),
             "mean_raw_reward": mean_raw_r,
             "mean_shaped_reward": mean_shaped_r,
             "elapsed_seconds": iter_elapsed,
@@ -1038,6 +1126,9 @@ def run_training(
         stop_reason = "iteration_limit"
     if current_scenario_log is not None and current_scenario_log["success"] is None:
         mark_budget_truncated(stop_reason)
+    environment_worker_pids = list(env.worker_pids)
+    environment_worker_cuda_initialized = list(env.worker_cuda_initialized)
+    trajectory_audit = env.close()
 
     total_elapsed = time.monotonic() - run_started
     successful_batch_count = sum(item.get("success") is True for item in scenario_log)
@@ -1098,11 +1189,16 @@ def run_training(
         "initial_actor_fingerprint": initial_actor_fingerprint,
         "initial_parameter_fingerprint": initial_parameter_fingerprint,
         "device": str(torch_device),
+        "environment_worker_pids": environment_worker_pids,
+        "environment_worker_cuda_initialized": environment_worker_cuda_initialized,
+        "environment_worker_start_method": "spawn",
+        "trajectory_audit": trajectory_audit,
         "device_name": device_name,
         "runtime_versions": {
             "python": platform.python_version(),
             "pytorch": torch.__version__,
             "numpy": np.__version__,
+            "lightning": pl.__version__,
         },
         "elapsed_seconds": total_elapsed,
         "memory_peak_bytes": memory_peak,
@@ -1111,6 +1207,8 @@ def run_training(
             else "process_peak_working_set_or_rss"
         ),
         "total_decisions": total_env_steps,
+        "lightning_optimization_steps": int(lightning_module.optimization_steps),
+        "lightning_fit_calls": lightning_fit_calls,
         "independent_episode_count": len({item["episode_id"] for item in scenario_log}),
         "successful_batch_count": int(successful_batch_count),
         "failure_reasons": failure_reasons,

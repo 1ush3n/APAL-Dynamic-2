@@ -52,6 +52,7 @@ class PPOTrainerWork3:
         time_head: nn.Module | None = None,
         time_loss_coef: float = 0.0,
         device: str | torch.device = "cpu",
+        create_optimizer: bool = True,
     ) -> None:
         self.actor_critic = actor_critic
         self.clip_eps = float(clip_eps)
@@ -73,12 +74,14 @@ class PPOTrainerWork3:
                 for parameter in self.time_head.parameters()
                 if id(parameter) not in actor_parameter_ids
             )
-        self.optimizer = torch.optim.AdamW(
-            self.optimized_parameters,
-            lr=lr,
-            eps=1e-5,
-            weight_decay=1e-4,
-        )
+        self.optimizer: torch.optim.Optimizer | None = None
+        if create_optimizer:
+            self.optimizer = torch.optim.AdamW(
+                self.optimized_parameters,
+                lr=lr,
+                eps=1e-5,
+                weight_decay=1e-4,
+            )
 
     def compute_time_auxiliary_loss(self, batch: dict[str, Any]) -> torch.Tensor:
         """在采样快照上计算共享图表征的有符号时间监督损失。"""
@@ -87,16 +90,20 @@ class PPOTrainerWork3:
         state_feats = batch["state_feats"].to(self.device)
         graph_snapshots = batch["graph_snapshots"]
         targets = batch["target_residuals"].to(self.device)
+        worker_ids = batch.get("worker_ids", [0] * state_feats.size(0))
         episode_ids = batch["episode_ids"]
         cycle_ids = batch["cycle_ids"]
         decision_ids = batch["decision_ids"]
         assert state_feats.ndim == 2
         assert len(graph_snapshots) == state_feats.size(0)
         assert targets.shape == (state_feats.size(0),)
+        assert len(worker_ids) == state_feats.size(0)
         assert len(episode_ids) == state_feats.size(0)
         assert len(cycle_ids) == state_feats.size(0)
         assert len(decision_ids) == state_feats.size(0)
-        assert len(set(decision_ids)) == len(decision_ids)
+        decision_keys = tuple(zip(worker_ids, episode_ids, decision_ids, strict=True))
+        if len(set(decision_keys)) != len(decision_keys):
+            raise ValueError("时间监督批次含重复(worker_id, episode_id, decision_id)")
 
         shared_features = torch.stack([
             self.actor_critic.encode_shared_representation(
@@ -114,6 +121,55 @@ class PPOTrainerWork3:
             reduction="none",
         )
         return per_sample_loss.mean()
+
+    def compute_ppo_minibatch_loss(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:
+        """纯计算一个PPO minibatch的损失，不反传、不创建或更新优化器。"""
+        state_feats = batch["state_feats"].to(self.device)
+        time_urgencies = batch["time_urgencies"].to(self.device)
+        old_log_probs = batch["old_log_probs"].to(self.device, dtype=torch.float32)
+        advantages = batch["advantages"].to(self.device, dtype=torch.float32)
+        target_values = batch["target_values"].to(self.device, dtype=torch.float32)
+        assert state_feats.ndim == 2 and state_feats.size(-1) == 32
+        assert time_urgencies.shape == (state_feats.size(0), 2)
+        assert old_log_probs.shape == advantages.shape == target_values.shape == (
+            state_feats.size(0),
+        )
+
+        values, new_log_probs, entropies = self.actor_critic.evaluate_action_log_probs(
+            state_feats=state_feats,
+            time_urgencies=time_urgencies,
+            sample_records=batch["sample_records"],
+        )
+        values = values.float()
+        new_log_probs = new_log_probs.float()
+        entropies = entropies.float()
+        log_ratio = new_log_probs - old_log_probs
+        ratio = torch.exp(log_ratio)
+        surrogate = ratio * advantages
+        clipped_surrogate = torch.clamp(
+            ratio,
+            1.0 - self.clip_eps,
+            1.0 + self.clip_eps,
+        ) * advantages
+        policy_loss = -torch.min(surrogate, clipped_surrogate).mean()
+        value_loss = 0.5 * F.mse_loss(values, target_values)
+        entropy = entropies.mean()
+        total_loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
+        approx_kl = ((ratio - 1.0) - log_ratio).mean()
+        clip_fraction = (ratio.sub(1.0).abs() > self.clip_eps).float().mean()
+        return {
+            "total_loss": total_loss,
+            "policy_loss": policy_loss,
+            "value_loss": value_loss,
+            "entropy": entropy,
+            "values": values,
+            "new_log_probs": new_log_probs,
+            "entropies": entropies,
+            "ratio": ratio,
+            "log_ratio": log_ratio,
+            "approx_kl": approx_kl,
+            "clip_fraction": clip_fraction,
+        }
 
     def train_step(
         self,
@@ -153,22 +209,16 @@ class PPOTrainerWork3:
             raise ValueError("time_auxiliary_epochs不能为负数")
         if time_auxiliary_batch_size <= 0:
             raise ValueError("time_auxiliary_batch_size必须为正数")
+        if self.optimizer is None:
+            raise RuntimeError("当前PPOTrainer未创建优化器；请使用Lightning训练模块更新")
 
         for epoch in range(ppo_epochs):
             for batch in buffer.get_batches(batch_size=batch_size, shuffle=True):
-                state_feats = batch["state_feats"].to(self.device)
-                time_urgencies = batch["time_urgencies"].to(self.device)
                 old_log_probs = batch["old_log_probs"].to(self.device)
-                advantages = batch["advantages"].to(self.device)
-                target_values = batch["target_values"].to(self.device)
-                sample_records = batch["sample_records"]
-
-                # 1. 批量重放计算当前网络的新策略概率、价值与熵
-                values, new_log_probs, entropies = self.actor_critic.evaluate_action_log_probs(
-                    state_feats=state_feats,
-                    time_urgencies=time_urgencies,
-                    sample_records=sample_records,
-                )
+                batch_losses = self.compute_ppo_minibatch_loss(batch)
+                values = batch_losses["values"]
+                new_log_probs = batch_losses["new_log_probs"]
+                entropies = batch_losses["entropies"]
 
                 if not sampling_replay_checked:
                     with torch.no_grad():
@@ -178,28 +228,13 @@ class PPOTrainerWork3:
                     sampling_replay_sample_count = int(old_log_probs.numel())
                     sampling_replay_checked = True
 
-                # 2. 重要性采样比率 r_t(θ)
-                log_ratio = new_log_probs - old_log_probs
-                ratio = torch.exp(log_ratio)
-
-                # 3. PPO 裁剪代理策略损失
-                surr1 = ratio * advantages
-                surr2 = torch.clamp(ratio, 1.0 - self.clip_eps, 1.0 + self.clip_eps) * advantages
-                policy_loss = -torch.min(surr1, surr2).mean()
-
-                # 4. 价值函数平方误差损失
-                value_loss = 0.5 * F.mse_loss(values, target_values)
-
-                # 5. 策略熵奖励损失 (-entropy 促使熵最大化)
-                entropy = entropies.mean()
-                entropy_loss = -entropy
-
-                # 6. 综合损失
-                loss = (
-                    policy_loss
-                    + (self.vf_coef * value_loss)
-                    + (self.ent_coef * entropy_loss)
-                )
+                # 纯损失由共享计算路径给出；这里仅为旧入口执行优化步骤。
+                log_ratio = batch_losses["log_ratio"]
+                ratio = batch_losses["ratio"]
+                policy_loss = batch_losses["policy_loss"]
+                value_loss = batch_losses["value_loss"]
+                entropy = batch_losses["entropy"]
+                loss = batch_losses["total_loss"]
 
                 # 7. 反向传播与梯度裁剪
                 self.optimizer.zero_grad()
@@ -240,19 +275,27 @@ class PPOTrainerWork3:
             time_label_count = int(time_auxiliary_batch["target_residuals"].numel())
             if time_label_count and self.time_loss_coef > 0.0:
                 graph_snapshots = time_auxiliary_batch["graph_snapshots"]
+                worker_ids = time_auxiliary_batch.get(
+                    "worker_ids",
+                    [0] * time_label_count,
+                )
                 episode_ids = time_auxiliary_batch["episode_ids"]
                 cycle_ids = time_auxiliary_batch["cycle_ids"]
                 decision_ids = time_auxiliary_batch["decision_ids"]
                 if not (
                     len(graph_snapshots)
+                    == len(worker_ids)
                     == len(episode_ids)
                     == len(cycle_ids)
                     == len(decision_ids)
                     == time_label_count
                 ):
                     raise ValueError("时间监督批次的图与标签元数据长度不一致")
-                if len(set(decision_ids)) != len(decision_ids):
-                    raise ValueError("时间监督批次含重复decision_id")
+                decision_keys = tuple(zip(worker_ids, episode_ids, decision_ids, strict=True))
+                if len(set(decision_keys)) != len(decision_keys):
+                    raise ValueError(
+                        "时间监督批次含重复(worker_id, episode_id, decision_id)"
+                    )
 
                 for _ in range(time_auxiliary_epochs):
                     indices = torch.randperm(time_label_count)
@@ -264,6 +307,7 @@ class PPOTrainerWork3:
                             "state_feats": time_auxiliary_batch["state_feats"][batch_indices],
                             "graph_snapshots": [graph_snapshots[index] for index in batch_indices],
                             "target_residuals": time_auxiliary_batch["target_residuals"][batch_indices],
+                            "worker_ids": [worker_ids[index] for index in batch_indices],
                             "episode_ids": [episode_ids[index] for index in batch_indices],
                             "cycle_ids": [cycle_ids[index] for index in batch_indices],
                             "decision_ids": [decision_ids[index] for index in batch_indices],
@@ -315,9 +359,10 @@ class PPOTrainerWork3:
             "graph_feature_dims": dict(GRAPH_FEATURE_DIMS),
             "graph_feature_schema": dict(GRAPH_FEATURE_SCHEMA),
             "actor_critic_state": self.actor_critic.state_dict(),
-            "optimizer_state": self.optimizer.state_dict(),
             "run_metadata": dict(metadata or {}),
         }
+        if self.optimizer is not None:
+            checkpoint["optimizer_state"] = self.optimizer.state_dict()
         if self.time_head is not None:
             checkpoint.update({
                 "time_head_state": self.time_head.state_dict(),
@@ -345,5 +390,5 @@ class PPOTrainerWork3:
             self.time_head.load_state_dict(checkpoint["time_head_state"])
         elif "time_head_state" in checkpoint:
             raise ValueError("完整工作三检查点包含时间头，但当前训练器未配置时间头")
-        if "optimizer_state" in checkpoint:
+        if "optimizer_state" in checkpoint and self.optimizer is not None:
             self.optimizer.load_state_dict(checkpoint["optimizer_state"])

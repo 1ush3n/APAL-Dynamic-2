@@ -58,6 +58,12 @@ def _work3_vector_env_module() -> ModuleType:
     return importlib.import_module("training.work3_vector_env")
 
 
+def _work3_lightning_module() -> ModuleType:
+    if importlib.util.find_spec("training.work3_lightning") is None:
+        pytest.fail("工作三Lightning训练生命周期尚未实现", pytrace=False)
+    return importlib.import_module("training.work3_lightning")
+
+
 def test_runtime_config_loads_smoke_defaults_and_hashes_resolved_yaml() -> None:
     module = _runtime_config_module()
 
@@ -1012,3 +1018,219 @@ def test_rollout_buffer_stores_immutable_cpu_feature_mask_and_graph_snapshots() 
     assert stored.sample_record["graph_snapshot"] is not graph
     assert torch.equal(stored.sample_record["graph_snapshot"]["task"].x, torch.ones((1, 3)))
     assert stored.sample_record["target_residual"].item() == pytest.approx(-0.25)
+
+
+def _make_lightning_training_fixture() -> tuple[object, object, object]:
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
+    from models.work3.action_fusion import compute_time_urgency_vector
+    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+    from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+    from models.work3.time_head import TimeResidualHead
+    lightning_runtime = _work3_lightning_module()
+
+    environment = AirLineEnvWork3(
+        baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    )
+    environment.reset()
+    actor = ActorCriticWork3(hidden_dim=16)
+    time_head = TimeResidualHead(in_dim=16, hidden_dim=16)
+    cmax = compute_cycle_heuristic_cmax(environment.state)
+    state_features = extract_compact_state_features(environment.state, cmax)
+    time_features = compute_time_urgency_vector(
+        estimated_r=max(0.0, cmax - environment.state.current_time),
+        current_time=environment.state.current_time,
+        last_transfer_time=environment.state.last_transfer_time,
+        h0=environment.state.h0,
+    )
+    action, log_prob, value, sample_record = actor.select_action(
+        environment,
+        state_features,
+        time_features,
+        deterministic=True,
+    )
+    assert action is not None
+    buffer = RolloutBufferWork3(normalize_advantages=False)
+    buffer.add(
+        PPOTransition(
+            state_feat=state_features,
+            time_urgency=time_features,
+            sample_record=sample_record,
+            reward=1.0,
+            raw_reward=1.0,
+            value=value,
+            log_prob=log_prob,
+            worker_id=0,
+            episode_id=2,
+            segment_id=0,
+            done=True,
+            terminated=True,
+            action_dict=action,
+        )
+    )
+    buffer.finish_trajectories(last_values_by_segment={})
+    update = lightning_runtime.Work3TrainingUpdate(buffer=buffer, environment_steps=3)
+    return actor, time_head, update
+
+
+def test_lightning_trainer_fit_runs_ppo_update_and_separates_step_counts() -> None:
+    import lightning.pytorch as pl
+
+    lightning_runtime = _work3_lightning_module()
+
+    actor, time_head, update = _make_lightning_training_fixture()
+    parameters_before = [parameter.detach().clone() for parameter in actor.parameters()]
+    module = lightning_runtime.Work3LightningModule(
+        actor_critic=actor,
+        time_head=time_head,
+        ppo_epochs=1,
+        batch_size=1,
+        learning_rate=1e-3,
+    )
+    data_module = lightning_runtime.Work3PPODataModule(update_factory=lambda: iter((update,)))
+    trainer = pl.Trainer(
+        accelerator="cpu",
+        devices=1,
+        max_epochs=1,
+        limit_train_batches=1,
+        num_sanity_val_steps=0,
+        logger=False,
+        enable_checkpointing=False,
+        enable_model_summary=False,
+        enable_progress_bar=False,
+        default_root_dir=ROOT_DIR / "outputs" / "work3_lightning_test",
+    )
+
+    trainer.fit(module, datamodule=data_module)
+
+    assert trainer.global_step == 1
+    assert module.optimization_steps == 1
+    assert module.environment_steps == 3
+    assert module.last_metrics["sampling_replay_max_abs_error"] <= 1e-6
+    assert module.last_metrics["sampling_replay_sample_count"] == 1
+    assert any(
+        not torch.equal(before, after)
+        for before, after in zip(parameters_before, actor.parameters(), strict=True)
+    )
+
+
+def test_lightning_configures_one_deduplicated_optimizer_for_all_trainable_models() -> None:
+    lightning_runtime = _work3_lightning_module()
+
+    actor, time_head, _update = _make_lightning_training_fixture()
+    module = lightning_runtime.Work3LightningModule(actor_critic=actor, time_head=time_head)
+    optimizer = module.configure_optimizers()
+    optimizer_parameter_ids = [
+        id(parameter)
+        for group in optimizer.param_groups
+        for parameter in group["params"]
+    ]
+    expected_parameter_ids = {
+        id(parameter)
+        for parameter in (*actor.parameters(), *time_head.parameters())
+        if parameter.requires_grad
+    }
+
+    assert len(optimizer_parameter_ids) == len(set(optimizer_parameter_ids))
+    assert set(optimizer_parameter_ids) == expected_parameter_ids
+    assert len(module.optimizers_configured_parameter_ids) == len(expected_parameter_ids)
+
+
+def test_lightning_ppo_loss_computation_is_pure_and_datamodule_uses_no_loader_workers() -> None:
+    from models.work3.ppo_trainer import PPOTrainerWork3
+    lightning_runtime = _work3_lightning_module()
+
+    actor, time_head, update = _make_lightning_training_fixture()
+    objective = PPOTrainerWork3(
+        actor_critic=actor,
+        time_head=time_head,
+        device="cpu",
+        create_optimizer=False,
+    )
+    minibatch = next(update.buffer.get_batches(batch_size=1, shuffle=False))
+    parameters_before = [parameter.detach().clone() for parameter in actor.parameters()]
+
+    losses = objective.compute_ppo_minibatch_loss(minibatch)
+
+    assert set(losses) >= {"total_loss", "policy_loss", "value_loss", "entropy"}
+    assert objective.optimizer is None
+    assert torch.isfinite(losses["total_loss"])
+    assert all(parameter.grad is None for parameter in actor.parameters())
+    assert all(
+        torch.equal(before, after)
+        for before, after in zip(parameters_before, actor.parameters(), strict=True)
+    )
+    data_module = lightning_runtime.Work3PPODataModule(update_factory=lambda: iter((update,)))
+    data_module.setup("fit")
+    assert data_module.train_dataloader().num_workers == 0
+
+
+def test_lightning_time_auxiliary_batch_scopes_decision_ids_by_worker_episode() -> None:
+    from models.work3.ppo_trainer import PPOTrainerWork3
+
+    actor, time_head, update = _make_lightning_training_fixture()
+    trainer = PPOTrainerWork3(
+        actor_critic=actor,
+        time_head=time_head,
+        device="cpu",
+        create_optimizer=False,
+    )
+    graph = update.buffer.transitions[0].sample_record["graph_snapshot"]
+    batch = {
+        "state_feats": torch.zeros((2, 32)),
+        "graph_snapshots": [graph, graph],
+        "target_residuals": torch.tensor([-0.2, 0.3]),
+        "worker_ids": [0, 1],
+        "episode_ids": [7, 7],
+        "cycle_ids": [2, 2],
+        "decision_ids": [11, 11],
+    }
+
+    loss = trainer.compute_time_auxiliary_loss(batch)
+
+    assert torch.isfinite(loss)
+    batch["worker_ids"] = [0, 0]
+    with pytest.raises(ValueError, match="worker_id, episode_id, decision_id"):
+        trainer.compute_time_auxiliary_loss(batch)
+
+
+def test_lightning_fit_calls_preserve_the_single_optimizer_between_rollouts() -> None:
+    import lightning.pytorch as pl
+
+    lightning_runtime = _work3_lightning_module()
+    actor, time_head, update = _make_lightning_training_fixture()
+    module = lightning_runtime.Work3LightningModule(
+        actor_critic=actor,
+        time_head=time_head,
+        ppo_epochs=1,
+        batch_size=1,
+        learning_rate=1e-3,
+    )
+    optimizer = module.configure_optimizers()
+    parameter = next(actor.parameters())
+    for environment_steps in (3, 5):
+        single_update = lightning_runtime.Work3TrainingUpdate(
+            buffer=update.buffer,
+            environment_steps=environment_steps,
+        )
+        data_module = lightning_runtime.Work3PPODataModule(
+            update_factory=lambda update=single_update: iter((update,))
+        )
+        trainer = pl.Trainer(
+            accelerator="cpu",
+            devices=1,
+            max_epochs=1,
+            limit_train_batches=1,
+            num_sanity_val_steps=0,
+            logger=False,
+            enable_checkpointing=False,
+            enable_model_summary=False,
+            enable_progress_bar=False,
+            default_root_dir=ROOT_DIR / "outputs" / "work3_lightning_sequential_test",
+        )
+        trainer.fit(module, datamodule=data_module)
+        assert module.configure_optimizers() is optimizer
+
+    assert module.optimization_steps == 2
+    assert module.environment_steps == 8
+    assert int(optimizer.state[parameter]["step"]) == 2
