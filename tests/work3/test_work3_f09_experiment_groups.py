@@ -117,3 +117,64 @@ def test_short_formal_c_training_loads_disturbance_and_records_episode(tmp_path:
     assert result["scenario_log"][0]["scenario_id"]
     assert result["scenario_log"][0]["timing"] in {"EARLY", "MID", "LATE"}
     assert isinstance(result["scenario_log"][0]["actual_hit_count"], int)
+    entry = result["scenario_log"][0]
+    train_pool = load_training_scenarios(
+        "data/work3/scenarios_9class.json",
+        "data/work3/experiment_splits/train.json",
+    )
+    assert entry["scenario_id"] in {item["scenario_id"] for item in train_pool}
+    assert Path(result["training_config"]["scenario_split_path"]) == Path(
+        "data/work3/experiment_splits/train.json"
+    )
+    assert entry["scheduled_target_count"] == len(entry["scheduled_affected_task_keys"])
+    assert entry["scenario_id"] in result["planned_scenario_ids"]
+    assert entry["disturbance_triggered"] is False
+    assert entry["actual_hit_count"] == 0
+    assert entry["actual_hit_task_keys"] == []
+
+
+def test_training_log_separates_fixed_target_count_from_actual_hit_count(
+    tmp_path: Path,
+) -> None:
+    """零时刻已揭示事件应记录预设目标、已触发状态和真实命中工序。"""
+    scenario = {
+        "scenario_id": "FIXED_TRAINING_LOG_HIT",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "delta": 1.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenarios_path = tmp_path / "scenarios.json"
+    split_path = tmp_path / "train.json"
+    scenarios_path.write_text(json.dumps([scenario]), encoding="utf-8")
+    split_path.write_text(json.dumps([scenario]), encoding="utf-8")
+
+    result = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=1,
+        num_iterations=1,
+        steps_per_iter=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=42,
+        method_variant="C",
+        baseline_path="data/work3/real_283_k10_baseline.json",
+        scenarios_path=scenarios_path,
+        scenario_split_path=split_path,
+        output_ckpt=tmp_path / "pilot.pt",
+        report_path=tmp_path / "pilot.json",
+        device="cpu",
+    )
+
+    entry = result["scenario_log"][0]
+    assert entry["scheduled_target_count"] == 1
+    assert entry["scheduled_affected_task_keys"] == ["0_15"]
+    assert entry["disturbance_triggered"] is True
+    assert entry["actual_hit_count"] == 1
+    assert entry["actual_hit_task_keys"] == ["0_15"]

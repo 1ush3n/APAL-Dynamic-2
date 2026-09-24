@@ -226,14 +226,22 @@ def compute_heuristic_potential(
     return -float(a) * (h_est / h0_value) - float(b) * max(0.0, h_est - h0_value) / h0_value
 
 
-def count_actual_scenario_hits(env: AirLineEnvWork3, scenario: dict[str, Any]) -> int:
-    """按实际物料恢复时间统计已揭示的目标工序数量。"""
-    return sum(
-        1
+def actual_scenario_hit_task_keys(
+    env: AirLineEnvWork3,
+    scenario: dict[str, Any],
+) -> list[str]:
+    """返回实际受到恢复时刻约束的目标工序。"""
+    return [
+        str(task_key)
         for task_key in scenario.get("affected_task_keys", [])
         if task_key in env.state.tasks
         and float(env.state.tasks[task_key].material_ready_time) > env.tolerance
-    )
+    ]
+
+
+def count_actual_scenario_hits(env: AirLineEnvWork3, scenario: dict[str, Any]) -> int:
+    """按实际物料恢复时间统计已揭示的目标工序数量。"""
+    return len(actual_scenario_hit_task_keys(env, scenario))
 
 
 def compute_online_time_inputs(
@@ -499,6 +507,18 @@ def run_training(
     episode_done = False
     episode_termination_reason: str | None = None
 
+    def update_current_scenario_effect_log() -> None:
+        if current_scenario_log is None or current_scenario is None:
+            return
+        tau = current_scenario.get("tau") if run_mode == "pilot" else None
+        current_scenario_log["disturbance_triggered"] = bool(
+            tau is not None
+            and env.state.current_time >= float(tau) - env.tolerance
+        )
+        hit_keys = actual_scenario_hit_task_keys(env, current_scenario)
+        current_scenario_log["actual_hit_task_keys"] = hit_keys
+        current_scenario_log["actual_hit_count"] = len(hit_keys)
+
     def start_episode() -> None:
         nonlocal episode_plan_index, current_scenario, current_scenario_log
         env.reset()
@@ -517,7 +537,14 @@ def run_training(
             "scheduled_tau": current_scenario.get("tau") if run_mode == "pilot" else None,
             "scheduled_recovery_time": current_scenario.get("recovery_time") if run_mode == "pilot" else None,
             "scheduled_affected_task_keys": list(current_scenario.get("affected_task_keys", [])) if run_mode == "pilot" else [],
-            "actual_hit_count": None,
+            "scheduled_target_count": (
+                len(current_scenario.get("affected_task_keys", []))
+                if run_mode == "pilot"
+                else 0
+            ),
+            "disturbance_triggered": False,
+            "actual_hit_task_keys": [],
+            "actual_hit_count": 0,
             "actual_transfer_times": [],
             "completed": False,
             "success": None,
@@ -525,6 +552,7 @@ def run_training(
             "termination_reason": None,
         }
         scenario_log.append(current_scenario_log)
+        update_current_scenario_effect_log()
         logger.info(
             "加载训练episode=%s scenario=%s disturbance=%s timing=%s intensity=%s station=%s",
             episode_id,
@@ -553,6 +581,7 @@ def run_training(
     def mark_budget_truncated(reason: str) -> None:
         nonlocal stop_reason
         stop_reason = reason
+        update_current_scenario_effect_log()
         if current_scenario_log is not None and current_scenario_log["success"] is None:
             current_scenario_log.update({
                 "completed": False,
@@ -613,6 +642,7 @@ def run_training(
             if env._check_terminated() or episode_done:
                 episode_success = env._check_terminated()
                 final_reason = "completed" if episode_success else episode_termination_reason
+                update_current_scenario_effect_log()
                 if not episode_success:
                     record_unlabelled_cycles(episode_id)
                 pending_time_labels.discard_episode(episode_id)
@@ -715,6 +745,7 @@ def run_training(
             # 环境执行一步调度动作
             transfer_count_before = len(env.state.transfer_history)
             obs, raw_reward, terminated, truncated, info = env.step(act)
+            update_current_scenario_effect_log()
             done = terminated or truncated
             last_terminated = bool(terminated)
             discard_unlabelled_time_samples = False
@@ -850,10 +881,7 @@ def run_training(
                 break
 
         if current_scenario_log is not None:
-            current_scenario_log["actual_hit_count"] = count_actual_scenario_hits(
-                env,
-                current_scenario or {},
-            )
+            update_current_scenario_effect_log()
 
         # -------------------------
         # GAE 与价值目标结算
