@@ -147,11 +147,8 @@ def _source_revision() -> tuple[str | None, bool | None]:
     return revision.stdout.strip(), bool(status.stdout.strip())
 
 
-def _peak_memory_bytes(device: torch.device) -> int | None:
-    """读取当前训练进程的峰值显存或峰值常驻内存；无平台接口时返回None。"""
-    if device.type == "cuda" and torch.cuda.is_available():
-        torch.cuda.synchronize(device)
-        return int(torch.cuda.max_memory_allocated(device))
+def _peak_host_memory_bytes() -> int | None:
+    """读取训练主进程峰值常驻内存；平台不支持时返回None。"""
     try:
         import psutil
 
@@ -170,6 +167,14 @@ def _peak_memory_bytes(device: torch.device) -> int | None:
         except (ImportError, OSError, ValueError):
             pass
     return None
+
+
+def _peak_gpu_memory_bytes(device: torch.device) -> int | None:
+    """读取本次训练使用设备的峰值分配显存；未使用CUDA时返回None。"""
+    if device.type != "cuda" or not torch.cuda.is_available():
+        return None
+    torch.cuda.synchronize(device)
+    return int(torch.cuda.max_memory_allocated(device))
 
 
 def _module_fingerprint(modules: dict[str, torch.nn.Module | None]) -> str:
@@ -1533,7 +1538,9 @@ def run_training(
         for item in history
         if item.get("sampling_replay_max_abs_error") is not None
     ]
-    memory_peak = _peak_memory_bytes(torch_device)
+    host_memory_peak = _peak_host_memory_bytes()
+    gpu_memory_peak = _peak_gpu_memory_bytes(torch_device)
+    memory_peak = gpu_memory_peak if torch_device.type == "cuda" else host_memory_peak
     device_name = (
         torch.cuda.get_device_name(torch_device)
         if torch_device.type == "cuda"
@@ -1618,6 +1625,8 @@ def run_training(
         },
         "elapsed_seconds": total_elapsed,
         "memory_peak_bytes": memory_peak,
+        "host_memory_peak_bytes": host_memory_peak,
+        "gpu_memory_peak_bytes": gpu_memory_peak,
         "memory_peak_kind": (
             "cuda_max_memory_allocated" if torch_device.type == "cuda"
             else "process_peak_working_set_or_rss"

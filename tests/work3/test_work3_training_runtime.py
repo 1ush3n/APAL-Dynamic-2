@@ -1687,6 +1687,9 @@ def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
         assert report["amp_dtype"] == "fp32"
         assert report["device"] == "cpu"
         assert report["memory_peak_kind"]
+        assert report["gpu_memory_peak_bytes"] is None
+        assert report["host_memory_peak_bytes"] is None or report["host_memory_peak_bytes"] > 0
+        assert report["memory_peak_bytes"] == report["host_memory_peak_bytes"]
         assert report["elapsed_seconds"] > 0.0
         assert report["worker_step_settlement_requests"] == sum(report["worker_step_counts"])
         audit = report["trajectory_audit"]
@@ -1824,6 +1827,8 @@ def test_work3_cuda_bf16_two_worker_pilot_records_real_hits_and_resource_state(
     assert report["device"] == "cuda"
     assert report["memory_peak_kind"] == "cuda_max_memory_allocated"
     assert report["memory_peak_bytes"] > 0
+    assert report["gpu_memory_peak_bytes"] == report["memory_peak_bytes"]
+    assert report["host_memory_peak_bytes"] is None or report["host_memory_peak_bytes"] > 0
     assert report["training_config"]["num_envs"] == 2
     assert report["environment_worker_cuda_initialized"] == [False, False]
     assert report["total_decisions"] == 2
