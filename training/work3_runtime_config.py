@@ -152,6 +152,30 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
         raise ValueError("配置 ppo.clip_epsilon必须是正有限数值")
 
 
+def resolve_work3_precision(
+    amp_dtype: str,
+    device: str | torch.device,
+) -> tuple[str, torch.dtype | None]:
+    """将配置精度映射为Lightning策略与rollout autocast dtype。"""
+    if amp_dtype not in {"fp32", "fp16", "bf16"}:
+        raise ValueError("amp_dtype仅支持fp32、fp16或bf16")
+    target = torch.device(device)
+    if target.type not in {"cpu", "cuda"}:
+        raise ValueError(f"工作三训练不支持设备类型: {target.type}")
+    if amp_dtype == "fp32":
+        return "32-true", None
+    if target.type != "cuda" or not torch.cuda.is_available():
+        raise ValueError("fp16/bf16混合精度要求可用的CUDA设备")
+    if target.index is not None and target.index >= torch.cuda.device_count():
+        raise ValueError(f"配置的CUDA设备不存在: {target}")
+    if amp_dtype == "fp16":
+        return "16-mixed", torch.float16
+    with torch.cuda.device(target):
+        if not torch.cuda.is_bf16_supported(including_emulation=False):
+            raise ValueError(f"配置的CUDA设备不支持硬件bfloat16: {target}")
+    return "bf16-mixed", torch.bfloat16
+
+
 def load_work3_runtime_config(
     path: Path,
     overrides: Sequence[str] = (),

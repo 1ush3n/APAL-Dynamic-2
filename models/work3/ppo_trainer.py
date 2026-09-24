@@ -114,12 +114,13 @@ class PPOTrainerWork3:
         ])
         predictions = self.time_head(shared_features)
         assert predictions.shape == targets.shape
-        per_sample_loss = F.smooth_l1_loss(
-            predictions,
-            targets,
-            beta=0.01,
-            reduction="none",
-        )
+        with torch.amp.autocast(device_type=self.device.type, enabled=False):
+            per_sample_loss = F.smooth_l1_loss(
+                predictions.float(),
+                targets.float(),
+                beta=0.01,
+                reduction="none",
+            )
         return per_sample_loss.mean()
 
     def compute_ppo_minibatch_loss(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:
@@ -140,23 +141,24 @@ class PPOTrainerWork3:
             time_urgencies=time_urgencies,
             sample_records=batch["sample_records"],
         )
-        values = values.float()
-        new_log_probs = new_log_probs.float()
-        entropies = entropies.float()
-        log_ratio = new_log_probs - old_log_probs
-        ratio = torch.exp(log_ratio)
-        surrogate = ratio * advantages
-        clipped_surrogate = torch.clamp(
-            ratio,
-            1.0 - self.clip_eps,
-            1.0 + self.clip_eps,
-        ) * advantages
-        policy_loss = -torch.min(surrogate, clipped_surrogate).mean()
-        value_loss = 0.5 * F.mse_loss(values, target_values)
-        entropy = entropies.mean()
-        total_loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
-        approx_kl = ((ratio - 1.0) - log_ratio).mean()
-        clip_fraction = (ratio.sub(1.0).abs() > self.clip_eps).float().mean()
+        with torch.amp.autocast(device_type=self.device.type, enabled=False):
+            values = values.float()
+            new_log_probs = new_log_probs.float()
+            entropies = entropies.float()
+            log_ratio = new_log_probs - old_log_probs
+            ratio = torch.exp(log_ratio)
+            surrogate = ratio * advantages
+            clipped_surrogate = torch.clamp(
+                ratio,
+                1.0 - self.clip_eps,
+                1.0 + self.clip_eps,
+            ) * advantages
+            policy_loss = -torch.min(surrogate, clipped_surrogate).mean()
+            value_loss = 0.5 * F.mse_loss(values, target_values)
+            entropy = entropies.mean()
+            total_loss = policy_loss + self.vf_coef * value_loss - self.ent_coef * entropy
+            approx_kl = ((ratio - 1.0) - log_ratio).mean()
+            clip_fraction = (ratio.sub(1.0).abs() > self.clip_eps).float().mean()
         return {
             "total_loss": total_loss,
             "policy_loss": policy_loss,

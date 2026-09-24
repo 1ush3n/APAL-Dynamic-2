@@ -121,9 +121,17 @@ class Work3GraphEncoder(nn.Module):
             if edge_index is not None and edge_index.numel() > 0:
                 src_task, dst_worker = edge_index[0], edge_index[1]
                 w_delta = torch.zeros_like(worker_emb)
-                w_delta.index_add_(0, dst_worker, t2w_proj(task_emb[src_task]))
+                w_delta.index_add_(
+                    0,
+                    dst_worker,
+                    t2w_proj(task_emb[src_task]).to(dtype=w_delta.dtype),
+                )
                 t_delta = torch.zeros_like(task_emb)
-                t_delta.index_add_(0, src_task, w2t_proj(worker_emb[dst_worker]))
+                t_delta.index_add_(
+                    0,
+                    src_task,
+                    w2t_proj(worker_emb[dst_worker]).to(dtype=t_delta.dtype),
+                )
                 worker_emb = worker_emb + w_delta
                 task_emb = task_emb + t_delta
         encoded["task"] = task_emb

@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
@@ -49,6 +50,7 @@ from training.work3_runtime_config import (
     apply_work3_runtime_overrides,
     load_work3_runtime_config,
     resolved_config_fingerprint,
+    resolve_work3_precision,
     seed_work3_runtime,
 )
 
@@ -57,6 +59,15 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def _autocast_context(
+    device: torch.device,
+    dtype: torch.dtype | None,
+) -> AbstractContextManager[None]:
+    if dtype is None:
+        return nullcontext()
+    return torch.amp.autocast(device_type=device.type, dtype=dtype)
 
 
 @dataclass(slots=True)
@@ -424,6 +435,7 @@ def run_training(
     settle_timeout_seconds: float | None = None,
     resolved_config_yaml: str | None = None,
     resolved_config_sha256: str | None = None,
+    amp_dtype: str = "fp32",
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
@@ -477,10 +489,14 @@ def run_training(
         if observed_hash != resolved_config_sha256:
             raise ValueError("解析后YAML与其SHA256不匹配")
 
+    torch_device = torch.device(device)
+    lightning_precision, autocast_dtype = resolve_work3_precision(
+        amp_dtype,
+        torch_device,
+    )
     profile = build_method_profile(method_variant)
     torch.set_num_threads(main_num_threads)
     _seed_everything(seed, deterministic=deterministic)
-    torch_device = torch.device(device)
 
     training_scenarios = load_training_scenarios(scenarios_path, scenario_split_path)
     if run_mode == "smoke":
@@ -648,6 +664,8 @@ def run_training(
         "report_path": str(report_path),
         "paired_report_path": None if paired_report_path is None else str(paired_report_path),
         "device": str(torch_device),
+        "amp_dtype": amp_dtype,
+        "lightning_precision": lightning_precision,
     }
     initial_actor_fingerprint = _module_fingerprint({"actor_critic": actor_critic})
     initial_parameter_fingerprint = _module_fingerprint({
@@ -664,6 +682,7 @@ def run_training(
     scenario_log: list[dict[str, Any]] = []
     cycle_time_labels: list[dict[str, Any]] = []
     lightning_fit_calls = 0
+    lightning_grad_scaler_enabled: bool | None = None
     stop_reason: str | None = None
     worker_states: list[_TrainingWorkerEpisode] = []
     episode_wave_index = 0
@@ -896,11 +915,12 @@ def run_training(
                 graph_snapshot = snapshot.graph_snapshot
                 action_snapshot = snapshot
                 if profile.use_corrected_time_input and time_head is not None:
-                    graph_snapshot, time_urgency, _ = compute_online_snapshot_time_inputs(
-                        actor_critic=actor_critic,
-                        time_head=time_head,
-                        snapshot=snapshot,
-                    )
+                    with _autocast_context(torch_device, autocast_dtype):
+                        graph_snapshot, time_urgency, _ = compute_online_snapshot_time_inputs(
+                            actor_critic=actor_critic,
+                            time_head=time_head,
+                            snapshot=snapshot,
+                        )
                     action_snapshot = replace(snapshot, time_features=time_urgency)
                 else:
                     time_urgency = snapshot.time_features
@@ -908,17 +928,18 @@ def run_training(
                 if shaper is not None:
                     if state.predictor_version is None:
                         raise RuntimeError("势函数episode没有绑定预测器版本")
-                    phi_current = shaper.compute_potential(
-                        state_feat=state_features,
-                        estimated_cmax=cmax_est,
-                        current_time=snapshot.current_time,
-                        h0=snapshot.h0,
-                        last_transfer_time=snapshot.last_transfer_time,
-                        is_terminal=False,
-                        graph_data=graph_snapshot,
-                        worker_id=state.worker_id,
-                        episode_id=state.episode_id,
-                    )
+                    with _autocast_context(torch_device, autocast_dtype):
+                        phi_current = shaper.compute_potential(
+                            state_feat=state_features,
+                            estimated_cmax=cmax_est,
+                            current_time=snapshot.current_time,
+                            h0=snapshot.h0,
+                            last_transfer_time=snapshot.last_transfer_time,
+                            is_terminal=False,
+                            graph_data=graph_snapshot,
+                            worker_id=state.worker_id,
+                            episode_id=state.episode_id,
+                        )
                 else:
                     phi_current = compute_heuristic_potential(
                         cmax_est,
@@ -926,10 +947,11 @@ def run_training(
                         snapshot.h0,
                     )
 
-                action, log_prob, value, sample_record = actor_critic.select_snapshot(
-                    action_snapshot,
-                    deterministic=False,
-                )
+                with _autocast_context(torch_device, autocast_dtype):
+                    action, log_prob, value, sample_record = actor_critic.select_snapshot(
+                        action_snapshot,
+                        deterministic=False,
+                    )
                 if action is None:
                     raise RuntimeError(
                         "Actor未返回动作；无候选状态应通过强制推进动作进入env.step()"
@@ -1064,26 +1086,28 @@ def run_training(
                     if next_cmax_est is None:
                         raise RuntimeError("环境worker下一状态快照缺少时间预测")
                     if profile.use_corrected_time_input and time_head is not None:
-                        next_graph, next_time_urgency, _ = compute_online_snapshot_time_inputs(
-                            actor_critic=actor_critic,
-                            time_head=time_head,
-                            snapshot=snapshot,
-                        )
+                        with _autocast_context(torch_device, autocast_dtype):
+                            next_graph, next_time_urgency, _ = compute_online_snapshot_time_inputs(
+                                actor_critic=actor_critic,
+                                time_head=time_head,
+                                snapshot=snapshot,
+                            )
                     else:
                         next_graph = snapshot.graph_snapshot
                         next_time_urgency = snapshot.time_features
                     if shaper is not None:
-                        phi_next = shaper.compute_potential(
-                            state_feat=snapshot.state_features,
-                            estimated_cmax=next_cmax_est,
-                            current_time=snapshot.current_time,
-                            h0=snapshot.h0,
-                            last_transfer_time=snapshot.last_transfer_time,
-                            is_terminal=False,
-                            graph_data=next_graph,
-                            worker_id=worker_id,
-                            episode_id=state.episode_id,
-                        )
+                        with _autocast_context(torch_device, autocast_dtype):
+                            phi_next = shaper.compute_potential(
+                                state_feat=snapshot.state_features,
+                                estimated_cmax=next_cmax_est,
+                                current_time=snapshot.current_time,
+                                h0=snapshot.h0,
+                                last_transfer_time=snapshot.last_transfer_time,
+                                is_terminal=False,
+                                graph_data=next_graph,
+                                worker_id=worker_id,
+                                episode_id=state.episode_id,
+                            )
                     else:
                         phi_next = compute_heuristic_potential(
                             next_cmax_est,
@@ -1092,7 +1116,7 @@ def run_training(
                         )
 
                 if truncated:
-                    with torch.no_grad():
+                    with torch.no_grad(), _autocast_context(torch_device, autocast_dtype):
                         truncated_value, _ = actor_critic.encode_state(
                             snapshot.state_features.to(torch_device),
                             next_time_urgency.to(torch_device),
@@ -1187,15 +1211,16 @@ def run_training(
                 if snapshot.estimated_cmax is None:
                     raise RuntimeError("rollout结束时环境worker快照缺少时间预测")
                 if profile.use_corrected_time_input and time_head is not None:
-                    graph_snapshot, last_time_urgency, _ = compute_online_snapshot_time_inputs(
-                        actor_critic=actor_critic,
-                        time_head=time_head,
-                        snapshot=snapshot,
-                    )
+                    with _autocast_context(torch_device, autocast_dtype):
+                        graph_snapshot, last_time_urgency, _ = compute_online_snapshot_time_inputs(
+                            actor_critic=actor_critic,
+                            time_head=time_head,
+                            snapshot=snapshot,
+                        )
                 else:
                     graph_snapshot = snapshot.graph_snapshot
                     last_time_urgency = snapshot.time_features
-                with torch.no_grad():
+                with torch.no_grad(), _autocast_context(torch_device, autocast_dtype):
                     last_value, _ = actor_critic.encode_state(
                         snapshot.state_features.to(torch_device),
                         last_time_urgency.to(torch_device),
@@ -1222,7 +1247,7 @@ def run_training(
             lightning_trainer = pl.Trainer(
                 accelerator="gpu" if torch_device.type == "cuda" else "cpu",
                 devices=1,
-                precision="32-true",
+                precision=lightning_precision,
                 max_epochs=1,
                 limit_train_batches=1,
                 num_sanity_val_steps=0,
@@ -1233,6 +1258,18 @@ def run_training(
                 default_root_dir=report_path.parent / ".work3_lightning",
             )
             lightning_trainer.fit(lightning_module, datamodule=data_module)
+            scaler = getattr(lightning_trainer.precision_plugin, "scaler", None)
+            current_scaler_enabled = bool(
+                scaler is not None and scaler.is_enabled()
+            )
+            if (
+                lightning_grad_scaler_enabled is not None
+                and lightning_grad_scaler_enabled != current_scaler_enabled
+            ):
+                raise RuntimeError("不同rollout的Lightning GradScaler状态不一致")
+            lightning_grad_scaler_enabled = current_scaler_enabled
+            # Lightning teardown把模型和优化器状态移回CPU；后续rollout/bootstrap需要主策略留在目标设备。
+            lightning_module.to(torch_device)
             lightning_fit_calls += 1
             metrics = lightning_module.last_metrics
         else:
@@ -1258,6 +1295,10 @@ def run_training(
             "time_supervision_epochs": metrics.get("time_supervision_epochs", 0),
             "environment_steps": len(buffer),
             "lightning_optimization_steps": int(lightning_module.optimization_steps),
+            "lightning_optimizer_step_attempts": int(
+                metrics.get("optimizer_step_attempts", 0)
+            ),
+            "lightning_amp_skipped_steps": int(metrics.get("amp_skipped_steps", 0)),
             "lightning_fit_calls": lightning_fit_calls,
             "time_supervision_status": (
                 "not_applicable_method_c" if not profile.use_time_auxiliary
@@ -1379,6 +1420,8 @@ def run_training(
         "worker_step_counts": worker_step_counts,
         "trajectory_audit": trajectory_audit,
         "device_name": device_name,
+        "amp_dtype": amp_dtype,
+        "lightning_precision": lightning_precision,
         "runtime_versions": {
             "python": platform.python_version(),
             "pytorch": torch.__version__,
@@ -1393,7 +1436,12 @@ def run_training(
         ),
         "total_decisions": total_env_steps,
         "lightning_optimization_steps": int(lightning_module.optimization_steps),
+        "lightning_optimizer_step_attempts": int(
+            lightning_module.optimizer_step_attempts
+        ),
+        "lightning_amp_skipped_steps": int(lightning_module.amp_skipped_steps),
         "lightning_fit_calls": lightning_fit_calls,
+        "lightning_grad_scaler_enabled": lightning_grad_scaler_enabled,
         "independent_episode_count": len({
             (item["worker_id"], item["episode_id"])
             for item in scenario_log
@@ -1563,8 +1611,6 @@ def main() -> None:
         {key: value for key, value in cli_overrides.items() if value is not None},
     )
     resolved_yaml, config_sha256 = resolved_config_fingerprint(runtime_config)
-    if runtime_config.runtime.amp_dtype != "fp32":
-        raise ValueError("当前训练入口尚未接入AMP；请先使用runtime.amp_dtype=fp32")
 
     run_mode = str(runtime_config.runtime.run_mode)
     method_profile = str(runtime_config.runtime.method_profile)
@@ -1611,6 +1657,7 @@ def main() -> None:
         scenario_split_path=Path(runtime_config.runtime.scenario_split_path),
         time_head_ckpt=Path(runtime_config.paths.time_head_checkpoint),
         device=str(runtime_config.runtime.device),
+        amp_dtype=str(runtime_config.runtime.amp_dtype),
         output_ckpt=output_path,
         report_path=report_path,
         paired_report_path=args.paired_report,

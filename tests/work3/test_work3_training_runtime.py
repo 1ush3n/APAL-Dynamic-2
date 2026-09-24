@@ -94,6 +94,8 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
         "runtime.seed=31415",
         "runtime.num_envs=2",
         "ppo.steps_per_iter=8",
+        "runtime.device=cuda",
+        "runtime.amp_dtype=bf16",
     )
     resolved_config = runtime_config_module.load_work3_runtime_config(
         DEFAULT_CONFIG,
@@ -131,8 +133,175 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
     assert captured["main_num_threads"] == 1
     assert captured["env_num_threads"] == 1
     assert captured["settle_timeout_seconds"] == 2.0
+    assert captured["amp_dtype"] == "bf16"
     assert captured["resolved_config_yaml"] == resolved_yaml
     assert captured["resolved_config_sha256"] == fingerprint
+
+
+def test_amp_precision_resolver_rejects_mixed_precision_on_cpu() -> None:
+    runtime = _runtime_config_module()
+
+    with pytest.raises(ValueError, match="CUDA"):
+        runtime.resolve_work3_precision("fp16", torch.device("cpu"))
+
+
+@pytest.mark.parametrize("amp_dtype", ["fp16", "bf16"])
+def test_actor_sampling_and_replay_keep_probability_math_fp32_under_amp(
+    amp_dtype: str,
+) -> None:
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA AMP验收需要CUDA设备")
+    if amp_dtype == "bf16" and not torch.cuda.is_bf16_supported():
+        pytest.skip("当前CUDA设备不支持bfloat16")
+
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.actor_critic import ActorCriticWork3
+    from scripts.work3.train_ppo_work3 import ROOT_DIR
+
+    environment = AirLineEnvWork3(
+        baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    )
+    environment.reset()
+    actor = ActorCriticWork3(hidden_dim=16).to("cuda").eval()
+    state_features = torch.zeros(32)
+    time_features = torch.zeros(2)
+    snapshot = actor.make_decision_snapshot(
+        environment,
+        state_features,
+        time_features,
+        worker_id=0,
+        episode_id=0,
+        episode_index=0,
+    )
+    amp_torch_dtype = torch.float16 if amp_dtype == "fp16" else torch.bfloat16
+
+    with torch.amp.autocast(device_type="cuda", dtype=amp_torch_dtype):
+        action, sampled_log_prob, _value, sample_record = actor.select_snapshot(
+            snapshot,
+            deterministic=True,
+        )
+        assert action is not None
+        _values, replay_log_probs, entropies = actor.evaluate_action_log_probs(
+            state_features.unsqueeze(0).to("cuda"),
+            time_features.unsqueeze(0).to("cuda"),
+            [sample_record],
+        )
+        from models.work3.ppo_trainer import PPOTrainerWork3
+
+        objective = PPOTrainerWork3(
+            actor_critic=actor,
+            device="cuda",
+            create_optimizer=False,
+        )
+        losses = objective.compute_ppo_minibatch_loss(
+            {
+                "state_feats": state_features.unsqueeze(0),
+                "time_urgencies": time_features.unsqueeze(0),
+                "old_log_probs": torch.tensor([sampled_log_prob]),
+                "advantages": torch.tensor([1.0]),
+                "target_values": torch.tensor([0.0]),
+                "sample_records": [sample_record],
+            }
+        )
+        from models.work3.time_head import TimeResidualHead
+
+        time_head = TimeResidualHead(in_dim=16, hidden_dim=16).to("cuda")
+        auxiliary_objective = PPOTrainerWork3(
+            actor_critic=actor,
+            time_head=time_head,
+            device="cuda",
+            create_optimizer=False,
+        )
+        time_loss = auxiliary_objective.compute_time_auxiliary_loss(
+            {
+                "state_feats": state_features.unsqueeze(0),
+                "graph_snapshots": [snapshot.graph_snapshot],
+                "target_residuals": torch.tensor([-0.2]),
+                "worker_ids": [0],
+                "episode_ids": [0],
+                "cycle_ids": [0],
+                "decision_ids": [0],
+            }
+        )
+
+    assert torch.isfinite(torch.tensor(sampled_log_prob))
+    assert replay_log_probs.dtype == torch.float32
+    assert entropies.dtype == torch.float32
+    assert torch.isfinite(replay_log_probs).all()
+    assert torch.isfinite(entropies).all()
+    assert float(replay_log_probs[0]) == pytest.approx(sampled_log_prob, abs=1e-6)
+    for key in (
+        "values",
+        "new_log_probs",
+        "entropies",
+        "ratio",
+        "log_ratio",
+        "advantages",
+        "target_values",
+        "total_loss",
+    ):
+        if key in losses:
+            assert losses[key].dtype == torch.float32
+            assert torch.isfinite(losses[key]).all()
+    losses["total_loss"].backward()
+    assert all(
+        parameter.grad is None or torch.isfinite(parameter.grad).all()
+        for parameter in actor.parameters()
+    )
+    actor.zero_grad(set_to_none=True)
+    assert time_loss.dtype == torch.float32
+    assert torch.isfinite(time_loss)
+    time_loss.backward()
+    shared_gradient = next(actor.graph_encoder.parameters()).grad
+    time_head_gradient = next(time_head.parameters()).grad
+    assert shared_gradient is not None and torch.isfinite(shared_gradient).all()
+    assert time_head_gradient is not None and torch.isfinite(time_head_gradient).all()
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="训练入口AMP验收需要CUDA设备")
+@pytest.mark.parametrize(
+    ("amp_dtype", "lightning_precision"),
+    [("fp16", "16-mixed"), ("bf16", "bf16-mixed")],
+)
+def test_training_entry_uses_configured_amp_for_rollout_and_lightning(
+    tmp_path: Path,
+    amp_dtype: str,
+    lightning_precision: str,
+) -> None:
+    if amp_dtype == "bf16" and not torch.cuda.is_bf16_supported():
+        pytest.skip("当前CUDA设备不支持bfloat16")
+
+    from scripts.work3.train_ppo_work3 import run_training
+
+    report = run_training(
+        run_mode="smoke",
+        num_iterations=1,
+        steps_per_iter=1,
+        max_decisions=1,
+        ppo_epochs=1,
+        batch_size=1,
+        method_variant="D",
+        amp_dtype=amp_dtype,
+        device="cuda",
+        output_ckpt=tmp_path / "amp_bf16_smoke.pt",
+        report_path=tmp_path / "amp_bf16_smoke.run.json",
+    )
+
+    assert report["amp_dtype"] == amp_dtype
+    assert report["lightning_precision"] == lightning_precision
+    assert report["method_variant"] == "D"
+    assert report["memory_peak_kind"] == "cuda_max_memory_allocated"
+    assert report["lightning_grad_scaler_enabled"] is (amp_dtype == "fp16")
+    assert report["history"][0]["environment_steps"] == 1
+    assert report["history"][0]["lightning_optimizer_step_attempts"] == 1
+    assert (
+        report["history"][0]["lightning_optimization_steps"]
+        + report["history"][0]["lightning_amp_skipped_steps"]
+        == 1
+    )
+    assert report["history"][0]["sampling_replay_max_abs_error"] <= 1e-6
+    for key in ("total_loss", "policy_loss", "value_loss", "entropy", "grad_norm"):
+        assert torch.isfinite(torch.tensor(report["history"][0][key]))
 
 
 def test_runtime_config_overrides_change_resolved_values_and_fingerprint() -> None:
@@ -1183,6 +1352,66 @@ def test_lightning_trainer_fit_runs_ppo_update_and_separates_step_counts() -> No
     )
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Lightning AMP验收需要CUDA设备")
+@pytest.mark.parametrize(
+    ("amp_dtype", "precision"),
+    [("fp16", "16-mixed"), ("bf16", "bf16-mixed")],
+)
+def test_lightning_amp_uses_only_precision_plugin_scaler(
+    tmp_path: Path,
+    amp_dtype: str,
+    precision: str,
+) -> None:
+    if amp_dtype == "bf16" and not torch.cuda.is_bf16_supported():
+        pytest.skip("当前CUDA设备不支持bfloat16")
+
+    import lightning.pytorch as pl
+
+    lightning_runtime = _work3_lightning_module()
+    actor, time_head, update = _make_lightning_training_fixture()
+    module = lightning_runtime.Work3LightningModule(
+        actor_critic=actor,
+        time_head=time_head,
+        ppo_epochs=1,
+        batch_size=1,
+        learning_rate=1e-3,
+    )
+    trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=1,
+        precision=precision,
+        max_epochs=1,
+        limit_train_batches=1,
+        num_sanity_val_steps=0,
+        logger=False,
+        enable_checkpointing=False,
+        enable_model_summary=False,
+        enable_progress_bar=False,
+        default_root_dir=tmp_path,
+    )
+
+    trainer.fit(
+        module,
+        datamodule=lightning_runtime.Work3PPODataModule(
+            update_factory=lambda: iter((update,))
+        ),
+    )
+
+    scaler = getattr(trainer.precision_plugin, "scaler", None)
+    assert (scaler is not None and scaler.is_enabled()) is (amp_dtype == "fp16")
+    assert not hasattr(module, "scaler")
+    assert module.optimizer_step_attempts == 1
+    assert module.optimization_steps + module.amp_skipped_steps == 1
+    assert module.last_metrics["optimizer_step_attempts"] == 1
+    assert module.last_metrics["amp_skipped_steps"] == module.amp_skipped_steps
+    grad_norm = module.last_metrics.get("grad_norm")
+    if grad_norm is not None:
+        assert torch.isfinite(torch.tensor(grad_norm))
+    if amp_dtype == "bf16":
+        assert module.optimization_steps == 1
+        assert module.amp_skipped_steps == 0
+
+
 def test_lightning_configures_one_deduplicated_optimizer_for_all_trainable_models() -> None:
     lightning_runtime = _work3_lightning_module()
 
@@ -1203,6 +1432,19 @@ def test_lightning_configures_one_deduplicated_optimizer_for_all_trainable_model
     assert len(optimizer_parameter_ids) == len(set(optimizer_parameter_ids))
     assert set(optimizer_parameter_ids) == expected_parameter_ids
     assert len(module.optimizers_configured_parameter_ids) == len(expected_parameter_ids)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="设备保留验收需要CUDA设备")
+def test_lightning_module_construction_preserves_actor_cuda_device() -> None:
+    from models.work3.actor_critic import ActorCriticWork3
+
+    lightning_runtime = _work3_lightning_module()
+    actor = ActorCriticWork3(hidden_dim=16).to("cuda")
+
+    module = lightning_runtime.Work3LightningModule(actor_critic=actor)
+
+    assert next(actor.parameters()).device.type == "cuda"
+    assert next(module.actor_critic.parameters()).device.type == "cuda"
 
 
 def test_lightning_ppo_loss_computation_is_pure_and_datamodule_uses_no_loader_workers() -> None:

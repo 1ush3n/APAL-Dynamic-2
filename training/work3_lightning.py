@@ -107,14 +107,18 @@ class Work3LightningModule(LightningModule):
             max_grad_norm=max_grad_norm,
             time_head=time_head,
             time_loss_coef=time_loss_coef,
-            device="cpu",
+            device=next(actor_critic.parameters()).device,
             create_optimizer=False,
         )
         self.optimization_steps = 0
+        self.optimizer_step_attempts = 0
+        self.amp_skipped_steps = 0
         self.environment_steps = 0
         self.last_metrics: dict[str, float | None] = {}
         self._optimizer_parameter_ids: tuple[int, ...] = ()
         self._optimizer: torch.optim.Optimizer | None = None
+        self._step_grad_norm: float | None = None
+        self._step_has_non_finite_gradients = False
 
     @property
     def optimizers_configured_parameter_ids(self) -> tuple[int, ...]:
@@ -158,25 +162,63 @@ class Work3LightningModule(LightningModule):
     def on_fit_start(self) -> None:
         self.objective.device = self.device
 
-    def _manual_update(self, loss: torch.Tensor, optimizer: Any) -> float:
+    def _active_grad_scaler(self) -> Any | None:
+        if not self._trainer:
+            return None
+        scaler = getattr(self.trainer.precision_plugin, "scaler", None)
+        return scaler if scaler is not None and scaler.is_enabled() else None
+
+    def on_before_optimizer_step(self, optimizer: torch.optim.Optimizer) -> None:
+        """Lightning已完成GradScaler反缩放后，在真正更新前检查并裁剪梯度。"""
+        del optimizer
+        parameters = [
+            parameter
+            for parameter in self.parameters()
+            if parameter.requires_grad and parameter.grad is not None
+        ]
+        non_finite_gradients = any(
+            not bool(torch.isfinite(parameter.grad).all().item())
+            for parameter in parameters
+        )
+        self._step_has_non_finite_gradients = non_finite_gradients
+        if non_finite_gradients:
+            if self._active_grad_scaler() is None:
+                raise FloatingPointError("Lightning PPO梯度包含NaN或Inf")
+            # GradScaler已在调用本钩子前记录溢出；跳过裁剪并让其跳过更新、降低scale。
+            self._step_grad_norm = None
+            return
+        if not parameters:
+            self._step_grad_norm = 0.0
+            return
+        grad_norm = torch.nn.utils.clip_grad_norm_(
+            parameters,
+            max_norm=self.max_grad_norm,
+            error_if_nonfinite=True,
+        )
+        self._step_grad_norm = float(grad_norm.detach().float().item())
+
+    def _manual_update(self, loss: torch.Tensor, optimizer: Any) -> float | None:
         if loss.ndim != 0 or not bool(torch.isfinite(loss).item()):
             raise FloatingPointError("Lightning收到非有限或非标量训练损失")
         optimizer.zero_grad()
         self.manual_backward(loss)
-        parameters = [parameter for parameter in self.parameters() if parameter.grad is not None]
-        if any(not bool(torch.isfinite(parameter.grad).all().item()) for parameter in parameters):
-            optimizer.zero_grad()
-            raise FloatingPointError("Lightning PPO梯度包含NaN或Inf")
-        grad_norm = self.clip_gradients(
-            optimizer,
-            gradient_clip_val=self.max_grad_norm,
-            gradient_clip_algorithm="norm",
-        )
+        self._step_grad_norm = None
+        self._step_has_non_finite_gradients = False
+        scaler = self._active_grad_scaler()
+        scale_before = scaler.get_scale() if scaler is not None else None
+        self.optimizer_step_attempts += 1
         optimizer.step()
+        scale_after = scaler.get_scale() if scaler is not None else None
+        skipped = self._step_has_non_finite_gradients or (
+            scale_before is not None
+            and scale_after is not None
+            and scale_after < scale_before
+        )
+        if skipped:
+            self.amp_skipped_steps += 1
+            return None
         self.optimization_steps += 1
-        if isinstance(grad_norm, torch.Tensor):
-            return float(grad_norm.detach().float().item())
-        return float(grad_norm) if grad_norm is not None else 0.0
+        return self._step_grad_norm if self._step_grad_norm is not None else 0.0
 
     def training_step(self, batch: Work3TrainingUpdate, batch_idx: int) -> torch.Tensor:
         del batch_idx
@@ -202,6 +244,8 @@ class Work3LightningModule(LightningModule):
         sampling_replay_sample_count = 0
         ppo_update_count = 0
         time_supervision_steps = 0
+        attempts_before = self.optimizer_step_attempts
+        skipped_before = self.amp_skipped_steps
         time_label_count = (
             int(batch.time_auxiliary_batch["target_residuals"].numel())
             if batch.time_auxiliary_batch is not None
@@ -212,8 +256,12 @@ class Work3LightningModule(LightningModule):
                 losses = self.objective.compute_ppo_minibatch_loss(minibatch)
                 if sampling_replay_max_abs_error is None:
                     with torch.no_grad():
+                        replay_reference = minibatch["old_log_probs"].to(
+                            device=losses["new_log_probs"].device,
+                            dtype=torch.float32,
+                        )
                         sampling_replay_max_abs_error = float(
-                            (losses["new_log_probs"] - minibatch["old_log_probs"])
+                            (losses["new_log_probs"] - replay_reference)
                             .abs()
                             .max()
                             .item()
@@ -231,7 +279,8 @@ class Work3LightningModule(LightningModule):
                     "clip_fraction",
                 ):
                     metrics[key].append(float(losses[key].detach().float().item()))
-                metrics["grad_norm"].append(grad_norm)
+                if grad_norm is not None:
+                    metrics["grad_norm"].append(grad_norm)
                 ppo_update_count += 1
 
         auxiliary = batch.time_auxiliary_batch
@@ -274,6 +323,12 @@ class Work3LightningModule(LightningModule):
         self.last_metrics["time_supervision_steps"] = float(time_supervision_steps)
         self.last_metrics["time_supervision_epochs"] = float(self.time_auxiliary_epochs)
         self.last_metrics["optimization_steps"] = float(self.optimization_steps)
+        self.last_metrics["optimizer_step_attempts"] = float(
+            self.optimizer_step_attempts - attempts_before
+        )
+        self.last_metrics["amp_skipped_steps"] = float(
+            self.amp_skipped_steps - skipped_before
+        )
         self.last_metrics["environment_steps"] = float(self.environment_steps)
         self.last_metrics["sampling_replay_max_abs_error"] = (
             sampling_replay_max_abs_error
