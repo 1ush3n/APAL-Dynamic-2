@@ -222,6 +222,12 @@ def worker_completion_mask(
 - 修改/新增：工作三检查点加载器（优先复用`PPOTrainerWork3`现有检查点契约）
 - 测试：`tests/work3/test_work3_training_runtime.py`
 
+- [x] 训练CLI默认载入工作三OmegaConf YAML；`--set`与显式CLI选项作为覆盖值，并在覆盖后重新校验。
+- [x] 将配置中的预算、C/D profile、路径、PPO参数、随机确定性、主/环境线程数和worker结算时限接入训练入口；smoke的实际决策数受单段长度约束。
+- [x] 报告和检查点保存解析后YAML及SHA256；训练入口校验两者配对且哈希一致。
+
+**子阶段7A执行记录（2026-09-25）：** 初始CLI反例因`--config/--set`未注册而失败；配置留存反例修正smoke夹具后，旧报告在`resolved_runtime_config_yaml`处以`KeyError`失败；worker线程配置反例因向量环境不接受`worker_torch_num_threads`而失败。修复后训练入口`5 passed in 81.34s`、训练运行时`35 passed in 173.18s`、R08复现性`10 passed in 113.27s`；关键CLI/检查点复测`2 passed in 23.83s`，相关编译与`git diff --check`通过。代码提交`8c4864c`。本子阶段只接通FP32配置入口和元数据，不宣称AMP已启用；选择fp16/bf16会明确拒绝，下一子阶段实现一致精度路径。
+
 - [ ] 写测试：CUDA AMP可用时，采样与PPO重放用相同dtype/设备/autocast上下文，记录log-prob最大误差；不可用硬件明确拒绝所选AMP而不伪报AMP训练。
 - [ ] 写测试：奖励、费用、GAE、优势、value目标和重要性比率显式保持FP32；AMP前向输出、辅助损失、梯度范数和报告数值均有限。
 - [ ] 写测试：Actor/Critic共享参数只由一个Lightning optimizer更新；FP16时GradScaler仅归Lightning精度插件所有，BF16不创建第二个scaler。
