@@ -105,14 +105,14 @@ def worker_completion_mask(
 
 `TeamCompletionContext`保存有序本站工人稳定ID、技能集合、效率、日历区间快照、任务技能/人数需求和团队规则所需字段。日历/资源时序特征不替代环境资源排程；最终团队可行性仍由环境复核。图与张量在生成时clone到CPU，不保留环境引用、可变状态别名或CUDA张量。
 
-- [ ] 写缺陷测试：构造技能/人数受限的两名合法工人，逐指针断言只有能保留合法补全的成员为True；改变源环境技能、日历或工人绑定后，已发快照内容保持不变。
-- [ ] 写等价测试：同一现场下逐任务比较环境的留站/后移分支掩码与快照掩码；对每个可能的已选工人前缀比较逐人掩码及候选顺序。
-- [ ] 写重放测试：从快照采样留站动作并在不变快照上重放，log-prob误差不超过FP32当前基线容差；后移和强制推进仍不计算团队/对齐头概率。
-- [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py tests/work3/test_work3_worker_mask_replay.py -q`记录首轮结果。
-- [ ] 提取纯CPU团队补全规则并让快照逐步掩码调用它；增加Actor快照采样/重放入口，保留现有环境入口为兼容适配，不能产生两套分支合法性规则。
-- [ ] 环境`step()`收到完整团队时再次按当前状态校验；快照旧/伪造团队必须被拒绝。
-- [ ] 重跑上述测试及`tests/work3/test_actor_critic.py`、`tests/work3/test_work3_f04_physical_constraints.py`。
-- [ ] 更新任务表记录掩码等价矩阵、重放误差和提交号后提交。
+- [x] 写缺陷测试：技能/人数限制逐指针补全；环境技能、日历变更不污染已发快照；候选掩码、CPU张量/图复制和版本不匹配均有断言。
+- [x] 写等价测试：同一现场逐任务比较候选顺序与留站/后移掩码；对每个候选工序的各个工人前缀比较纯规则与环境规则的候选顺序。
+- [x] 写重放测试：固定留站分支从快照采样并重放；已有回归覆盖后移和强制推进不计算团队/对齐概率。
+- [x] 红灯记录：`pytest tests/work3/test_work3_training_runtime.py -k snapshot -q`在实现前为`4 failed, 13 deselected`；新增Actor入口测试后再次以`1 failed, 17 deselected`复现缺少`make_decision_snapshot`。
+- [x] 提取纯CPU团队补全规则并由环境校验和Actor逐人掩码共同调用；增加快照采样入口，保留旧环境入口作为快照适配，不维护第二套规则。
+- [x] 环境step的权威团队校验保持有效；`test_work3_f04_physical_constraints.py`覆盖不合技能、站外、重复及人数不足团队的拒绝。
+- [x] 定向验证：`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py tests/work3/test_work3_worker_mask_replay.py tests/work3/test_actor_critic.py tests/work3/test_work3_f04_physical_constraints.py -q`，`43 passed in 23.72s`；`git diff --check`通过。
+- [x] 代码/测试提交`9d4cab0`；任务表回填另行提交。等价断言覆盖当次现场全部候选任务和技能/人数可行前缀；留站采样—PPO重放log-prob差在`1e-6`容差内。未运行训练或完整批次轨迹。
 
 ### 任务3：单环境FP32快照运行路径与旧路径逐步对照
 
