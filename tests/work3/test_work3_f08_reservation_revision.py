@@ -438,7 +438,7 @@ def test_first_deviating_publication_is_compared_with_p0() -> None:
     assert revision["team_change"] == pytest.approx(1.0 / task.demand)
 
 
-def test_three_person_a_to_b_to_a_charges_one_third_per_publication() -> None:
+def test_three_person_a_to_b_to_a_charges_each_revision_and_zero_final_team_deviation() -> None:
     env = _new_env()
     task = env.state.tasks["0_34"]
     env.state.aircraft[task.aircraft_id].current_station = task.current_station
@@ -463,6 +463,7 @@ def test_three_person_a_to_b_to_a_charges_one_third_per_publication() -> None:
         "position": 20.0,
     }
     task.last_published_assignment = task.baseline_assignment.copy()
+    team_cost_before = env.cost_team
 
     _reserve_at_future_time(env, task, team_a)
     assert task.revision_history == []
@@ -481,7 +482,14 @@ def test_three_person_a_to_b_to_a_charges_one_third_per_publication() -> None:
         [1.0 / 3.0, 1.0 / 3.0]
     )
     assert set(task.last_published_assignment["team"]) == set(team_a)
+
+    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+
+    assert task.status == TaskStatus.RUNNING
+    assert set(task.assigned_team) == set(team_a)
+    assert env.cost_team == pytest.approx(team_cost_before)
     breakdown = evaluate_trajectory_objective(env, weights=env.weights)
+    assert breakdown.d_team == pytest.approx(0.0)
     assert breakdown.j_revision == pytest.approx(env.cost_revision)
     assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
 
