@@ -1,0 +1,35 @@
+runtime:
+  run_mode: smoke
+  method_profile: C
+  seed: 42
+  deterministic: true
+  num_envs: 1
+  start_method: spawn
+  total_env_steps: 64
+  successful_batch_target: null
+  max_wall_seconds: 30.0
+  settle_timeout_seconds: 2.0
+  device: cpu
+  amp_dtype: fp32
+  main_num_threads: 1
+  env_num_threads: 1
+  dataloader_num_workers: 0
+  scenario_pool_path: data/work3/scenarios_9class.json
+  scenario_split_path: data/work3/experiment_splits/train.json
+paths:
+  baseline: data/work3/real_283_k10_baseline.json
+  time_head_checkpoint: models/work3/checkpoints/time_head_best.pt
+  checkpoint_dir: models/work3/checkpoints
+  report_dir: outputs/work3
+ppo:
+  steps_per_iter: 32
+  epochs: 1
+  batch_size: 32
+  learning_rate: 0.0003
+  clip_epsilon: 0.2
+  value_coefficient: 0.5
+  entropy_coefficient: 0.01
+  gamma: 0.99
+  gae_lambda: 0.95
+  shaping_coefficient: 1.0
+  time_loss_coefficient: 1.0
