@@ -52,6 +52,70 @@ TASK_STATUS_TO_SLOT: dict[TaskStatus, int | None] = {
 }
 
 
+GRAPH_FEATURE_VERSION = "work3_graph_v2"
+GRAPH_FEATURE_DIMS: dict[str, int] = {
+    "task": 26,
+    "worker": 21,
+    "station": 15,
+    "skill": 11,
+}
+GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
+    "version": GRAPH_FEATURE_VERSION,
+    "dims": dict(GRAPH_FEATURE_DIMS),
+    "task_features": (
+        "duration_norm",
+        "status_ready",
+        "status_reserved",
+        "status_running",
+        "status_postponed",
+        "skill_0",
+        "skill_1",
+        "skill_2",
+        "skill_3",
+        "skill_4",
+        "baseline_in_station_offset_norm",
+        "aircraft_progress_norm",
+        "relative_station_offset",
+        "postpone_count",
+        "is_physical_task",
+        "baseline_cycle_norm",
+        "demand",
+        "material_wait_log1p",
+        "is_reserved",
+        "has_schedule",
+        "scheduled_start_remaining_norm",
+        "has_schedule_end",
+        "scheduled_end_remaining_norm",
+        "has_last_published_position",
+        "last_published_station_norm",
+        "last_published_position_norm",
+    ),
+    "worker_features": (
+        "efficiency",
+        "skill_0",
+        "skill_1",
+        "skill_2",
+        "skill_3",
+        "skill_4",
+        "current_busy_wait_log1p",
+        "is_currently_free",
+        "station_0",
+        "station_1",
+        "station_2",
+        "station_3",
+        "station_4",
+        "reserved_slot_13",
+        "reserved_slot_14",
+        "reserved_slot_15",
+        "reserved_slot_16",
+        "active_or_future_interval_count",
+        "has_next_reserved_interval",
+        "next_reserved_start_remaining_norm",
+        "next_reserved_end_remaining_norm",
+    ),
+}
+
+
 @dataclass
 class Work3ResourceConfig:
     """符合 ResourceGraphConfig 协议的工作三轻量级配置。"""
@@ -90,14 +154,14 @@ class MultiAircraftGraphBuilder:
         for workers in baseline.station_workers.values():
             all_workers_set.update(workers)
         self.sorted_workers: list[int] = sorted(all_workers_set)
-        self.worker_id_to_idx: dict[int, int] = {w: i for i, w in enumerate(self.sorted_workers)}
+        self.worker_id_to_idx: dict[int, int] = {w: i for i, k in enumerate(self.sorted_workers) for w in [k]}
         self.num_workers = len(self.sorted_workers)
         self.num_stations = 5
 
         # ------------------
-        # 1. 预构建静态 Task 特征底座 (Shape: [num_tasks, 18])
+        # 1. 预构建静态 Task 特征底座 (Shape: [num_tasks, 26])
         # ------------------
-        self.base_task_x = torch.zeros((self.num_tasks, 18), dtype=torch.float)
+        self.base_task_x = torch.zeros((self.num_tasks, GRAPH_FEATURE_DIMS["task"]), dtype=torch.float)
         for i, key in enumerate(self.task_keys):
             t = baseline.tasks[key]
             # [0] 持续工时归一化
@@ -117,9 +181,9 @@ class MultiAircraftGraphBuilder:
             self.base_task_x[i, 16] = float(t.demand)
 
         # ------------------
-        # 2. 预构建静态 Worker 特征底座 (Shape: [num_workers, 17])
+        # 2. 预构建静态 Worker 特征底座 (Shape: [num_workers, 21])
         # ------------------
-        self.base_worker_x = torch.zeros((self.num_workers, 17), dtype=torch.float)
+        self.base_worker_x = torch.zeros((self.num_workers, GRAPH_FEATURE_DIMS["worker"]), dtype=torch.float)
         # 统计各工人的技能能力（从基准任务中聚合该工人的技能）
         worker_skills: dict[int, set[int]] = {w: set() for w in self.sorted_workers}
         worker_station: dict[int, int] = {}
@@ -191,6 +255,8 @@ class MultiAircraftGraphBuilder:
         done_by_dst: list[int] = []
         baseline_team_src: list[int] = []
         baseline_team_dst: list[int] = []
+        published_team_src: list[int] = []
+        published_team_dst: list[int] = []
         station_remain_workload = [0.0] * 5
         station_current_workload = [0.0] * 5
         station_future_workload = [0.0] * 5
@@ -206,6 +272,14 @@ class MultiAircraftGraphBuilder:
                 if w_id in self.worker_id_to_idx:
                     baseline_team_src.append(idx)
                     baseline_team_dst.append(self.worker_id_to_idx[w_id])
+
+            last_published = t_rt.last_published_assignment or t_rt.baseline_assignment
+            pub_team = last_published.get("team") if isinstance(last_published, dict) else None
+            if pub_team:
+                for w_id in pub_team:
+                    if w_id in self.worker_id_to_idx:
+                        published_team_src.append(idx)
+                        published_team_dst.append(self.worker_id_to_idx[w_id])
 
             # [1:5] 状态独热设置 (UNREADY/COMPLETED=全0, READY=1, RESERVED=2, RUNNING=3, POSTPONED=4)
             task_x_np[idx, 1:5] = 0.0
@@ -226,6 +300,54 @@ class MultiAircraftGraphBuilder:
             # [17] 到料等待紧迫度 log1p(max(0, R - t) / H_0)
             wait_time = max(0.0, float(t_rt.material_ready_time) - current_time)
             task_x_np[idx, 17] = math.log1p(wait_time / h0)
+
+            # [18..22] 有效预约/执行时间特征（无预约时置 0，不产生 NaN）
+            is_reserved = t_rt.status == TaskStatus.RESERVED
+            task_x_np[idx, 18] = 1.0 if is_reserved else 0.0
+            has_schedule = (
+                t_rt.status in (TaskStatus.RESERVED, TaskStatus.RUNNING)
+                and t_rt.scheduled_start is not None
+                and math.isfinite(float(t_rt.scheduled_start))
+            )
+            if has_schedule:
+                sched_start = float(t_rt.scheduled_start)
+                task_x_np[idx, 19] = 1.0
+                task_x_np[idx, 20] = max(0.0, sched_start - current_time) / h0
+                exec_dur = (
+                    t_rt.execution_duration
+                    if t_rt.execution_duration is not None
+                    else t_rt.duration
+                )
+                if exec_dur is not None and math.isfinite(float(exec_dur)):
+                    task_x_np[idx, 21] = 1.0
+                    task_x_np[idx, 22] = max(0.0, sched_start + float(exec_dur) - current_time) / h0
+                else:
+                    task_x_np[idx, 21] = 0.0
+                    task_x_np[idx, 22] = 0.0
+            else:
+                task_x_np[idx, 19] = 0.0
+                task_x_np[idx, 20] = 0.0
+                task_x_np[idx, 21] = 0.0
+                task_x_np[idx, 22] = 0.0
+
+            # [23..25] 上一次正式发布计划的站位与周期内位置参照
+            pub_pos = last_published.get("position") if isinstance(last_published, dict) else None
+            pub_station = (
+                last_published.get("station", t_rt.base_station)
+                if isinstance(last_published, dict)
+                else t_rt.base_station
+            )
+            if pub_pos is not None and math.isfinite(float(pub_pos)):
+                task_x_np[idx, 23] = 1.0
+                task_x_np[idx, 25] = float(pub_pos) / h0
+            else:
+                task_x_np[idx, 23] = 0.0
+                task_x_np[idx, 25] = 0.0
+            task_x_np[idx, 24] = (
+                float(pub_station) / 4.0
+                if pub_station is not None
+                else float(t_rt.base_station) / 4.0
+            )
 
             # 动态边收集与站位负荷累积
             st = t_rt.current_station
@@ -263,9 +385,22 @@ class MultiAircraftGraphBuilder:
                         worker_x_np[w_idx, 1 + skill_id] = 1.0
             cal = state.workers.get(w_id)
             if cal is not None:
+                valid_intervals = []
+                for iv in cal.intervals:
+                    if iv.end <= current_time + 1e-5:
+                        continue
+                    iv_task = state.tasks.get(iv.task_key)
+                    if iv_task is not None and iv_task.status not in (
+                        TaskStatus.RUNNING,
+                        TaskStatus.RESERVED,
+                    ):
+                        continue
+                    valid_intervals.append(iv)
+                valid_intervals.sort(key=lambda item: item.start)
+
                 is_free = True
                 wait_w = 0.0
-                for iv in cal.intervals:
+                for iv in valid_intervals:
                     if iv.start <= current_time < iv.end - 1e-5:
                         is_free = False
                         wait_w = max(wait_w, iv.end - current_time)
@@ -273,6 +408,22 @@ class MultiAircraftGraphBuilder:
                 worker_x_np[w_idx, 6] = math.log1p(wait_w / h0)
                 # [7] 当前是否空闲
                 worker_x_np[w_idx, 7] = 1.0 if is_free else 0.0
+                # [17..20] 未来有效预约/占用区间统计与下一预约时段
+                worker_x_np[w_idx, 17] = float(len(valid_intervals)) / 5.0
+                future_intervals = [
+                    iv for iv in valid_intervals if iv.start > current_time - 1e-5
+                ]
+                if not future_intervals and valid_intervals:
+                    future_intervals = valid_intervals
+                if future_intervals:
+                    next_iv = future_intervals[0]
+                    worker_x_np[w_idx, 18] = 1.0
+                    worker_x_np[w_idx, 19] = max(0.0, float(next_iv.start) - current_time) / h0
+                    worker_x_np[w_idx, 20] = max(0.0, float(next_iv.end) - current_time) / h0
+                else:
+                    worker_x_np[w_idx, 18] = 0.0
+                    worker_x_np[w_idx, 19] = 0.0
+                    worker_x_np[w_idx, 20] = 0.0
 
         worker_x = torch.from_numpy(worker_x_np)
         data["worker"].x = worker_x
@@ -318,24 +469,44 @@ class MultiAircraftGraphBuilder:
             baseline_edges = torch.empty((2, 0), dtype=torch.long)
         data["task", "baseline_team", "worker"].edge_index = baseline_edges
 
+        if published_team_src:
+            published_edges = torch.tensor(
+                [published_team_src, published_team_dst], dtype=torch.long
+            )
+        else:
+            published_edges = torch.empty((2, 0), dtype=torch.long)
+        data["task", "last_published_team", "worker"].edge_index = published_edges
+
         # 5. 挂载 Skill Hub 特征与双向资源边
         apply_resource_graph(
             data,
-            task_x,
-            worker_x,
+            task_x[:, :18],
+            worker_x[:, :17],
             self.config,
             skill_hub_topology=self.skill_hub_topology,
         )
 
         return data
 
+    def get_action_candidate_indices(self, env: AirLineEnvWork3) -> list[int]:
+        """获取当前环境下具有合法调度动作资格的候选工序在图节点中的全局索引。"""
+        candidates = env.get_action_candidates()
+        return [
+            self.task_key_to_idx[t.task_key]
+            for t in candidates
+            if t.task_key in self.task_key_to_idx
+        ]
+
     def get_ready_task_indices(self, env: AirLineEnvWork3) -> list[int]:
-        """获取当前状态下处于 READY 状态的所有工序在图节点中的全局索引。"""
-        ready_tasks = env.get_ready_tasks()
-        return [self.task_key_to_idx[t.task_key] for t in ready_tasks if t.task_key in self.task_key_to_idx]
+        """获取当前环境下具备留站执行/预约资格的就绪工序索引（委托环境 can_reserve）。"""
+        return [
+            self.task_key_to_idx[t.task_key]
+            for t in env.get_action_candidates()
+            if env.can_reserve(t) and t.task_key in self.task_key_to_idx
+        ]
 
     def get_ready_task_mask(self, env: AirLineEnvWork3) -> torch.Tensor:
-        """获取全图工序就绪布尔掩码 (Shape: [num_tasks], True 为就绪)。"""
+        """获取全图就绪可执行工序布尔掩码 (Shape: [num_tasks], True 为就绪可留站)。"""
         mask = torch.zeros(self.num_tasks, dtype=torch.bool)
         indices = self.get_ready_task_indices(env)
         if indices:
@@ -343,7 +514,7 @@ class MultiAircraftGraphBuilder:
         return mask
 
     def get_action_branch_mask(self, env: AirLineEnvWork3, task_idx: int) -> dict[str, bool]:
-        """获取指定工序在当前环境下的动作分支合法性掩码。
+        """获取指定工序在当前环境下的动作分支合法性掩码（直接委托环境约束）。
 
         Returns:
             {"can_stay": bool, "can_postpone": bool}
@@ -352,13 +523,7 @@ class MultiAircraftGraphBuilder:
             return {"can_stay": False, "can_postpone": False}
         key = self.task_keys[task_idx]
         task = env.state.tasks.get(key)
-        if task is None or task.status != TaskStatus.READY:
+        if task is None:
             return {"can_stay": False, "can_postpone": False}
-
-        # 分支 A (留在当前站)：只要处于 READY 即合法
-        can_stay = True
-
-        # 分支 B (后移至下一站)：校验后移放行条件（非末站即可合法后移）
-        can_postpone = bool(task.current_station < env.state.num_stations - 1)
-
-        return {"can_stay": can_stay, "can_postpone": can_postpone}
+        can_stay, can_postpone = env.get_action_branch_mask(task)
+        return {"can_stay": bool(can_stay), "can_postpone": bool(can_postpone)}

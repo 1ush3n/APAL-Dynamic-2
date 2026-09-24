@@ -131,7 +131,24 @@ def build_formal_evaluation_agent(
             time_head.eval()
         return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
 
-    checkpoint = torch.load(path, map_location=torch_device)
+    checkpoint = torch.load(path, map_location=torch_device, weights_only=False)
+    from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
+
+    if checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION or dict(
+        checkpoint.get("graph_feature_dims") or {}
+    ) != dict(GRAPH_FEATURE_DIMS):
+        if debug_random:
+            if profile.use_time_auxiliary:
+                time_head = TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64).to(torch_device)
+            actor.eval()
+            if time_head is not None:
+                time_head.eval()
+            return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
+        raise ValueError(
+            f"正式方法 {profile.name} 检查点图特征版本或维度不匹配："
+            f"期望 {GRAPH_FEATURE_VERSION} {GRAPH_FEATURE_DIMS}，"
+            f"实际 {checkpoint.get('graph_feature_version')} {checkpoint.get('graph_feature_dims')}"
+        )
     actor_state = checkpoint.get("actor_critic_state")
     if actor_state is None:
         if debug_random:

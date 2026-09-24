@@ -45,8 +45,8 @@ def test_graph_builder_node_and_edge_integrity(baseline_path: str) -> None:
 
     # 1. 验证 4 类核心节点
     assert set(data.node_types) == {"task", "worker", "station", "skill"}
-    assert data["task"].x.shape == (2830, 18)
-    assert data["worker"].x.shape == (builder.num_workers, 17)
+    assert data["task"].x.shape == (2830, 26)
+    assert data["worker"].x.shape == (builder.num_workers, 21)
     assert data["station"].x.shape == (5, 15)
     assert data["skill"].x.shape == (5, 11)
 

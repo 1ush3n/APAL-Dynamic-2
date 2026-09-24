@@ -27,6 +27,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.work3.actor_critic import ActorCriticWork3
+from models.work3.graph_builder import (
+    GRAPH_FEATURE_DIMS,
+    GRAPH_FEATURE_SCHEMA,
+    GRAPH_FEATURE_VERSION,
+)
 from models.work3.ppo_buffer import RolloutBufferWork3
 
 logger = logging.getLogger(__name__)
@@ -289,7 +294,10 @@ class PPOTrainerWork3:
     def save_checkpoint(self, path: str) -> None:
         """保存模型与优化器检查点。"""
         checkpoint: dict[str, Any] = {
-            "checkpoint_version": "work3_actor_time_v1",
+            "checkpoint_version": "work3_actor_time_v2",
+            "graph_feature_version": GRAPH_FEATURE_VERSION,
+            "graph_feature_dims": dict(GRAPH_FEATURE_DIMS),
+            "graph_feature_schema": dict(GRAPH_FEATURE_SCHEMA),
             "actor_critic_state": self.actor_critic.state_dict(),
             "optimizer_state": self.optimizer.state_dict(),
         }
@@ -303,7 +311,14 @@ class PPOTrainerWork3:
 
     def load_checkpoint(self, path: str) -> None:
         """恢复模型检查点。"""
-        checkpoint = torch.load(path, map_location=self.device)
+        checkpoint = torch.load(path, map_location=self.device, weights_only=False)
+        if checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION or dict(
+            checkpoint.get("graph_feature_dims") or {}
+        ) != dict(GRAPH_FEATURE_DIMS):
+            raise ValueError(
+                f"检查点图特征版本或维度不匹配：期望 {GRAPH_FEATURE_VERSION} {GRAPH_FEATURE_DIMS}，"
+                f"实际 {checkpoint.get('graph_feature_version')} {checkpoint.get('graph_feature_dims')}"
+            )
         self.actor_critic.load_state_dict(checkpoint["actor_critic_state"])
         if self.time_head is not None:
             if "time_head_state" not in checkpoint:

@@ -40,7 +40,13 @@ from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskRuntimeS
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
 from models.hb_gat_pn import FeatureEmbedder, HeteroGATEncoder
-from models.work3.graph_builder import MultiAircraftGraphBuilder, Work3ResourceConfig
+from models.work3.graph_builder import (
+    GRAPH_FEATURE_DIMS,
+    GRAPH_FEATURE_SCHEMA,
+    GRAPH_FEATURE_VERSION,
+    MultiAircraftGraphBuilder,
+    Work3ResourceConfig,
+)
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
@@ -53,10 +59,10 @@ class Work3GraphEncoder(nn.Module):
             hidden_dim=int(hidden_dim),
             num_gat_layers=1,
             num_heads=2,
-            task_feat_dim=18,
-            worker_feat_dim=17,
-            station_feat_dim=15,
-            skill_feat_dim=11,
+            task_feat_dim=GRAPH_FEATURE_DIMS["task"],
+            worker_feat_dim=GRAPH_FEATURE_DIMS["worker"],
+            station_feat_dim=GRAPH_FEATURE_DIMS["station"],
+            skill_feat_dim=GRAPH_FEATURE_DIMS["skill"],
             use_skill_hub=True,
             skill_hub_bidirectional=True,
             num_skill_types=5,
@@ -68,6 +74,10 @@ class Work3GraphEncoder(nn.Module):
         )
         self.embedder = FeatureEmbedder(config)
         self.message_passing = HeteroGATEncoder(config)
+        self.baseline_team_task_to_worker = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.published_team_task_to_worker = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.baseline_team_worker_to_task = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.published_team_worker_to_task = nn.Linear(hidden_dim, hidden_dim, bias=False)
         self.context_projection = nn.Sequential(
             nn.Linear(hidden_dim * 4, hidden_dim),
             nn.LayerNorm(hidden_dim),
@@ -86,6 +96,32 @@ class Work3GraphEncoder(nn.Module):
         x_dict = self.embedder(raw_x)
         edge_index_dict = graph.edge_index_dict
         encoded = self.message_passing(x_dict, edge_index_dict)
+
+        task_emb = encoded["task"]
+        worker_emb = encoded["worker"]
+        for edge_key, t2w_proj, w2t_proj in (
+            (
+                ("task", "baseline_team", "worker"),
+                self.baseline_team_task_to_worker,
+                self.baseline_team_worker_to_task,
+            ),
+            (
+                ("task", "last_published_team", "worker"),
+                self.published_team_task_to_worker,
+                self.published_team_worker_to_task,
+            ),
+        ):
+            edge_index = edge_index_dict.get(edge_key)
+            if edge_index is not None and edge_index.numel() > 0:
+                src_task, dst_worker = edge_index[0], edge_index[1]
+                w_delta = torch.zeros_like(worker_emb)
+                w_delta.index_add_(0, dst_worker, t2w_proj(task_emb[src_task]))
+                t_delta = torch.zeros_like(task_emb)
+                t_delta.index_add_(0, src_task, w2t_proj(worker_emb[dst_worker]))
+                worker_emb = worker_emb + w_delta
+                task_emb = task_emb + t_delta
+        encoded["task"] = task_emb
+        encoded["worker"] = worker_emb
 
         def mean_pool(node_type: str) -> torch.Tensor:
             value = encoded.get(node_type)
@@ -109,18 +145,7 @@ def extract_candidate_task_features(
     state: MultiAircraftState,
     candidate_tasks: list[TaskRuntimeState],
 ) -> torch.Tensor:
-    """提取就绪候选工序的 8 维标准化物理特征张量。
-
-    维度定义:
-      0: 标准工时比例 (duration / H_0)
-      1: 周期内基准开工偏移 (in_station_offset / H_0)
-      2: 人数需求比例 (demand / 5.0)
-      3: 当前排定执行站位 (current_station / 4.0)
-      4: 累计后移次数 (postpone_count / 5.0)
-      5: 是否缺料等待 (material_ready_time > current_time)
-      6: 物料缺料延误紧迫度 (max(0, R - t) / H_0)
-      7: 物理相对站位偏移 ((s_k - m_i^0) / 4.0)
-    """
+    """提取候选工序的 8 维标准化物理特征张量（含未来预约时刻与上一版发布差异）。"""
     if not candidate_tasks:
         return torch.empty((0, 8), dtype=torch.float)
 
@@ -134,16 +159,57 @@ def extract_candidate_task_features(
         ac_station = ac.current_station if ac is not None else task.current_station
         rel_station_offset = float(ac_station - task.base_station)
 
+        last_pub = task.last_published_assignment or task.baseline_assignment
+        pub_pos = (
+            float(last_pub["position"])
+            if isinstance(last_pub, dict)
+            and last_pub.get("position") is not None
+            and math.isfinite(float(last_pub["position"]))
+            else float(task.in_station_offset)
+        )
+        pub_station = (
+            float(last_pub.get("station", task.base_station))
+            if isinstance(last_pub, dict) and last_pub.get("station") is not None
+            else float(task.base_station)
+        )
+        pub_team = last_pub.get("team") if isinstance(last_pub, dict) else None
+        team_diff_ratio = 0.0
+        if pub_team and task.demand > 0:
+            overlap = len(set(pub_team) & set(task.base_team))
+            team_diff_ratio = 1.0 - (float(overlap) / float(task.demand))
+
+        is_reserved = task.status == TaskStatus.RESERVED
+        has_sched = (
+            task.status in (TaskStatus.RESERVED, TaskStatus.RUNNING)
+            and task.scheduled_start is not None
+            and math.isfinite(float(task.scheduled_start))
+        )
+        sched_start_rem = (
+            max(0.0, float(task.scheduled_start) - current_time) / h0
+            if has_sched
+            else 0.0
+        )
+        exec_dur = (
+            task.execution_duration
+            if task.execution_duration is not None
+            else task.duration
+        )
+        sched_end_rem = (
+            max(0.0, float(task.scheduled_start) + float(exec_dur) - current_time) / h0
+            if has_sched and exec_dur is not None and math.isfinite(float(exec_dur))
+            else 0.0
+        )
+
         feats[idx, 0] = float(task.duration) / h0
-        feats[idx, 1] = float(task.in_station_offset) / h0
-        feats[idx, 2] = float(task.demand) / 5.0
-        feats[idx, 3] = float(task.current_station) / 4.0
-        feats[idx, 4] = float(task.postpone_count) / 5.0
+        feats[idx, 1] = (pub_pos / h0) + (sched_start_rem if is_reserved else 0.0)
+        feats[idx, 2] = (float(task.demand) / 5.0) + (0.25 * team_diff_ratio)
+        feats[idx, 3] = (float(task.current_station) / 4.0) + (0.1 * (pub_station - float(task.base_station)))
+        feats[idx, 4] = (float(task.postpone_count) / 5.0) + (0.5 if is_reserved else 0.0)
 
         is_delayed = 1.0 if task.material_ready_time > current_time else 0.0
-        feats[idx, 5] = is_delayed
-        feats[idx, 6] = max(0.0, float(task.material_ready_time - current_time)) / h0
-        feats[idx, 7] = rel_station_offset / 4.0
+        feats[idx, 5] = is_delayed + (0.5 if is_reserved else 0.0)
+        feats[idx, 6] = (max(0.0, float(task.material_ready_time - current_time)) / h0) + sched_start_rem
+        feats[idx, 7] = (rel_station_offset / 4.0) + sched_end_rem
 
     return feats
 
@@ -458,7 +524,7 @@ class ActorCriticWork3(nn.Module):
                     "advance_available": False,
                     "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
                     "graph_snapshot": graph_snapshot,
-                    "graph_version": "work3_graph_v1",
+                    "graph_version": GRAPH_FEATURE_VERSION,
                     "candidate_task_node_indices": (),
                     "worker_node_indices": (),
                 },
@@ -494,7 +560,7 @@ class ActorCriticWork3(nn.Module):
                         "advance_choice": 1,
                         "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
                         "graph_snapshot": graph_snapshot,
-                        "graph_version": "work3_graph_v1",
+                        "graph_version": GRAPH_FEATURE_VERSION,
                         "candidate_task_node_indices": (),
                         "worker_node_indices": (),
                     },
@@ -562,7 +628,7 @@ class ActorCriticWork3(nn.Module):
             "chosen_team": (),
             "align": 0,
             "graph_snapshot": graph_snapshot,
-            "graph_version": "work3_graph_v1",
+            "graph_version": GRAPH_FEATURE_VERSION,
             "candidate_task_node_indices": tuple(candidate_task_node_indices),
             "worker_node_indices": (),
         }
