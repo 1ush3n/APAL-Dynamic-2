@@ -72,6 +72,15 @@ class PendingTimeLabelCache:
     def pending_count(self) -> int:
         return sum(len(samples) for samples in self._pending.values())
 
+    def pending_cycle_counts(self, episode_id: int) -> dict[int, int]:
+        """返回指定episode中尚未获得真实转站标签的周期样本数。"""
+        episode = int(episode_id)
+        return {
+            cycle_id: len(samples)
+            for (pending_episode, cycle_id), samples in self._pending.items()
+            if pending_episode == episode
+        }
+
     def add(
         self,
         *,

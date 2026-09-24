@@ -27,17 +27,19 @@ def test_ppo_training_pipeline_sanity() -> None:
         out_ckpt = Path(tmpdir) / "test_method_d.pt"
 
         results = run_training(
-            num_iterations=2,
-            steps_per_iter=16,
-            ppo_epochs=2,
-            batch_size=8,
+            run_mode="smoke",
+            num_iterations=1,
+            steps_per_iter=32,
+            ppo_epochs=1,
+            batch_size=32,
             lr=1e-3,
+            seed=42,
             output_ckpt=str(out_ckpt),
             device="cpu",
         )
 
         assert "history" in results
-        assert len(results["history"]) == 2
+        assert len(results["history"]) == 1
 
         for log in results["history"]:
             assert not math.isnan(log["total_loss"])
@@ -89,6 +91,9 @@ def test_training_starts_new_episode_after_advance_deadlock(
 
     monkeypatch.setattr(ActorCriticWork3, "select_action", always_advance)
     result = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=2,
         num_iterations=1,
         steps_per_iter=2,
         ppo_epochs=0,
@@ -121,6 +126,9 @@ def test_training_records_forced_advance_when_no_legal_candidates(
     monkeypatch.setattr(AirLineEnvWork3, "get_action_candidates", lambda self: [])
 
     result = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=1,
         num_iterations=1,
         steps_per_iter=1,
         ppo_epochs=0,

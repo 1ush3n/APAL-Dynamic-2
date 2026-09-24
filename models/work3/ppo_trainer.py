@@ -35,6 +35,7 @@ from models.work3.graph_builder import (
 from models.work3.ppo_buffer import RolloutBufferWork3
 
 logger = logging.getLogger(__name__)
+PPO_CHECKPOINT_VERSION = "work3_actor_time_v2"
 
 
 class PPOTrainerWork3:
@@ -122,7 +123,7 @@ class PPOTrainerWork3:
         time_auxiliary_batch: dict[str, Any] | None = None,
         time_auxiliary_epochs: int = 1,
         time_auxiliary_batch_size: int = 64,
-    ) -> dict[str, float]:
+    ) -> dict[str, Any]:
         """使用缓冲区的 Rollout 经验执行一轮多 Epoch PPO 更新。
 
         Args:
@@ -145,6 +146,9 @@ class PPOTrainerWork3:
         total_clip_frac = 0.0
         total_grad_norm = 0.0
         num_updates = 0
+        sampling_replay_checked = False
+        sampling_replay_max_abs_error: float | None = None
+        sampling_replay_sample_count = 0
         if time_auxiliary_epochs < 0:
             raise ValueError("time_auxiliary_epochs不能为负数")
         if time_auxiliary_batch_size <= 0:
@@ -165,6 +169,14 @@ class PPOTrainerWork3:
                     time_urgencies=time_urgencies,
                     sample_records=sample_records,
                 )
+
+                if not sampling_replay_checked:
+                    with torch.no_grad():
+                        sampling_replay_max_abs_error = float(
+                            (new_log_probs.detach() - old_log_probs).abs().max().item()
+                        )
+                    sampling_replay_sample_count = int(old_log_probs.numel())
+                    sampling_replay_checked = True
 
                 # 2. 重要性采样比率 r_t(θ)
                 log_ratio = new_log_probs - old_log_probs
@@ -289,17 +301,22 @@ class PPOTrainerWork3:
                 time_auxiliary_epochs if time_supervision_steps else 0
             ),
             "num_updates": num_updates,
+            "sampling_replay_max_abs_error": sampling_replay_max_abs_error,
+            "sampling_replay_sample_count": sampling_replay_sample_count,
         }
 
-    def save_checkpoint(self, path: str) -> None:
-        """保存模型与优化器检查点。"""
+    def save_checkpoint(self, path: str, metadata: dict[str, Any] | None = None) -> None:
+        """保存推理/热启动权重；不承诺恢复完整训练状态。"""
         checkpoint: dict[str, Any] = {
-            "checkpoint_version": "work3_actor_time_v2",
+            "checkpoint_version": PPO_CHECKPOINT_VERSION,
+            "checkpoint_role": "model_weights",
+            "resume_capability": "non_exact",
             "graph_feature_version": GRAPH_FEATURE_VERSION,
             "graph_feature_dims": dict(GRAPH_FEATURE_DIMS),
             "graph_feature_schema": dict(GRAPH_FEATURE_SCHEMA),
             "actor_critic_state": self.actor_critic.state_dict(),
             "optimizer_state": self.optimizer.state_dict(),
+            "run_metadata": dict(metadata or {}),
         }
         if self.time_head is not None:
             checkpoint.update({
@@ -310,7 +327,7 @@ class PPOTrainerWork3:
         torch.save(checkpoint, path)
 
     def load_checkpoint(self, path: str) -> None:
-        """恢复模型检查点。"""
+        """加载模型/优化器权重；此操作不恢复环境和采样状态，不能精确续训。"""
         checkpoint = torch.load(path, map_location=self.device, weights_only=False)
         if checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION or dict(
             checkpoint.get("graph_feature_dims") or {}

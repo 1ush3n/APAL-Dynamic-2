@@ -100,6 +100,9 @@ def test_formal_method_d_requires_checkpoint_unless_debug_mode(tmp_path: Path) -
 def test_short_formal_c_training_loads_disturbance_and_records_episode(tmp_path: Path) -> None:
     """最小训练烟测必须真的加载扰动，而不是退回无扰动生产。"""
     result = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=2,
         num_iterations=1,
         steps_per_iter=2,
         ppo_epochs=1,
