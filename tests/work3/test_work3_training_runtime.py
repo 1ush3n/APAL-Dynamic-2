@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import os
 import random
 from collections.abc import Iterator
 from pathlib import Path
@@ -576,3 +577,243 @@ def test_single_env_worker_matches_direct_environment_for_frozen_actions() -> No
     assert direct_feasible == report.is_feasible
     assert direct_violations == report.violations
     assert len(direct_completed) == len(direct_env.state.tasks)
+
+
+def test_worker_scenario_plan_is_stable_for_worker_episode_coordinates() -> None:
+    from scripts.work3.train_ppo_work3 import build_worker_scenario_plan
+
+    scenarios = [
+        {"scenario_id": f"scenario-{index}", "tau": float(index)}
+        for index in range(5)
+    ]
+    first = build_worker_scenario_plan(
+        scenarios,
+        num_workers=2,
+        episodes_per_worker=3,
+        seed=41,
+    )
+    second = build_worker_scenario_plan(
+        scenarios,
+        num_workers=2,
+        episodes_per_worker=3,
+        seed=41,
+    )
+
+    assert first == second
+    assert [(item["worker_id"], item["episode_index"]) for item in first] == [
+        (worker_id, episode_index)
+        for episode_index in range(3)
+        for worker_id in range(2)
+    ]
+    assert all(item["scenario"]["scenario_id"] in {
+        scenario["scenario_id"] for scenario in scenarios
+    } for item in first)
+
+
+def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget() -> None:
+    from envs.work3.core_types import ActionBranch
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.actor_critic import ActorCriticWork3
+    from models.work3.heuristic_agent import HeuristicAgentWork3
+    from training.work3_vector_env import Work3VectorEnv
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    planning_env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    planning_env.reset()
+    agent = HeuristicAgentWork3(name="VectorBudgetFixture")
+    frozen_actions: list[dict[str, object]] = []
+    for _ in range(32):
+        action = agent.select_action(planning_env)
+        if action is None:
+            action = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+        frozen_actions.append(action)
+        planning_env.step(action)
+        if action.get("branch") == ActionBranch.ADVANCE_TO_NEXT_EVENT:
+            break
+    assert frozen_actions[-1]["branch"] == ActionBranch.ADVANCE_TO_NEXT_EVENT
+
+    vector = Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(baseline_path)},
+        num_envs=2,
+        start_method="spawn",
+    )
+    actor = ActorCriticWork3(hidden_dim=32)
+    try:
+        assert len(vector.worker_pids) == 2
+        assert len(set(vector.worker_pids)) == 2
+        assert all(pid != os.getpid() for pid in vector.worker_pids)
+        assert vector.workers_alive == (True, True)
+        assert vector.worker_cuda_initialized == (False, False)
+
+        resets = vector.reset_all(
+            scenarios=(None, None),
+            episode_ids=(11, 12),
+            episode_indices=(0, 0),
+        )
+        assert len(resets) == 2
+        snapshots = vector.snapshots()
+        assert snapshots[0].current_time == snapshots[1].current_time == 0.0
+        assert all(snapshot.graph_snapshot["task"].x.device.type == "cpu" for snapshot in snapshots)
+        assert actor.select_snapshot(snapshots[0], deterministic=True)[0] is not None
+
+        observed: list[object] = []
+        last_batch = None
+        for action in frozen_actions:
+            last_batch = vector.step_all(
+                actions=(action, action),
+                max_total_steps=17,
+            )
+            observed.extend(result for result in last_batch.results if result is not None)
+        assert last_batch is not None
+        assert last_batch.results[0] is not None
+        assert last_batch.results[1] is None
+        assert vector.total_env_steps == 17
+        assert vector.budget_reserved_steps == 17
+        assert len(observed) == 17
+        assert vector.worker_step_counts == (9, 8)
+    finally:
+        vector.close()
+    assert vector.workers_alive == (False, False)
+
+
+def test_vector_reset_reports_fixed_scenario_and_actual_hit_status() -> None:
+    from scripts.work3.train_ppo_work3 import build_worker_scenario_plan
+    from training.work3_vector_env import Work3VectorEnv
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    scenarios = [
+        {
+            "scenario_id": "VECTOR_T0_HIT",
+            "tau": 0.0,
+            "recovery_time": 1.0,
+            "affected_task_keys": ["0_15"],
+        },
+        {
+            "scenario_id": "VECTOR_NOT_YET_TRIGGERED",
+            "tau": 1000.0,
+            "recovery_time": 1001.0,
+            "affected_task_keys": ["missing-task"],
+        },
+    ]
+    plan = build_worker_scenario_plan(
+        scenarios,
+        num_workers=2,
+        episodes_per_worker=1,
+        seed=41,
+    )
+    with Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(baseline_path)},
+        num_envs=2,
+        start_method="spawn",
+    ) as vector:
+        resets = vector.reset_from_plan(plan)
+
+    for reset, planned in zip(resets, plan, strict=True):
+        status = reset.scenario_status
+        assert status["scenario_id"] == planned["scenario"]["scenario_id"]
+        assert status["started"] is True
+        assert status["scheduled_target_count"] == 1
+        assert status["in_flight"] is True
+        if status["scenario_id"] == "VECTOR_T0_HIT":
+            assert status["event_triggered"] is True
+            assert status["actual_hit_task_keys"] == ("0_15",)
+            assert status["actual_hit_count"] == 1
+        else:
+            assert status["event_triggered"] is False
+            assert status["actual_hit_count"] == 0
+            assert status["unhit_reasons"] == {"missing-task": "event_not_triggered"}
+
+
+def test_vector_worker_errors_and_incomplete_step_timeouts_are_explicit_and_cleaned() -> None:
+    from envs.work3.core_types import ActionBranch
+    from models.work3.actor_critic import ActorCriticWork3
+    from training.work3_vector_env import Work3VectorEnv
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    failed_vector = Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(baseline_path)},
+        num_envs=2,
+        start_method="spawn",
+    )
+    try:
+        failed_vector.reset_all(
+            scenarios=(None, None),
+            episode_ids=(30, 31),
+            episode_indices=(0, 0),
+        )
+        failed_batch = failed_vector.step_all(
+            actions=(
+                {"branch": ActionBranch.STATION_EXECUTE},
+                {"branch": ActionBranch.STATION_EXECUTE},
+            ),
+            max_total_steps=2,
+        )
+        assert failed_batch.worker_errors
+        assert all("step" in message for _, message in failed_batch.worker_errors)
+    finally:
+        failed_vector.close()
+    assert failed_vector.workers_alive == (False, False)
+
+    timed_vector = Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(baseline_path)},
+        num_envs=2,
+        start_method="spawn",
+    )
+    try:
+        timed_vector.reset_all(
+            scenarios=(None, None),
+            episode_ids=(40, 41),
+            episode_indices=(0, 0),
+        )
+        snapshots = timed_vector.snapshots()
+        actor = ActorCriticWork3(hidden_dim=32)
+        actions = tuple(
+            actor.select_snapshot(snapshot, deterministic=True)[0]
+            for snapshot in snapshots
+        )
+        assert all(action is not None for action in actions)
+        batch = timed_vector.step_all(
+            actions=tuple(action for action in actions if action is not None),
+            max_total_steps=2,
+            settle_timeout_seconds=1e-9,
+        )
+        assert batch.interrupted_worker_ids
+        assert all(batch.results[index] is None for index in batch.interrupted_worker_ids)
+        assert batch.total_env_steps <= 2
+        assert batch.budget_reserved_steps == len(batch.dispatched_worker_ids)
+    finally:
+        timed_vector.close()
+    assert timed_vector.workers_alive == (False, False)
+
+
+def test_vector_expired_wall_clock_deadline_stops_dispatch_without_fake_result() -> None:
+    import time
+
+    from envs.work3.core_types import ActionBranch
+    from training.work3_vector_env import Work3VectorEnv
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    vector = Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(baseline_path)},
+        num_envs=1,
+        start_method="spawn",
+    )
+    try:
+        vector.reset_all(
+            scenarios=(None,),
+            episode_ids=(50,),
+            episode_indices=(0,),
+        )
+        deadline = time.monotonic() - 1.0
+        stopped = vector.step_all(
+            actions=({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT},),
+            max_total_steps=2,
+            wall_clock_deadline=deadline,
+        )
+        assert stopped.wall_clock_expired is True
+        assert stopped.dispatched_worker_ids == ()
+        assert stopped.results == (None,)
+        assert stopped.total_env_steps == 0
+    finally:
+        vector.close()
+    assert vector.workers_alive == (False,)

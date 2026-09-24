@@ -222,6 +222,35 @@ def build_episode_scenario_plan(
     return plan[:num_episodes]
 
 
+def build_worker_scenario_plan(
+    scenarios: list[dict[str, Any]],
+    *,
+    num_workers: int,
+    episodes_per_worker: int,
+    seed: int,
+) -> list[dict[str, Any]]:
+    """固定生成按``(worker_id, episode_index)``索引的外生事件计划。"""
+    if type(num_workers) is not int or num_workers < 1:
+        raise ValueError("num_workers必须为正整数")
+    if type(episodes_per_worker) is not int or episodes_per_worker < 1:
+        raise ValueError("episodes_per_worker必须为正整数")
+    flat_plan = build_episode_scenario_plan(
+        scenarios,
+        num_workers * episodes_per_worker,
+        seed=seed,
+    )
+    return [
+        {
+            "worker_id": worker_id,
+            "episode_index": episode_index,
+            "episode_id": episode_index * num_workers + worker_id,
+            "scenario": dict(flat_plan[episode_index * num_workers + worker_id]),
+        }
+        for episode_index in range(episodes_per_worker)
+        for worker_id in range(num_workers)
+    ]
+
+
 def compute_heuristic_potential(
     estimated_cmax: float,
     last_transfer_time: float,

@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import multiprocessing as mp
+import math
+import time
 import traceback
+from collections.abc import Sequence
 from dataclasses import dataclass
-from multiprocessing.connection import Connection
+from multiprocessing.connection import Connection, wait
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +17,7 @@ import torch
 from envs.work3.core_types import TaskRuntimeState
 from envs.work3.decision_snapshot import DecisionSnapshot, build_decision_snapshot
 from envs.work3.environment import AirLineEnvWork3
+from envs.work3.event_queue import EventType
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import extract_compact_state_features
 from models.work3.graph_builder import (
@@ -36,6 +40,29 @@ class Work3StepResult:
     processed_events: tuple[tuple[float, str, int, str | None, int], ...]
     completed_execution_records: tuple[dict[str, Any], ...]
     step_count: int
+    scenario_status: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class Work3ResetResult:
+    """一次episode启动结果及预先分配场景的执行状态。"""
+
+    observation: dict[str, Any]
+    scenario_status: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class Work3VectorStepBatch:
+    """同步向量step的完整/中断结果；缺失结果不得用于bootstrap。"""
+
+    results: tuple[Work3StepResult | None, ...]
+    dispatched_worker_ids: tuple[int, ...]
+    invoked_worker_ids: tuple[int, ...]
+    interrupted_worker_ids: tuple[int, ...]
+    worker_errors: tuple[tuple[int, str], ...]
+    total_env_steps: int
+    budget_reserved_steps: int
+    wall_clock_expired: bool
 
 
 def _execution_record(
@@ -124,6 +151,52 @@ def _trajectory_audit(
     }
 
 
+def _scenario_status(
+    env: AirLineEnvWork3,
+    scenario: dict[str, Any] | None,
+    *,
+    event_triggered: bool,
+    unhit_reasons_at_event: dict[str, str],
+    baseline_material_ready_by_task: dict[str, float],
+    in_flight: bool,
+) -> dict[str, Any]:
+    target_keys = tuple(
+        str(task_key) for task_key in (scenario or {}).get("affected_task_keys", ())
+    )
+    hit_keys = tuple(
+        task_key
+        for task_key in target_keys
+        if event_triggered
+        and task_key in env.state.tasks
+        and env.state.tasks[task_key].material_ready_time
+        > baseline_material_ready_by_task.get(task_key, 0.0) + env.tolerance
+    )
+    unhit_reasons = {
+        task_key: (
+            "event_not_triggered"
+            if not event_triggered
+            else unhit_reasons_at_event.get(
+                task_key,
+                "target_not_in_instance"
+                if task_key not in env.state.tasks
+                else "no_material_delay_recorded",
+            )
+        )
+        for task_key in target_keys
+        if task_key not in hit_keys
+    }
+    return {
+        "scenario_id": (scenario or {}).get("scenario_id"),
+        "started": scenario is not None,
+        "event_triggered": bool(event_triggered),
+        "scheduled_target_count": len(target_keys),
+        "actual_hit_task_keys": hit_keys,
+        "actual_hit_count": len(hit_keys),
+        "unhit_reasons": unhit_reasons,
+        "in_flight": bool(in_flight),
+    }
+
+
 def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
     """spawn入口：只初始化CPU环境与图构造器，不构造Actor或载入权重。"""
     env: AirLineEnvWork3 | None = None
@@ -140,9 +213,14 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
             config=Work3ResourceConfig(),
         )
         processed_events: list[tuple[float, str, int, str | None, int]] = []
+        current_scenario: dict[str, Any] | None = None
+        scenario_event_triggered = False
+        unhit_reasons_at_event: dict[str, str] = {}
+        baseline_material_ready_by_task: dict[str, float] = {}
         original_pop = env.event_queue.pop
 
         def traced_pop() -> Any:
+            nonlocal scenario_event_triggered
             event = original_pop()
             if event is not None:
                 processed_events.append(
@@ -154,6 +232,22 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
                         int(event.generation),
                     )
                 )
+                if event.event_type == EventType.DISTURBANCE:
+                    payload = event.payload
+                    if (
+                        current_scenario is not None
+                        and payload.get("scenario_id") == current_scenario.get("scenario_id")
+                    ):
+                        scenario_event_triggered = True
+                        for task_key_value in payload.get("affected_task_keys", ()):
+                            task_key = str(task_key_value)
+                            task = env.state.tasks.get(task_key)
+                            if task is None:
+                                unhit_reasons_at_event[task_key] = "target_not_in_instance"
+                            elif task.status.name in {"RUNNING", "COMPLETED"}:
+                                unhit_reasons_at_event[task_key] = (
+                                    "already_started_or_completed_at_event"
+                                )
             return event
 
         env.event_queue.pop = traced_pop  # type: ignore[method-assign]
@@ -172,7 +266,16 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
         episode_id = 0
         episode_index = 0
         last_info: dict[str, Any] = {}
-        connection.send({"request_id": 0, "ok": True, "result": {"pid": mp.current_process().pid}})
+        connection.send(
+            {
+                "request_id": 0,
+                "ok": True,
+                "result": {
+                    "pid": mp.current_process().pid,
+                    "cuda_initialized": torch.cuda.is_initialized(),
+                },
+            }
+        )
 
         while True:
             request = connection.recv()
@@ -188,12 +291,31 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
                     known_completed.clear()
                     start_station_by_task.clear()
                     last_info = {}
-                    scenario = request.get("scenario")
-                    if scenario is not None:
-                        env.load_scenario(scenario)
+                    current_scenario = request.get("scenario")
+                    if current_scenario is not None:
+                        current_scenario = dict(current_scenario)
+                    scenario_event_triggered = False
+                    unhit_reasons_at_event.clear()
+                    baseline_material_ready_by_task = {
+                        str(task_key): float(env.state.tasks[task_key].material_ready_time)
+                        for task_key in (current_scenario or {}).get("affected_task_keys", ())
+                        if task_key in env.state.tasks
+                    }
+                    if current_scenario is not None:
+                        env.load_scenario(current_scenario)
                         observation = env._get_observation()
                     processed_events.clear()
-                    result: Any = observation
+                    result: Any = Work3ResetResult(
+                        observation=observation,
+                        scenario_status=_scenario_status(
+                            env,
+                            current_scenario,
+                            event_triggered=scenario_event_triggered,
+                            unhit_reasons_at_event=unhit_reasons_at_event,
+                            baseline_material_ready_by_task=baseline_material_ready_by_task,
+                            in_flight=not env._check_terminated(),
+                        ),
+                    )
                 elif command == "snapshot":
                     estimated_cmax = compute_cycle_heuristic_cmax(env.state)
                     state_features = extract_compact_state_features(
@@ -220,6 +342,9 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
                     action = request.get("action")
                     if not isinstance(action, dict):
                         raise TypeError("step动作必须是字典")
+                    connection.send(
+                        {"request_id": request_id, "ok": True, "phase": "step_started"}
+                    )
                     event_offset = len(processed_events)
                     observation, raw_reward, terminated, truncated, info = env.step(action)
                     last_info = dict(info)
@@ -241,6 +366,14 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
                         processed_events=tuple(processed_events[event_offset:]),
                         completed_execution_records=tuple(completed_records),
                         step_count=int(env.step_count),
+                        scenario_status=_scenario_status(
+                            env,
+                            current_scenario,
+                            event_triggered=scenario_event_triggered,
+                            unhit_reasons_at_event=unhit_reasons_at_event,
+                            baseline_material_ready_by_task=baseline_material_ready_by_task,
+                            in_flight=not (terminated or truncated),
+                        ),
                     )
                 elif command == "close":
                     result = _trajectory_audit(env, last_info, start_station_by_task)
@@ -278,7 +411,7 @@ def _worker_main(connection: Connection, env_kwargs: dict[str, Any]) -> None:
 
 
 class Work3VectorEnv:
-    """当前阶段限制为单个spawn环境；双worker在后续任务单独验收。"""
+    """主进程协调固定顺序的spawn CPU环境worker。"""
 
     def __init__(
         self,
@@ -289,69 +422,230 @@ class Work3VectorEnv:
         startup_timeout_seconds: float = 60.0,
         request_timeout_seconds: float = 300.0,
     ) -> None:
-        if num_envs != 1:
-            raise ValueError("单环境FP32阶段只支持num_envs=1")
+        if type(num_envs) is not int or num_envs < 1:
+            raise ValueError("num_envs必须为正整数")
         if start_method != "spawn":
             raise ValueError("工作三环境worker必须使用spawn启动")
         if startup_timeout_seconds <= 0 or request_timeout_seconds <= 0:
             raise ValueError("worker超时必须为正数")
-        context = mp.get_context(start_method)
-        self._parent_connection, child_connection = context.Pipe(duplex=True)
-        self._process = context.Process(
-            target=_worker_main,
-            args=(child_connection, dict(env_kwargs or {})),
-            name="work3-env-0",
-        )
+        self._num_envs = num_envs
         self._request_id = 0
         self._closed = False
         self._request_timeout_seconds = float(request_timeout_seconds)
-        self._episode_id = 0
-        self._episode_index = 0
-        self._process.start()
-        child_connection.close()
+        self._processes: list[mp.Process] = []
+        self._parent_connections: list[Connection] = []
+        self._worker_metadata: list[dict[str, Any]] = []
+        self._episode_ids = [0] * num_envs
+        self._episode_indices = [0] * num_envs
+        self._worker_step_counts = [0] * num_envs
+        self._total_env_steps = 0
+        self._budget_reserved_steps = 0
+        self._interrupted_workers: set[int] = set()
+
+        context = mp.get_context(start_method)
         try:
-            if not self._parent_connection.poll(startup_timeout_seconds):
-                raise TimeoutError("工作三环境worker启动超时")
-            response = self._parent_connection.recv()
-            if not response.get("ok"):
-                raise RuntimeError(
-                    f"工作三环境worker启动失败: {response.get('error')}\n"
-                    f"{response.get('traceback', '')}"
+            for worker_id in range(num_envs):
+                parent_connection, child_connection = context.Pipe(duplex=True)
+                process = context.Process(
+                    target=_worker_main,
+                    args=(child_connection, dict(env_kwargs or {})),
+                    name=f"work3-env-{worker_id}",
                 )
+                try:
+                    process.start()
+                except Exception:
+                    parent_connection.close()
+                    child_connection.close()
+                    raise
+                child_connection.close()
+                self._processes.append(process)
+                self._parent_connections.append(parent_connection)
+
+            pending = {
+                connection: (worker_id, 0)
+                for worker_id, connection in enumerate(self._parent_connections)
+            }
+            results, errors, timed_out, _invoked = self._collect_responses(
+                pending,
+                float(startup_timeout_seconds),
+            )
+            if timed_out or errors or len(results) != num_envs:
+                raise RuntimeError(
+                    f"工作三worker启动失败：errors={errors}, timed_out={sorted(timed_out)}"
+                )
+            self._worker_metadata = [results[index] for index in range(num_envs)]
         except Exception:
-            self._terminate()
+            self._terminate_all()
             raise
 
     @property
+    def num_envs(self) -> int:
+        return self._num_envs
+
+    @property
     def pid(self) -> int | None:
-        return self._process.pid
+        return self._processes[0].pid if self._processes else None
+
+    @property
+    def worker_pids(self) -> tuple[int | None, ...]:
+        return tuple(process.pid for process in self._processes)
+
+    @property
+    def worker_cuda_initialized(self) -> tuple[bool, ...]:
+        return tuple(bool(item["cuda_initialized"]) for item in self._worker_metadata)
+
+    @property
+    def workers_alive(self) -> tuple[bool, ...]:
+        return tuple(process.is_alive() for process in self._processes)
 
     @property
     def is_alive(self) -> bool:
-        return self._process.is_alive()
+        return any(self.workers_alive)
 
-    def _request(self, command: str, **payload: Any) -> Any:
+    @property
+    def worker_step_counts(self) -> tuple[int, ...]:
+        return tuple(self._worker_step_counts)
+
+    @property
+    def total_env_steps(self) -> int:
+        return self._total_env_steps
+
+    @property
+    def budget_reserved_steps(self) -> int:
+        """已派发step数；在途/中断请求也占用预算，防止超发。"""
+        return self._budget_reserved_steps
+
+    def _next_request_id(self) -> int:
+        self._request_id += 1
+        return self._request_id
+
+    def _validate_worker_id(self, worker_id: int) -> None:
+        if type(worker_id) is not int or not 0 <= worker_id < self._num_envs:
+            raise ValueError(f"worker_id必须位于[0, {self._num_envs})")
+
+    def _send_command(
+        self,
+        worker_id: int,
+        command: str,
+        payload: dict[str, Any],
+    ) -> tuple[Connection, tuple[int, int]]:
+        self._validate_worker_id(worker_id)
         if self._closed:
             raise RuntimeError("工作三环境worker已经关闭")
-        self._request_id += 1
-        request_id = self._request_id
+        if worker_id in self._interrupted_workers or not self._processes[worker_id].is_alive():
+            raise RuntimeError(f"工作三worker {worker_id}已退出或被中断")
+        request_id = self._next_request_id()
+        connection = self._parent_connections[worker_id]
+        connection.send({"request_id": request_id, "command": command, **payload})
+        if command == "step":
+            self._budget_reserved_steps += 1
+        return connection, (worker_id, request_id)
+
+    def _collect_responses(
+        self,
+        pending: dict[Connection, tuple[int, int]],
+        timeout_seconds: float,
+    ) -> tuple[dict[int, Any], list[tuple[int, str]], set[int], tuple[int, ...]]:
+        results: dict[int, Any] = {}
+        errors: list[tuple[int, str]] = []
+        invoked: list[int] = []
+        acknowledged: set[int] = set()
+        deadline = time.monotonic() + timeout_seconds
+        while pending:
+            remaining = max(0.0, deadline - time.monotonic())
+            ready = wait(tuple(pending), timeout=remaining)
+            if not ready:
+                break
+            for connection in ready:
+                worker_id, expected_request_id = pending[connection]
+                try:
+                    response = connection.recv()
+                except (EOFError, OSError) as exc:
+                    pending.pop(connection, None)
+                    errors.append((worker_id, f"worker连接中断: {exc}"))
+                    continue
+                if not isinstance(response, dict):
+                    pending.pop(connection, None)
+                    errors.append((worker_id, "worker响应不是字典"))
+                    continue
+                if response.get("request_id") != expected_request_id:
+                    pending.pop(connection, None)
+                    errors.append((worker_id, "worker响应序号不匹配"))
+                    continue
+                if response.get("phase") == "step_started":
+                    if worker_id in acknowledged:
+                        pending.pop(connection, None)
+                        errors.append((worker_id, "worker重复确认同一step"))
+                        continue
+                    acknowledged.add(worker_id)
+                    invoked.append(worker_id)
+                    self._total_env_steps += 1
+                    self._worker_step_counts[worker_id] += 1
+                    continue
+                pending.pop(connection, None)
+                if not response.get("ok"):
+                    errors.append(
+                        (
+                            worker_id,
+                            f"{response.get('error')}\n{response.get('traceback', '')}",
+                        )
+                    )
+                else:
+                    results[worker_id] = response.get("result")
+        timed_out = {worker_id for worker_id, _request_id in pending.values()}
+        return results, errors, timed_out, tuple(invoked)
+
+    def _terminate_worker(self, worker_id: int) -> None:
+        self._interrupted_workers.add(worker_id)
+        connection = self._parent_connections[worker_id]
+        process = self._processes[worker_id]
         try:
-            self._parent_connection.send(
-                {"request_id": request_id, "command": command, **payload}
-            )
-            if not self._parent_connection.poll(self._request_timeout_seconds):
-                raise TimeoutError(f"工作三环境worker命令{command}超时")
-            response = self._parent_connection.recv()
-        except (BrokenPipeError, EOFError, OSError) as exc:
-            raise RuntimeError("工作三环境worker连接中断") from exc
-        if response.get("request_id") != request_id:
-            raise RuntimeError("工作三环境worker响应序号不匹配")
-        if not response.get("ok"):
-            raise RuntimeError(
-                f"工作三环境worker命令{command}失败: {response.get('error')}\n"
-                f"{response.get('traceback', '')}"
-            )
-        return response.get("result")
+            connection.close()
+        except OSError:
+            pass
+        if process.is_alive():
+            process.terminate()
+            process.join(timeout=5.0)
+
+    def _terminate_all(self) -> None:
+        self._closed = True
+        for worker_id, process in enumerate(self._processes):
+            try:
+                self._parent_connections[worker_id].close()
+            except (IndexError, OSError):
+                pass
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=5.0)
+
+    def _request_many(
+        self,
+        commands: dict[int, tuple[str, dict[str, Any]]],
+        *,
+        timeout_seconds: float | None = None,
+    ) -> dict[int, Any]:
+        pending: dict[Connection, tuple[int, int]] = {}
+        send_errors: list[tuple[int, str]] = []
+        for worker_id, (command, payload) in sorted(commands.items()):
+            try:
+                connection, request = self._send_command(worker_id, command, payload)
+                pending[connection] = request
+            except (BrokenPipeError, EOFError, OSError, RuntimeError) as exc:
+                send_errors.append((worker_id, str(exc)))
+        results, errors, timed_out, _invoked = self._collect_responses(
+            pending,
+            self._request_timeout_seconds if timeout_seconds is None else timeout_seconds,
+        )
+        all_errors = send_errors + errors
+        for worker_id, _message in all_errors:
+            self._terminate_worker(worker_id)
+        for worker_id in timed_out:
+            self._terminate_worker(worker_id)
+        if all_errors:
+            raise RuntimeError(f"工作三worker请求失败: {all_errors}")
+        if timed_out:
+            raise TimeoutError(f"工作三worker请求超时: {sorted(timed_out)}")
+        return results
 
     def reset(
         self,
@@ -359,60 +653,303 @@ class Work3VectorEnv:
         scenario: dict[str, Any] | None = None,
         episode_id: int = 0,
         episode_index: int = 0,
+        worker_id: int = 0,
     ) -> dict[str, Any]:
-        if episode_id < 0 or episode_index < 0:
-            raise ValueError("episode_id和episode_index不得为负数")
-        self._episode_id = int(episode_id)
-        self._episode_index = int(episode_index)
-        return self._request(
-            "reset",
+        result = self._reset_one(
+            worker_id,
             scenario=scenario,
-            episode_id=self._episode_id,
-            episode_index=self._episode_index,
+            episode_id=episode_id,
+            episode_index=episode_index,
+        )
+        return result.observation
+
+    def _reset_one(
+        self,
+        worker_id: int,
+        *,
+        scenario: dict[str, Any] | None,
+        episode_id: int,
+        episode_index: int,
+    ) -> Work3ResetResult:
+        self._validate_worker_id(worker_id)
+        if (
+            type(episode_id) is not int
+            or type(episode_index) is not int
+            or min(episode_id, episode_index) < 0
+        ):
+            raise ValueError("episode_id和episode_index必须是非负整数")
+        self._episode_ids[worker_id] = episode_id
+        self._episode_indices[worker_id] = episode_index
+        result = self._request_many(
+            {
+                worker_id: (
+                    "reset",
+                    {
+                        "scenario": scenario,
+                        "episode_id": episode_id,
+                        "episode_index": episode_index,
+                    },
+                )
+            }
+        )[worker_id]
+        if not isinstance(result, Work3ResetResult):
+            raise TypeError("环境worker返回了非Work3ResetResult结果")
+        return result
+
+    def reset_all(
+        self,
+        *,
+        scenarios: Sequence[dict[str, Any] | None],
+        episode_ids: Sequence[int],
+        episode_indices: Sequence[int],
+    ) -> tuple[Work3ResetResult, ...]:
+        if not (
+            len(scenarios)
+            == len(episode_ids)
+            == len(episode_indices)
+            == self._num_envs
+        ):
+            raise ValueError("reset_all必须为每个worker提供场景、episode_id和episode_index")
+        commands: dict[int, tuple[str, dict[str, Any]]] = {}
+        for worker_id, (scenario, episode_id, episode_index) in enumerate(
+            zip(scenarios, episode_ids, episode_indices, strict=True)
+        ):
+            if (
+                type(episode_id) is not int
+                or type(episode_index) is not int
+                or min(episode_id, episode_index) < 0
+            ):
+                raise ValueError("episode_id和episode_index必须是非负整数")
+            self._episode_ids[worker_id] = episode_id
+            self._episode_indices[worker_id] = episode_index
+            commands[worker_id] = (
+                "reset",
+                {
+                    "scenario": scenario,
+                    "episode_id": episode_id,
+                    "episode_index": episode_index,
+                },
+            )
+        results = self._request_many(commands)
+        resets = tuple(results[index] for index in range(self._num_envs))
+        if not all(isinstance(result, Work3ResetResult) for result in resets):
+            raise TypeError("环境worker返回了非Work3ResetResult结果")
+        return resets
+
+    def reset_from_plan(
+        self,
+        plan: Sequence[dict[str, Any]],
+    ) -> tuple[Work3ResetResult, ...]:
+        """按冻结的worker/episode坐标装载一轮场景，不按完成先后重抽。"""
+        if len(plan) != self._num_envs:
+            raise ValueError("每轮计划必须恰好包含每个worker一个episode")
+        by_worker: dict[int, dict[str, Any]] = {}
+        for item in plan:
+            worker_id = item.get("worker_id")
+            if type(worker_id) is not int or not 0 <= worker_id < self._num_envs:
+                raise ValueError("场景计划包含非法worker_id")
+            if worker_id in by_worker:
+                raise ValueError(f"场景计划重复包含worker {worker_id}")
+            if (
+                type(item.get("episode_id")) is not int
+                or type(item.get("episode_index")) is not int
+            ):
+                raise ValueError("场景计划必须包含整数episode_id和episode_index")
+            if not isinstance(item.get("scenario"), dict):
+                raise ValueError("场景计划必须包含scenario字典")
+            by_worker[worker_id] = item
+        if set(by_worker) != set(range(self._num_envs)):
+            raise ValueError("场景计划未覆盖所有worker")
+        ordered = [by_worker[index] for index in range(self._num_envs)]
+        return self.reset_all(
+            scenarios=[item["scenario"] for item in ordered],
+            episode_ids=[item["episode_id"] for item in ordered],
+            episode_indices=[item["episode_index"] for item in ordered],
         )
 
-    def snapshot(self) -> DecisionSnapshot:
-        snapshot = self._request(
-            "snapshot",
-            worker_id=0,
-            episode_id=self._episode_id,
-            episode_index=self._episode_index,
-        )
+    def snapshot(self, *, worker_id: int = 0) -> DecisionSnapshot:
+        self._validate_worker_id(worker_id)
+        snapshot = self._request_many(
+            {
+                worker_id: (
+                    "snapshot",
+                    {
+                        "worker_id": worker_id,
+                        "episode_id": self._episode_ids[worker_id],
+                        "episode_index": self._episode_indices[worker_id],
+                    },
+                )
+            }
+        )[worker_id]
         if not isinstance(snapshot, DecisionSnapshot):
             raise TypeError("环境worker返回了非DecisionSnapshot结果")
         return snapshot
 
-    def step(self, action: dict[str, Any]) -> Work3StepResult:
-        result = self._request("step", action=action)
+    def snapshots(self) -> tuple[DecisionSnapshot, ...]:
+        results = self._request_many(
+            {
+                worker_id: (
+                    "snapshot",
+                    {
+                        "worker_id": worker_id,
+                        "episode_id": self._episode_ids[worker_id],
+                        "episode_index": self._episode_indices[worker_id],
+                    },
+                )
+                for worker_id in range(self._num_envs)
+            }
+        )
+        snapshots = tuple(results[index] for index in range(self._num_envs))
+        if not all(isinstance(snapshot, DecisionSnapshot) for snapshot in snapshots):
+            raise TypeError("环境worker返回了非DecisionSnapshot结果")
+        return snapshots
+
+    def step(self, action: dict[str, Any], *, worker_id: int = 0) -> Work3StepResult:
+        result = self._request_many(
+            {worker_id: ("step", {"action": action})}
+        )[worker_id]
         if not isinstance(result, Work3StepResult):
             raise TypeError("环境worker返回了非Work3StepResult结果")
-        self._episode_index += 1
+        self._episode_indices[worker_id] += 1
         return result
 
-    def close(self) -> dict[str, Any]:
-        if self._closed:
-            return {}
-        audit: dict[str, Any] = {}
-        try:
-            if self._process.is_alive():
-                audit = self._request("close")
-        finally:
-            self._closed = True
-            self._parent_connection.close()
-            self._process.join(timeout=5.0)
-            if self._process.is_alive():
-                self._process.terminate()
-                self._process.join(timeout=5.0)
-        if self._process.is_alive():
-            raise RuntimeError("工作三环境worker未能退出")
-        return audit
+    def step_all(
+        self,
+        *,
+        actions: Sequence[dict[str, Any] | None],
+        max_total_steps: int,
+        settle_timeout_seconds: float | None = None,
+        wall_clock_deadline: float | None = None,
+    ) -> Work3VectorStepBatch:
+        if len(actions) != self._num_envs:
+            raise ValueError("step_all动作数必须与worker数相同")
+        if type(max_total_steps) is not int or max_total_steps < 1:
+            raise ValueError("max_total_steps必须为正整数")
+        if settle_timeout_seconds is not None and settle_timeout_seconds <= 0:
+            raise ValueError("settle_timeout_seconds必须为正数")
+        if wall_clock_deadline is not None and not math.isfinite(wall_clock_deadline):
+            raise ValueError("wall_clock_deadline必须是有限的monotonic时间戳")
+        wall_clock_expired = (
+            wall_clock_deadline is not None
+            and time.monotonic() >= wall_clock_deadline
+        )
+        remaining = max_total_steps - self._budget_reserved_steps
+        eligible = (
+            [
+                worker_id
+                for worker_id, action in enumerate(actions)
+                if action is not None
+                and worker_id not in self._interrupted_workers
+                and self._processes[worker_id].is_alive()
+            ]
+            if not wall_clock_expired
+            else []
+        )
+        selected = eligible[: max(0, remaining)]
+        results: dict[int, Any] = {}
+        errors: list[tuple[int, str]] = []
+        timed_out: set[int] = set()
+        invoked: tuple[int, ...] = ()
+        dispatched: list[int] = []
+        if selected:
+            pending: dict[Connection, tuple[int, int]] = {}
+            for worker_id in selected:
+                try:
+                    connection, request = self._send_command(
+                        worker_id,
+                        "step",
+                        {"action": actions[worker_id]},
+                    )
+                    pending[connection] = request
+                    dispatched.append(worker_id)
+                except (BrokenPipeError, EOFError, OSError, RuntimeError) as exc:
+                    errors.append((worker_id, str(exc)))
+            results, response_errors, timed_out, invoked = self._collect_responses(
+                pending,
+                self._request_timeout_seconds
+                if settle_timeout_seconds is None
+                else settle_timeout_seconds,
+            )
+            errors.extend(response_errors)
+            for worker_id, _message in errors:
+                self._terminate_worker(worker_id)
+            for worker_id in timed_out:
+                self._terminate_worker(worker_id)
 
-    def _terminate(self) -> None:
+        ordered_results: list[Work3StepResult | None] = [None] * self._num_envs
+        for worker_id, result in results.items():
+            if not isinstance(result, Work3StepResult):
+                errors.append((worker_id, "环境worker返回了非Work3StepResult结果"))
+                self._terminate_worker(worker_id)
+                continue
+            self._episode_indices[worker_id] += 1
+            ordered_results[worker_id] = result
+        return Work3VectorStepBatch(
+            results=tuple(ordered_results),
+            dispatched_worker_ids=tuple(dispatched),
+            invoked_worker_ids=tuple(sorted(invoked)),
+            interrupted_worker_ids=tuple(
+                sorted(timed_out | {worker_id for worker_id, _ in errors})
+            ),
+            worker_errors=tuple(errors),
+            total_env_steps=self._total_env_steps,
+            budget_reserved_steps=self._budget_reserved_steps,
+            wall_clock_expired=(
+                wall_clock_expired
+                or (
+                    wall_clock_deadline is not None
+                    and time.monotonic() >= wall_clock_deadline
+                )
+            ),
+        )
+
+    def close(self) -> dict[str, Any] | tuple[dict[str, Any] | None, ...]:
+        if self._closed:
+            return {} if self._num_envs == 1 else tuple(None for _ in self._processes)
+        audits: list[dict[str, Any] | None] = [None] * self._num_envs
+        close_error: Exception | None = None
+        closed_workers: set[int] = set()
+        active = {
+            worker_id: ("close", {})
+            for worker_id, process in enumerate(self._processes)
+            if process.is_alive() and worker_id not in self._interrupted_workers
+        }
+        if active:
+            try:
+                results = self._request_many(active, timeout_seconds=30.0)
+                for worker_id, result in results.items():
+                    if isinstance(result, dict):
+                        audits[worker_id] = result
+                        closed_workers.add(worker_id)
+            except (OSError, RuntimeError, TimeoutError) as exc:
+                close_error = exc
         self._closed = True
-        self._parent_connection.close()
-        if self._process.is_alive():
-            self._process.terminate()
-            self._process.join(timeout=5.0)
+        for worker_id, connection in enumerate(self._parent_connections):
+            try:
+                connection.close()
+            except OSError:
+                pass
+            process = self._processes[worker_id]
+            process.join(timeout=5.0)
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=5.0)
+        if any(process.is_alive() for process in self._processes):
+            raise RuntimeError("工作三环境worker未能退出")
+        unexpectedly_exited = [
+            worker_id
+            for worker_id, process in enumerate(self._processes)
+            if not process.is_alive()
+            and worker_id not in self._interrupted_workers
+            and worker_id not in closed_workers
+        ]
+        if unexpectedly_exited and close_error is None:
+            close_error = RuntimeError(f"worker非正常退出: {unexpectedly_exited}")
+        if close_error is not None:
+            raise RuntimeError(f"工作三worker关闭失败: {close_error}") from close_error
+        if self._num_envs == 1:
+            return audits[0] or {}
+        return tuple(audits)
 
     def __enter__(self) -> Work3VectorEnv:
         return self
@@ -423,5 +960,5 @@ class Work3VectorEnv:
         else:
             try:
                 self.close()
-            except (OSError, RuntimeError):
+            except (OSError, RuntimeError, TimeoutError):
                 pass
