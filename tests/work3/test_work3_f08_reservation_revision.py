@@ -434,15 +434,36 @@ def test_postpone_preserves_last_published_team_and_position_as_pending_referenc
     task.status = TaskStatus.READY
     team = _legal_teams(env, task)[0]
     _reserve_at_future_time(env, task, team)
+    original_station = task.current_station
+    original_generation = task.generation
+    original_postpone_count = task.postpone_count
     previous_assignment = task.last_published_assignment.copy()
     revision_cost_before = env.cost_revision
 
     env.step({"task_key": task.task_key, "branch": ActionBranch.POSTPONE})
 
+    assert task.current_station == original_station + 1
     assert task.current_station == previous_assignment["station"] + 1
+    assert task.status == TaskStatus.POSTPONED
+    assert task.assigned_team == []
+    assert task.scheduled_start is None
+    assert task.execution_duration is None
+    assert task.postpone_count == original_postpone_count + 1
+    assert task.generation == original_generation + 1
     assert task.last_published_assignment["team"] == previous_assignment["team"]
     assert task.last_published_assignment["position"] == pytest.approx(
         previous_assignment["position"]
+    )
+    assert all(
+        interval.task_key != task.task_key
+        for worker in env.state.workers.values()
+        for interval in worker.intervals
+    )
+    assert task.task_key not in env._station_occupied_tasks[original_station]
+    assert task.task_key not in env._station_occupied_tasks[task.current_station]
+    assert not any(
+        event.task_key == task.task_key and env.event_queue._is_event_valid(event)
+        for event in env.event_queue._heap
     )
     assert env.cost_revision == pytest.approx(revision_cost_before)
     assert env.cost_postpone > 0.0
