@@ -18,6 +18,8 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
+import hashlib
 import json
 import logging
 import math
@@ -40,6 +42,7 @@ from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_fe
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from models.work3.time_head import TimeResidualHead
+from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
@@ -121,6 +124,169 @@ class FormalEvaluationAgent:
         return action
 
 
+def _validate_state_dict_shapes(
+    expected: dict[str, torch.Tensor],
+    observed: Any,
+    component: str,
+) -> None:
+    if not isinstance(observed, dict) or set(observed) != set(expected):
+        raise ValueError(f"正式检查点{component}结构不匹配")
+    for name, tensor in expected.items():
+        value = observed[name]
+        if not isinstance(value, torch.Tensor) or value.shape != tensor.shape:
+            raise ValueError(f"正式检查点{component}参数维度不匹配: {name}")
+
+
+def _validate_formal_checkpoint_contract(
+    profile: Work3MethodProfile,
+    checkpoint: dict[str, Any],
+    actor: ActorCriticWork3,
+) -> None:
+    """拒绝缺少训练来源、配置指纹或与C/D方法不一致的推理权重。"""
+    from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
+
+    metadata = checkpoint.get("run_metadata")
+    expected_profile = asdict(profile)
+    config = metadata.get("training_config") if isinstance(metadata, dict) else None
+    if (
+        not isinstance(metadata, dict)
+        or metadata.get("method_variant") != profile.name
+        or metadata.get("method_profile") != expected_profile
+        or not isinstance(config, dict)
+        or config.get("method_variant") != profile.name
+        or config.get("method_profile") != expected_profile
+    ):
+        raise ValueError(f"正式检查点方法profile不匹配: 期望{profile.name}")
+    if (
+        checkpoint.get("checkpoint_version") != PPO_CHECKPOINT_VERSION
+        or checkpoint.get("checkpoint_role") != "model_weights"
+        or checkpoint.get("resume_capability") != "non_exact"
+    ):
+        raise ValueError("正式检查点格式或续训能力标记不匹配")
+
+    config_yaml = metadata.get("resolved_runtime_config_yaml")
+    config_hash = metadata.get("resolved_runtime_config_sha256")
+    if (
+        not isinstance(config_yaml, str)
+        or not config_yaml
+        or not isinstance(config_hash, str)
+        or hashlib.sha256(config_yaml.encode("utf-8")).hexdigest() != config_hash
+        or config.get("resolved_config_sha256") != config_hash
+    ):
+        raise ValueError("正式检查点解析配置与SHA256不匹配")
+
+    data_fingerprint = metadata.get("data_fingerprint")
+    fingerprint_keys = (
+        "scenario_pool_sha256",
+        "scenario_split_sha256",
+        "baseline_sha256",
+        "event_plan_sha256",
+        "worker_event_plan_sha256",
+    )
+    source_sha = metadata.get("source_sha")
+    initial_fingerprint = metadata.get("initial_actor_fingerprint")
+    if (
+        not isinstance(source_sha, str)
+        or len(source_sha) != 40
+        or any(character not in "0123456789abcdef" for character in source_sha)
+        or not isinstance(initial_fingerprint, str)
+        or len(initial_fingerprint) != 64
+        or any(character not in "0123456789abcdef" for character in initial_fingerprint)
+        or not isinstance(data_fingerprint, dict)
+        or any(
+            not isinstance(data_fingerprint.get(key), str)
+            or len(data_fingerprint[key]) != 64
+            or any(c not in "0123456789abcdef" for c in data_fingerprint[key])
+            for key in fingerprint_keys
+        )
+    ):
+        raise ValueError("正式检查点缺少源码、初始化或数据指纹")
+
+    training_state = checkpoint.get("lightning_training_state")
+    expected_rng_fields = {"python", "numpy", "torch_cpu", "torch_cuda"}
+    if (
+        not isinstance(training_state, dict)
+        or not isinstance(training_state.get("optimizer_state"), dict)
+        or not isinstance(training_state.get("precision_state"), dict)
+        or not isinstance(training_state.get("rng_state"), dict)
+        or not expected_rng_fields.issubset(training_state["rng_state"])
+        or not isinstance(training_state.get("event_plan_position"), dict)
+        or checkpoint.get("resume_capability") != "non_exact"
+    ):
+        raise ValueError("正式检查点缺少Lightning训练/精度状态或随机状态")
+    precision_state = training_state["precision_state"]
+    expected_precision = {
+        "fp32": "32-true",
+        "fp16": "16-mixed",
+        "bf16": "bf16-mixed",
+    }.get(config.get("amp_dtype"))
+    if (
+        expected_precision is None
+        or expected_precision != config.get("lightning_precision")
+        or precision_state.get("precision") != expected_precision
+    ):
+        raise ValueError("检查点Lightning精度与训练配置不匹配")
+    scaler_state = precision_state.get("grad_scaler_state")
+    if (config.get("amp_dtype") == "fp16") != isinstance(scaler_state, dict):
+        raise ValueError("检查点GradScaler状态与AMP精度配置不匹配")
+
+    if (
+        metadata.get("run_mode") != "pilot"
+        or int(metadata.get("successful_batch_count", 0)) < 1
+        or int(metadata.get("lightning_optimization_steps", 0)) < 1
+        or metadata.get("checkpoint_evaluation_eligible") is not True
+    ):
+        raise ValueError("检查点尚未通过完整批次训练评测门槛")
+
+    if not profile.use_time_auxiliary:
+        if "time_head_state" in checkpoint or metadata.get("potential_predictor_snapshot") is not None:
+            raise ValueError("C profile检查点不得包含D时间学习预测器")
+        return
+
+    labels = int(metadata.get("time_label_count", 0))
+    successful_updates = int(metadata.get("time_supervision_optimizer_updates", 0))
+    if (
+        metadata.get("time_head_training_status") != "trained_online"
+        or labels < 1
+        or successful_updates < 1
+    ):
+        raise ValueError("正式方法D时间头必须由真实转站标签成功训练")
+    if (
+        checkpoint.get("time_head_model_version") != "signed_residual_v1"
+        or int(checkpoint.get("time_head_in_dim", -1)) != actor.hidden_dim
+        or "time_head_state" not in checkpoint
+    ):
+        raise ValueError("正式方法D检查点缺少兼容的有符号时间头")
+    time_head = TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64)
+    _validate_state_dict_shapes(
+        time_head.state_dict(),
+        checkpoint["time_head_state"],
+        "在线时间头",
+    )
+
+    snapshot = metadata.get("potential_predictor_snapshot")
+    if (
+        not isinstance(snapshot, dict)
+        or int(snapshot.get("version", -1)) < 0
+        or snapshot.get("graph_feature_version") != GRAPH_FEATURE_VERSION
+        or snapshot.get("time_head_model_version") != "signed_residual_v1"
+        or int(snapshot.get("time_head_in_dim", -1)) != actor.hidden_dim
+    ):
+        raise ValueError("正式方法D缺少兼容的势函数预测器快照")
+    if dict(checkpoint.get("graph_feature_dims") or {}) != dict(GRAPH_FEATURE_DIMS):
+        raise ValueError("势函数预测器图特征维度不匹配")
+    _validate_state_dict_shapes(
+        actor.state_dict(),
+        snapshot.get("actor_state"),
+        "势函数图编码器",
+    )
+    _validate_state_dict_shapes(
+        time_head.state_dict(),
+        snapshot.get("time_head_state"),
+        "势函数时间头",
+    )
+
+
 def build_formal_evaluation_agent(
     method_variant: str,
     checkpoint_path: str | Path,
@@ -144,7 +310,7 @@ def build_formal_evaluation_agent(
             time_head.eval()
         return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
 
-    checkpoint = torch.load(path, map_location=torch_device, weights_only=False)
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
 
     if checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION or dict(
@@ -175,6 +341,20 @@ def build_formal_evaluation_agent(
                 time_head.eval()
             return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
         raise ValueError(f"方法 {profile.name} 检查点缺少 actor_critic_state: {path}")
+    try:
+        _validate_formal_checkpoint_contract(profile, checkpoint, actor)
+    except ValueError:
+        if not debug_random:
+            raise
+        time_head = (
+            TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64).to(torch_device)
+            if profile.use_time_auxiliary
+            else None
+        )
+        actor.eval()
+        if time_head is not None:
+            time_head.eval()
+        return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
     actor.load_state_dict(actor_state)
 
     if profile.use_time_auxiliary:

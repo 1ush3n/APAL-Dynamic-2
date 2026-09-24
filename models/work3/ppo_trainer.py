@@ -351,7 +351,13 @@ class PPOTrainerWork3:
             "sampling_replay_sample_count": sampling_replay_sample_count,
         }
 
-    def save_checkpoint(self, path: str, metadata: dict[str, Any] | None = None) -> None:
+    def save_checkpoint(
+        self,
+        path: str,
+        metadata: dict[str, Any] | None = None,
+        *,
+        training_state: dict[str, Any] | None = None,
+    ) -> None:
         """保存推理/热启动权重；不承诺恢复完整训练状态。"""
         checkpoint: dict[str, Any] = {
             "checkpoint_version": PPO_CHECKPOINT_VERSION,
@@ -371,6 +377,8 @@ class PPOTrainerWork3:
                 "time_head_model_version": "signed_residual_v1",
                 "time_head_in_dim": int(getattr(self.time_head, "in_dim", -1)),
             })
+        if training_state is not None:
+            checkpoint["lightning_training_state"] = dict(training_state)
         torch.save(checkpoint, path)
 
     def load_checkpoint(self, path: str) -> None:

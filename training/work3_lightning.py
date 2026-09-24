@@ -113,6 +113,7 @@ class Work3LightningModule(LightningModule):
         self.optimization_steps = 0
         self.optimizer_step_attempts = 0
         self.amp_skipped_steps = 0
+        self.time_supervision_optimizer_updates = 0
         self.environment_steps = 0
         self.last_metrics: dict[str, float | None] = {}
         self._optimizer_parameter_ids: tuple[int, ...] = ()
@@ -123,6 +124,10 @@ class Work3LightningModule(LightningModule):
     @property
     def optimizers_configured_parameter_ids(self) -> tuple[int, ...]:
         return self._optimizer_parameter_ids
+
+    @property
+    def optimizer_state_dict(self) -> dict[str, Any] | None:
+        return None if self._optimizer is None else self._optimizer.state_dict()
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         parameters: list[torch.nn.Parameter] = []
@@ -244,6 +249,7 @@ class Work3LightningModule(LightningModule):
         sampling_replay_sample_count = 0
         ppo_update_count = 0
         time_supervision_steps = 0
+        time_supervision_updates_before = self.time_supervision_optimizer_updates
         attempts_before = self.optimizer_step_attempts
         skipped_before = self.amp_skipped_steps
         time_label_count = (
@@ -304,7 +310,12 @@ class Work3LightningModule(LightningModule):
                         "decision_ids": [auxiliary["decision_ids"][i] for i in chosen],
                     }
                     time_loss = self.objective.compute_time_auxiliary_loss(minibatch)
-                    self._manual_update(self.objective.time_loss_coef * time_loss, optimizer)
+                    grad_norm = self._manual_update(
+                        self.objective.time_loss_coef * time_loss,
+                        optimizer,
+                    )
+                    if grad_norm is not None:
+                        self.time_supervision_optimizer_updates += 1
                     time_supervision_steps += 1
                     metrics.setdefault("time_loss", []).append(
                         float(time_loss.detach().float().item())
@@ -321,6 +332,9 @@ class Work3LightningModule(LightningModule):
         self.last_metrics["ppo_updates"] = float(ppo_update_count)
         self.last_metrics["time_label_count"] = float(time_label_count)
         self.last_metrics["time_supervision_steps"] = float(time_supervision_steps)
+        self.last_metrics["time_supervision_optimizer_updates"] = float(
+            self.time_supervision_optimizer_updates - time_supervision_updates_before
+        )
         self.last_metrics["time_supervision_epochs"] = float(self.time_auxiliary_epochs)
         self.last_metrics["optimization_steps"] = float(self.optimization_steps)
         self.last_metrics["optimizer_step_attempts"] = float(

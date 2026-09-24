@@ -38,6 +38,7 @@ from envs.work3.environment import AirLineEnvWork3
 from envs.work3.decision_snapshot import DecisionSnapshot
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3
+from models.work3.graph_builder import GRAPH_FEATURE_VERSION
 from models.work3.potential_shaping import PotentialRewardShaper
 from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
 from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
@@ -175,6 +176,13 @@ def _module_fingerprint(modules: dict[str, torch.nn.Module | None]) -> str:
             digest.update(f"{module_name}.{name}".encode("utf-8"))
             digest.update(tensor.detach().cpu().contiguous().numpy().tobytes())
     return digest.hexdigest()
+
+
+def _cpu_state_dict(module: torch.nn.Module) -> dict[str, torch.Tensor]:
+    return {
+        name: tensor.detach().cpu().clone()
+        for name, tensor in module.state_dict().items()
+    }
 
 
 def _compare_training_reports(
@@ -683,6 +691,12 @@ def run_training(
     cycle_time_labels: list[dict[str, Any]] = []
     lightning_fit_calls = 0
     lightning_grad_scaler_enabled: bool | None = None
+    lightning_precision_state: dict[str, Any] = {
+        "precision": lightning_precision,
+        "amp_dtype": amp_dtype,
+        "grad_scaler_state": None,
+        "grad_scaler_scale": None,
+    }
     stop_reason: str | None = None
     worker_states: list[_TrainingWorkerEpisode] = []
     episode_wave_index = 0
@@ -1268,6 +1282,16 @@ def run_training(
             ):
                 raise RuntimeError("不同rollout的Lightning GradScaler状态不一致")
             lightning_grad_scaler_enabled = current_scaler_enabled
+            lightning_precision_state = {
+                "precision": lightning_precision,
+                "amp_dtype": amp_dtype,
+                "grad_scaler_state": (
+                    scaler.state_dict() if current_scaler_enabled else None
+                ),
+                "grad_scaler_scale": (
+                    float(scaler.get_scale()) if current_scaler_enabled else None
+                ),
+            }
             # Lightning teardown把模型和优化器状态移回CPU；后续rollout/bootstrap需要主策略留在目标设备。
             lightning_module.to(torch_device)
             lightning_fit_calls += 1
@@ -1292,6 +1316,9 @@ def run_training(
             "time_loss": metrics.get("time_loss", 0.0),
             "time_label_count": metrics.get("time_label_count", 0),
             "time_supervision_steps": metrics.get("time_supervision_steps", 0),
+            "time_supervision_optimizer_updates": metrics.get(
+                "time_supervision_optimizer_updates", 0
+            ),
             "time_supervision_epochs": metrics.get("time_supervision_epochs", 0),
             "environment_steps": len(buffer),
             "lightning_optimization_steps": int(lightning_module.optimization_steps),
@@ -1352,6 +1379,20 @@ def run_training(
 
     total_elapsed = time.monotonic() - run_started
     successful_batch_count = sum(item.get("success") is True for item in scenario_log)
+    time_label_count = sum(int(item.get("time_label_count", 0)) for item in history)
+    time_supervision_steps = sum(
+        int(item.get("time_supervision_steps", 0)) for item in history
+    )
+    time_supervision_optimizer_updates = sum(
+        int(item.get("time_supervision_optimizer_updates", 0)) for item in history
+    )
+    time_head_training_status = (
+        "not_applicable_method_c"
+        if not profile.use_time_auxiliary
+        else "trained_online"
+        if time_label_count > 0 and time_supervision_optimizer_updates > 0
+        else "untrained_no_successful_online_update"
+    )
     failure_reasons: dict[str, int] = {}
     for item in scenario_log:
         if item.get("success") is not True:
@@ -1384,6 +1425,35 @@ def run_training(
         if torch_device.type == "cuda"
         else platform.processor() or platform.machine()
     )
+    required_data_hashes = (
+        data_fingerprint.get("scenario_pool_sha256"),
+        data_fingerprint.get("scenario_split_sha256"),
+        data_fingerprint.get("baseline_sha256"),
+        data_fingerprint.get("event_plan_sha256"),
+        data_fingerprint.get("worker_event_plan_sha256"),
+    )
+    resolved_config_valid = (
+        resolved_config_yaml is not None
+        and resolved_config_sha256 is not None
+        and hashlib.sha256(resolved_config_yaml.encode("utf-8")).hexdigest()
+        == resolved_config_sha256
+    )
+    checkpoint_evaluation_eligible = bool(
+        run_mode == "pilot"
+        and successful_batch_count > 0
+        and lightning_module.optimization_steps > 0
+        and resolved_config_valid
+        and all(
+            isinstance(value, str)
+            and len(value) == 64
+            and all(character in "0123456789abcdef" for character in value)
+            for value in required_data_hashes
+        )
+        and (
+            not profile.use_time_auxiliary
+            or time_head_training_status == "trained_online"
+        )
+    )
     report: dict[str, Any] = {
         "report_version": "work3_training_run_v1",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -1396,7 +1466,9 @@ def run_training(
         "truncated": stop_reason != "successful_batch_target_reached",
         "termination_reason": stop_reason,
         "research_result_eligible": False,
+        "checkpoint_evaluation_eligible": checkpoint_evaluation_eligible,
         "method_variant": profile.name,
+        "method_profile": config["method_profile"],
         "seed": int(seed),
         "seed_role": "training_initialization_and_episode_schedule",
         "source_sha": source_sha,
@@ -1442,6 +1514,10 @@ def run_training(
         "lightning_amp_skipped_steps": int(lightning_module.amp_skipped_steps),
         "lightning_fit_calls": lightning_fit_calls,
         "lightning_grad_scaler_enabled": lightning_grad_scaler_enabled,
+        "time_head_training_status": time_head_training_status,
+        "time_label_count": time_label_count,
+        "time_supervision_steps": time_supervision_steps,
+        "time_supervision_optimizer_updates": time_supervision_optimizer_updates,
         "independent_episode_count": len({
             (item["worker_id"], item["episode_id"])
             for item in scenario_log
@@ -1488,6 +1564,10 @@ def run_training(
     checkpoint_metadata = {
         "run_mode": run_mode,
         "seed": int(seed),
+        "method_variant": profile.name,
+        "method_profile": config["method_profile"],
+        "initial_actor_fingerprint": initial_actor_fingerprint,
+        "initial_parameter_fingerprint": initial_parameter_fingerprint,
         "source_sha": source_sha,
         "source_tree_dirty": source_tree_dirty,
         "training_config": config,
@@ -1497,10 +1577,69 @@ def run_training(
         "event_plan_fingerprint": data_fingerprint["event_plan_sha256"],
         "termination_reason": stop_reason,
         "successful_batch_count": int(successful_batch_count),
+        "lightning_optimization_steps": int(lightning_module.optimization_steps),
+        "checkpoint_evaluation_eligible": checkpoint_evaluation_eligible,
+        "time_head_training_status": time_head_training_status,
+        "time_label_count": time_label_count,
+        "time_supervision_steps": time_supervision_steps,
+        "time_supervision_optimizer_updates": time_supervision_optimizer_updates,
+        "lightning_precision_state": dict(lightning_precision_state),
+        "potential_predictor_snapshot": (
+            {
+                "version": int(shaper.snapshot_version),
+                "graph_feature_version": GRAPH_FEATURE_VERSION,
+                "actor_state": _cpu_state_dict(shaper.frozen_actor),
+                "time_head_state": _cpu_state_dict(shaper.frozen_head),
+                "time_head_model_version": "signed_residual_v1",
+                "time_head_in_dim": int(shaper.frozen_head.in_dim),
+            }
+            if shaper is not None and shaper.frozen_actor is not None
+            else None
+        ),
         "independent_episode_count": report["independent_episode_count"],
         "resume_capability": "non_exact",
     }
-    trainer.save_checkpoint(str(output_ckpt), metadata=checkpoint_metadata)
+    numpy_rng_state = np.random.get_state()
+    training_state = {
+        "optimizer_state": lightning_module.optimizer_state_dict,
+        "precision_state": dict(lightning_precision_state),
+        "rng_state": {
+            "python": random.getstate(),
+            "numpy": (
+                str(numpy_rng_state[0]),
+                numpy_rng_state[1].tolist(),
+                int(numpy_rng_state[2]),
+                int(numpy_rng_state[3]),
+                float(numpy_rng_state[4]),
+            ),
+            "torch_cpu": torch.get_rng_state().clone(),
+            "torch_cuda": (
+                torch.cuda.get_rng_state_all()
+                if torch_device.type == "cuda"
+                else None
+            ),
+        },
+        "optimizer_step_counts": {
+            "successful": int(lightning_module.optimization_steps),
+            "attempted": int(lightning_module.optimizer_step_attempts),
+            "amp_skipped": int(lightning_module.amp_skipped_steps),
+            "time_supervision_successful": time_supervision_optimizer_updates,
+        },
+        "trainer_global_step": int(lightning_module.optimization_steps),
+        "environment_steps": int(total_env_steps),
+        "event_plan_position": {
+            str(worker_id): sum(
+                int(item.get("worker_id", -1)) == worker_id
+                for item in scenario_log
+            )
+            for worker_id in range(num_envs)
+        },
+    }
+    trainer.save_checkpoint(
+        str(output_ckpt),
+        metadata=checkpoint_metadata,
+        training_state=training_state,
+    )
     report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False),
         encoding="utf-8",

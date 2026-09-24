@@ -49,6 +49,19 @@ def test_seeded_smoke_runs_repeat_initialization_and_event_plan(tmp_path: Path) 
     assert checkpoint["resume_capability"] == "non_exact"
     assert checkpoint["checkpoint_role"] == "model_weights"
     assert checkpoint["checkpoint_version"]
+    assert checkpoint["run_metadata"]["method_variant"] == "C"
+    assert checkpoint["run_metadata"]["method_profile"] == first["training_config"]["method_profile"]
+    training_state = checkpoint["lightning_training_state"]
+    assert training_state["optimizer_state"] is not None
+    assert training_state["precision_state"]["precision"] == "32-true"
+    assert training_state["precision_state"]["grad_scaler_state"] is None
+    assert set(training_state["rng_state"]) >= {
+        "python",
+        "numpy",
+        "torch_cpu",
+        "torch_cuda",
+    }
+    assert training_state["event_plan_position"]
     report = json.loads(Path(first["report_path"]).read_text(encoding="utf-8"))
     assert report["run_mode"] == "smoke"
     assert report["research_result_eligible"] is False
@@ -166,7 +179,15 @@ def test_method_d_without_transfer_labels_reports_skipped_supervision(tmp_path: 
     assert all(label["actual_transfer_time"] is None for label in result["cycle_time_labels"])
     assert result["history"][0]["time_label_count"] == 0
     assert result["history"][0]["time_supervision_status"] == "skipped_no_real_transfer_labels"
+    assert result["time_head_training_status"] == "untrained_no_successful_online_update"
+    assert result["time_supervision_optimizer_updates"] == 0
     assert result["scenario_log"][0]["truncated"] is True
+    checkpoint = torch.load(result["checkpoint_path"], map_location="cpu", weights_only=False)
+    metadata = checkpoint["run_metadata"]
+    assert metadata["time_head_training_status"] == "untrained_no_successful_online_update"
+    assert metadata["time_supervision_optimizer_updates"] == 0
+    assert metadata["checkpoint_evaluation_eligible"] is False
+    assert metadata["potential_predictor_snapshot"]["time_head_state"]
 
 
 def test_training_cli_exposes_seed_and_pilot_budget_arguments() -> None:

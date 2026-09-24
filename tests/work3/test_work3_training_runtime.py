@@ -302,6 +302,16 @@ def test_training_entry_uses_configured_amp_for_rollout_and_lightning(
     assert report["history"][0]["sampling_replay_max_abs_error"] <= 1e-6
     for key in ("total_loss", "policy_loss", "value_loss", "entropy", "grad_norm"):
         assert torch.isfinite(torch.tensor(report["history"][0][key]))
+    checkpoint = torch.load(
+        report["checkpoint_path"],
+        map_location="cpu",
+        weights_only=False,
+    )
+    precision_state = checkpoint["lightning_training_state"]["precision_state"]
+    assert precision_state["precision"] == lightning_precision
+    assert isinstance(precision_state["grad_scaler_state"], dict) is (
+        amp_dtype == "fp16"
+    )
 
 
 def test_runtime_config_overrides_change_resolved_values_and_fingerprint() -> None:
@@ -1545,3 +1555,56 @@ def test_lightning_fit_calls_preserve_the_single_optimizer_between_rollouts() ->
     assert module.optimization_steps == 2
     assert module.environment_steps == 8
     assert int(optimizer.state[parameter]["step"]) == 2
+
+
+def test_lightning_counts_only_successful_real_time_label_updates(tmp_path: Path) -> None:
+    import lightning.pytorch as pl
+
+    lightning_runtime = _work3_lightning_module()
+    actor, time_head, update = _make_lightning_training_fixture()
+    graph = update.buffer.transitions[0].sample_record["graph_snapshot"]
+    labeled_update = lightning_runtime.Work3TrainingUpdate(
+        buffer=update.buffer,
+        environment_steps=update.environment_steps,
+        time_auxiliary_batch={
+            "state_feats": torch.zeros((1, 32)),
+            "graph_snapshots": [graph],
+            "target_residuals": torch.tensor([-0.2]),
+            "worker_ids": [0],
+            "episode_ids": [2],
+            "cycle_ids": [1],
+            "decision_ids": [0],
+        },
+    )
+    module = lightning_runtime.Work3LightningModule(
+        actor_critic=actor,
+        time_head=time_head,
+        time_loss_coef=1.0,
+        ppo_epochs=1,
+        time_auxiliary_epochs=1,
+        time_auxiliary_batch_size=1,
+    )
+    trainer = pl.Trainer(
+        accelerator="cpu",
+        devices=1,
+        max_epochs=1,
+        limit_train_batches=1,
+        num_sanity_val_steps=0,
+        logger=False,
+        enable_checkpointing=False,
+        enable_model_summary=False,
+        enable_progress_bar=False,
+        default_root_dir=tmp_path,
+    )
+
+    trainer.fit(
+        module,
+        datamodule=lightning_runtime.Work3PPODataModule(
+            update_factory=lambda: iter((labeled_update,))
+        ),
+    )
+
+    assert module.last_metrics["time_supervision_steps"] == 1
+    assert module.last_metrics["time_supervision_optimizer_updates"] == 1
+    assert module.time_supervision_optimizer_updates == 1
+    assert module.optimization_steps == 2
