@@ -114,10 +114,17 @@ def test_benchmark_evaluation_m5_acceptance(baseline_path: str, scenarios_path: 
             max_decisions=32,
         )
 
-        assert len(results) == 2
+        assert results["schema_version"] == "work3_eval_c_vs_d_v2"
+        assert results["nominal_method_c"]["scenario_id"] == "NOMINAL"
+        nominal = results["nominal_method_c"]
+        assert "raw_cost_components" in nominal
+        assert "success" in nominal and "feasible" in nominal
+        assert "time_prediction_metrics" in nominal
+        scenario_results = results["scenario_results"]
+        assert len(scenario_results) == 2
         assert out_json.is_file()
 
-        for item in results:
+        for item in scenario_results:
             assert "scenario_id" in item
             assert "method_c" in item
             assert "method_d" in item
@@ -126,3 +133,5 @@ def test_benchmark_evaluation_m5_acceptance(baseline_path: str, scenarios_path: 
             assert 0 <= item["method_d"]["completed_tasks"] <= 2830
             assert "termination_reason" in item["method_d"]
             assert "success" in item["method_d"]
+            assert "time_prediction_metrics" in item["method_c"]
+            assert "time_prediction_metrics" in item["method_d"]

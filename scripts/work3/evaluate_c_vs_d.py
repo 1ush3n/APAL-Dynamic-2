@@ -11,7 +11,8 @@
    - J_postpone: 跨站后移改派惩罚；
    - J_total: 全线综合惩罚费用 (J_total = w_h J_takt + w_tau D_time + w_m D_team + w_p J_postpone)；
    - Makespan: 全线 10 架次飞机总完工时长；
-3. 输出基线 C 与方法 D 的详细对照评估表与改进百分比，达成里程碑 M5 验收目标。
+3. 以同一 C 检查点报告无扰动基线；仅对双方成功且独立可行的轨迹计算真实费用改善率。
+4. 对具有真实转站标签的周期报告原始启发式及修正预测 MAE（小时与 H0 归一化）。
 """
 
 from __future__ import annotations
@@ -19,11 +20,12 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, field
 from pathlib import Path
 import sys
 import time
-from typing import Any
+from typing import Any, Sequence
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
@@ -62,11 +64,15 @@ class FormalEvaluationAgent:
     actor_critic: ActorCriticWork3
     time_head: TimeResidualHead | None
     debug_random: bool = False
+    last_time_prediction: tuple[int, float, float, float] | None = field(
+        default=None, init=False, repr=False
+    )
 
     def select_action(self, env: AirLineEnvWork3) -> dict[str, Any] | None:
         """使用启发式或学习修正时间输入调用同一图策略。"""
         device = next(self.actor_critic.parameters()).device
         cmax = compute_cycle_heuristic_cmax(env.state)
+        corrected_cmax = cmax
         state_feat = extract_compact_state_features(env.state, cmax)
         if self.profile.use_corrected_time_input:
             if self.time_head is None:
@@ -77,13 +83,14 @@ class FormalEvaluationAgent:
                     state_feat.to(device),
                     graph_snapshot,
                 ).unsqueeze(0)
-                _, remaining, _ = self.time_head.predict_corrected_time(
+                p_corrected, remaining, _ = self.time_head.predict_corrected_time(
                     state_feat=shared_feature,
                     estimated_cmax=cmax,
                     current_time=float(env.state.current_time),
                     h0=float(env.state.h0),
                     last_transfer_time=float(env.state.last_transfer_time),
                 )
+                corrected_cmax = float(p_corrected.detach().cpu().item())
                 time_urgency = compute_time_urgency_vector(
                     estimated_r=remaining.squeeze(0),
                     current_time=env.state.current_time,
@@ -99,6 +106,12 @@ class FormalEvaluationAgent:
                 h0=env.state.h0,
                 device=device,
             )
+        self.last_time_prediction = (
+            int(env.state.current_cycle),
+            float(cmax),
+            float(corrected_cmax),
+            float(env.state.h0),
+        )
         action, _, _, _ = self.actor_critic.select_action(
             env=env,
             state_feat=state_feat,
@@ -186,6 +199,55 @@ def build_formal_evaluation_agent(
     if time_head is not None:
         time_head.eval()
     return FormalEvaluationAgent(profile, actor, time_head, debug_random=False)
+
+
+def summarize_cycle_prediction_errors(
+    prediction_records: Sequence[tuple[int, float, float, float]],
+    transfer_history: Sequence[float],
+) -> dict[str, int | float | None]:
+    """仅用有实际转站标签的周期计算启发式与修正预测 MAE。"""
+    actual_by_cycle = dict(enumerate(transfer_history, start=1))
+    labeled_errors: list[tuple[int, float, float, float]] = []
+    for cycle_idx, heuristic_cmax, corrected_cmax, h0 in prediction_records:
+        if cycle_idx not in actual_by_cycle:
+            continue
+        actual_time = float(actual_by_cycle[cycle_idx])
+        scale = float(h0)
+        if not math.isfinite(scale) or scale <= 0.0:
+            raise ValueError(f"周期{cycle_idx}的H0必须是有限正数")
+        labeled_errors.append(
+            (
+                cycle_idx,
+                abs(actual_time - float(heuristic_cmax)),
+                abs(actual_time - float(corrected_cmax)),
+                scale,
+            )
+        )
+
+    sample_count = len(labeled_errors)
+    if sample_count == 0:
+        heuristic_mae_hours = None
+        heuristic_mae_h0 = None
+        corrected_mae_hours = None
+        corrected_mae_h0 = None
+    else:
+        heuristic_mae_hours = sum(item[1] for item in labeled_errors) / sample_count
+        heuristic_mae_h0 = (
+            sum(item[1] / item[3] for item in labeled_errors) / sample_count
+        )
+        corrected_mae_hours = sum(item[2] for item in labeled_errors) / sample_count
+        corrected_mae_h0 = (
+            sum(item[2] / item[3] for item in labeled_errors) / sample_count
+        )
+
+    return {
+        "labeled_cycle_count": len({item[0] for item in labeled_errors}),
+        "sample_count": sample_count,
+        "heuristic_mae_hours": heuristic_mae_hours,
+        "heuristic_mae_h0": heuristic_mae_h0,
+        "corrected_mae_hours": corrected_mae_hours,
+        "corrected_mae_h0": corrected_mae_h0,
+    }
 
 
 def _check_completed_trajectory_feasibility(
@@ -329,6 +391,8 @@ def evaluate_single_trajectory(
 ) -> dict[str, Any]:
     """运行单条生产轨迹并结算综合目标。"""
     torch_device = torch.device(device)
+    if isinstance(agent, FormalEvaluationAgent):
+        agent.last_time_prediction = None
     env.reset()
     if scenario is not None:
         env.load_scenario(scenario)
@@ -337,6 +401,7 @@ def evaluate_single_trajectory(
     termination_reason = "decision_limit"
     terminated = False
     truncated = False
+    prediction_records: list[tuple[int, float, float, float]] = []
     with torch.inference_mode():
         while decisions < max_decisions:
             candidates = env.get_action_candidates()
@@ -364,6 +429,11 @@ def evaluate_single_trajectory(
                     raise TypeError(f"正式{agent_type}必须使用FormalEvaluationAgent")
             else:
                 raise ValueError(f"未知智能体类型: {agent_type}")
+
+            if isinstance(agent, FormalEvaluationAgent):
+                prediction = agent.last_time_prediction
+                if prediction is not None:
+                    prediction_records.append(prediction)
 
             if action is None:
                 _obs, _reward, terminated, truncated, info = env.step(
@@ -441,10 +511,162 @@ def evaluate_single_trajectory(
         "constraint_violation_count": sum(constraint_violations.values()),
         "actual_disturbance_hits": effect_report["actual_hit_count"],
         "disturbance_effects": effect_report,
+        "time_prediction_metrics": summarize_cycle_prediction_errors(
+            prediction_records,
+            env.state.transfer_history,
+        ),
         "postponed_count": postponed_total,
         "decisions": decisions,
         "transfers": len(env.state.transfer_history),
     }
+
+
+def _sanitize_for_json(value: Any) -> Any:
+    """递归清洗非有限浮点数，确保 JSON 严格序列化不含 NaN 或 Inf。"""
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            return None
+        return value
+    if isinstance(value, dict):
+        return {str(k): _sanitize_for_json(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_for_json(v) for v in value]
+    return value
+
+
+def compare_c_vs_d_pair(
+    res_c: dict[str, Any],
+    res_d: dict[str, Any],
+) -> dict[str, Any]:
+    """仅当 C 与 D 均完工 (success=True) 且独立可行 (feasible=True) 时才计算性能改善百分比。"""
+    c_ok = bool(res_c.get("success")) and bool(res_c.get("feasible"))
+    d_ok = bool(res_d.get("success")) and bool(res_d.get("feasible"))
+    c_hits = int(res_c.get("actual_disturbance_hits", 0))
+    d_hits = int(res_d.get("actual_disturbance_hits", 0))
+    c_hit = c_hits > 0
+    d_hit = d_hits > 0
+    both_hit = c_hit and d_hit
+
+    if not (c_ok and d_ok):
+        c_reason = str(res_c.get("termination_reason", "unknown"))
+        d_reason = str(res_d.get("termination_reason", "unknown"))
+        return {
+            "improvement_j_total_pct": None,
+            "comparison_valid": False,
+            "both_hit_disturbance": False,
+            "comparison_status": (
+                f"invalid_incomplete_or_infeasible: c_success={c_ok}({c_reason}), "
+                f"d_success={d_ok}({d_reason})"
+            ),
+        }
+
+    cost_c = float(res_c.get("j_total", 0.0))
+    cost_d = float(res_d.get("j_total", 0.0))
+    if not (math.isfinite(cost_c) and math.isfinite(cost_d)):
+        return {
+            "improvement_j_total_pct": None,
+            "comparison_valid": False,
+            "both_hit_disturbance": False,
+            "comparison_status": "invalid_non_finite_cost",
+        }
+
+    improv_pct = ((cost_c - cost_d) / cost_c) * 100.0 if cost_c > 1e-6 else 0.0
+    if both_hit:
+        comparison_status = "valid_both_completed_and_hit"
+    elif c_hit or d_hit:
+        comparison_status = "valid_both_completed_one_sided_hit"
+    else:
+        comparison_status = "valid_both_completed_zero_hit"
+
+    return {
+        "improvement_j_total_pct": float(improv_pct),
+        "comparison_valid": True,
+        "both_hit_disturbance": both_hit,
+        "comparison_status": comparison_status,
+    }
+
+
+def summarize_benchmark_credibility(
+    results: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """无条件汇总 C/D 失败率，并将有效成对完工集合与双方实际命中扰动子集分列报告。"""
+    total = len(results)
+    c_success = 0
+    d_success = 0
+    c_reasons: dict[str, int] = {}
+    d_reasons: dict[str, int] = {}
+    valid_improvements: list[float] = []
+    valid_and_hit_improvements: list[float] = []
+    valid_one_sided_hit_improvements: list[float] = []
+    valid_zero_hit_improvements: list[float] = []
+
+    for item in results:
+        res_c = item.get("method_c", {})
+        res_d = item.get("method_d", {})
+        c_ok = bool(res_c.get("success")) and bool(res_c.get("feasible"))
+        d_ok = bool(res_d.get("success")) and bool(res_d.get("feasible"))
+        if c_ok:
+            c_success += 1
+        if d_ok:
+            d_success += 1
+        c_r = str(res_c.get("termination_reason", "unknown"))
+        d_r = str(res_d.get("termination_reason", "unknown"))
+        c_reasons[c_r] = c_reasons.get(c_r, 0) + 1
+        d_reasons[d_r] = d_reasons.get(d_r, 0) + 1
+
+        pair_eval = compare_c_vs_d_pair(res_c, res_d)
+        if pair_eval["comparison_valid"] and pair_eval["improvement_j_total_pct"] is not None:
+            imp = float(pair_eval["improvement_j_total_pct"])
+            valid_improvements.append(imp)
+            if pair_eval["both_hit_disturbance"]:
+                valid_and_hit_improvements.append(imp)
+            elif int(res_c.get("actual_disturbance_hits", 0)) > 0 or int(
+                res_d.get("actual_disturbance_hits", 0)
+            ) > 0:
+                valid_one_sided_hit_improvements.append(imp)
+            else:
+                valid_zero_hit_improvements.append(imp)
+
+    c_fail = total - c_success
+    d_fail = total - d_success
+    summary = {
+        "total_scenarios": total,
+        "method_c_success_count": c_success,
+        "method_c_failure_count": c_fail,
+        "method_c_failure_rate": (c_fail / total) if total > 0 else 0.0,
+        "method_c_termination_reasons": c_reasons,
+        "method_d_success_count": d_success,
+        "method_d_failure_count": d_fail,
+        "method_d_failure_rate": (d_fail / total) if total > 0 else 0.0,
+        "method_d_termination_reasons": d_reasons,
+        "valid_comparison_count": len(valid_improvements),
+        "invalid_comparison_count": total - len(valid_improvements),
+        "mean_improvement_valid_only_pct": (
+            sum(valid_improvements) / len(valid_improvements)
+            if valid_improvements
+            else None
+        ),
+        "valid_and_both_hit_count": len(valid_and_hit_improvements),
+        "mean_improvement_valid_and_hit_only_pct": (
+            sum(valid_and_hit_improvements) / len(valid_and_hit_improvements)
+            if valid_and_hit_improvements
+            else None
+        ),
+        "valid_one_sided_hit_count": len(valid_one_sided_hit_improvements),
+        "mean_improvement_valid_one_sided_hit_pct": (
+            sum(valid_one_sided_hit_improvements)
+            / len(valid_one_sided_hit_improvements)
+            if valid_one_sided_hit_improvements
+            else None
+        ),
+        "valid_zero_hit_count": len(valid_zero_hit_improvements),
+        "mean_improvement_valid_zero_hit_pct": (
+            sum(valid_zero_hit_improvements) / len(valid_zero_hit_improvements)
+            if valid_zero_hit_improvements
+            else None
+        ),
+    }
+    return _sanitize_for_json(summary)
 
 
 def run_benchmark_evaluation(
@@ -458,7 +680,7 @@ def run_benchmark_evaluation(
     device: str = "cpu",
     allow_debug_random: bool = False,
     max_decisions: int = 10000,
-) -> list[dict[str, Any]]:
+) -> dict[str, Any]:
     """在固定外生事件上比较同架构正式方法 C 与 D。"""
     torch_device = torch.device(device)
     Path(output_json).parent.mkdir(parents=True, exist_ok=True)
@@ -496,6 +718,16 @@ def run_benchmark_evaluation(
     )
 
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    nominal_started = time.time()
+    nominal_method_c = evaluate_single_trajectory(
+        env,
+        "Method-C",
+        agent_c,
+        scenario=None,
+        max_decisions=max_decisions,
+        device=device,
+    )
+    nominal_method_c["evaluation_time_s"] = time.time() - nominal_started
 
     results: list[dict[str, Any]] = []
 
@@ -530,29 +762,32 @@ def run_benchmark_evaluation(
         )
         t_d = time.time() - t0
 
-        # 计算综合目标优化幅度
-        cost_c = res_c["j_total"]
-        cost_d = res_d["j_total"]
-        if cost_c > 1e-6:
-            improv_pct = ((cost_c - cost_d) / cost_c) * 100.0
-        else:
-            improv_pct = 0.0
+        pair_eval = compare_c_vs_d_pair(res_c, res_d)
+        improv_pct = pair_eval["improvement_j_total_pct"]
+        cost_c = float(res_c["j_total"])
+        cost_d = float(res_d["j_total"])
 
-        item = {
-            "scenario_id": sc_id,
-            "timing": sc.get("timing"),
-            "intensity": sc.get("intensity"),
-            "station": sc.get("station_id"),
-            "method_c": res_c,
-            "method_d": res_d,
-            "improvement_j_total_pct": improv_pct,
-            "time_c_s": t_c,
-            "time_d_s": t_d,
-        }
+        item = _sanitize_for_json(
+            {
+                "scenario_id": sc_id,
+                "timing": sc.get("timing"),
+                "intensity": sc.get("intensity"),
+                "station": sc.get("station_id"),
+                "method_c": res_c,
+                "method_d": res_d,
+                "improvement_j_total_pct": improv_pct,
+                "comparison_valid": pair_eval["comparison_valid"],
+                "both_hit_disturbance": pair_eval["both_hit_disturbance"],
+                "comparison_status": pair_eval["comparison_status"],
+                "time_c_s": t_c,
+                "time_d_s": t_d,
+            }
+        )
         results.append(item)
 
+        delta_str = f"{improv_pct:>+8.2f}%" if improv_pct is not None else "INVALID"
         logger.info(
-            f"{sc_id:<16} | {'J_total':<10} | {cost_c:<12.4f} | {cost_d:<12.4f} | {improv_pct:>+8.2f}%"
+            f"{sc_id:<16} | {'J_total':<10} | {cost_c:<12.4f} | {cost_d:<12.4f} | {delta_str:<10}"
         )
         logger.info(
             f"{'':<16} | {'J_takt':<10} | {res_c['j_takt']:<12.4f} | {res_d['j_takt']:<12.4f} |"
@@ -568,12 +803,21 @@ def run_benchmark_evaluation(
         )
         logger.info("-" * 105)
 
-    # 保存评测结果
-    with open(output_json, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+    credibility_summary = summarize_benchmark_credibility(results)
+    report = {
+        "schema_version": "work3_eval_c_vs_d_v2",
+        "nominal_method_c": nominal_method_c,
+        "scenario_results": results,
+        "credibility_summary": credibility_summary,
+    }
+
+    # 保存评测结果（严格禁止 NaN/Inf）
+    sanitized_report = _sanitize_for_json(report)
+    with Path(output_json).open("w", encoding="utf-8") as f:
+        json.dump(sanitized_report, f, indent=2, ensure_ascii=False, allow_nan=False)
     logger.info(f"评测结果已持久化保存至: {output_json}")
 
-    return results
+    return sanitized_report
 
 
 def main() -> None:
