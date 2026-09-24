@@ -141,17 +141,18 @@ def worker_completion_mask(
 **文件：**
 
 - 修改：`training/work3_vector_env.py`
-- 修改：`conf/work3/train_pilot.yaml`
+- 配置核查：`conf/work3/train_pilot.yaml`（已有`runtime.num_envs`覆盖入口；保留默认单环境smoke配置，不改文件）
 - 测试：`tests/work3/test_work3_training_runtime.py`
 
-- [ ] 写测试：`spawn`下两个CPU worker各持独立环境且主进程只有一个Actor；worker异常可见，`close()`后进程退出，不在子进程导入CUDA上下文。
-- [ ] 写测试：总预算为奇数且两个worker活动时，最后一轮按固定worker顺序仅派发剩余额度；实际完成`step()`总数恰等于上限，不因强制推进漏计或超发。
-- [ ] 写测试：固定事件计划按`(worker_id, episode_index)`映射；报告分别保存计划场景、实际启动/执行场景、事件触发、命中、未命中原因和在途场景。不得声称相同计划等于相同事件暴露。
-- [ ] 写测试：达到墙钟预算后停止新派发；完整返回结清为转移，超过有界结算时间的请求整体丢弃并标记基础设施中断；无后继观测时不调用价值bootstrap。
-- [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -k 'vector or budget or timeout or event_plan' -q`记录反例结果。
-- [ ] 最小实现同步“取活动快照→单Actor批次决策→并发step→汇总完整响应”协议、严格step预算、清理和报告，不加自动重启/异步Actor。
-- [ ] 重跑双worker测试、任务3单worker对照以及`tests/work3/test_work3_r08_training_reproducibility.py`。
-- [ ] 更新任务表并提交；若平台spawn测试因Windows/Linux行为差异失败，先在当前Windows rag_env定位，不能跳过子进程测试进入下一阶段。
+- [x] 写测试：`spawn`下两个CPU worker各持独立环境且主进程只有一个Actor；worker异常可见，`close()`后进程退出，不初始化CUDA上下文。
+- [x] 写测试：总预算为奇数且两个worker活动时，最后一轮按固定worker顺序仅派发剩余额度；预算17按worker顺序分配为9/8，实际step总数恰等于上限。
+- [x] 写测试：固定事件计划按`(worker_id, episode_index)`映射；reset/step结果分别保留计划场景、是否启动、事件触发、实际命中、未命中原因和在途状态。相同计划不等同于相同事件暴露。
+- [x] 写测试：过期墙钟不派发新动作；在途请求只有完整响应才作为转移，超出有界结算时间则返回缺失结果并标记worker中断，不合成后继观测。
+- [x] TDD红灯：初始双worker/场景计划定向组`3 failed`，原因是计划构造器缺失且运行时拒绝`num_envs=2`；单独双worker预算反例`1 failed`，复现旧运行时仅支持单worker。墙钟测试用例改为“已过期截止时间”的确定前提，并通过移除接口后观察到缺少`wall_clock_deadline`参数的预期失败，再实现恢复。
+- [x] 最小实现同步“并行取快照→主进程策略→并发step→等待完整响应”协议、聚合预算、固定worker顺序、超时/异常清理和场景状态报告；不加自动重启、异步Actor或CUDA worker。
+- [x] 配置复用：现有OmegaConf配置已接受`runtime.num_envs=2`覆盖；默认smoke保持1，故未改YAML，避免提前改变单环境对照入口。
+- [x] 定向验证：五项双worker/计划/命中/错误/超时测试`5 passed, 20 deselected in 56.25s`；回归命令`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py tests/work3/test_work3_r08_training_reproducibility.py tests/work3/test_work3_same_timestamp_events.py tests/work3/test_work3_actual_hit_counterexample.py tests/work3/test_work3_f04_trajectory_checker.py tests/work3/test_work3_worker_mask_replay.py tests/work3/test_actor_critic.py tests/work3/test_work3_f04_physical_constraints.py -q`为`76 passed in 237.25s`；`py_compile`与`git diff --check`通过。组合回归包含任务3冻结动作序列对照及R08复现测试；没有重新运行2830工序轨迹或训练。
+- [x] 代码/测试提交`79e48e3`；任务表回填另行提交。任务4仅完成双环境FP32协调器及边界验收；GAE、跨段标签、episode塑形版本仍属任务5，AMP/Lightning和完整批次试点尚未开始。
 
 ### 任务5：worker/episode/segment GAE、跨段标签与塑形版本固定
 
