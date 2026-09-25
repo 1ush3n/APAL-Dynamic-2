@@ -304,6 +304,49 @@ def test_auxiliary_supervision_calls_do_not_scale_with_ppo_batch_size(
     assert call_counts == [2, 2]
 
 
+def test_ppo_policy_loss_does_not_backpropagate_through_online_time_input(
+    env: AirLineEnvWork3,
+) -> None:
+    """在线显式时间输入停止梯度，单独PPO损失不更新时间头。"""
+    torch.manual_seed(17)
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
+    actor.eval()
+    head = TimeResidualHead(in_dim=16, hidden_dim=16)
+    trainer = PPOTrainerWork3(actor_critic=actor, time_head=head, time_loss_coef=1.0)
+    cmax = compute_cycle_heuristic_cmax(env.state)
+    state_feat = extract_compact_state_features(env.state, cmax)
+    base_snapshot = actor.make_decision_snapshot(
+        env,
+        state_feat,
+        torch.zeros(2),
+        estimated_cmax=cmax,
+    )
+    _, time_input, _ = compute_online_snapshot_time_inputs(
+        actor, head, base_snapshot
+    )
+    assert not time_input.requires_grad
+
+    action, old_log_prob, value, record = actor.select_snapshot(
+        replace(base_snapshot, time_features=time_input),
+        deterministic=True,
+    )
+    assert action is not None
+    minibatch = {
+        "state_feats": state_feat.unsqueeze(0),  # [32] -> [1, 32]
+        "time_urgencies": time_input.unsqueeze(0),  # [2] -> [1, 2]
+        "old_log_probs": torch.tensor([old_log_prob]),  # [] -> [1]
+        "advantages": torch.ones(1),
+        "target_values": torch.tensor([value]),  # [] -> [1]
+        "sample_records": [record],
+    }
+
+    trainer.optimizer.zero_grad()
+    losses = trainer.compute_ppo_minibatch_loss(minibatch)
+    losses["total_loss"].backward()
+
+    assert all(parameter.grad is None for parameter in head.parameters())
+
+
 def test_ppo_replay_uses_saved_time_input_after_online_head_changes(
     env: AirLineEnvWork3,
     monkeypatch: pytest.MonkeyPatch,
