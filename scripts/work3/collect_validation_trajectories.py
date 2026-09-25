@@ -158,7 +158,7 @@ def collect_all_trajectories(
     scenarios_path: str = "data/work3/scenarios_9class.json",
     output_path: str = "data/work3/val_trajectories.pt",
     max_scenarios: int | None = None,
-    num_nominal: int = 5,
+    num_nominal: int = 1,
     scenario_ids: list[str] | None = None,
     scenario_split_path: str | Path | None = None,
 ) -> list[dict[str, Any]]:
@@ -226,7 +226,7 @@ if __name__ == "__main__":
     parser.add_argument("--scenarios", type=str, default="data/work3/scenarios_9class.json")
     parser.add_argument("--output", type=str, default="data/work3/val_trajectories.pt")
     parser.add_argument("--max_scenarios", type=int, default=None)
-    parser.add_argument("--num_nominal", type=int, default=5)
+    parser.add_argument("--num_nominal", type=int, default=1)
     parser.add_argument("--scenario_split", type=str, default=None)
     args = parser.parse_args()
 

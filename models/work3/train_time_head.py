@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 from typing import Any
@@ -84,27 +85,82 @@ def split_trajectories_by_scenario(
     val_ratio: float = 0.25,
     seed: int = 42,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """按生产轨迹进行独立切分，确保训练集与验证集场景无时序重叠。"""
+    """去重后按scenario整体划分，拒绝没有独立验证场景的数据集。"""
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    seen: set[tuple[str, bytes]] = set()
+    for trajectory in trajectories:
+        scenario_id = str(trajectory.get("scenario_id") or "").strip()
+        if not scenario_id:
+            raise ValueError("每条轨迹必须包含非空scenario_id，才能进行无泄漏划分")
+        fingerprint = _trajectory_supervision_fingerprint(trajectory)
+        identity = (scenario_id, fingerprint)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        grouped.setdefault(scenario_id, []).append(trajectory)
+
+    scenario_ids = sorted(grouped)
+    if len(scenario_ids) < 2:
+        raise ValueError("时间头训练/验证切分至少需要两个独立scenario")
+
     rng = np.random.RandomState(seed)
-    n = len(trajectories)
-    if n <= 1:
-        return trajectories, trajectories
-
-    indices = list(range(n))
-    rng.shuffle(indices)
-
-    n_val = max(1, int(round(n * val_ratio)))
-    val_indices = set(indices[:n_val])
-
-    train_trajs = [trajectories[i] for i in range(n) if i not in val_indices]
-    val_trajs = [trajectories[i] for i in range(n) if i in val_indices]
+    rng.shuffle(scenario_ids)
+    n_val = min(
+        len(scenario_ids) - 1,
+        max(1, int(round(len(scenario_ids) * val_ratio))),
+    )
+    val_scenario_ids = set(scenario_ids[:n_val])
+    train_trajs = [
+        trajectory
+        for scenario_id, items in grouped.items()
+        if scenario_id not in val_scenario_ids
+        for trajectory in items
+    ]
+    val_trajs = [
+        trajectory
+        for scenario_id, items in grouped.items()
+        if scenario_id in val_scenario_ids
+        for trajectory in items
+    ]
 
     logger.info(
-        f"轨迹切分完成: 训练轨迹={len(train_trajs)}条 "
-        f"({sum(len(t['steps']) for t in train_trajs)}步), "
-        f"验证轨迹={len(val_trajs)}条 ({sum(len(t['steps']) for t in val_trajs)}步)"
+        f"轨迹切分完成: 训练场景={len(scenario_ids) - n_val}个、轨迹={len(train_trajs)}条 "
+        f"验证场景={n_val}个、轨迹={len(val_trajs)}条 "
+        f"训练步数={sum(len(t['steps']) for t in train_trajs)}, "
+        f"验证步数={sum(len(t['steps']) for t in val_trajs)}"
     )
     return train_trajs, val_trajs
+
+
+def _trajectory_supervision_fingerprint(trajectory: dict[str, Any]) -> bytes:
+    """对时间头实际消费的特征与监督值做定长摘要，忽略trajectory_id。"""
+    digest = hashlib.sha256()
+    scalar_keys = (
+        "current_time",
+        "estimated_cmax",
+        "actual_transfer_time",
+        "label_y",
+    )
+    digest.update(np.asarray(float(trajectory["h0"]), dtype="<f4").tobytes())
+    steps = trajectory["steps"]
+    digest.update(len(steps).to_bytes(8, byteorder="little", signed=False))
+    for step in steps:
+        feature = step["state_feat"]
+        if isinstance(feature, torch.Tensor):
+            feature = feature.detach().cpu().numpy()
+        # 输入形状[D]保持不变；统一float32字节表示，不保存整条副本的展开列表。
+        feature_array = np.asarray(feature, dtype="<f4")
+        assert feature_array.ndim == 1, "时间头状态特征必须为[D]"
+        digest.update(np.asarray(feature_array.shape, dtype="<i8").tobytes())
+        digest.update(feature_array.tobytes(order="C"))
+        for key in scalar_keys:
+            value = step.get(key)
+            if value is None:
+                digest.update(b"N")
+            else:
+                digest.update(b"F")
+                digest.update(np.asarray(float(value), dtype="<f4").tobytes())
+    return digest.digest()
 
 
 def evaluate_time_head(

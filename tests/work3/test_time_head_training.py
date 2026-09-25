@@ -93,6 +93,85 @@ def test_disjoint_trajectory_splitting() -> None:
     assert train_ids.isdisjoint(val_ids), "训练集与验证集轨迹 ID 存在重叠，发生数据泄漏！"
 
 
+def test_identical_nominal_trajectories_are_deduplicated_and_scenario_grouped() -> None:
+    """五份相同名义轨迹只能作为一个样本，且scenario不能跨训练/验证集。"""
+    trajectories = [
+        _create_synthetic_trajectory(index, "NOMINAL_BASELINE", num_steps=10)
+        for index in range(5)
+    ]
+    trajectories.extend(
+        _create_synthetic_trajectory(index + 5, f"SC_{index}", num_steps=10)
+        for index in range(3)
+    )
+
+    train_trajs, val_trajs = split_trajectories_by_scenario(
+        trajectories,
+        val_ratio=0.25,
+        seed=123,
+    )
+
+    train_scenarios = {item["scenario_id"] for item in train_trajs}
+    val_scenarios = {item["scenario_id"] for item in val_trajs}
+    nominal_copies = [
+        item
+        for item in train_trajs + val_trajs
+        if item["scenario_id"] == "NOMINAL_BASELINE"
+    ]
+    assert train_scenarios.isdisjoint(val_scenarios)
+    assert len(nominal_copies) == 1
+    assert len(train_trajs) + len(val_trajs) == 4
+
+
+def test_split_rejects_five_copies_of_only_one_scenario() -> None:
+    """仅有同一确定性场景的重复轨迹时不得伪造独立验证集。"""
+    trajectories = [
+        _create_synthetic_trajectory(index, "NOMINAL_BASELINE", num_steps=10)
+        for index in range(5)
+    ]
+
+    with pytest.raises(ValueError, match="至少需要两个独立scenario"):
+        split_trajectories_by_scenario(trajectories, val_ratio=0.25, seed=123)
+
+
+def test_collector_defaults_to_one_nominal_trajectory(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """确定性基准采集默认只写一条名义轨迹，不制造重复样本数。"""
+    from scripts.work3 import collect_validation_trajectories
+
+    def fake_collect_single_trajectory(
+        agent: object,
+        baseline_path: str,
+        scenario: dict[str, object] | None = None,
+        trajectory_id: int = 0,
+    ) -> dict[str, object]:
+        del agent, baseline_path
+        return {
+            "trajectory_id": trajectory_id,
+            "scenario_id": "NOMINAL_BASELINE" if scenario is None else "SCENARIO",
+            "h0": 1.0,
+            "total_steps": 0,
+            "makespan": 0.0,
+            "transfer_count": 0,
+            "steps": [],
+        }
+
+    monkeypatch.setattr(
+        collect_validation_trajectories,
+        "collect_single_trajectory",
+        fake_collect_single_trajectory,
+    )
+    trajectories = collect_validation_trajectories.collect_all_trajectories(
+        baseline_path=str(tmp_path / "baseline.json"),
+        scenarios_path=str(tmp_path / "absent_scenarios.json"),
+        output_path=str(tmp_path / "trajectories.pt"),
+    )
+
+    assert len(trajectories) == 1
+    assert trajectories[0]["scenario_id"] == "NOMINAL_BASELINE"
+
+
 def test_train_time_head_convergence_and_checkpoint() -> None:
     """测试训练循环的数值收敛与最佳检查点读写。"""
     train_trajs = [_create_synthetic_trajectory(i, f"TRAIN_{i}", num_steps=40, delay_hours=15.0) for i in range(4)]
