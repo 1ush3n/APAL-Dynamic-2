@@ -372,6 +372,115 @@ def test_training_entry_uses_two_spawn_workers_with_aggregate_budget(
     assert len(labels) == len(set(labels)) == 3
 
 
+def test_training_mixed_worker_termination_truncation_and_continuation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """同批worker分别终止、截断、继续时独立bootstrap且不再派发终止worker。"""
+    from dataclasses import replace
+
+    from models.work3.ppo_buffer import RolloutBufferWork3
+    from training.work3_vector_env import Work3VectorEnv
+
+    action_masks: list[tuple[bool, ...]] = []
+    dispatched_workers: list[tuple[int, ...]] = []
+    finalized_rollouts: list[dict[str, Any]] = []
+    original_step_all = Work3VectorEnv.step_all
+    original_finish = RolloutBufferWork3.finish_trajectories
+
+    def script_worker_outcomes(
+        environment: Work3VectorEnv,
+        **kwargs: Any,
+    ) -> Any:
+        action_masks.append(tuple(action is not None for action in kwargs["actions"]))
+        batch = original_step_all(environment, **kwargs)
+        dispatched_workers.append(batch.dispatched_worker_ids)
+        results = list(batch.results)
+        if len(action_masks) == 1:
+            for worker_id in range(3):
+                assert results[worker_id] is not None
+            result_0 = results[0]
+            result_1 = results[1]
+            result_2 = results[2]
+            assert result_0 is not None and result_1 is not None and result_2 is not None
+            results[0] = replace(
+                result_0,
+                terminated=True,
+                truncated=False,
+                info={**result_0.info, "success": False, "termination_reason": "deadlock"},
+            )
+            results[1] = replace(result_1, terminated=False, truncated=True)
+            results[2] = replace(result_2, terminated=False, truncated=False)
+        else:
+            assert batch.dispatched_worker_ids == (2,)
+            result_2 = results[2]
+            assert result_2 is not None
+            results[2] = replace(result_2, terminated=False, truncated=False)
+        return replace(batch, results=tuple(results))
+
+    def record_finalized_rollout(
+        buffer: RolloutBufferWork3,
+        *,
+        last_values_by_segment: dict[tuple[int, int, int], float],
+    ) -> None:
+        original_finish(
+            buffer,
+            last_values_by_segment=last_values_by_segment,
+        )
+        finalized_rollouts.append({
+            "last_values": dict(last_values_by_segment),
+            "transitions": list(buffer.transitions),
+            "target_values": buffer.target_values.tolist(),
+        })
+
+    monkeypatch.setattr(Work3VectorEnv, "step_all", script_worker_outcomes)
+    monkeypatch.setattr(
+        RolloutBufferWork3,
+        "finish_trajectories",
+        record_finalized_rollout,
+    )
+
+    result = run_training(
+        run_mode="smoke",
+        num_iterations=1,
+        steps_per_iter=4,
+        max_decisions=4,
+        ppo_epochs=1,
+        batch_size=4,
+        gamma=1.0,
+        gae_lambda=1.0,
+        seed=31,
+        method_variant="C",
+        num_envs=3,
+        output_ckpt=str(tmp_path / "mixed_worker_termination.pt"),
+    )
+
+    assert result["total_decisions"] == 4
+    assert action_masks == [(True, True, True), (False, False, True)]
+    assert dispatched_workers == [(0, 1, 2), (2,)]
+    assert len(finalized_rollouts) == 1
+    rollout = finalized_rollouts[0]
+    transitions = rollout["transitions"]
+    assert [(item.worker_id, item.terminated, item.truncated) for item in transitions] == [
+        (0, True, False),
+        (1, False, True),
+        (2, False, False),
+        (2, False, True),
+    ]
+    last_values = rollout["last_values"]
+    assert set(last_values) == {(1, 1, 1), (2, 2, 1)}
+
+    targets = rollout["target_values"]
+    assert targets[0] == pytest.approx(transitions[0].reward)
+    assert targets[1] == pytest.approx(transitions[1].reward + last_values[(1, 1, 1)])
+    assert targets[2] == pytest.approx(
+        transitions[2].reward + transitions[3].reward + last_values[(2, 2, 1)]
+    )
+    assert targets[3] == pytest.approx(
+        transitions[3].reward + last_values[(2, 2, 1)]
+    )
+
+
 def test_training_entry_closes_other_workers_after_worker_error(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
