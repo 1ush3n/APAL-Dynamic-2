@@ -149,6 +149,63 @@ def test_postpone_replay_truncates_before_worker_head() -> None:
     _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
 
 
+def test_postpone_probability_and_entropy_ignore_dummy_team_and_alignment() -> None:
+    """后移重放不得读取占位团队/对齐字段或未激活动作头。"""
+    env = _new_env()
+    for task in env.get_ready_tasks():
+        env._successors_map[task.aircraft_id][task.task_id] = []
+    task = next(task for task in env.get_action_candidates() if env.can_postpone(task))
+    env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
+
+    actor = ActorCriticWork3(hidden_dim=32)
+    actor.eval()
+    with torch.no_grad():
+        for parameter in actor.branch_head.parameters():
+            parameter.zero_()
+        actor.branch_head[-1].bias[1] = 0.5
+    state_feat, urgency = _inputs()
+    action, sampled_log_prob, _, record = actor.select_action(
+        env,
+        state_feat,
+        urgency,
+        deterministic=True,
+    )
+    assert action is not None and action["branch"] == ActionBranch.POSTPONE
+
+    _, base_log_prob, base_entropy = actor.evaluate_action_log_probs(
+        state_feat.unsqueeze(0),
+        urgency.unsqueeze(0),
+        [record],
+    )
+    _assert_probability_round_trip(sampled_log_prob, base_log_prob)
+    assert float(base_entropy[0]) > 0.0
+
+    dummy_record = dict(record)
+    dummy_record.update({
+        "chosen_team": tuple(env.state.station_worker_bindings[task.current_station][:task.demand]),
+        "chosen_worker_indices": tuple(range(task.demand)),
+        "worker_valid_masks": tuple(
+            tuple(True for _ in range(actor.max_station_workers))
+            for _ in range(task.demand)
+        ),
+        "worker_node_indices": tuple(range(task.demand)),
+        "station_worker_ids": tuple(env.state.station_worker_bindings[task.current_station]),
+        "align": 1,
+    })
+    with torch.no_grad():
+        for module in (actor.worker_score_fc, actor.worker_graph_score, actor.align_head):
+            for parameter in module.parameters():
+                parameter.add_(0.25)
+
+    _, dummy_log_prob, dummy_entropy = actor.evaluate_action_log_probs(
+        state_feat.unsqueeze(0),
+        urgency.unsqueeze(0),
+        [dummy_record],
+    )
+    assert torch.equal(base_log_prob, dummy_log_prob)
+    assert torch.equal(base_entropy, dummy_entropy)
+
+
 def test_explicit_advance_replay_has_no_worker_masks() -> None:
     env = _new_env()
     task = env.get_ready_tasks()[0]
