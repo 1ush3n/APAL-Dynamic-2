@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import torch
@@ -87,6 +88,102 @@ def test_worker_calendar_changes_graph_policy_input(env: AirLineEnvWork3) -> Non
         before["worker"].x[worker_index],
         after["worker"].x[worker_index],
     )
+
+
+def test_training_entry_traces_graph_policy_and_updates_graph_parameters(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """真实训练入口应构图、使用图表征完成动作，并更新图编码器。"""
+    from models.work3.actor_critic import ActorCriticWork3
+    from scripts.work3.train_ppo_work3 import run_training
+
+    trace: dict[str, Any] = {
+        "sampled_actions": [],
+        "graph_encoder": 0,
+        "task_graph_proj": 0,
+        "worker_graph_score": 0,
+        "task_score_fc": 0,
+        "worker_score_fc": 0,
+    }
+    initial_graph_state: dict[str, torch.Tensor] = {}
+    original_actor_init = ActorCriticWork3.__init__
+    original_select_snapshot = ActorCriticWork3.select_snapshot
+
+    def capture_actor_init(actor: ActorCriticWork3, *args: Any, **kwargs: Any) -> None:
+        original_actor_init(actor, *args, **kwargs)
+        if initial_graph_state:
+            return
+        initial_graph_state.update({
+            name: parameter.detach().cpu().clone()
+            for name, parameter in actor.graph_encoder.named_parameters()
+        })
+        for module_name in (
+            "graph_encoder",
+            "task_graph_proj",
+            "worker_graph_score",
+            "task_score_fc",
+            "worker_score_fc",
+        ):
+            getattr(actor, module_name).register_forward_hook(
+                lambda _module, _inputs, _output, name=module_name: trace.__setitem__(
+                    name,
+                    trace[name] + 1,
+                )
+            )
+
+    def capture_sampled_action(
+        actor: ActorCriticWork3,
+        snapshot: Any,
+        deterministic: bool = False,
+    ) -> Any:
+        result = original_select_snapshot(actor, snapshot, deterministic=deterministic)
+        assert isinstance(snapshot.graph_snapshot, HeteroData)
+        trace["sampled_actions"].append((result[0], result[3]))
+        return result
+
+    monkeypatch.setattr(ActorCriticWork3, "__init__", capture_actor_init)
+    monkeypatch.setattr(ActorCriticWork3, "select_snapshot", capture_sampled_action)
+
+    report = run_training(
+        run_mode="smoke",
+        num_iterations=1,
+        steps_per_iter=4,
+        max_decisions=4,
+        ppo_epochs=1,
+        batch_size=4,
+        seed=42,
+        method_variant="C",
+        device="cpu",
+        num_envs=1,
+        output_ckpt=tmp_path / "graph_policy_smoke.pt",
+        report_path=tmp_path / "graph_policy_smoke.run.json",
+    )
+
+    assert report["history"][0]["environment_steps"] == 4
+    assert report["lightning_optimization_steps"] == 1
+    assert trace["graph_encoder"] > 0
+    assert trace["task_graph_proj"] > 0
+    assert trace["task_score_fc"] > 0
+    assert trace["sampled_actions"]
+    assert any(
+        sample_record["worker_node_indices"]
+        for _action, sample_record in trace["sampled_actions"]
+    )
+    assert trace["worker_graph_score"] > 0
+    assert trace["worker_score_fc"] > 0
+
+    checkpoint = torch.load(report["checkpoint_path"], map_location="cpu", weights_only=False)
+    trained_graph_state = checkpoint["actor_critic_state"]
+    changed_graph_parameters = [
+        name
+        for name, initial_value in initial_graph_state.items()
+        if not torch.equal(
+            initial_value,
+            trained_graph_state[f"graph_encoder.{name}"].cpu(),
+        )
+    ]
+    assert changed_graph_parameters
 
 
 def test_legacy_actor_checkpoint_can_be_loaded(baseline_path: Path) -> None:
