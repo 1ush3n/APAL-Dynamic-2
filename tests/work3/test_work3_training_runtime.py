@@ -1861,6 +1861,227 @@ def test_lightning_trainer_fit_runs_ppo_update_and_separates_step_counts() -> No
     )
 
 
+def test_lightning_ppo_update_mixes_stay_and_postpone_samples(
+    tmp_path: Path,
+) -> None:
+    """同一CPU PPO minibatch含真实留站/后移样本并完成有限参数更新。"""
+    import lightning.pytorch as pl
+
+    from envs.work3.core_types import ActionBranch, TaskStatus
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.action_fusion import compute_time_urgency_vector
+    from models.work3.actor_critic import (
+        ActorCriticWork3,
+        extract_compact_state_features,
+    )
+    from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+    from models.work3.time_head import TimeResidualHead
+
+    lightning_runtime = _work3_lightning_module()
+    torch.manual_seed(107)
+    actor = ActorCriticWork3(hidden_dim=16)
+    actor.eval()
+    with torch.no_grad():
+        for parameter in actor.branch_head.parameters():
+            parameter.zero_()
+        actor.branch_head[-1].bias[0] = 5.0
+        actor.branch_head[-1].bias[1] = -5.0
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    stay_env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    stay_env.reset()
+    stay_task = next(
+        task
+        for task in stay_env.get_action_candidates()
+        if stay_env.can_reserve(task)
+        and not stay_env.can_postpone(task)
+        and task.skill >= 0
+    )
+    stay_team = tuple(
+        stay_env.valid_team_completion_workers(stay_task, [])[: stay_task.demand]
+    )
+    stay_task.in_station_offset = 20.0
+    stay_env.step(
+        {
+            "task_key": stay_task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": stay_team,
+            "align": 1,
+        }
+    )
+    assert stay_task.status == TaskStatus.RESERVED
+    assert stay_env.get_action_branch_mask(stay_task) == (True, False)
+    stay_candidate_getter = stay_env.get_action_candidates
+    stay_env.get_action_candidates = lambda: [stay_task]  # type: ignore[method-assign]
+
+    postpone_env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    postpone_env.reset()
+    postpone_task = next(
+        task
+        for task in postpone_env.get_action_candidates()
+        if postpone_env.get_action_branch_mask(task) == (False, True)
+    )
+    assert postpone_task.status == TaskStatus.UNREADY
+    postpone_candidate_getter = postpone_env.get_action_candidates
+    postpone_env.get_action_candidates = lambda: [postpone_task]  # type: ignore[method-assign]
+
+    transitions: list[PPOTransition] = []
+    bootstrap_values: dict[tuple[int, int, int], float] = {}
+    for episode_id, environment, expected_branch in (
+        (1, stay_env, ActionBranch.STATION_EXECUTE),
+        (2, postpone_env, ActionBranch.POSTPONE),
+    ):
+        estimated_cmax = compute_cycle_heuristic_cmax(environment.state)
+        state_features = extract_compact_state_features(
+            environment.state,
+            estimated_cmax,
+        )
+        time_features = compute_time_urgency_vector(
+            estimated_r=max(0.0, estimated_cmax - environment.state.current_time),
+            current_time=environment.state.current_time,
+            last_transfer_time=environment.state.last_transfer_time,
+            h0=environment.state.h0,
+        )
+        assert state_features.shape == (32,)
+        assert time_features.shape == (2,)
+        snapshot = actor.make_decision_snapshot(
+            environment,
+            state_features,
+            time_features,
+            worker_id=0,
+            episode_id=episode_id,
+            episode_index=0,
+        )
+        action, log_prob, value, sample_record = actor.select_snapshot(
+            snapshot,
+            deterministic=True,
+        )
+        assert action is not None
+        assert action["branch"] == expected_branch
+        environment.get_action_candidates = (
+            stay_candidate_getter
+            if episode_id == 1
+            else postpone_candidate_getter
+        )  # type: ignore[method-assign]
+        _, reward, terminated, truncated, _ = environment.step(action)
+        assert not truncated
+
+        transition = PPOTransition(
+            state_feat=state_features,
+            time_urgency=time_features,
+            sample_record=sample_record,
+            reward=reward,
+            raw_reward=reward,
+            value=value,
+            log_prob=log_prob,
+            worker_id=0,
+            episode_id=episode_id,
+            segment_id=0,
+            done=terminated or truncated,
+            action_dict=action,
+            terminated=terminated,
+            truncated=truncated,
+        )
+        transitions.append(transition)
+
+        if not transition.is_terminated:
+            next_cmax = compute_cycle_heuristic_cmax(environment.state)
+            next_state_features = extract_compact_state_features(
+                environment.state,
+                next_cmax,
+            )
+            next_time_features = compute_time_urgency_vector(
+                estimated_r=max(0.0, next_cmax - environment.state.current_time),
+                current_time=environment.state.current_time,
+                last_transfer_time=environment.state.last_transfer_time,
+                h0=environment.state.h0,
+            )
+            next_snapshot = actor.make_decision_snapshot(
+                environment,
+                next_state_features,
+                next_time_features,
+                worker_id=0,
+                episode_id=episode_id,
+                episode_index=1,
+            )
+            with torch.no_grad():
+                next_value, _ = actor.encode_state(
+                    next_snapshot.state_features,
+                    next_snapshot.time_features,
+                    graph_data=next_snapshot.graph_snapshot,
+                )
+            bootstrap_values[(0, episode_id, 0)] = float(next_value.item())
+
+    buffer = RolloutBufferWork3(normalize_advantages=False)
+    for transition in transitions:
+        buffer.add(transition)
+    buffer.finish_trajectories(last_values_by_segment=bootstrap_values)
+    update = lightning_runtime.Work3TrainingUpdate(
+        buffer=buffer,
+        environment_steps=2,
+    )
+
+    # 两个样本必须进入同一minibatch；[2,32]与[2,2]分别是状态和时间特征。
+    minibatch = next(buffer.get_batches(batch_size=2, shuffle=False))
+    sample_branches = {int(record["branch"]) for record in minibatch["sample_records"]}
+    assert sample_branches == {
+        int(ActionBranch.STATION_EXECUTE),
+        int(ActionBranch.POSTPONE),
+    }
+    _, replay_log_probs, entropies = actor.evaluate_action_log_probs(
+        minibatch["state_feats"],
+        minibatch["time_urgencies"],
+        minibatch["sample_records"],
+    )
+    assert replay_log_probs.shape == (2,)
+    assert torch.isfinite(replay_log_probs).all()
+    assert torch.isfinite(entropies).all()
+    assert torch.allclose(
+        replay_log_probs,
+        minibatch["old_log_probs"],
+        atol=1e-6,
+        rtol=0.0,
+    )
+
+    actor.train()
+    parameters_before = [parameter.detach().clone() for parameter in actor.parameters()]
+    module = lightning_runtime.Work3LightningModule(
+        actor_critic=actor,
+        time_head=TimeResidualHead(in_dim=16, hidden_dim=16),
+        ppo_epochs=1,
+        batch_size=2,
+        learning_rate=1e-3,
+    )
+    trainer = pl.Trainer(
+        accelerator="cpu",
+        devices=1,
+        max_epochs=1,
+        limit_train_batches=1,
+        num_sanity_val_steps=0,
+        logger=False,
+        enable_checkpointing=False,
+        enable_model_summary=False,
+        enable_progress_bar=False,
+        default_root_dir=tmp_path,
+    )
+    data_module = lightning_runtime.Work3PPODataModule(
+        update_factory=lambda: iter((update,)),
+    )
+    trainer.fit(module, datamodule=data_module)
+
+    assert trainer.global_step == module.optimization_steps == 1
+    assert module.last_metrics["ppo_updates"] == 1.0
+    assert module.last_metrics["sampling_replay_sample_count"] == 2.0
+    assert module.last_metrics["sampling_replay_max_abs_error"] <= 1e-6
+    for metric_name in ("total_loss", "policy_loss", "value_loss", "entropy", "grad_norm"):
+        assert torch.isfinite(torch.tensor(module.last_metrics[metric_name]))
+    assert any(
+        not torch.equal(before, after)
+        for before, after in zip(parameters_before, actor.parameters(), strict=True)
+    )
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Lightning AMP验收需要CUDA设备")
 @pytest.mark.parametrize(
     ("amp_dtype", "precision"),
