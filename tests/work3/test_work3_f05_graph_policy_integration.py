@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -245,6 +246,116 @@ def test_minibatch_keeps_local_candidate_and_worker_indices_across_graph_sizes()
         assert torch.allclose(batched_values[index : index + 1], value, atol=1e-6)
         assert torch.allclose(batched_log_probs[index : index + 1], log_prob, atol=1e-6)
         assert torch.allclose(batched_entropies[index : index + 1], entropy, atol=1e-6)
+
+
+def test_graph_node_relabel_and_candidate_reorder_preserve_identity_policy() -> None:
+    """同步重编号图节点和候选顺序后，策略按实体身份保持等变。"""
+    snapshot = _small_snapshot(
+        worker_id=7,
+        task_count=3,
+        worker_ids=(70, 71),
+        candidate_indices=(2, 0),
+        demands=(1, 2),
+        marker=0.2,
+    )
+    graph = snapshot.graph_snapshot.clone()
+    graph["task"].x[:, 0] = torch.tensor([0.1, 0.4, 0.9])
+    candidate_features = torch.tensor(
+        [
+            [2.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ]
+    )
+    snapshot = replace(
+        snapshot,
+        graph_snapshot=graph,
+        candidate_task_features=candidate_features,
+    )
+
+    node_orders = {
+        "task": torch.tensor([1, 2, 0]),
+        "worker": torch.tensor([1, 0]),
+        "station": torch.tensor([0]),
+        "skill": torch.tensor([3, 0, 4, 2, 1]),
+    }
+    old_to_new: dict[str, torch.Tensor] = {}
+    relabeled_graph = snapshot.graph_snapshot.clone()
+    for node_type, new_to_old in node_orders.items():
+        mapping = torch.empty_like(new_to_old)
+        mapping[new_to_old] = torch.arange(new_to_old.numel())
+        old_to_new[node_type] = mapping
+        # 节点特征形状：[N, F] -> [N, F]，只按节点编号重排。
+        relabeled_graph[node_type].x = relabeled_graph[node_type].x[new_to_old].clone()
+    for edge_type in relabeled_graph.edge_types:
+        edge_index = relabeled_graph[edge_type].edge_index
+        source_type, _, target_type = edge_type
+        # 边索引形状：[2, E] -> [2, E]，端点改写到对应的新节点编号。
+        relabeled_graph[edge_type].edge_index = torch.stack(
+            (
+                old_to_new[source_type][edge_index[0]],
+                old_to_new[target_type][edge_index[1]],
+            )
+        )
+
+    candidate_order = (1, 0)
+    relabeled_snapshot = replace(
+        snapshot,
+        graph_snapshot=relabeled_graph,
+        candidate_task_keys=tuple(snapshot.candidate_task_keys[index] for index in candidate_order),
+        candidate_task_features=snapshot.candidate_task_features[list(candidate_order)],
+        branch_masks=tuple(snapshot.branch_masks[index] for index in candidate_order),
+        team_contexts=tuple(snapshot.team_contexts[index] for index in candidate_order),
+        candidate_task_node_indices=tuple(
+            int(old_to_new["task"][snapshot.candidate_task_node_indices[index]])
+            for index in candidate_order
+        ),
+        worker_node_indices=tuple(
+            tuple(
+                int(old_to_new["worker"][worker_index])
+                for worker_index in snapshot.worker_node_indices[index]
+            )
+            for index in candidate_order
+        ),
+        reserved_flags=tuple(snapshot.reserved_flags[index] for index in candidate_order),
+    )
+
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16).eval()
+    with torch.no_grad():
+        context, task_nodes, worker_nodes = actor.graph_encoder(snapshot.graph_snapshot)
+        relabeled_context, relabeled_task_nodes, relabeled_worker_nodes = actor.graph_encoder(
+            relabeled_snapshot.graph_snapshot
+        )
+    assert torch.allclose(context, relabeled_context, atol=1e-5, rtol=1e-5)
+    for old_index, new_index in enumerate(old_to_new["task"].tolist()):
+        assert torch.allclose(
+            task_nodes[old_index], relabeled_task_nodes[new_index], atol=1e-5, rtol=1e-5
+        )
+    for old_index, new_index in enumerate(old_to_new["worker"].tolist()):
+        assert torch.allclose(
+            worker_nodes[old_index],
+            relabeled_worker_nodes[new_index],
+            atol=1e-5,
+            rtol=1e-5,
+        )
+
+    action, sampled_log_prob, _, record = actor.select_snapshot(
+        snapshot, deterministic=True
+    )
+    relabeled_action, relabeled_log_prob, _, relabeled_record = actor.select_snapshot(
+        relabeled_snapshot, deterministic=True
+    )
+    assert action is not None and relabeled_action is not None
+    assert action["task_key"] == relabeled_action["task_key"]
+    assert action["team"] == relabeled_action["team"]
+    assert action["branch"] == relabeled_action["branch"]
+    assert sampled_log_prob == pytest.approx(relabeled_log_prob, abs=1e-5)
+
+    states = torch.stack((snapshot.state_features, relabeled_snapshot.state_features))
+    times = torch.stack((snapshot.time_features, relabeled_snapshot.time_features))
+    _, replay_log_probs, _ = actor.evaluate_action_log_probs(
+        states, times, [record, relabeled_record]
+    )
+    assert torch.allclose(replay_log_probs, torch.full((2,), sampled_log_prob), atol=1e-5)
 
 
 def test_graph_encoder_receives_policy_gradient(env: AirLineEnvWork3) -> None:
