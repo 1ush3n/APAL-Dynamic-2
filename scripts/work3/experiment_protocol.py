@@ -18,24 +18,26 @@ class Work3MethodProfile:
 
 
 def build_method_profile(method_variant: str) -> Work3MethodProfile:
-    """返回正式C或D配置；启发式运行器不属于正式C/D。"""
+    """返回确认稿定义的正式时间机制profile。"""
     name = str(method_variant).strip().upper()
-    if name == "C":
-        return Work3MethodProfile(
-            name="C",
-            graph_policy=True,
-            allow_postpone=True,
-            use_time_auxiliary=False,
-            use_corrected_time_input=False,
-            use_learned_time_shaping=False,
-        )
-    if name == "D":
-        return Work3MethodProfile(
-            name="D",
-            graph_policy=True,
-            allow_postpone=True,
-            use_time_auxiliary=True,
-            use_corrected_time_input=True,
-            use_learned_time_shaping=True,
-        )
-    raise ValueError(f"正式方法只支持 C 或 D，不支持: {method_variant}")
+    time_profiles = {
+        "C": (False, False, False),
+        "E": (True, False, False),
+        "F": (True, True, False),
+        "G": (True, False, True),
+        "D": (True, True, True),
+    }
+    try:
+        use_auxiliary, use_corrected_input, use_learned_shaping = time_profiles[name]
+    except KeyError as error:
+        raise ValueError(
+            f"正式方法只支持 C、D、E、F、G，不支持: {method_variant}"
+        ) from error
+    return Work3MethodProfile(
+        name=name,
+        graph_policy=True,
+        allow_postpone=True,
+        use_time_auxiliary=use_auxiliary,
+        use_corrected_time_input=use_corrected_input,
+        use_learned_time_shaping=use_learned_shaping,
+    )

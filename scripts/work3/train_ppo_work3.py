@@ -1161,7 +1161,7 @@ def run_training(
                     raise RuntimeError(
                         "Actor未返回动作；无候选状态应通过强制推进动作进入env.step()"
                     )
-                if profile.use_time_auxiliary and shaper is not None:
+                if profile.use_time_auxiliary:
                     pending_time_labels.add(
                         episode_id=state.episode_id,
                         cycle_id=int(snapshot.cycle_id),
@@ -1904,7 +1904,12 @@ def main() -> None:
     parser.add_argument("--time-auxiliary-epochs", type=int, default=None)
     parser.add_argument("--time-auxiliary-batch-size", type=int, default=None)
     parser.add_argument("--lr", type=float, default=None, help="学习率")
-    parser.add_argument("--method", choices=("C", "D"), default=None, help="C/D方法配置")
+    parser.add_argument(
+        "--method",
+        choices=("C", "D", "E", "F", "G"),
+        default=None,
+        help="C/D主方法或E/F/G消融配置",
+    )
     parser.add_argument("--baseline", type=Path, default=None)
     parser.add_argument("--scenarios", type=Path, default=None)
     parser.add_argument("--scenario-split", type=Path, default=None)

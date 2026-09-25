@@ -94,8 +94,8 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
             raise ValueError("pilot必须配置正整数runtime.successful_batch_target")
     elif successful_batch_target is not None:
         raise ValueError("smoke不得设置runtime.successful_batch_target")
-    if config.runtime.method_profile not in {"C", "D"}:
-        raise ValueError("runtime.method_profile仅支持C或D")
+    if config.runtime.method_profile not in {"C", "D", "E", "F", "G"}:
+        raise ValueError("runtime.method_profile仅支持C、D、E、F或G")
     if type(config.runtime.seed) is not int:
         raise ValueError("runtime.seed必须是整数")
     if type(config.runtime.deterministic) is not bool:

@@ -60,7 +60,7 @@ class PendingTimeLabel:
     estimated_cmax: float
     current_time: float
     h0: float
-    predictor_version: int
+    predictor_version: int | None
     time_urgency: torch.Tensor | None = None
 
 
@@ -101,7 +101,7 @@ class PendingTimeLabelCache:
         estimated_cmax: float,
         current_time: float,
         h0: float,
-        predictor_version: int,
+        predictor_version: int | None,
         worker_id: int = 0,
         time_urgency: torch.Tensor | None = None,
     ) -> bool:
@@ -127,7 +127,9 @@ class PendingTimeLabelCache:
             estimated_cmax=float(estimated_cmax),
             current_time=float(current_time),
             h0=float(h0),
-            predictor_version=int(predictor_version),
+            predictor_version=(
+                None if predictor_version is None else int(predictor_version)
+            ),
             time_urgency=None if time_urgency is None else time_urgency.detach().cpu().clone(),
         )
         self._pending.setdefault(key, []).append(sample)

@@ -79,7 +79,7 @@ class FormalEvaluationAgent:
         state_feat = extract_compact_state_features(env.state, cmax)
         if self.profile.use_corrected_time_input:
             if self.time_head is None:
-                raise RuntimeError("正式方法 D 缺少共享时间头")
+                raise RuntimeError(f"正式方法 {self.profile.name} 缺少共享时间头")
             graph_snapshot = self.actor_critic.build_graph_snapshot(env)
             with torch.no_grad():
                 shared_feature = self.actor_critic.encode_shared_representation(
@@ -142,7 +142,7 @@ def _validate_formal_checkpoint_contract(
     checkpoint: dict[str, Any],
     actor: ActorCriticWork3,
 ) -> None:
-    """拒绝缺少训练来源、配置指纹或与C/D方法不一致的推理权重。"""
+    """拒绝缺少训练来源、配置指纹或与方法profile不一致的推理权重。"""
     from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
 
     metadata = checkpoint.get("run_metadata")
@@ -240,7 +240,7 @@ def _validate_formal_checkpoint_contract(
 
     if not profile.use_time_auxiliary:
         if "time_head_state" in checkpoint or metadata.get("potential_predictor_snapshot") is not None:
-            raise ValueError("C profile检查点不得包含D时间学习预测器")
+            raise ValueError(f"{profile.name} profile检查点不得包含时间学习预测器")
         return
 
     labels = int(metadata.get("time_label_count", 0))
@@ -250,13 +250,13 @@ def _validate_formal_checkpoint_contract(
         or labels < 1
         or successful_updates < 1
     ):
-        raise ValueError("正式方法D时间头必须由真实转站标签成功训练")
+        raise ValueError(f"正式方法{profile.name}时间头必须由真实转站标签成功训练")
     if (
         checkpoint.get("time_head_model_version") != "signed_residual_v1"
         or int(checkpoint.get("time_head_in_dim", -1)) != actor.hidden_dim
         or "time_head_state" not in checkpoint
     ):
-        raise ValueError("正式方法D检查点缺少兼容的有符号时间头")
+        raise ValueError(f"正式方法{profile.name}检查点缺少兼容的有符号时间头")
     time_head = TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64)
     _validate_state_dict_shapes(
         time_head.state_dict(),
@@ -265,6 +265,12 @@ def _validate_formal_checkpoint_contract(
     )
 
     snapshot = metadata.get("potential_predictor_snapshot")
+    if not profile.use_learned_time_shaping:
+        if snapshot is not None:
+            raise ValueError(
+                f"{profile.name} profile检查点不得包含学习势函数预测器快照"
+            )
+        return
     if (
         not isinstance(snapshot, dict)
         or int(snapshot.get("version", -1)) < 0
@@ -272,7 +278,7 @@ def _validate_formal_checkpoint_contract(
         or snapshot.get("time_head_model_version") != "signed_residual_v1"
         or int(snapshot.get("time_head_in_dim", -1)) != actor.hidden_dim
     ):
-        raise ValueError("正式方法D缺少兼容的势函数预测器快照")
+        raise ValueError(f"正式方法{profile.name}缺少兼容的势函数预测器快照")
     if dict(checkpoint.get("graph_feature_dims") or {}) != dict(GRAPH_FEATURE_DIMS):
         raise ValueError("势函数预测器图特征维度不匹配")
     _validate_state_dict_shapes(
@@ -294,7 +300,7 @@ def build_formal_evaluation_agent(
     device: str = "cpu",
     debug_random: bool = False,
 ) -> FormalEvaluationAgent:
-    """加载正式C/D模型；缺检查点仅在显式调试模式允许随机权重。"""
+    """加载正式profile模型；缺检查点仅在显式调试模式允许随机权重。"""
     profile = build_method_profile(method_variant)
     torch_device = torch.device(device)
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64).to(torch_device)
@@ -364,14 +370,14 @@ def build_formal_evaluation_agent(
                 actor.eval()
                 time_head.eval()
                 return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
-            raise ValueError("正式方法 D 检查点缺少有符号时间头版本")
+            raise ValueError(f"正式方法 {profile.name} 检查点缺少有符号时间头版本")
         if "time_head_state" not in checkpoint:
             if debug_random:
                 time_head = TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64).to(torch_device)
                 actor.eval()
                 time_head.eval()
                 return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
-            raise ValueError("正式方法 D 检查点缺少共享时间头")
+            raise ValueError(f"正式方法 {profile.name} 检查点缺少共享时间头")
         time_head = TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64).to(torch_device)
         time_head.load_state_dict(checkpoint["time_head_state"])
 

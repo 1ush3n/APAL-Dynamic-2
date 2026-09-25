@@ -101,6 +101,33 @@ def test_pending_time_labels_survive_rollout_buffer_boundary() -> None:
     assert cache.pending_count == 0
 
 
+def test_pending_time_labels_allow_profiles_without_a_shaping_snapshot() -> None:
+    """无塑形预测器的E/F样本仍可等到真实转站后补标签。"""
+    cache = PendingTimeLabelCache()
+    cache.add(
+        episode_id=8,
+        cycle_id=1,
+        decision_id=0,
+        state_feat=torch.ones(32),
+        graph_snapshot="cpu-graph-snapshot",
+        estimated_cmax=12.0,
+        current_time=4.0,
+        h0=8.0,
+        predictor_version=None,
+    )
+
+    assert cache.attach_transfer(
+        episode_id=8,
+        cycle_id=1,
+        actual_transfer_time=10.0,
+    )
+    batch = cache.drain_ready()
+
+    assert batch is not None
+    assert batch["predictor_versions"] == [None]
+    assert batch["target_residuals"].tolist() == pytest.approx([-0.25])
+
+
 def test_time_label_uses_heuristic_snapshot_captured_at_decision() -> None:
     """实际转站标签使用决策时P_h=12，而非由后续状态替换的数值。"""
     cache = PendingTimeLabelCache()

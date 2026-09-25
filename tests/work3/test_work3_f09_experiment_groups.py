@@ -6,6 +6,8 @@ import json
 from dataclasses import asdict
 import hashlib
 from pathlib import Path
+import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -17,6 +19,7 @@ from scripts.work3.train_ppo_work3 import (
     load_training_scenarios,
     run_training,
 )
+from training.work3_runtime_config import load_work3_runtime_config
 
 
 def _save_profile_checkpoint(
@@ -25,6 +28,7 @@ def _save_profile_checkpoint(
     *,
     time_supervision_optimizer_updates: int = 0,
     config_hash_valid: bool = True,
+    include_potential_snapshot: bool | None = None,
 ) -> Path:
     import torch
 
@@ -42,6 +46,11 @@ def _save_profile_checkpoint(
     )
     config_yaml = f"runtime:\n  method_profile: {profile.name}\n"
     config_hash = hashlib.sha256(config_yaml.encode("utf-8")).hexdigest()
+    has_potential_snapshot = (
+        profile.use_learned_time_shaping
+        if include_potential_snapshot is None
+        else include_potential_snapshot
+    )
     metadata = {
         "run_mode": "pilot",
         "method_variant": profile.name,
@@ -83,7 +92,7 @@ def _save_profile_checkpoint(
                 "time_head_model_version": "signed_residual_v1",
                 "time_head_in_dim": 64,
             }
-            if profile.use_time_auxiliary
+            if has_potential_snapshot
             else None
         ),
     }
@@ -124,6 +133,250 @@ def test_formal_c_and_d_share_graph_policy_but_only_d_enables_time_learning() ->
     assert profile_d.use_corrected_time_input is True
     assert profile_c.use_learned_time_shaping is False
     assert profile_d.use_learned_time_shaping is True
+
+
+@pytest.mark.parametrize(
+    ("variant", "auxiliary", "corrected_input", "learned_shaping"),
+    [
+        ("C", False, False, False),
+        ("E", True, False, False),
+        ("F", True, True, False),
+        ("G", True, False, True),
+        ("D", True, True, True),
+    ],
+)
+def test_all_confirmed_profiles_keep_graph_and_postpone_and_only_toggle_time_modules(
+    variant: str,
+    auxiliary: bool,
+    corrected_input: bool,
+    learned_shaping: bool,
+) -> None:
+    """C/D/E/F/G共用图策略与后移，只按确认稿切换时间机制。"""
+    profile = build_method_profile(variant)
+
+    assert profile.name == variant
+    assert profile.graph_policy is True
+    assert profile.allow_postpone is True
+    assert profile.use_time_auxiliary is auxiliary
+    assert profile.use_corrected_time_input is corrected_input
+    assert profile.use_learned_time_shaping is learned_shaping
+
+
+@pytest.mark.parametrize("variant", ["E", "F", "G"])
+def test_yaml_runtime_config_accepts_confirmed_ablation_profiles(variant: str) -> None:
+    config = load_work3_runtime_config(
+        Path("conf/work3/train_pilot.yaml"),
+        overrides=(f"runtime.method_profile={variant}",),
+    )
+
+    assert config.runtime.method_profile == variant
+
+
+def test_training_cli_accepts_ablation_profile_override() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/work3/train_ppo_work3.py",
+            "--method",
+            "E",
+            "--help",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("variant", ["E", "G"])
+def test_heuristic_input_profiles_do_not_call_corrected_time_head(
+    variant: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """E/G仍训练时间头，但Actor动作输入保持启发式值。"""
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.actor_critic import ActorCriticWork3
+    from models.work3.time_head import TimeResidualHead
+    from scripts.work3.evaluate_c_vs_d import FormalEvaluationAgent
+
+    profile = build_method_profile(variant)
+    agent = FormalEvaluationAgent(
+        profile,
+        ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64),
+        TimeResidualHead(in_dim=64, hidden_dim=64),
+    )
+    env = AirLineEnvWork3(
+        baseline_json_path="data/work3/real_283_k10_baseline.json"
+    )
+    env.reset()
+
+    def reject_prediction(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
+        pytest.fail("E/G不得用学习时间头修正Actor动作输入")
+
+    monkeypatch.setattr(TimeResidualHead, "predict_corrected_time", reject_prediction)
+    agent.select_action(env)
+
+    assert agent.last_time_prediction is not None
+    assert agent.last_time_prediction[1] == agent.last_time_prediction[2]
+
+
+@pytest.mark.parametrize(
+    ("variant", "corrected_input", "learned_shaping", "snapshot_version"),
+    [
+        ("E", False, False, None),
+        ("F", True, False, None),
+        ("G", False, True, 0),
+    ],
+)
+def test_ablation_training_caches_time_labels_independent_of_shaping_mode(
+    tmp_path: Path,
+    variant: str,
+    corrected_input: bool,
+    learned_shaping: bool,
+    snapshot_version: int | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """E/F无学习塑形也缓存标签；G的塑形版本绑定到episode。"""
+    import scripts.work3.train_ppo_work3 as training_module
+
+    corrected_input_calls = 0
+    original_compute = training_module.compute_online_snapshot_time_inputs
+
+    def track_corrected_input(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
+        nonlocal corrected_input_calls
+        corrected_input_calls += 1
+        return original_compute(*args, **kwargs)
+
+    monkeypatch.setattr(
+        training_module,
+        "compute_online_snapshot_time_inputs",
+        track_corrected_input,
+    )
+    scenario = {
+        "scenario_id": f"{variant}_AUXILIARY_PENDING_LABEL",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "delta": 1.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenario_path = tmp_path / f"{variant}_scenarios.json"
+    scenario_path.write_text(json.dumps([scenario]), encoding="utf-8")
+    split_path = tmp_path / f"{variant}_train.json"
+    split_path.write_text(json.dumps([scenario]), encoding="utf-8")
+
+    result = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=1,
+        num_iterations=1,
+        steps_per_iter=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=42,
+        method_variant=variant,
+        baseline_path="data/work3/real_283_k10_baseline.json",
+        scenarios_path=scenario_path,
+        scenario_split_path=split_path,
+        output_ckpt=tmp_path / f"{variant}.pt",
+        report_path=tmp_path / f"{variant}.json",
+        device="cpu",
+        num_envs=1,
+    )
+
+    assert result["method_profile"]["use_time_auxiliary"] is True
+    assert result["method_profile"]["use_corrected_time_input"] is corrected_input
+    assert result["method_profile"]["use_learned_time_shaping"] is learned_shaping
+    assert result["scenario_log"][0]["potential_snapshot_version"] == snapshot_version
+    assert (corrected_input_calls > 0) is corrected_input
+    cycle_samples = sum(
+        item["label_count"] + item["pending_decision_count"]
+        for item in result["cycle_time_labels"]
+    )
+    assert cycle_samples > 0
+
+
+@pytest.mark.parametrize("variant", ["E", "F", "G"])
+def test_yaml_runtime_config_accepts_confirmed_ablation_profiles(variant: str) -> None:
+    config = load_work3_runtime_config(
+        Path("conf/work3/train_pilot.yaml"),
+        overrides=(f"runtime.method_profile={variant}",),
+    )
+
+    assert config.runtime.method_profile == variant
+
+
+def test_training_cli_accepts_ablation_profile_override() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/work3/train_ppo_work3.py",
+            "--method",
+            "E",
+            "--help",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("variant", ["E", "F"])
+def test_auxiliary_ablation_collects_cycle_samples_without_learned_shaper(
+    tmp_path: Path,
+    variant: str,
+) -> None:
+    """E/F不启用学习塑形，仍须缓存决策图以等待实际转站标签。"""
+    scenario = {
+        "scenario_id": f"{variant}_AUXILIARY_PENDING_LABEL",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "delta": 1.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenario_path = tmp_path / f"{variant}_scenarios.json"
+    scenario_path.write_text(json.dumps([scenario]), encoding="utf-8")
+    split_path = tmp_path / f"{variant}_train.json"
+    split_path.write_text(json.dumps([scenario]), encoding="utf-8")
+
+    result = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=1,
+        num_iterations=1,
+        steps_per_iter=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=42,
+        method_variant=variant,
+        baseline_path="data/work3/real_283_k10_baseline.json",
+        scenarios_path=scenario_path,
+        scenario_split_path=split_path,
+        output_ckpt=tmp_path / f"{variant}.pt",
+        report_path=tmp_path / f"{variant}.json",
+        device="cpu",
+        num_envs=1,
+    )
+
+    assert result["method_profile"]["use_time_auxiliary"] is True
+    assert result["method_profile"]["use_learned_time_shaping"] is False
+    cycle_samples = sum(
+        item["label_count"] + item["pending_decision_count"]
+        for item in result["cycle_time_labels"]
+    )
+    assert cycle_samples > 0
 
 
 def test_training_loads_explicit_split_and_builds_mixed_episode_plan(tmp_path: Path) -> None:
@@ -271,6 +524,70 @@ def test_formal_d_accepts_profiled_checkpoint_with_real_label_updates(
     assert agent.debug_random is False
     assert agent.profile.name == "D"
     assert agent.time_head is not None
+
+
+@pytest.mark.parametrize("variant", ["E", "F"])
+def test_formal_ef_accept_trained_time_head_without_shaping_snapshot(
+    tmp_path: Path,
+    variant: str,
+) -> None:
+    checkpoint = _save_profile_checkpoint(
+        tmp_path / f"{variant.lower()}_trained.pt",
+        variant,
+        time_supervision_optimizer_updates=1,
+    )
+
+    agent = build_formal_evaluation_agent(variant, checkpoint, device="cpu")
+
+    assert agent.profile.name == variant
+    assert agent.time_head is not None
+
+
+def test_formal_g_accepts_trained_time_head_with_frozen_shaping_snapshot(
+    tmp_path: Path,
+) -> None:
+    checkpoint = _save_profile_checkpoint(
+        tmp_path / "g_trained.pt",
+        "G",
+        time_supervision_optimizer_updates=1,
+    )
+
+    agent = build_formal_evaluation_agent("G", checkpoint, device="cpu")
+
+    assert agent.profile.name == "G"
+    assert agent.time_head is not None
+
+
+@pytest.mark.parametrize("variant", ["D", "G"])
+def test_learned_shaping_profiles_reject_checkpoint_without_frozen_snapshot(
+    tmp_path: Path,
+    variant: str,
+) -> None:
+    checkpoint = _save_profile_checkpoint(
+        tmp_path / f"{variant.lower()}_no_snapshot.pt",
+        variant,
+        time_supervision_optimizer_updates=1,
+        include_potential_snapshot=False,
+    )
+
+    with pytest.raises(ValueError, match="势函数预测器快照"):
+        build_formal_evaluation_agent(variant, checkpoint, device="cpu")
+
+
+@pytest.mark.parametrize("variant", ["E", "F"])
+def test_non_shaping_profiles_reject_hidden_learned_shaping_snapshot(
+    tmp_path: Path,
+    variant: str,
+) -> None:
+    checkpoint = _save_profile_checkpoint(
+        tmp_path / f"{variant.lower()}_unexpected_snapshot.pt",
+        variant,
+        time_supervision_optimizer_updates=1,
+        include_potential_snapshot=True,
+    )
+
+    with pytest.raises(ValueError, match="不得包含学习势函数预测器快照"):
+        build_formal_evaluation_agent(variant, checkpoint, device="cpu")
 
 
 def test_formal_d_checkpoint_reload_preserves_prediction_and_policy_output(
