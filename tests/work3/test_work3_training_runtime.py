@@ -1416,18 +1416,27 @@ def test_training_preserves_rollout_boundary_potential_and_refreshes_episodes(
         def worker_torch_num_threads(self) -> tuple[int]:
             return (1,)
 
+        @property
+        def total_env_steps(self) -> int:
+            return sum(self.worker_step_counts)
+
         def reset_all(
             self,
             *,
             scenarios: list[dict[str, Any] | None],
             episode_ids: list[int],
             episode_indices: list[int],
+            warmup_mode: str = "none",
+            max_total_steps: int | None = None,
+            wall_clock_deadline: float | None = None,
         ) -> tuple[SimpleNamespace, ...]:
+            del warmup_mode, max_total_steps, wall_clock_deadline
             self.episode_ids = tuple(episode_ids)
             self.episode_indices = tuple(episode_indices)
             self.episode_step_counts = [0 for _ in episode_ids]
             return tuple(
-                SimpleNamespace(scenario_status={}) for _ in episode_ids
+                SimpleNamespace(scenario_status={}, warmup_result=None)
+                for _ in episode_ids
             )
 
         def snapshots(self) -> tuple[DecisionSnapshot, ...]:
