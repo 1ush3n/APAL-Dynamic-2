@@ -133,6 +133,38 @@ def test_split_rejects_five_copies_of_only_one_scenario() -> None:
         split_trajectories_by_scenario(trajectories, val_ratio=0.25, seed=123)
 
 
+def test_distinct_states_from_one_training_scenario_stay_in_training() -> None:
+    """同一训练事件生成的多条不同状态轨迹和全部step保持同一训练归属。"""
+    trajectories = [
+        _create_synthetic_trajectory(
+            index,
+            "TRAIN_EVENT_A",
+            num_steps=3,
+            delay_hours=10.0 + index,
+        )
+        for index in range(3)
+    ]
+    trajectories.extend(
+        _create_synthetic_trajectory(index + 3, f"SC_{index}", num_steps=3)
+        for index in range(3)
+    )
+
+    train_trajs, val_trajs = split_trajectories_by_scenario(
+        trajectories,
+        val_ratio=0.25,
+        seed=42,
+    )
+
+    event_train = [item for item in train_trajs if item["scenario_id"] == "TRAIN_EVENT_A"]
+    event_val = [item for item in val_trajs if item["scenario_id"] == "TRAIN_EVENT_A"]
+    train_scenarios = {item["scenario_id"] for item in train_trajs}
+    val_scenarios = {item["scenario_id"] for item in val_trajs}
+    assert len(event_train) == 3
+    assert sum(len(item["steps"]) for item in event_train) == 9
+    assert event_val == []
+    assert train_scenarios.isdisjoint(val_scenarios)
+
+
 def test_collector_defaults_to_one_nominal_trajectory(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
