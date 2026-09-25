@@ -68,6 +68,30 @@ def test_baseline_zero_reward_consistency(baseline_path: str) -> None:
     assert abs(sum(env.step_rewards) - (-breakdown.j_total)) < 1e-12
 
 
+def test_start_time_cost_uses_cycle_relative_offset(baseline_path: str) -> None:
+    """周期起点7、基准偏移3、实际开工10时，相对偏差和费用均为0。"""
+    weights = ObjectiveWeights(
+        w_h=0.0,
+        w_t=1.0,
+        w_w=0.0,
+        w_p=0.0,
+        normalize_by_n=False,
+    )
+    env = AirLineEnvWork3(baseline_json_path=baseline_path, weights=weights)
+    env.reset()
+    task = next(iter(env.state.tasks.values()))
+    task.in_station_offset = 3.0
+    task.assigned_team = list(task.base_team)
+    env.state.last_transfer_time = 7.0
+
+    env._on_task_started(task, start_time=10.0)
+
+    assert task.cycle_start_time == pytest.approx(7.0)
+    assert task.actual_start == pytest.approx(10.0)
+    assert env.cost_time == pytest.approx(0.0)
+    assert evaluate_trajectory_objective(env, weights=weights).d_time == pytest.approx(0.0)
+
+
 def test_postpone_incremental_consistency(baseline_path: str) -> None:
     """测试 2: 工序后移改派的增量扣费与终局账本绝对一致。"""
     weights = ObjectiveWeights(w_h=1.0, w_t=0.20, w_w=0.05, w_p=1.0, lambda_1=0.15, lambda_2=0.30)
