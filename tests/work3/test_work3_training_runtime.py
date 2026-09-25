@@ -2045,6 +2045,19 @@ def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
     assert d_report["paired_run_check"]["same_event_plan"] is True
     assert d_report["paired_run_check"]["same_interaction_budget"] is True
     assert d_report["paired_run_check"]["same_actual_hit_pattern"] is True
+    event_fields = {
+        "scenario_id": "TASK8_FIXED_TAU_ZERO_HIT",
+        "scheduled_tau": 0.0,
+        "scheduled_recovery_time": 1.0,
+        "scheduled_affected_task_keys": ["0_15"],
+        "scheduled_target_count": 1,
+    }
+    c_event = c_report["scenario_log"][0]
+    d_event = d_report["scenario_log"][0]
+    for field, expected in event_fields.items():
+        assert c_event[field] == expected
+        assert d_event[field] == expected
+        assert c_event[field] == d_event[field]
     for report in (c_report, d_report):
         assert report["research_result_eligible"] is False
         assert report["total_decisions"] == 1
