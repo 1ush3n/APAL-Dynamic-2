@@ -1,0 +1,86 @@
+# 工作三完整批次试点冻结配置；仅用于训练集可行性试点，不用于正式效果结论。
+runtime:
+  run_mode: pilot
+  method_profile: C
+  seed: 42
+  deterministic: true
+  num_envs: 2
+  start_method: spawn
+  total_env_steps: 12000
+  successful_batch_target: 1
+  max_wall_seconds: 5400.0
+  settle_timeout_seconds: 2.0
+  device: cuda:0
+  amp_dtype: bf16
+  main_num_threads: 1
+  env_num_threads: 1
+  dataloader_num_workers: 0
+  scenario_pool_path: data/work3/scenarios_9class.json
+  scenario_split_path: data/work3/experiment_splits/train.json
+paths:
+  baseline: data/work3/real_283_k10_baseline.json
+  # D从在线训练标签学习；不读取来源/划分不明的历史时间头。
+  time_head_checkpoint: experiments/work3/pilot_20260925/no_pretrained_time_head.pt
+  checkpoint_dir: experiments/work3/pilot_20260925/checkpoints
+  report_dir: experiments/work3/pilot_20260925/reports
+ppo:
+  steps_per_iter: 64
+  epochs: 1
+  batch_size: 64
+  learning_rate: 0.0003
+  clip_epsilon: 0.2
+  value_coefficient: 0.5
+  entropy_coefficient: 0.01
+  gamma: 0.99
+  gae_lambda: 0.95
+  shaping_coefficient: 1.0
+  time_loss_coefficient: 1.0
+  time_auxiliary_epochs: 1
+  time_auxiliary_batch_size: 64
+protocol:
+  protocol_id: work3_complete_batch_pilot_20260925
+  run_order: [C, D]
+  training_split: train
+  training_scenario_count: 25
+  episode_plan_scenario_ids:
+    - LATE_MID_S2
+    - LATE_HIGH_S2
+    - EARLY_MID_S4
+    - MID_LOW_S2
+    - MID_LOW_S0
+    - EARLY_MID_S0
+    - EARLY_LOW_S3
+    - LATE_HIGH_S0
+    - LATE_MID_S1
+    - MID_MID_S0
+    - LATE_HIGH_S1
+    - MID_HIGH_S3
+    - EARLY_HIGH_S1
+    - LATE_LOW_S3
+    - MID_MID_S2
+    - LATE_HIGH_S4
+    - EARLY_HIGH_S3
+    - MID_MID_S3
+    - EARLY_LOW_S1
+    - MID_MID_S4
+    - EARLY_MID_S1
+    - EARLY_MID_S2
+    - EARLY_HIGH_S0
+    - EARLY_HIGH_S4
+    - MID_LOW_S4
+  scenario_pool_sha256: ecd2ff2fbca9f535195c1b2257896efc1571a9e9e39f9e946c04c856861ab10b
+  scenario_split_sha256: f43fd5145eb5cc97e04540e9145d7add6fdacdcb0ea0e3057e1777b0e97ec98f
+  baseline_sha256: d38f827460ec7142493da940bb48648d694234f414193e8d536ecf8e8d175a56
+  episode_plan_sha256: b5f331765ecc7f9db8e706ed26c338ccd7998ecf7008521402527d153d27f724
+  worker_event_plan_sha256: 1d70bbe08cd7f12000b55edfb364e89c5cd433c14726b9556c0fe7d8816bbfc6
+  initial_actor_fingerprint: 1b3525dbbf0d67ff9dce95f18f9812e64bd11bc4b715bb24d23da170f4877bb2
+  implementation_commit: 13ad3c9
+  time_head_initialization: random_no_pretraining
+  research_result_eligible: false
+  hardware:
+    device_name: NVIDIA GeForce RTX 4060 Laptop GPU
+    python: 3.11.15
+    pytorch: 2.12.0+cu132
+    lightning: 2.6.5
+    numpy: 2.4.6
+    cuda_bf16_supported: true
