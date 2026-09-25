@@ -20,6 +20,7 @@ from models.work3.actor_critic import ActorCriticWork3
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from scripts.work3.evaluate_c_vs_d import (
     build_formal_evaluation_agent,
+    compare_c_vs_d_pair,
     evaluate_single_trajectory,
     run_benchmark_evaluation,
 )
@@ -152,6 +153,142 @@ def test_repeated_evaluation_does_not_update_actor_or_time_predictor(
     assert all(parameter.grad is None for parameter in agent.time_head.parameters())
 
 
+def test_evaluation_rejects_incomplete_uniform_warmup(
+    baseline_path: str,
+) -> None:
+    """暖机未达到共同前缀时不得进入主评测。"""
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    agent = HeuristicAgentWork3(name="Baseline-C")
+
+    with pytest.raises(ValueError, match="暖机未完成"):
+        evaluate_single_trajectory(
+            env,
+            "Baseline-C",
+            agent,
+            max_decisions=0,
+            warmup_mode="uniform_baseline",
+            max_warmup_steps=0,
+        )
+
+
+def test_evaluation_rejects_fixed_event_before_uniform_warmup(
+    baseline_path: str,
+) -> None:
+    """过早固定tau必须失败，不得为迁就暖机而重定时。"""
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    agent = HeuristicAgentWork3(name="Baseline-C")
+    scenario = {"scenario_id": "FIXED_EARLY", "tau": 0.0}
+
+    with pytest.raises(ValueError, match="早于.*暖机完成"):
+        evaluate_single_trajectory(
+            env,
+            "Baseline-C",
+            agent,
+            scenario=scenario,
+            max_decisions=0,
+            warmup_mode="uniform_baseline",
+        )
+    assert scenario["tau"] == 0.0
+
+
+def test_c_and_d_evaluation_report_same_warmup_prefix_and_step_budgets(
+    baseline_path: str,
+) -> None:
+    """同一固定事件的C/D须共享前缀，并拆分报告暖机步与策略步。"""
+    scenario = {
+        "scenario_id": "FIXED_AFTER_WARMUP",
+        "aircraft_id": 0,
+        "tau": 1e9,
+        "affected_task_keys": [],
+    }
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    agent_c = build_formal_evaluation_agent(
+        method_variant="C",
+        checkpoint_path=Path("__missing_debug_method_c.pt"),
+        device="cpu",
+        debug_random=True,
+    )
+    agent_d = build_formal_evaluation_agent(
+        method_variant="D",
+        checkpoint_path=Path("__missing_debug_method_d.pt"),
+        device="cpu",
+        debug_random=True,
+    )
+    actor_c_before = {
+        name: value.detach().clone()
+        for name, value in agent_c.actor_critic.state_dict().items()
+    }
+    actor_d_before = {
+        name: value.detach().clone()
+        for name, value in agent_d.actor_critic.state_dict().items()
+    }
+    assert agent_d.time_head is not None
+    time_head_d_before = {
+        name: value.detach().clone()
+        for name, value in agent_d.time_head.state_dict().items()
+    }
+
+    result_c = evaluate_single_trajectory(
+        env,
+        "Method-C",
+        agent_c,
+        scenario=scenario,
+        max_decisions=1,
+        warmup_mode="uniform_baseline",
+    )
+    result_d = evaluate_single_trajectory(
+        env,
+        "Method-D",
+        agent_d,
+        scenario=scenario,
+        max_decisions=1,
+        warmup_mode="uniform_baseline",
+    )
+
+    assert result_c["warmup"]["completed"] is True
+    assert result_d["warmup"]["completed"] is True
+    assert result_c["warmup"]["prefix_sha256"] == result_d["warmup"]["prefix_sha256"]
+    assert result_c["warmup"]["completion_time"] == result_d["warmup"]["completion_time"]
+    for result in (result_c, result_d):
+        assert result["warmup_steps"] == result["warmup"]["step_count"]
+        assert result["policy_steps"] == result["decisions"] == 1
+        assert result["total_steps"] == result["warmup_steps"] + result["policy_steps"]
+    assert all(
+        torch.equal(actor_c_before[name], value)
+        for name, value in agent_c.actor_critic.state_dict().items()
+    )
+    assert all(
+        torch.equal(actor_d_before[name], value)
+        for name, value in agent_d.actor_critic.state_dict().items()
+    )
+    assert all(
+        torch.equal(time_head_d_before[name], value)
+        for name, value in agent_d.time_head.state_dict().items()
+    )
+    assert all(parameter.grad is None for parameter in agent_d.time_head.parameters())
+    assert scenario["tau"] == 1e9
+
+
+def test_c_d_pair_rejects_different_uniform_warmup_prefixes() -> None:
+    shared = {"success": True, "feasible": True, "j_total": 10.0}
+    result = compare_c_vs_d_pair(
+        {
+            **shared,
+            "warmup_mode": "uniform_baseline",
+            "warmup": {"prefix_sha256": "a" * 64},
+        },
+        {
+            **shared,
+            "warmup_mode": "uniform_baseline",
+            "warmup": {"prefix_sha256": "b" * 64},
+        },
+    )
+
+    assert result["comparison_valid"] is False
+    assert result["comparison_status"] == "invalid_warmup_prefix_mismatch"
+    assert result["improvement_j_total_pct"] is None
+
+
 def test_benchmark_evaluation_m5_acceptance(baseline_path: str, scenarios_path: str) -> None:
     """测试 M5 验收对比评估接口与报告生成。"""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -168,6 +305,8 @@ def test_benchmark_evaluation_m5_acceptance(baseline_path: str, scenarios_path: 
         )
 
         assert results["schema_version"] == "work3_eval_c_vs_d_v2"
+        assert results["evaluation_protocol"]["warmup_mode"] == "uniform_baseline"
+        assert results["evaluation_protocol"]["reported_cost_includes_warmup_prefix"] is True
         assert results["nominal_method_c"]["scenario_id"] == "NOMINAL"
         nominal = results["nominal_method_c"]
         assert "raw_cost_components" in nominal

@@ -47,7 +47,17 @@ def test_r07_incomplete_or_infeasible_trajectory_cannot_produce_improvement_pct(
     monkeypatch.setattr(eval_mod, "build_formal_evaluation_agent", lambda *a, **kw: object())
     monkeypatch.setattr(eval_mod, "AirLineEnvWork3", lambda *a, **kw: object())
 
-    def _fake_eval(env, agent_type, agent, scenario=None, max_decisions=10000, device="cpu"):
+    def _fake_eval(
+        env,
+        agent_type,
+        agent,
+        scenario=None,
+        max_decisions=10000,
+        device="cpu",
+        warmup_mode="none",
+        max_warmup_steps=None,
+    ):
+        del warmup_mode, max_warmup_steps
         if scenario is None:
             return {
                 "agent": agent_type,
@@ -104,6 +114,8 @@ def test_r07_incomplete_or_infeasible_trajectory_cannot_produce_improvement_pct(
     results = report["scenario_results"]
 
     assert report["schema_version"] == "work3_eval_c_vs_d_v2"
+    assert report["evaluation_protocol"]["warmup_mode"] == "uniform_baseline"
+    assert report["evaluation_protocol"]["reported_cost_includes_warmup_prefix"] is True
     assert report["nominal_method_c"]["scenario_id"] == "NOMINAL"
     assert report["nominal_method_c"]["time_prediction_metrics"]["sample_count"] == 20
     # 第一条场景 D 未完工，严禁算出 +90% 伪改善，必须为 None 且标注无效原因

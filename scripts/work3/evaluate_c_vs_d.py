@@ -51,6 +51,11 @@ from utils.work3.trajectory_feasibility import (
     TrajectoryExecutionRecord,
     validate_trajectory,
 )
+from utils.work3.uniform_baseline_warmup import (
+    UniformBaselineWarmupResult,
+    run_uniform_baseline_warmup,
+    validate_scenario_after_warmup,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -620,16 +625,29 @@ def evaluate_single_trajectory(
     scenario: dict[str, Any] | None = None,
     max_decisions: int = 10000,
     device: str = "cpu",
+    warmup_mode: str = "none",
+    max_warmup_steps: int | None = None,
 ) -> dict[str, Any]:
     """运行单条生产轨迹并结算综合目标。"""
     torch_device = torch.device(device)
     if isinstance(agent, FormalEvaluationAgent):
         agent.last_time_prediction = None
+    if type(max_decisions) is not int or max_decisions < 0:
+        raise ValueError("max_decisions必须为非负整数")
+    if warmup_mode not in {"none", "uniform_baseline"}:
+        raise ValueError("warmup_mode必须为none或uniform_baseline")
     env.reset()
     baseline_material_ready_by_key = {
         task_key: float(task.material_ready_time)
         for task_key, task in env.state.tasks.items()
     }
+    warmup_result: UniformBaselineWarmupResult | None = None
+    if warmup_mode == "uniform_baseline":
+        warmup_result = run_uniform_baseline_warmup(
+            env,
+            max_steps=max_warmup_steps,
+        )
+        validate_scenario_after_warmup(scenario, warmup_result)
     if scenario is not None:
         env.load_scenario(scenario)
 
@@ -731,9 +749,16 @@ def evaluate_single_trajectory(
         tolerance=env.tolerance,
     )
 
+    warmup_steps = 0 if warmup_result is None else warmup_result.step_count
+    policy_steps = max(0, int(env.step_count) - warmup_steps)
     return {
         "agent": agent_type,
         "scenario_id": scenario["scenario_id"] if scenario else "NOMINAL",
+        "warmup_mode": warmup_mode,
+        "warmup": None if warmup_result is None else asdict(warmup_result),
+        "warmup_steps": warmup_steps,
+        "policy_steps": policy_steps,
+        "total_steps": int(env.step_count),
         "j_takt": env.cost_takt,
         "d_time": env.cost_time,
         "d_team": env.cost_team,
@@ -786,6 +811,29 @@ def compare_c_vs_d_pair(
     """仅当 C 与 D 均完工 (success=True) 且独立可行 (feasible=True) 时才计算性能改善百分比。"""
     c_ok = bool(res_c.get("success")) and bool(res_c.get("feasible"))
     d_ok = bool(res_d.get("success")) and bool(res_d.get("feasible"))
+    if "warmup_mode" in res_c or "warmup_mode" in res_d:
+        if res_c.get("warmup_mode") != res_d.get("warmup_mode"):
+            return {
+                "improvement_j_total_pct": None,
+                "comparison_valid": False,
+                "both_hit_disturbance": False,
+                "comparison_status": "invalid_warmup_mode_mismatch",
+            }
+        if res_c.get("warmup_mode") == "uniform_baseline":
+            c_warmup = res_c.get("warmup")
+            d_warmup = res_d.get("warmup")
+            if (
+                not isinstance(c_warmup, dict)
+                or not isinstance(d_warmup, dict)
+                or not c_warmup.get("prefix_sha256")
+                or c_warmup.get("prefix_sha256") != d_warmup.get("prefix_sha256")
+            ):
+                return {
+                    "improvement_j_total_pct": None,
+                    "comparison_valid": False,
+                    "both_hit_disturbance": False,
+                    "comparison_status": "invalid_warmup_prefix_mismatch",
+                }
     c_hits = int(res_c.get("actual_disturbance_hits", 0))
     d_hits = int(res_d.get("actual_disturbance_hits", 0))
     c_hit = c_hits > 0
@@ -925,6 +973,8 @@ def run_benchmark_evaluation(
     device: str = "cpu",
     allow_debug_random: bool = False,
     max_decisions: int = 10000,
+    warmup_mode: str = "uniform_baseline",
+    max_warmup_steps: int | None = None,
 ) -> dict[str, Any]:
     """在固定外生事件上比较同架构正式方法 C 与 D。"""
     torch_device = torch.device(device)
@@ -971,6 +1021,8 @@ def run_benchmark_evaluation(
         scenario=None,
         max_decisions=max_decisions,
         device=device,
+        warmup_mode=warmup_mode,
+        max_warmup_steps=max_warmup_steps,
     )
     nominal_method_c["evaluation_time_s"] = time.time() - nominal_started
 
@@ -992,6 +1044,8 @@ def run_benchmark_evaluation(
             scenario=sc,
             max_decisions=max_decisions,
             device=device,
+            warmup_mode=warmup_mode,
+            max_warmup_steps=max_warmup_steps,
         )
         t_c = time.time() - t0
 
@@ -1004,6 +1058,8 @@ def run_benchmark_evaluation(
             scenario=sc,
             max_decisions=max_decisions,
             device=device,
+            warmup_mode=warmup_mode,
+            max_warmup_steps=max_warmup_steps,
         )
         t_d = time.time() - t0
 
@@ -1051,6 +1107,13 @@ def run_benchmark_evaluation(
     credibility_summary = summarize_benchmark_credibility(results)
     report = {
         "schema_version": "work3_eval_c_vs_d_v2",
+        "evaluation_protocol": {
+            "warmup_mode": warmup_mode,
+            "max_warmup_steps": max_warmup_steps,
+            "reported_cost_includes_warmup_prefix": (
+                warmup_mode == "uniform_baseline"
+            ),
+        },
         "nominal_method_c": nominal_method_c,
         "scenario_results": results,
         "credibility_summary": credibility_summary,
@@ -1074,6 +1137,12 @@ def main() -> None:
     parser.add_argument("--d-ckpt", type=str, default="models/work3/checkpoints/method_d_model.pt")
     parser.add_argument("--output", type=str, default="data/work3/eval_c_vs_d_m5.json")
     parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument(
+        "--warmup-max-steps",
+        type=int,
+        default=None,
+        help="统一基准暖机最大step数；默认不单独截断",
+    )
     parser.add_argument("--debug-random", action="store_true", help="仅烟测时允许缺检查点随机权重")
     args = parser.parse_args()
 
@@ -1086,6 +1155,8 @@ def main() -> None:
         output_json=args.output,
         device=args.device,
         allow_debug_random=args.debug_random,
+        warmup_mode="uniform_baseline",
+        max_warmup_steps=args.warmup_max_steps,
     )
 
 
