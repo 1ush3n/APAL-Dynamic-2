@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import tempfile
 import pytest
+import torch
 
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import ActorCriticWork3
@@ -97,6 +98,56 @@ def test_evaluate_single_trajectory_method_d_debug(baseline_path: str, scenarios
         "deadlock",
     }
     assert res["success"] is (res["completed_tasks"] == 2830 and res["feasible"])
+
+
+def test_repeated_evaluation_does_not_update_actor_or_time_predictor(
+    baseline_path: str,
+) -> None:
+    """连续评测多条轨迹不得改变Actor/图编码器/时间头及归一化状态。"""
+    agent = build_formal_evaluation_agent(
+        method_variant="D",
+        checkpoint_path=Path("__missing_debug_method_d.pt"),
+        device="cpu",
+        debug_random=True,
+    )
+    assert agent.time_head is not None
+    assert agent.actor_critic.training is False
+    assert agent.time_head.training is False
+
+    def state_snapshot(module: torch.nn.Module) -> dict[str, torch.Tensor]:
+        return {
+            name: value.detach().clone()
+            for name, value in module.state_dict().items()
+        }
+
+    actor_before = state_snapshot(agent.actor_critic)
+    time_head_before = state_snapshot(agent.time_head)
+    assert any(name.startswith("graph_encoder.") for name in actor_before)
+    assert any(isinstance(module, torch.nn.LayerNorm) for module in agent.actor_critic.modules())
+    assert any(isinstance(module, torch.nn.LayerNorm) for module in agent.time_head.modules())
+
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    for _ in range(2):
+        result = evaluate_single_trajectory(
+            env,
+            "Method-D",
+            agent,
+            max_decisions=1,
+            device="cpu",
+        )
+        assert result["decisions"] == 1
+        assert agent.last_time_prediction is not None
+
+    assert all(
+        torch.equal(actor_before[name], value)
+        for name, value in agent.actor_critic.state_dict().items()
+    )
+    assert all(
+        torch.equal(time_head_before[name], value)
+        for name, value in agent.time_head.state_dict().items()
+    )
+    assert all(parameter.grad is None for parameter in agent.actor_critic.parameters())
+    assert all(parameter.grad is None for parameter in agent.time_head.parameters())
 
 
 def test_benchmark_evaluation_m5_acceptance(baseline_path: str, scenarios_path: str) -> None:
