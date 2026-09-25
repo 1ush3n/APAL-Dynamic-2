@@ -1245,6 +1245,56 @@ def test_episode_potential_versions_survive_overlapping_worker_episodes() -> Non
     assert shaper.end_episode(worker_id=0, episode_id=8) is True
 
 
+def test_online_predictor_update_preserves_all_active_snapshot_state() -> None:
+    """在线头更新不得改写活动episode的图编码器、时间头或归一化状态。"""
+    import copy
+
+    from models.work3.actor_critic import ActorCriticWork3
+    from models.work3.potential_shaping import PotentialRewardShaper
+    from models.work3.time_head import TimeResidualHead
+
+    actor = ActorCriticWork3(hidden_dim=16)
+    head = TimeResidualHead(in_dim=16, hidden_dim=16)
+    shaper = PotentialRewardShaper(time_head=head, actor_critic=actor)
+    assert shaper.begin_episode(worker_id=0, episode_id=11) == 0
+
+    active_actor = shaper.frozen_actor
+    active_head = shaper.frozen_head
+    assert active_actor is not None
+    actor_state = {
+        name: value.detach().clone()
+        for name, value in active_actor.state_dict().items()
+    }
+    head_state = {
+        name: value.detach().clone()
+        for name, value in active_head.state_dict().items()
+    }
+    updated_actor = copy.deepcopy(actor)
+    updated_head = copy.deepcopy(head)
+    with torch.no_grad():
+        next(updated_actor.parameters()).add_(0.01)
+        next(updated_head.parameters()).add_(0.01)
+    assert any(
+        not torch.equal(actor_state[name], value)
+        for name, value in updated_actor.state_dict().items()
+    )
+    assert any(
+        not torch.equal(head_state[name], value)
+        for name, value in updated_head.state_dict().items()
+    )
+
+    assert shaper.update_snapshot(updated_head, new_actor=updated_actor) == 1
+    assert shaper.retained_snapshot_versions == (0, 1)
+    assert all(
+        torch.equal(actor_state[name], value)
+        for name, value in active_actor.state_dict().items()
+    )
+    assert all(
+        torch.equal(head_state[name], value)
+        for name, value in active_head.state_dict().items()
+    )
+
+
 def test_rollout_buffer_stores_immutable_cpu_feature_mask_and_graph_snapshots() -> None:
     from torch_geometric.data import HeteroData
 
