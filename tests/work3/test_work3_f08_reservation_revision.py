@@ -541,6 +541,8 @@ def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> N
     previous_assignment = task.last_published_assignment.copy()
     history_size = len(task.revision_history)
     old_start = task.scheduled_start
+    revision_cost_before_invalidation = env.cost_revision
+    cumulative_cost_before_invalidation = env.cumulative_cost
 
     env._handle_disturbance_event(
         1.0,
@@ -548,8 +550,11 @@ def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> N
     )
     assert task.status == TaskStatus.UNREADY
     assert task.last_published_assignment == previous_assignment
+    assert len(task.revision_history) == history_size
+    assert env.cost_revision == pytest.approx(revision_cost_before_invalidation)
+    assert env.cumulative_cost == pytest.approx(cumulative_cost_before_invalidation)
 
-    env.step(
+    _, _, _, _, info = env.step(
         {
             "task_key": task.task_key,
             "branch": ActionBranch.STATION_EXECUTE,
@@ -565,6 +570,10 @@ def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> N
     assert revision["before"]["team"] == list(first_team)
     assert revision["after"]["team"] == list(second_team)
     assert revision["team_change"] == pytest.approx(1.0 / task.demand)
+    assert env.cost_revision - revision_cost_before_invalidation == pytest.approx(
+        revision["revision_cost"]
+    )
+    assert info["cost_revision_inc"] == pytest.approx(revision["revision_cost"])
 
     env.state.current_time = float(old_start)
     env.process_due_events()
