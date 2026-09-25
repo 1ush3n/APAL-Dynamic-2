@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
@@ -293,6 +294,90 @@ def test_single_legal_action_with_exact_team_has_finite_zero_log_probability() -
     assert torch.isfinite(replay_log_prob).all()
     assert torch.isfinite(entropy).all()
     assert float(replay_log_prob[0]) == pytest.approx(0.0, abs=1e-6)
+
+
+def test_sample_snapshot_stays_isolated_after_environment_executes_action() -> None:
+    """环境执行并改写现场后，旧图、候选、掩码和PPO重放仍保持原样。"""
+    env = _new_env()
+    actor = ActorCriticWork3(hidden_dim=32)
+    actor.eval()
+    state_feat, urgency = _inputs()
+    snapshot = actor.make_decision_snapshot(env, state_feat, urgency)
+    assert snapshot.candidate_task_keys
+    assert snapshot.branch_masks[0][0]
+    assert not snapshot.advance_available
+
+    with torch.no_grad():
+        for module in (
+            actor.task_score_fc,
+            actor.branch_head,
+            actor.worker_score_fc,
+            actor.worker_graph_score,
+            actor.align_head,
+        ):
+            for parameter in module.parameters():
+                parameter.zero_()
+        actor.branch_head[-1].bias[0] = 100.0
+        actor.branch_head[-1].bias[1] = -100.0
+
+    action, sampled_log_prob, _, record = actor.select_snapshot(
+        snapshot, deterministic=True
+    )
+    assert action is not None
+    assert action["task_key"] == snapshot.candidate_task_keys[0]
+    assert action["branch"] == ActionBranch.STATION_EXECUTE
+    task = env.state.tasks[action["task_key"]]
+    old_task_status = task.status
+    old_graph = deepcopy(snapshot.graph_snapshot)
+    old_candidate_features = snapshot.candidate_task_features.clone()
+    old_candidate_keys = snapshot.candidate_task_keys
+    old_branch_masks = snapshot.branch_masks
+    old_candidate_node_indices = snapshot.candidate_task_node_indices
+    old_worker_node_indices = snapshot.worker_node_indices
+    old_team_contexts = snapshot.team_contexts
+    old_sample_graph = deepcopy(record["graph_snapshot"])
+    old_sample_candidates = record["candidate_task_keys"]
+    old_sample_branch_masks = record["candidate_branch_masks"]
+    old_sample_worker_masks = record["worker_valid_masks"]
+    replay_inputs = (state_feat.unsqueeze(0), urgency.unsqueeze(0), [record])
+    _, replay_before, entropy_before = actor.evaluate_action_log_probs(*replay_inputs)
+
+    env.step(action)
+    assert task.status != old_task_status
+
+    assert torch.equal(snapshot.candidate_task_features, old_candidate_features)
+    assert snapshot.candidate_task_keys == old_candidate_keys
+    assert snapshot.branch_masks == old_branch_masks
+    assert snapshot.candidate_task_node_indices == old_candidate_node_indices
+    assert snapshot.worker_node_indices == old_worker_node_indices
+    assert snapshot.team_contexts == old_team_contexts
+    assert record["candidate_task_keys"] == old_sample_candidates
+    assert record["candidate_branch_masks"] == old_sample_branch_masks
+    assert record["worker_valid_masks"] == old_sample_worker_masks
+
+    for graph_before, graph_after in (
+        (old_graph, snapshot.graph_snapshot),
+        (old_sample_graph, record["graph_snapshot"]),
+    ):
+        assert graph_before.node_types == graph_after.node_types
+        assert graph_before.edge_types == graph_after.edge_types
+        assert len(graph_before.stores) == len(graph_after.stores)
+        for store_before, store_after in zip(
+            graph_before.stores, graph_after.stores, strict=True
+        ):
+            assert set(store_before.keys()) == set(store_after.keys())
+            for key in store_before.keys():
+                value_before = store_before[key]
+                value_after = store_after[key]
+                if isinstance(value_before, torch.Tensor):
+                    assert torch.equal(value_before, value_after)
+                else:
+                    assert value_before == value_after
+
+    _, replay_after, entropy_after = actor.evaluate_action_log_probs(*replay_inputs)
+    assert torch.equal(replay_after, replay_before)
+    assert torch.equal(entropy_after, entropy_before)
+    _assert_probability_round_trip(sampled_log_prob, replay_after)
 
 
 def test_postpone_replay_truncates_before_worker_head() -> None:
