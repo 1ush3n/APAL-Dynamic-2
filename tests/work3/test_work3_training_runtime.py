@@ -1722,6 +1722,20 @@ def test_online_predictor_update_preserves_all_active_snapshot_state() -> None:
         for name, value in active_head.state_dict().items()
     )
 
+    published_actor = shaper.frozen_actor
+    assert published_actor is not None
+    published_actor_state = {
+        name: value.detach().clone()
+        for name, value in published_actor.state_dict().items()
+    }
+    with torch.no_grad():
+        next(updated_actor.graph_encoder.parameters()).add_(0.1)
+    assert all(not parameter.requires_grad for parameter in published_actor.parameters())
+    assert all(
+        torch.equal(published_actor_state[name], value)
+        for name, value in published_actor.state_dict().items()
+    )
+
 
 def test_rollout_buffer_stores_immutable_cpu_feature_mask_and_graph_snapshots() -> None:
     from torch_geometric.data import HeteroData
