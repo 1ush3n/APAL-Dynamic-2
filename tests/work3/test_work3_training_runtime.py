@@ -1245,6 +1245,276 @@ def test_episode_potential_versions_survive_overlapping_worker_episodes() -> Non
     assert shaper.end_episode(worker_id=0, episode_id=8) is True
 
 
+def test_training_refreshes_potential_between_completed_episodes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """末步沿用旧版本结算；下一条完整轨迹才绑定刷新后的版本。"""
+    import importlib
+    from types import SimpleNamespace
+
+    from envs.work3.decision_snapshot import DecisionSnapshot
+    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
+    from models.work3.potential_shaping import PotentialRewardShaper
+    from torch_geometric.data import HeteroData
+    from training.work3_vector_env import Work3StepResult, Work3VectorStepBatch
+
+    training = importlib.import_module("scripts.work3.train_ppo_work3")
+    events: list[tuple[Any, ...]] = []
+    last_potential_context: tuple[int, int] | None = None
+
+    class CompletedEpisodeEnv:
+        def __init__(self) -> None:
+            self.episode_ids: tuple[int, ...] = ()
+            self.episode_indices: tuple[int, ...] = ()
+            self.worker_step_counts = [0]
+            self.step_settlement_requests = 0
+
+        @property
+        def worker_pids(self) -> tuple[int]:
+            return (0,)
+
+        @property
+        def worker_cuda_initialized(self) -> tuple[bool]:
+            return (False,)
+
+        @property
+        def worker_torch_num_threads(self) -> tuple[int]:
+            return (1,)
+
+        def reset_all(
+            self,
+            *,
+            scenarios: list[dict[str, Any] | None],
+            episode_ids: list[int],
+            episode_indices: list[int],
+        ) -> tuple[SimpleNamespace, ...]:
+            self.episode_ids = tuple(episode_ids)
+            self.episode_indices = tuple(episode_indices)
+            return tuple(
+                SimpleNamespace(scenario_status={}) for _ in episode_ids
+            )
+
+        def snapshots(self) -> tuple[DecisionSnapshot, ...]:
+            return tuple(
+                DecisionSnapshot(
+                    worker_id=worker_id,
+                    episode_id=episode_id,
+                    episode_index=self.episode_indices[worker_id],
+                    state_features=torch.zeros(32),
+                    time_features=torch.zeros(2),
+                    graph_snapshot=HeteroData(),
+                    candidate_task_keys=(),
+                    candidate_task_features=torch.zeros((0, 8)),
+                    branch_masks=(),
+                    team_contexts=(),
+                    candidate_task_node_indices=(),
+                    worker_node_indices=(),
+                    reserved_flags=(),
+                    advance_available=True,
+                    current_time=float(episode_id),
+                    cycle_id=0,
+                    estimated_cmax=20.0,
+                    h0=10.0,
+                    last_transfer_time=0.0,
+                    graph_version=GRAPH_FEATURE_VERSION,
+                )
+                for worker_id, episode_id in enumerate(self.episode_ids)
+            )
+
+        def step_all(
+            self,
+            *,
+            actions: list[dict[str, Any] | None],
+            max_total_steps: int | None,
+            settle_timeout_seconds: float | None,
+            wall_clock_deadline: float | None,
+        ) -> Work3VectorStepBatch:
+            dispatched = tuple(
+                worker_id
+                for worker_id, action in enumerate(actions)
+                if action is not None
+            )
+            results: list[Work3StepResult | None] = [None] * len(actions)
+            for worker_id in dispatched:
+                self.worker_step_counts[worker_id] += 1
+                results[worker_id] = Work3StepResult(
+                    observation={},
+                    raw_reward=-1.0,
+                    terminated=True,
+                    truncated=False,
+                    info={"success": True, "termination_reason": "completed"},
+                    processed_events=(),
+                    completed_execution_records=(),
+                    step_count=1,
+                    scenario_status={},
+                )
+            return Work3VectorStepBatch(
+                results=tuple(results),
+                dispatched_worker_ids=dispatched,
+                invoked_worker_ids=dispatched,
+                interrupted_worker_ids=(),
+                worker_errors=(),
+                total_env_steps=len(dispatched),
+                budget_reserved_steps=len(dispatched),
+                wall_clock_expired=False,
+            )
+
+        def close(self) -> tuple[None, ...]:
+            return (None,)
+
+    class NoOpTrainer:
+        def __init__(self, **kwargs: Any) -> None:
+            self.precision_plugin = SimpleNamespace(scaler=None)
+
+        def fit(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
+    def select_advance(
+        actor: Any,
+        snapshot: DecisionSnapshot,
+        *,
+        deterministic: bool,
+    ) -> tuple[dict[str, str], torch.Tensor, torch.Tensor, dict[str, Any]]:
+        return (
+            {"action": "advance"},
+            torch.tensor(0.0),
+            torch.tensor(0.0),
+            {"graph_snapshot": snapshot.graph_snapshot},
+        )
+
+    original_begin = PotentialRewardShaper.begin_episode
+    original_end = PotentialRewardShaper.end_episode
+    original_update = PotentialRewardShaper.update_snapshot
+    original_shape = PotentialRewardShaper.shape_reward
+
+    def record_begin(
+        shaper: PotentialRewardShaper,
+        *,
+        worker_id: int,
+        episode_id: int,
+    ) -> int:
+        version = original_begin(shaper, worker_id=worker_id, episode_id=episode_id)
+        events.append(("begin", episode_id, version))
+        return version
+
+    def record_end(
+        shaper: PotentialRewardShaper,
+        *,
+        worker_id: int,
+        episode_id: int,
+    ) -> bool:
+        version = shaper._episode_versions[(worker_id, episode_id)]
+        events.append(("end", episode_id, version))
+        return original_end(shaper, worker_id=worker_id, episode_id=episode_id)
+
+    def record_update(
+        shaper: PotentialRewardShaper,
+        new_head: Any,
+        new_actor: Any | None = None,
+    ) -> int:
+        version = original_update(shaper, new_head, new_actor)
+        events.append(("update", version))
+        return version
+
+    def record_potential(
+        shaper: PotentialRewardShaper,
+        *args: Any,
+        **kwargs: Any,
+    ) -> float:
+        nonlocal last_potential_context
+        episode_id = int(kwargs["episode_id"])
+        worker_id = int(kwargs["worker_id"])
+        version = shaper._episode_versions[(worker_id, episode_id)]
+        last_potential_context = (episode_id, version)
+        events.append(("potential", episode_id, version))
+        return float(version + 1)
+
+    def record_shape(
+        shaper: PotentialRewardShaper,
+        actual_reward: float,
+        phi_current: float,
+        phi_next: float,
+    ) -> float:
+        assert last_potential_context is not None
+        events.append((
+            "shape",
+            *last_potential_context,
+            float(phi_current),
+            float(phi_next),
+        ))
+        return original_shape(shaper, actual_reward, phi_current, phi_next)
+
+    scenarios = [
+        {
+            "scenario_id": f"tiny-{index}",
+            "timing": "mid",
+            "intensity": "light",
+            "station_id": 1,
+            "aircraft_id": 0,
+            "affected_task_keys": [],
+            "valid": True,
+            "tau": 0.0,
+            "recovery_time": 0.0,
+        }
+        for index in range(2)
+    ]
+    monkeypatch.setattr(training, "load_training_scenarios", lambda *args: scenarios)
+    monkeypatch.setattr(
+        training,
+        "create_work3_single_env_runtime",
+        lambda *args, **kwargs: CompletedEpisodeEnv(),
+    )
+    monkeypatch.setattr(training.ActorCriticWork3, "select_snapshot", select_advance)
+    monkeypatch.setattr(
+        training,
+        "compute_online_snapshot_time_inputs",
+        lambda *, actor_critic, time_head, snapshot: (
+            snapshot.graph_snapshot,
+            snapshot.time_features,
+            0.0,
+        ),
+    )
+    monkeypatch.setattr(PotentialRewardShaper, "begin_episode", record_begin)
+    monkeypatch.setattr(PotentialRewardShaper, "end_episode", record_end)
+    monkeypatch.setattr(PotentialRewardShaper, "update_snapshot", record_update)
+    monkeypatch.setattr(PotentialRewardShaper, "compute_potential", record_potential)
+    monkeypatch.setattr(PotentialRewardShaper, "shape_reward", record_shape)
+    monkeypatch.setattr(training.pl, "Trainer", NoOpTrainer)
+
+    report = training.run_training(
+        run_mode="pilot",
+        successful_batch_target=2,
+        max_decisions=2,
+        max_wall_seconds=30.0,
+        num_iterations=1,
+        steps_per_iter=2,
+        ppo_epochs=1,
+        batch_size=2,
+        num_envs=1,
+        baseline_path=Path("data/work3/real_283_k10_baseline.json"),
+        scenarios_path=Path("unused-scenarios.json"),
+        scenario_split_path=Path("data/work3/experiment_splits/train.json"),
+        time_head_ckpt=tmp_path / "missing_time_head.pt",
+        output_ckpt=tmp_path / "pilot.pt",
+        report_path=tmp_path / "pilot.json",
+        device="cpu",
+    )
+
+    assert report["successful_batch_count"] == 2
+    assert [event for event in events if event[0] == "begin"] == [
+        ("begin", 0, 0),
+        ("begin", 1, 1),
+    ]
+    first_tail = events.index(("shape", 0, 0, 1.0, 0.0))
+    first_end = events.index(("end", 0, 0))
+    refresh = events.index(("update", 1))
+    second_begin = events.index(("begin", 1, 1))
+    assert first_tail < first_end < refresh < second_begin
+    assert ("potential", 0, 0) in events
+    assert ("potential", 1, 1) in events
+
+
 def test_online_predictor_update_preserves_all_active_snapshot_state() -> None:
     """在线头更新不得改写活动episode的图编码器、时间头或归一化状态。"""
     import copy
