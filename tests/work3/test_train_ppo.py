@@ -368,3 +368,91 @@ def test_training_entry_closes_workers_after_actor_exception(
         for environment in created_envs:
             if any(environment.workers_alive):
                 environment.close()
+
+
+def test_cli_training_loads_and_hits_each_planned_scenario(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """CLI从训练split加载两个事件，并在两个spawn episode中各记录实际命中。"""
+    import json
+    import sys
+
+    scenarios = [
+        {
+            "scenario_id": "K01_EARLY_HIT",
+            "timing": "EARLY",
+            "intensity": "LOW",
+            "station_id": 0,
+            "aircraft_id": 0,
+            "tau": 0.0,
+            "delta": 1.0,
+            "recovery_time": 1.0,
+            "affected_task_keys": ["0_15"],
+            "valid": True,
+        },
+        {
+            "scenario_id": "K01_MIDDLE_HIT",
+            "timing": "MIDDLE",
+            "intensity": "LOW",
+            "station_id": 0,
+            "aircraft_id": 0,
+            "tau": 0.0,
+            "delta": 2.0,
+            "recovery_time": 2.0,
+            "affected_task_keys": ["0_15"],
+            "valid": True,
+        },
+    ]
+    scenarios_path = tmp_path / "k01_scenarios.json"
+    split_path = tmp_path / "k01_train_split.json"
+    report_path = tmp_path / "k01_training_report.json"
+    scenarios_path.write_text(json.dumps(scenarios), encoding="utf-8")
+    split_path.write_text(
+        json.dumps({"scenarios": [item["scenario_id"] for item in scenarios]}),
+        encoding="utf-8",
+    )
+    checkpoint_path = tmp_path / "k01_training.pt"
+    project_root = Path(__file__).resolve().parents[2]
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_ppo_work3.py",
+            "--mode", "pilot",
+            "--seed", "20260925",
+            "--iterations", "1",
+            "--steps", "2",
+            "--num-envs", "2",
+            "--epochs", "1",
+            "--batch-size", "2",
+            "--successful-batch-target", "1",
+            "--max-decisions", "2",
+            "--max-wall-seconds", "600",
+            "--method", "C",
+            "--baseline", str(project_root / "data" / "work3" / "real_283_k10_baseline.json"),
+            "--scenarios", str(scenarios_path),
+            "--scenario-split", str(split_path),
+            "--device", "cpu",
+            "--output", str(checkpoint_path),
+            "--report", str(report_path),
+        ],
+    )
+    train_module.main()
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["training_config"]["num_envs"] == 2
+    assert report["total_decisions"] == 2
+    assert {item["scenario_id"] for item in report["scenario_log"]} == {
+        item["scenario_id"] for item in scenarios
+    }
+    assert report["actual_disturbance_hit_count"] == 2
+    for item in report["scenario_log"]:
+        assert item["disturbance_scheduled"] is True
+        assert item["disturbance_triggered"] is True
+        assert item["actual_hit_task_keys"] == ["0_15"]
+        assert item["actual_hit_count"] == 1
+        assert item["success"] is False
+        assert item["truncated"] is True
+    assert checkpoint_path.is_file()
