@@ -156,7 +156,8 @@ def test_positive_residual_applies_exact_heuristic_time_correction() -> None:
 
 
 def test_time_auxiliary_loss_reaches_shared_graph_encoder(env: AirLineEnvWork3) -> None:
-    """仅反传时间辅助损失时，图编码器与时间头都必须获得梯度。"""
+    """时间辅助损失更新共享编码器与时间头，但不更新Critic。"""
+    torch.manual_seed(23)
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
     time_head = TimeResidualHead(in_dim=16, hidden_dim=16)
     trainer = PPOTrainerWork3(
@@ -183,8 +184,13 @@ def test_time_auxiliary_loss_reaches_shared_graph_encoder(env: AirLineEnvWork3) 
 
     graph_parameters = [p for p in actor.graph_encoder.parameters() if p.requires_grad]
     time_parameters = [p for p in time_head.parameters() if p.requires_grad]
-    assert graph_parameters and any(p.grad is not None for p in graph_parameters)
-    assert time_parameters and any(p.grad is not None for p in time_parameters)
+    graph_gradients = [p.grad for p in graph_parameters if p.grad is not None]
+    time_gradients = [p.grad for p in time_parameters if p.grad is not None]
+    assert graph_gradients and all(torch.isfinite(grad).all() for grad in graph_gradients)
+    assert time_gradients and all(torch.isfinite(grad).all() for grad in time_gradients)
+    assert any(torch.count_nonzero(grad).item() > 0 for grad in graph_gradients)
+    assert any(torch.count_nonzero(grad).item() > 0 for grad in time_gradients)
+    assert all(parameter.grad is None for parameter in actor.critic.parameters())
 
 
 def test_time_auxiliary_update_is_reported_separately_from_ppo_loss(
