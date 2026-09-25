@@ -357,7 +357,7 @@ class ActorCriticWork3(nn.Module):
         # 5. Head 3: 站内工人指针头 (Worker Pointer Head)
         # 输入: [e_fused, task_embed, cumulative_worker_embed]
         self.worker_score_fc = nn.Sequential(
-            nn.Linear(hidden_dim * 2 + 16, hidden_dim),
+            nn.Linear(hidden_dim * 2 + max_station_workers, hidden_dim),
             nn.LeakyReLU(negative_slope=0.1),
             nn.Linear(hidden_dim, max_station_workers),
         )
@@ -665,6 +665,11 @@ class ActorCriticWork3(nn.Module):
             )
 
         num_station_workers = len(context.workers)
+        if num_station_workers > self.max_station_workers:
+            raise ValueError(
+                f"站内工人数量{num_station_workers}超过Actor掩码上限"
+                f"{self.max_station_workers}"
+            )
         worker_node_indices = snapshot.worker_node_indices[task_idx]
         sample_record["num_st_workers"] = num_station_workers
         sample_record["worker_node_indices"] = worker_node_indices
@@ -879,6 +884,11 @@ class ActorCriticWork3(nn.Module):
                     f"工序 {rec.get('task_key', '<unknown>')} 缺少逐步工人合法掩码快照"
                 )
             num_st_workers = rec.get("num_st_workers", self.max_station_workers)
+            if num_st_workers > self.max_station_workers:
+                raise ValueError(
+                    f"采样快照工人数量{num_st_workers}超过Actor掩码上限"
+                    f"{self.max_station_workers}"
+                )
             lp_workers = torch.zeros((), device=device)
             ent_workers = torch.zeros((), device=device)
             worker_mask = torch.zeros(self.max_station_workers, dtype=torch.float, device=device)

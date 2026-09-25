@@ -12,6 +12,7 @@ import torch
 from torch.distributions import Categorical
 
 from envs.work3.core_types import ActionBranch
+from envs.work3.decision_snapshot import DecisionSnapshot, TeamCompletionContext, WorkerSnapshot
 from envs.work3.environment import AirLineEnvWork3
 from envs.work3.event_queue import EventType
 from models.work3.actor_critic import ActorCriticWork3
@@ -378,6 +379,99 @@ def test_sample_snapshot_stays_isolated_after_environment_executes_action() -> N
     assert torch.equal(replay_after, replay_before)
     assert torch.equal(entropy_after, entropy_before)
     _assert_probability_round_trip(sampled_log_prob, replay_after)
+
+
+def test_actor_worker_capacity_supports_configured_width_and_rejects_overflow() -> None:
+    """策略显式支持15/16/17人宽度，超出配置时不得维度报错或静默截断。"""
+    env = _new_env()
+    task = next(task for task in env.get_action_candidates() if env.can_reserve(task))
+    task.skill = -1
+    task.demand = 1
+    env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
+    worker_ids = tuple(dict.fromkeys(
+        worker_id
+        for station_workers in env.state.station_worker_bindings.values()
+        for worker_id in station_workers
+    ))
+    assert len(worker_ids) >= 17
+    state_feat, urgency = _inputs()
+
+    def snapshot_for_width(
+        actor: ActorCriticWork3,
+        width: int,
+    ) -> DecisionSnapshot:
+        snapshot = actor.make_decision_snapshot(env, state_feat, urgency)
+        graph_builder = actor.graph_builder
+        assert graph_builder is not None
+        selected_ids = worker_ids[:width]
+        worker_snapshots = tuple(
+            WorkerSnapshot(
+                worker_id=worker_id,
+                skills=tuple(sorted(env.worker_skills[worker_id])),
+                efficiency=env.worker_efficiencies[worker_id],
+                calendar_intervals=tuple(
+                    (interval.start, interval.end, interval.task_key)
+                    for interval in env.state.workers[worker_id].intervals
+                ),
+            )
+            for worker_id in selected_ids
+        )
+        context = TeamCompletionContext(
+            task_key=task.task_key,
+            station_id=task.current_station,
+            required_skill=-1,
+            demand=1,
+            workers=worker_snapshots,
+        )
+        return replace(
+            snapshot,
+            team_contexts=(context,),
+            worker_node_indices=(tuple(
+                graph_builder.worker_id_to_idx[worker_id]
+                for worker_id in selected_ids
+            ),),
+        )
+
+    def assert_width_round_trip(actor: ActorCriticWork3, width: int) -> tuple[
+        DecisionSnapshot,
+        dict[str, object],
+        float,
+    ]:
+        actor.eval()
+        with torch.no_grad():
+            actor.branch_head[-1].bias[0] = 100.0
+            actor.branch_head[-1].bias[1] = -100.0
+        snapshot = snapshot_for_width(actor, width)
+        action, sampled_log_prob, _, record = actor.select_snapshot(
+            snapshot, deterministic=True
+        )
+        assert action is not None and action["branch"] == ActionBranch.STATION_EXECUTE
+        assert record["station_worker_ids"] == worker_ids[:width]
+        assert len(set(record["station_worker_ids"])) == width
+        selected_index = record["chosen_worker_indices"][0]
+        assert record["chosen_team"] == (worker_ids[selected_index],)
+        assert sum(record["worker_valid_masks"][0]) == width
+        _, replay_log_prob, entropy = actor.evaluate_action_log_probs(
+            state_feat.unsqueeze(0), urgency.unsqueeze(0), [record]
+        )
+        _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
+        assert torch.isfinite(entropy).all()
+        return snapshot, record, sampled_log_prob
+
+    default_actor = ActorCriticWork3(hidden_dim=32, max_station_workers=16)
+    assert_width_round_trip(default_actor, 15)
+    assert_width_round_trip(default_actor, 16)
+
+    expanded_actor = ActorCriticWork3(hidden_dim=32, max_station_workers=17)
+    oversized_snapshot, oversized_record, _ = assert_width_round_trip(
+        expanded_actor, 17
+    )
+    with pytest.raises(ValueError, match="超过Actor掩码上限"):
+        default_actor.select_snapshot(oversized_snapshot, deterministic=True)
+    with pytest.raises(ValueError, match="超过Actor掩码上限"):
+        default_actor.evaluate_action_log_probs(
+            state_feat.unsqueeze(0), urgency.unsqueeze(0), [oversized_record]
+        )
 
 
 def test_postpone_replay_truncates_before_worker_head() -> None:
