@@ -6,6 +6,7 @@ import json
 from dataclasses import asdict
 import hashlib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -270,6 +271,91 @@ def test_formal_d_accepts_profiled_checkpoint_with_real_label_updates(
     assert agent.debug_random is False
     assert agent.profile.name == "D"
     assert agent.time_head is not None
+
+
+def test_formal_d_checkpoint_reload_preserves_prediction_and_policy_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """同一评测状态上保存重载前后的时间预测与策略输出一致。"""
+    import torch
+
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.actor_critic import ActorCriticWork3
+
+    checkpoint = _save_profile_checkpoint(
+        tmp_path / "formal_d.pt",
+        "D",
+        time_supervision_optimizer_updates=2,
+    )
+    first = build_formal_evaluation_agent("D", checkpoint, device="cpu")
+    reloaded = build_formal_evaluation_agent("D", checkpoint, device="cpu")
+    assert first.time_head is not None and reloaded.time_head is not None
+
+    captured: dict[int, tuple[torch.Tensor, torch.Tensor, tuple[Any, ...]]] = {}
+    original_select = ActorCriticWork3.select_action
+
+    def capture_select(
+        actor: ActorCriticWork3,
+        env: Any,
+        state_feat: torch.Tensor,
+        time_urgency: torch.Tensor,
+        deterministic: bool = False,
+    ) -> tuple[Any, ...]:
+        output = original_select(
+            actor,
+            env,
+            state_feat,
+            time_urgency,
+            deterministic=deterministic,
+        )
+        captured[id(actor)] = (
+            state_feat.detach().cpu().clone(),
+            time_urgency.detach().cpu().clone(),
+            output,
+        )
+        return output
+
+    monkeypatch.setattr(ActorCriticWork3, "select_action", capture_select)
+    env = AirLineEnvWork3(
+        baseline_json_path="data/work3/real_283_k10_baseline.json"
+    )
+    env.reset()
+    first_action = first.select_action(env)
+    first_prediction = first.last_time_prediction
+    reloaded_action = reloaded.select_action(env)
+    reloaded_prediction = reloaded.last_time_prediction
+
+    assert first_prediction is not None and reloaded_prediction is not None
+    assert first_prediction == pytest.approx(reloaded_prediction, abs=1e-6)
+    assert first_action == reloaded_action
+    first_input = captured[id(first.actor_critic)]
+    reloaded_input = captured[id(reloaded.actor_critic)]
+    assert torch.equal(first_input[0], reloaded_input[0])
+    assert torch.equal(first_input[1], reloaded_input[1])
+    first_output = first_input[2]
+    reloaded_output = reloaded_input[2]
+    assert first_output[0] == reloaded_output[0]
+    assert first_output[1] == pytest.approx(reloaded_output[1], abs=1e-6)
+    assert first_output[2] == pytest.approx(reloaded_output[2], abs=1e-6)
+
+    first_value, first_log_prob, first_entropy = (
+        first.actor_critic.evaluate_action_log_probs(
+            first_input[0].unsqueeze(0),
+            first_input[1].unsqueeze(0),
+            [first_output[3]],
+        )
+    )
+    reload_value, reload_log_prob, reload_entropy = (
+        reloaded.actor_critic.evaluate_action_log_probs(
+            reloaded_input[0].unsqueeze(0),
+            reloaded_input[1].unsqueeze(0),
+            [reloaded_output[3]],
+        )
+    )
+    assert torch.allclose(first_value, reload_value, atol=1e-6, rtol=1e-6)
+    assert torch.allclose(first_log_prob, reload_log_prob, atol=1e-6, rtol=1e-6)
+    assert torch.allclose(first_entropy, reload_entropy, atol=1e-6, rtol=1e-6)
 
 
 def test_short_formal_c_training_loads_disturbance_and_records_episode(tmp_path: Path) -> None:
