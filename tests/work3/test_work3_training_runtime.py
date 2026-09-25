@@ -1794,12 +1794,13 @@ def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
     assert d_report["checkpoint_evaluation_eligible"] is False
 
 
-def test_work3_d_pilot_trains_from_both_signed_residuals_after_real_transfer(
+def test_work3_d_pilot_records_real_transfer_labels_and_nonterminal_potential(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """真实周期转站补齐两种符号残差，并触发D的辅助优化更新。"""
     from models.work3.ppo_buffer import PendingTimeLabelCache
+    from models.work3.potential_shaping import PotentialRewardShaper
     from scripts.work3.train_ppo_work3 import run_training
 
     scenario = {
@@ -1819,16 +1820,40 @@ def test_work3_d_pilot_trains_from_both_signed_residuals_after_real_transfer(
     scenarios_path.write_text(json.dumps([scenario]), encoding="utf-8")
     split_path.write_text(json.dumps([scenario]), encoding="utf-8")
 
-    observed_residuals: list[float] = []
+    observed_label_batches: list[dict[str, torch.Tensor]] = []
+    observed_potentials: list[tuple[float, bool, float]] = []
     original_drain_ready = PendingTimeLabelCache.drain_ready
+    original_compute_potential = PotentialRewardShaper.compute_potential
 
     def capture_residuals(cache: PendingTimeLabelCache) -> dict[str, Any] | None:
         batch = original_drain_ready(cache)
         if batch is not None:
-            observed_residuals.extend(batch["target_residuals"].tolist())
+            observed_label_batches.append({
+                name: batch[name].clone()
+                for name in (
+                    "estimated_cmax",
+                    "actual_transfer_times",
+                    "h0",
+                    "target_residuals",
+                )
+            })
         return batch
 
+    def capture_potential(
+        shaper: PotentialRewardShaper,
+        *args: Any,
+        **kwargs: Any,
+    ) -> float:
+        potential = original_compute_potential(shaper, *args, **kwargs)
+        observed_potentials.append((
+            float(kwargs["last_transfer_time"]),
+            bool(kwargs.get("is_terminal", False)),
+            potential,
+        ))
+        return potential
+
     monkeypatch.setattr(PendingTimeLabelCache, "drain_ready", capture_residuals)
+    monkeypatch.setattr(PotentialRewardShaper, "compute_potential", capture_potential)
     report = run_training(
         run_mode="pilot",
         successful_batch_target=1,
@@ -1850,8 +1875,18 @@ def test_work3_d_pilot_trains_from_both_signed_residuals_after_real_transfer(
 
     assert report["actual_disturbance_hit_count"] > 0
     assert report["time_label_count"] > 0
-    assert any(value < 0.0 for value in observed_residuals)
-    assert any(value > 0.0 for value in observed_residuals)
+    assert observed_label_batches
+    for batch in observed_label_batches:
+        expected_residuals = (
+            batch["actual_transfer_times"] - batch["estimated_cmax"]
+        ) / batch["h0"]
+        assert torch.isfinite(batch["target_residuals"]).all()
+        assert torch.allclose(
+            batch["target_residuals"],
+            expected_residuals,
+            atol=1e-6,
+            rtol=1e-6,
+        )
     assert report["time_supervision_optimizer_updates"] > 0
     assert report["lightning_optimization_steps"] > 0
     assert report["time_head_training_status"] == "trained_online"
@@ -1871,6 +1906,10 @@ def test_work3_d_pilot_trains_from_both_signed_residuals_after_real_transfer(
         for item in unavailable_labels
     )
     assert {item["potential_snapshot_version"] for item in report["scenario_log"]} == {0}
+    assert any(
+        last_transfer_time > 0.0 and not is_terminal and abs(potential) > 1e-6
+        for last_transfer_time, is_terminal, potential in observed_potentials
+    )
     assert report["research_result_eligible"] is False
 
 
