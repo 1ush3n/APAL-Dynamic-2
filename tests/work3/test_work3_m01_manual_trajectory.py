@@ -7,13 +7,18 @@ from pathlib import Path
 
 import pytest
 
-from envs.work3.core_types import ActionBranch
+from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.objective_evaluator import ObjectiveWeights, evaluate_trajectory_objective
+from utils.work3.objective_evaluator import (
+    ObjectiveBreakdown,
+    ObjectiveWeights,
+    evaluate_trajectory_objective,
+)
 from utils.work3.trajectory_feasibility import (
     TaskConstraintRecord,
     TrajectoryExecutionRecord,
+    TrajectoryFeasibilityReport,
     validate_trajectory,
 )
 
@@ -39,7 +44,7 @@ EXPECTED_TASK_DURATIONS = (
 )
 
 
-def _small_five_station_baseline(path: Path) -> None:
+def _small_five_station_baseline(path: Path, *, time_scale: float = 1.0) -> None:
     source = MultiAircraftBaseline.load_from_json(BASELINE_PATH)
     tasks = {}
     for station_id, task_id in FIXED_TASKS:
@@ -48,18 +53,126 @@ def _small_five_station_baseline(path: Path) -> None:
         assert not task.predecessors
         tasks[task.task_key] = replace(
             task,
+            duration=task.duration * time_scale,
             in_station_offset=0.0,
             baseline_start=0.0,
-            baseline_end=task.duration,
+            baseline_end=task.duration * time_scale,
+            nominal_station_entry=task.nominal_station_entry * time_scale,
+            nominal_station_exit=task.nominal_station_exit * time_scale,
         )
 
     MultiAircraftBaseline(
         num_aircraft=1,
         num_stations=5,
-        h0=source.h0,
+        h0=source.h0 * time_scale,
         tasks=tasks,
         station_workers=source.station_workers,
     ).save_to_json(path)
+
+
+def _run_scaled_disturbed_batch(
+    baseline_path: Path,
+    *,
+    time_scale: float,
+) -> tuple[
+    AirLineEnvWork3,
+    list[float],
+    list[tuple[tuple[str, ...], tuple[bool, bool], tuple[int, ...]]],
+    ObjectiveBreakdown,
+    TrajectoryFeasibilityReport,
+]:
+    _small_five_station_baseline(baseline_path, time_scale=time_scale)
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    env.reset()
+    recovery_time = 400.0 * time_scale
+    scenario = {
+        "scenario_id": "N01_FIXED_SCALE_EVENT",
+        "tau": 0.0,
+        "delta": recovery_time,
+        "recovery_time": recovery_time,
+        "affected_task_keys": ["0_15"],
+    }
+    env.load_scenario(scenario)
+    assert env.state.tasks["0_15"].status.name == "UNREADY"
+    assert env.disturbance_event_results[scenario["scenario_id"]][
+        "actual_hit_task_keys"
+    ] == ("0_15",)
+
+    rewards: list[float] = []
+    signatures: list[
+        tuple[tuple[str, ...], tuple[bool, bool], tuple[int, ...]]
+    ] = []
+    _observation, reward, terminated, truncated, info = env.step(
+        {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    )
+    assert info.get("advanced") is True
+    assert not terminated and not truncated
+    rewards.append(reward)
+    assert env.state.current_time == pytest.approx(recovery_time)
+
+    records: list[TrajectoryExecutionRecord] = []
+    for action_index, (station_id, task_id) in enumerate(FIXED_TASKS):
+        task_key = f"0_{task_id}"
+        candidates = tuple(
+            candidate.task_key for candidate in env.get_action_candidates()
+        )
+        task = env.state.tasks[task_key]
+        mask = env.get_action_branch_mask(task)
+        valid_workers = tuple(env.valid_team_completion_workers(task, []))
+        signatures.append((candidates, mask, valid_workers))
+        assert task_key in candidates and mask[0]
+
+        _observation, reward, terminated, truncated, _info = env.step(
+            {
+                "task_key": task_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": FIXED_TEAMS[task_key],
+                "align": 0,
+            }
+        )
+        rewards.append(reward)
+        assert not truncated
+        assert terminated is (action_index == len(FIXED_TASKS) - 1)
+        assert task.actual_start is not None and task.actual_end is not None
+        aircraft = env.state.aircraft[0]
+        records.append(
+            TrajectoryExecutionRecord(
+                aircraft_id=0,
+                task_id=task_id,
+                station_id=station_id - 1,
+                team=FIXED_TEAMS[task_key],
+                start=task.actual_start,
+                end=task.actual_end,
+                material_ready_time=task.material_ready_time,
+                station_entry_time=aircraft.entry_times[station_id - 1],
+                aircraft_station_at_start=station_id - 1,
+                station_exit_time=aircraft.exit_times[station_id - 1],
+            )
+        )
+
+    constraints = {
+        task_id: TaskConstraintRecord(
+            demand=env.state.tasks[f"0_{task_id}"].demand,
+            required_skill=env.state.tasks[f"0_{task_id}"].skill,
+            predecessors=env.state.tasks[f"0_{task_id}"].predecessors,
+            fixed_station=env.state.tasks[f"0_{task_id}"].fixed_station,
+            max_allowed_station=env.state.tasks[f"0_{task_id}"].max_allowed_station,
+        )
+        for _, task_id in FIXED_TASKS
+    }
+    feasibility = validate_trajectory(
+        records,
+        task_constraints=constraints,
+        worker_skills=env.worker_skills,
+        worker_station_bindings={
+            worker_id: station_id
+            for station_id, worker_ids in env.state.station_worker_bindings.items()
+            for worker_id in worker_ids
+        },
+        station_capacities={station_id: env.max_slots_per_station for station_id in range(5)},
+    )
+    objective = evaluate_trajectory_objective(env)
+    return env, rewards, signatures, objective, feasibility
 
 
 def test_five_station_fixed_actions_match_manual_time_and_costs(tmp_path: Path) -> None:
@@ -158,3 +271,121 @@ def test_five_station_fixed_actions_match_manual_time_and_costs(tmp_path: Path) 
         station_capacities={station_id: env.max_slots_per_station for station_id in range(5)},
     )
     assert independent_report.is_feasible, independent_report.violations
+
+
+def test_n01_uniform_time_scaling_preserves_feasibility_and_normalized_cost(
+    tmp_path: Path,
+) -> None:
+    """统一缩放时间、工时、H0及恢复时刻后，固定五站动作保持可行与归一化费用。"""
+    if not BASELINE_PATH.is_file():
+        pytest.skip(f"{BASELINE_PATH} 不存在")
+
+    scale = 3.0
+    base_env, base_rewards, base_signatures, base_objective, base_check = (
+        _run_scaled_disturbed_batch(tmp_path / "n01_base.json", time_scale=1.0)
+    )
+    scaled_env, scaled_rewards, scaled_signatures, scaled_objective, scaled_check = (
+        _run_scaled_disturbed_batch(
+            tmp_path / "n01_scaled.json",
+            time_scale=scale,
+        )
+    )
+
+    base_target = base_env.state.tasks["0_15"]
+    scaled_target = scaled_env.state.tasks["0_15"]
+    assert base_target.actual_start == pytest.approx(400.0)
+    assert scaled_target.actual_start == pytest.approx(1200.0)
+    assert base_target.actual_start >= base_target.material_ready_time - base_env.tolerance
+    assert scaled_target.actual_start >= scaled_target.material_ready_time - scaled_env.tolerance
+    assert base_env.state.h0 < base_target.actual_start - base_env.tolerance
+    assert scaled_env.state.h0 < scaled_target.actual_start - scaled_env.tolerance
+    assert base_env.tolerance == scaled_env.tolerance
+
+    # The fixed absolute tolerance is not scaled; event and H0 margins here are much larger.
+    assert base_target.actual_start - base_env.state.h0 > 100.0
+    assert scaled_target.actual_start - scaled_env.state.h0 > 100.0
+    assert base_check.is_feasible, base_check.violations
+    assert scaled_check.is_feasible, scaled_check.violations
+    assert scaled_check.violations == base_check.violations == {}
+    assert base_signatures == scaled_signatures
+    assert scaled_env.state.h0 == pytest.approx(scale * base_env.state.h0)
+    assert scaled_env.state.current_time == pytest.approx(
+        scale * base_env.state.current_time,
+        rel=0.0,
+        abs=1e-7,
+    )
+    assert scaled_env.state.transfer_history == pytest.approx(
+        [scale * value for value in base_env.state.transfer_history],
+        rel=0.0,
+        abs=1e-7,
+    )
+    assert scaled_env.disturbance_event_results == base_env.disturbance_event_results
+
+    for task_key, base_task in base_env.state.tasks.items():
+        scaled_task = scaled_env.state.tasks[task_key]
+        assert scaled_task.status == base_task.status == TaskStatus.COMPLETED
+        assert scaled_task.current_station == base_task.current_station
+        assert scaled_task.assigned_team == base_task.assigned_team
+        for field_name in (
+            "duration",
+            "material_ready_time",
+            "scheduled_start",
+            "actual_start",
+            "actual_end",
+            "execution_duration",
+            "cycle_start_time",
+        ):
+            base_value = getattr(base_task, field_name)
+            scaled_value = getattr(scaled_task, field_name)
+            if base_value is None:
+                assert scaled_value is None, f"{task_key}.{field_name}"
+            else:
+                assert scaled_value == pytest.approx(
+                    scale * base_value,
+                    rel=0.0,
+                    abs=1e-7,
+                ), f"{task_key}.{field_name}"
+
+    base_aircraft = base_env.state.aircraft[0]
+    scaled_aircraft = scaled_env.state.aircraft[0]
+    assert scaled_aircraft.current_station == base_aircraft.current_station
+    assert scaled_aircraft.entry_times.keys() == base_aircraft.entry_times.keys()
+    assert scaled_aircraft.exit_times.keys() == base_aircraft.exit_times.keys()
+    for station_id, base_time in base_aircraft.entry_times.items():
+        assert scaled_aircraft.entry_times[station_id] == pytest.approx(
+            scale * base_time,
+            rel=0.0,
+            abs=1e-7,
+        )
+    for station_id, base_time in base_aircraft.exit_times.items():
+        assert scaled_aircraft.exit_times[station_id] == pytest.approx(
+            scale * base_time,
+            rel=0.0,
+            abs=1e-7,
+        )
+
+    assert scaled_rewards == pytest.approx(base_rewards, rel=0.0, abs=1e-10)
+    assert sum(base_rewards) == pytest.approx(-base_objective.j_total, abs=1e-10)
+    assert sum(scaled_rewards) == pytest.approx(-scaled_objective.j_total, abs=1e-10)
+    assert base_objective.j_takt > 0.0
+    assert base_objective.d_time > 0.0
+    for field_name in (
+        "j_takt",
+        "d_time",
+        "d_team",
+        "j_postpone",
+        "j_total",
+        "revision_time",
+        "revision_team",
+        "j_revision",
+    ):
+        assert getattr(scaled_objective, field_name) == pytest.approx(
+            getattr(base_objective, field_name),
+            rel=0.0,
+            abs=1e-10,
+        ), field_name
+    assert scaled_objective.takt_violation_hours == pytest.approx(
+        scale * base_objective.takt_violation_hours,
+        rel=0.0,
+        abs=1e-7,
+    )
