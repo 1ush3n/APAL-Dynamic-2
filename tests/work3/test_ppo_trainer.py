@@ -133,6 +133,49 @@ def test_buffer_batches_generator() -> None:
         assert first_batch["sample_records"][k]["step_id"] == k
 
 
+def test_ppo_clipped_surrogate_matches_hand_calculation_for_both_advantage_signs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ratio=1.5、epsilon=0.2时正负优势分别按PPO最小代理项裁剪。"""
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=8)
+    new_log_probs = torch.full((2,), math.log(1.5), dtype=torch.float32)
+
+    def evaluate_fixed_policy(
+        state_feats: torch.Tensor,
+        time_urgencies: torch.Tensor,
+        sample_records: list[dict[str, object]],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        assert state_feats.shape == (2, 32)
+        assert time_urgencies.shape == (2, 2)
+        assert len(sample_records) == 2
+        return torch.zeros(2), new_log_probs, torch.zeros(2)
+
+    monkeypatch.setattr(actor, "evaluate_action_log_probs", evaluate_fixed_policy)
+    trainer = PPOTrainerWork3(
+        actor_critic=actor,
+        clip_eps=0.2,
+        vf_coef=0.0,
+        ent_coef=0.0,
+        create_optimizer=False,
+    )
+    batch = {
+        "state_feats": torch.zeros((2, 32)),
+        "time_urgencies": torch.zeros((2, 2)),
+        "old_log_probs": torch.zeros(2),
+        "advantages": torch.tensor([2.0, -2.0]),
+        "target_values": torch.zeros(2),
+        "sample_records": [{"case": "positive"}, {"case": "negative"}],
+    }
+
+    losses = trainer.compute_ppo_minibatch_loss(batch)
+
+    assert torch.allclose(losses["ratio"], torch.tensor([1.5, 1.5]), atol=1e-6)
+    # A=+2: min(1.5*2, 1.2*2)=2.4; A=-2: min(1.5*-2, 1.2*-2)=-3.
+    # PPO loss为两项最小代理目标的负均值：-((2.4 + -3.0) / 2)=0.3。
+    assert float(losses["policy_loss"]) == pytest.approx(0.3, abs=1e-6)
+    assert float(losses["clip_fraction"]) == pytest.approx(1.0)
+
+
 def test_ppo_trainer_train_step(env: AirLineEnvWork3) -> None:
     """测试 PPOTrainerWork3 在真实仿真交互数据上的端到端多步梯度更新。"""
     net = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64)
