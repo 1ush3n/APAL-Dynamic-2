@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -228,6 +229,70 @@ def test_sampled_worker_order_replays_after_environment_sorts_execution_team() -
 
     _, replay_after, _ = actor.evaluate_action_log_probs(*replay_inputs)
     _assert_probability_round_trip(sampled_log_prob, replay_after)
+
+
+def test_single_legal_action_with_exact_team_has_finite_zero_log_probability() -> None:
+    """单工序、单分支、恰好够人的情形不产生退化分布异常。"""
+    env = _new_env()
+    task = next(
+        task
+        for task in env.get_action_candidates()
+        if env.can_reserve(task) and not env.can_postpone(task)
+    )
+    station_workers = env.state.station_worker_bindings[task.current_station]
+    assert 1 <= len(station_workers) <= 16
+    task.skill = 3
+    task.demand = len(station_workers)
+    for worker_id in station_workers:
+        env.worker_skills[worker_id] = frozenset(
+            set(env.worker_skills[worker_id]) | {task.skill}
+        )
+    assert tuple(env.valid_team_completion_workers(task, [])) == tuple(station_workers)
+    env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
+
+    actor = ActorCriticWork3(hidden_dim=32)
+    actor.eval()
+    state_feat, urgency = _inputs()
+    snapshot = actor.make_decision_snapshot(env, state_feat, urgency)
+    assert snapshot.candidate_task_keys == (task.task_key,)
+    assert snapshot.branch_masks == ((True, False),)
+    snapshot = replace(snapshot, advance_available=False)
+
+    with torch.no_grad():
+        for module in (
+            actor.task_score_fc,
+            actor.branch_head,
+            actor.worker_score_fc,
+            actor.worker_graph_score,
+            actor.align_head,
+        ):
+            for parameter in module.parameters():
+                parameter.zero_()
+        actor.worker_score_fc[-1].bias[0] = 20.0
+        actor.align_head[-1].bias[0] = 20.0
+        actor.align_head[-1].bias[1] = -20.0
+
+    action, sampled_log_prob, _, record = actor.select_snapshot(
+        snapshot, deterministic=True
+    )
+    assert action is not None and action["branch"] == ActionBranch.STATION_EXECUTE
+    assert record["can_reserve"] is True
+    assert record["can_postpone"] is False
+    assert len(action["team"]) == task.demand
+    assert len(set(action["team"])) == task.demand
+    assert tuple(record["chosen_worker_indices"])[0] == 0
+    assert [sum(mask) for mask in record["worker_valid_masks"]] == list(
+        range(task.demand, 0, -1)
+    )
+    assert math.isfinite(sampled_log_prob)
+    assert sampled_log_prob == pytest.approx(0.0, abs=1e-6)
+
+    _, replay_log_prob, entropy = actor.evaluate_action_log_probs(
+        state_feat.unsqueeze(0), urgency.unsqueeze(0), [record]
+    )
+    assert torch.isfinite(replay_log_prob).all()
+    assert torch.isfinite(entropy).all()
+    assert float(replay_log_prob[0]) == pytest.approx(0.0, abs=1e-6)
 
 
 def test_postpone_replay_truncates_before_worker_head() -> None:
