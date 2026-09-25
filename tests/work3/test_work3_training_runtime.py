@@ -981,6 +981,66 @@ def test_vector_reset_reports_fixed_scenario_and_actual_hit_status() -> None:
             assert status["unhit_reasons"] == {"missing-task": "event_not_triggered"}
 
 
+def test_vector_worker_keeps_started_disturbance_target_fixed_and_unhit() -> None:
+    from envs.work3.core_types import ActionBranch
+    from training.work3_vector_env import Work3VectorEnv
+    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    baseline = MultiAircraftBaseline.load_from_json(baseline_path)
+    target_key = "0_15"
+    target = baseline.get_task(0, 15)
+    tau = target.duration / 2.0
+    scenario = {
+        "scenario_id": "VECTOR_FIXED_TARGET_ALREADY_RUNNING",
+        "tau": tau,
+        "recovery_time": tau + 1.0,
+        "affected_task_keys": [target_key],
+    }
+
+    with Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(baseline_path)},
+        num_envs=1,
+        start_method="spawn",
+    ) as vector:
+        reset = vector.reset_all(
+            scenarios=(scenario,),
+            episode_ids=(70,),
+            episode_indices=(0,),
+        )[0]
+        assert reset.scenario_status["event_triggered"] is False
+        snapshot = vector.snapshot()
+        assert target_key in snapshot.candidate_task_keys
+
+        started = vector.step(
+            {
+                "task_key": target_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": target.team,
+                "align": 0,
+            }
+        )
+        assert started.info["scheduled_status"] == "RUNNING"
+        assert started.info["scheduled_start"] == pytest.approx(0.0)
+        assert started.scenario_status["actual_hit_count"] == 0
+
+        after_disturbance = vector.step(
+            {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+        )
+
+    assert any(
+        event[1] == "DISTURBANCE" for event in after_disturbance.processed_events
+    )
+    assert after_disturbance.scenario_status["scenario_id"] == scenario["scenario_id"]
+    assert after_disturbance.scenario_status["scheduled_target_count"] == 1
+    assert after_disturbance.scenario_status["event_triggered"] is True
+    assert after_disturbance.scenario_status["actual_hit_task_keys"] == ()
+    assert after_disturbance.scenario_status["actual_hit_count"] == 0
+    assert after_disturbance.scenario_status["unhit_reasons"] == {
+        target_key: "already_started_or_completed_at_event"
+    }
+
+
 def test_vector_worker_errors_and_incomplete_step_timeouts_are_explicit_and_cleaned() -> None:
     from envs.work3.core_types import ActionBranch
     from models.work3.actor_critic import ActorCriticWork3
