@@ -61,13 +61,15 @@
 - `derive_worker_seed(seed: int, worker_id: int, episode_index: int) -> int`
 - `resolved_config_fingerprint(config: DictConfig) -> tuple[str, str]`返回resolved YAML文本及SHA256。
 
-- [ ] 写测试：默认配置含profile、`num_envs=1`、FP32、事件清单/散列字段、总步数/墙钟边界、线程限制、PPO参数和`pathlib`输出路径。
-- [ ] 写测试：CLI式OmegaConf覆盖进入resolved YAML并改变配置哈希；缺字段、非法精度、非正预算、越界环境数均明确失败。
-- [ ] 写测试：相同主种子和`(worker_id, episode_index)`派生相同环境种子，不同worker或episode不会复用同一派生种子；Python/NumPy/PyTorch种子初始化可重复。
-- [ ] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -q`执行新测试，记录预期失败原因；若测试通过，检查是否已有配置实现或测试前提已变化，不人为制造失败。
-- [ ] 使用OmegaConf现有依赖实现配置加载、值域校验、resolved配置/散列和统一种子函数；不安装第二套配置框架。
-- [ ] 重跑该测试文件，并运行`tests/work3/test_work3_r08_training_reproducibility.py`与`tests/work3/test_train_ppo.py`。
-- [ ] 在任务表记载配置字段、测试首轮结果/最终结果、实际修改文件和提交号；仅提交本任务文件。
+- [x] 写测试：默认配置含profile、`num_envs=1`、FP32、事件清单/散列字段、总步数/墙钟边界、线程限制、PPO参数和`pathlib`输出路径。
+- [x] 写测试：CLI式OmegaConf覆盖进入resolved YAML并改变配置哈希；缺字段、非法精度、非正预算、越界环境数均明确失败。
+- [x] 写测试：相同主种子和`(worker_id, episode_index)`派生相同环境种子，不同worker或episode不会复用同一派生种子；Python/NumPy/PyTorch种子初始化可重复。
+- [x] 使用`D:\Conda\envs\rag_env\python.exe -m pytest tests/work3/test_work3_training_runtime.py -q`执行新测试，记录预期失败原因；若测试通过，检查是否已有配置实现或测试前提已变化，不人为制造失败。
+- [x] 使用OmegaConf现有依赖实现配置加载、值域校验、resolved配置/散列和统一种子函数；不安装第二套配置框架。
+- [x] 重跑该测试文件，并运行`tests/work3/test_work3_r08_training_reproducibility.py`与`tests/work3/test_train_ppo.py`。
+- [x] 在任务表记载配置字段、测试首轮结果/最终结果、实际修改文件和提交号；仅提交本任务文件。
+
+**任务1记录核对：** 主任务表已记录首次新增配置反例`8 failed`及后续gamma/pilot目标与空白路径反例；修复后合并定向回归`26 passed in 45.33s`，配置与种子实现提交`35eb658`。本计划勾选状态据此补齐，不重复修改运行代码。
 
 ### 任务2：CPU决策快照与逐人团队补全掩码
 
@@ -262,6 +264,8 @@ def worker_completion_mask(
 - [ ] 所有门槛通过后，只冻结下一步完整批次试点的配置、训练集事件清单及哈希、种子、总聚合step/墙钟限制、`num_envs`、精度、batch/rollout和C/D初始权重指纹；提交冻结记录。此任务不自动授权正式测试集评测或方法优劣结论。
 
 **Task8执行记录（2026-09-25）：** 资源遥测反例先证明CUDA和CPU训练报告都缺少分设备字段；新增字段保留旧`memory_peak_bytes`兼容行为，并将`host_memory_peak_bytes`明确限定为训练主进程峰值常驻内存。定向CUDA BF16及CPU C/D固定事件用例`2 passed`。新增D端到端有限预算测试由固定命中事件触发真实转站，检查缓存中的残差同时包含正负值、时间监督有成功优化更新、episode内势函数版本固定；不完整周期的真实转站标签继续缺失。该测试首轮因错误地断言所有周期都已完成而失败，修正为核验未完成周期不伪造标签后通过。代码提交`cd90e23`，D有符号残差集成测试提交`98b031e`。定向测试`1 passed, 47 deselected in 54.50s`；整套`tests/work3`（含该测试）`304 passed, 3 skipped in 1576.95s`；`py_compile`和`git diff --check`通过。试点预算/设备/场景清单及C/D真实初始权重指纹尚未冻结，未启动完整批次或正式比较；未推送。
+
+**成功目标退出边界复核（2026-09-25）：** 对照设计稿“达到成功批次目标后停止分配新episode；已启动episode在预算允许时继续到终态”，发现旧入口在第一个成功episode后立即结束当前rollout wave，并将仍活动worker截断。新增测试先因缺少“活动episode数参与停止判定”的逻辑失败（`1 failed`）；修复后`tests/work3/test_work3_training_runtime.py`、`tests/work3/test_work3_r08_training_reproducibility.py`及`tests/work3/test_train_ppo.py`合计`64 passed in 642.15s`，相关`py_compile`与`git diff --check`通过。实现/测试提交`13ad3c9`。现在只有成功目标已达且活动episode数为0才正常停止；若步数或墙钟预算先耗尽，活动episode仍按预算截断语义记录。完整批次试点协议仍未冻结。
 
 ## 任务提交和记录规则
 
