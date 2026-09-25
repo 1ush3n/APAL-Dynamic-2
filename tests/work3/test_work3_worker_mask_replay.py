@@ -29,6 +29,20 @@ def _inputs() -> tuple[torch.Tensor, torch.Tensor]:
     return torch.zeros(32), torch.zeros(2)
 
 
+def _assert_probability_round_trip(
+    sampled_log_prob: float,
+    replay_log_prob: torch.Tensor,
+) -> None:
+    assert replay_log_prob.dtype == torch.float32
+    assert float(replay_log_prob[0].detach()) == pytest.approx(
+        sampled_log_prob,
+        abs=1e-5,
+    )
+    ratio = torch.exp(replay_log_prob - sampled_log_prob)
+    assert torch.isfinite(ratio).all()
+    assert float(ratio[0].detach()) == pytest.approx(1.0, abs=1e-5)
+
+
 def test_stay_replay_uses_sampled_skill_masks_after_live_state_changes() -> None:
     """技能受限的两人团队在采样与重放中应具有同一条件概率。"""
     env = _new_env()
@@ -68,7 +82,7 @@ def test_stay_replay_uses_sampled_skill_masks_after_live_state_changes() -> None
     _, replay_log_prob, entropies = actor.evaluate_action_log_probs(
         state_feat.unsqueeze(0), urgency.unsqueeze(0), [record]
     )
-    assert float(replay_log_prob[0].detach()) == pytest.approx(sampled_log_prob, abs=1e-5)
+    _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
     assert torch.isfinite(entropies).all()
 
     masks = record["worker_valid_masks"]
@@ -132,7 +146,7 @@ def test_postpone_replay_truncates_before_worker_head() -> None:
     _, replay_log_prob, _ = actor.evaluate_action_log_probs(
         state_feat.unsqueeze(0), urgency.unsqueeze(0), [record]
     )
-    assert float(replay_log_prob[0].detach()) == pytest.approx(sampled_log_prob, abs=1e-5)
+    _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
 
 
 def test_explicit_advance_replay_has_no_worker_masks() -> None:
@@ -169,4 +183,4 @@ def test_explicit_advance_replay_has_no_worker_masks() -> None:
     _, replay_log_prob, _ = actor.evaluate_action_log_probs(
         state_feat.unsqueeze(0), urgency.unsqueeze(0), [record]
     )
-    assert float(replay_log_prob[0].detach()) == pytest.approx(sampled_log_prob, abs=1e-5)
+    _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
