@@ -255,3 +255,51 @@ def test_training_entry_closes_other_workers_after_worker_error(
 
     assert len(created_envs) == 1
     assert created_envs[0].workers_alive == (False, False)
+
+
+def test_training_entry_closes_workers_after_actor_exception(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """主进程Actor抛出异常时，训练入口也必须回收已启动的环境worker。"""
+    from training.work3_vector_env import Work3VectorEnv
+
+    created_envs: list[Work3VectorEnv] = []
+    original_create = train_module.create_work3_single_env_runtime
+
+    def capture_environment(*args: Any, **kwargs: Any) -> Work3VectorEnv:
+        environment = original_create(*args, **kwargs)
+        created_envs.append(environment)
+        return environment
+
+    def fail_actor(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("simulated main-process actor failure")
+
+    monkeypatch.setattr(
+        train_module,
+        "create_work3_single_env_runtime",
+        capture_environment,
+    )
+    monkeypatch.setattr(ActorCriticWork3, "select_snapshot", fail_actor)
+
+    try:
+        with pytest.raises(RuntimeError, match="simulated main-process actor failure"):
+            run_training(
+                run_mode="smoke",
+                num_iterations=1,
+                steps_per_iter=1,
+                max_decisions=1,
+                ppo_epochs=1,
+                batch_size=1,
+                seed=29,
+                method_variant="C",
+                num_envs=2,
+                output_ckpt=str(tmp_path / "actor_error.pt"),
+            )
+
+        assert len(created_envs) == 1
+        assert created_envs[0].workers_alive == (False, False)
+    finally:
+        for environment in created_envs:
+            if any(environment.workers_alive):
+                environment.close()

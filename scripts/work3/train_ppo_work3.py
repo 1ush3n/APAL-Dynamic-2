@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import argparse
 from contextlib import AbstractContextManager, nullcontext
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from functools import wraps
 import hashlib
 import json
 import logging
@@ -24,7 +26,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
-from typing import Any
+from typing import Any, Callable
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
@@ -66,6 +68,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_ACTIVE_TRAINING_ENVS: ContextVar[list[Work3VectorEnv] | None] = ContextVar(
+    "work3_active_training_envs",
+    default=None,
+)
+
+
+def _close_training_envs_on_exit(
+    function: Callable[..., Any],
+) -> Callable[..., Any]:
+    """在训练正常或异常退出时回收本次调用启动的向量环境。"""
+    @wraps(function)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        environments: list[Work3VectorEnv] = []
+        token = _ACTIVE_TRAINING_ENVS.set(environments)
+        try:
+            result = function(*args, **kwargs)
+        except BaseException:
+            for environment in reversed(environments):
+                try:
+                    environment.close()
+                except Exception:
+                    logger.exception("训练异常期间关闭工作三环境失败")
+            raise
+        else:
+            for environment in reversed(environments):
+                environment.close()
+            return result
+        finally:
+            _ACTIVE_TRAINING_ENVS.reset(token)
+
+    return wrapped
+
 
 def _autocast_context(
     device: torch.device,
@@ -98,12 +132,16 @@ def create_work3_single_env_runtime(
     worker_torch_num_threads: int = 1,
 ) -> Work3VectorEnv:
     """构造FP32 spawn环境worker池；策略与PPO优化器仍由调用方持有。"""
-    return Work3VectorEnv(
+    environment = Work3VectorEnv(
         env_kwargs={"baseline_json_path": str(Path(baseline_path))},
         num_envs=num_envs,
         worker_torch_num_threads=worker_torch_num_threads,
         start_method="spawn",
     )
+    active_environments = _ACTIVE_TRAINING_ENVS.get()
+    if active_environments is not None:
+        active_environments.append(environment)
+    return environment
 
 
 def _seed_everything(seed: int, *, deterministic: bool = True) -> None:
@@ -541,6 +579,7 @@ def compute_online_snapshot_time_inputs(
     return graph_snapshot, urgency, predicted_transfer.squeeze(0)
 
 
+@_close_training_envs_on_exit
 def run_training(
     num_iterations: int | None = None,
     steps_per_iter: int = 32,
