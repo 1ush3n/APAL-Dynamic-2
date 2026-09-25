@@ -22,6 +22,68 @@ import scripts.work3.train_ppo_work3 as train_module
 from scripts.work3.train_ppo_work3 import run_training
 
 
+@pytest.mark.parametrize("environment_truncated", [False, True])
+def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
+    environment_truncated: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """正常转移不预先计算下一状态时间特征；真实截断仍计算bootstrap特征。"""
+    from dataclasses import replace
+
+    from training.work3_vector_env import Work3VectorEnv
+
+    prediction_times: list[float] = []
+    original_prediction = train_module.compute_online_snapshot_time_inputs
+    original_step_all = Work3VectorEnv.step_all
+
+    def record_prediction(
+        actor_critic: ActorCriticWork3,
+        time_head: train_module.TimeResidualHead,
+        snapshot: train_module.DecisionSnapshot,
+    ) -> tuple[Any, torch.Tensor, torch.Tensor]:
+        prediction_times.append(snapshot.current_time)
+        return original_prediction(actor_critic, time_head, snapshot)
+
+    monkeypatch.setattr(
+        train_module,
+        "compute_online_snapshot_time_inputs",
+        record_prediction,
+    )
+
+    if environment_truncated:
+        def truncate_worker_result(
+            environment: Work3VectorEnv,
+            **kwargs: Any,
+        ) -> Any:
+            batch = original_step_all(environment, **kwargs)
+            results = list(batch.results)
+            assert results[0] is not None
+            results[0] = replace(results[0], truncated=True)
+            return replace(batch, results=tuple(results))
+
+        monkeypatch.setattr(Work3VectorEnv, "step_all", truncate_worker_result)
+
+    result = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        max_decisions=1,
+        max_wall_seconds=600.0,
+        steps_per_iter=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=43,
+        method_variant="D",
+        num_envs=1,
+        time_head_ckpt=str(tmp_path / "missing_time_head.pt"),
+        output_ckpt=str(tmp_path / "time_prediction_calls.pt"),
+        device="cpu",
+    )
+
+    assert result["total_decisions"] == 1
+    assert len(prediction_times) == 2
+
+
 def test_ppo_training_pipeline_sanity() -> None:
     """运行极速 2 轮 PPO 验证训练，测试全流程端到端稳定性。"""
     with tempfile.TemporaryDirectory() as tmpdir:

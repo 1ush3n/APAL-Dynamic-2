@@ -1275,16 +1275,7 @@ def run_training(
                     next_cmax_est = snapshot.estimated_cmax
                     if next_cmax_est is None:
                         raise RuntimeError("环境worker下一状态快照缺少时间预测")
-                    if profile.use_corrected_time_input and time_head is not None:
-                        with _autocast_context(torch_device, autocast_dtype):
-                            next_graph, next_time_urgency, _ = compute_online_snapshot_time_inputs(
-                                actor_critic=actor_critic,
-                                time_head=time_head,
-                                snapshot=snapshot,
-                            )
-                    else:
-                        next_graph = snapshot.graph_snapshot
-                        next_time_urgency = snapshot.time_features
+                    next_graph = snapshot.graph_snapshot
                     if shaper is not None:
                         with _autocast_context(torch_device, autocast_dtype):
                             phi_next = shaper.compute_potential(
@@ -1306,6 +1297,16 @@ def run_training(
                         )
 
                 if truncated:
+                    if profile.use_corrected_time_input and time_head is not None:
+                        with _autocast_context(torch_device, autocast_dtype):
+                            next_graph, next_time_urgency, _ = compute_online_snapshot_time_inputs(
+                                actor_critic=actor_critic,
+                                time_head=time_head,
+                                snapshot=snapshot,
+                            )
+                    else:
+                        next_graph = snapshot.graph_snapshot
+                        next_time_urgency = snapshot.time_features
                     with torch.no_grad(), _autocast_context(torch_device, autocast_dtype):
                         truncated_value, _ = actor_critic.encode_state(
                             snapshot.state_features.to(torch_device),
