@@ -101,6 +101,27 @@ def test_physical_time_lower_bound_remains_after_negative_correction() -> None:
     assert remaining.item() == pytest.approx(0.0)
 
 
+def test_negative_residual_applies_exact_heuristic_time_correction() -> None:
+    """真实时间头输出δ=-0.3时，P_h=12、t=5、H0=10应修正为9。"""
+    head = TimeResidualHead(in_dim=2, hidden_dim=8)
+    with torch.no_grad():
+        for module in head.reg_fc:
+            if isinstance(module, torch.nn.Linear):
+                module.weight.zero_()
+                module.bias.zero_()
+        head.reg_fc[-1].bias.fill_(-0.3)
+
+    corrected, remaining, _ = head.predict_corrected_time(
+        state_feat=torch.zeros(1, 2),
+        estimated_cmax=12.0,
+        current_time=5.0,
+        h0=10.0,
+    )
+
+    assert corrected.item() == pytest.approx(9.0)
+    assert remaining.item() == pytest.approx(4.0)
+
+
 def test_time_auxiliary_loss_reaches_shared_graph_encoder(env: AirLineEnvWork3) -> None:
     """仅反传时间辅助损失时，图编码器与时间头都必须获得梯度。"""
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
