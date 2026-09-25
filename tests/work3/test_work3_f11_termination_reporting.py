@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch
+from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from envs.work3.event_queue import EventType
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
 from models.work3.train_time_head import StepResidualDataset
 from scripts.work3.collect_validation_trajectories import attach_transfer_labels
+import scripts.work3.evaluate_c_vs_d as evaluation_module
 from scripts.work3.evaluate_c_vs_d import evaluate_single_trajectory
 
 
@@ -165,6 +167,80 @@ def test_evaluation_decision_limit_is_not_success(baseline_path: Path) -> None:
     assert result["feasible"] is False
     assert result["termination_reason"] == "decision_limit"
     assert result["completed_tasks"] == 0
+
+
+def test_evaluation_accepts_real_completion_on_exact_decision_limit(
+    baseline_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """最后一个额度内动作真实完成批次时，不能误报decision_limit。"""
+    task = SimpleNamespace(
+        status=TaskStatus.READY,
+        material_ready_time=0.0,
+        postpone_count=0,
+    )
+
+    class OneStepCompletionEnv:
+        baseline_json_path = str(baseline_path)
+        tolerance = 1e-5
+
+        def __init__(self) -> None:
+            self.reset()
+
+        def reset(self) -> None:
+            task.status = TaskStatus.READY
+            self.finished = False
+            self.step_count = 0
+            self.cumulative_cost = 0.0
+            self.cost_takt = 0.0
+            self.cost_time = 0.0
+            self.cost_team = 0.0
+            self.cost_postpone = 0.0
+            self.cost_revision = 0.0
+            self.disturbance_event_triggered = False
+            self.disturbance_event_results = {}
+            self.state = SimpleNamespace(
+                tasks={"one": task},
+                transfer_history=[],
+                current_time=1.0,
+            )
+
+        def get_action_candidates(self) -> list[SimpleNamespace]:
+            return [] if self.finished else [task]
+
+        def step(self, action: dict[str, object]) -> tuple[dict[str, object], float, bool, bool, dict[str, str]]:
+            assert action == {"test_action": True}
+            self.finished = True
+            self.step_count += 1
+            task.status = TaskStatus.COMPLETED
+            return {}, 0.0, True, False, {"termination_reason": "completed"}
+
+        def _check_terminated(self) -> bool:
+            return self.finished
+
+    class CompleteInOneActionAgent:
+        def select_action(self, _env: OneStepCompletionEnv) -> dict[str, bool]:
+            return {"test_action": True}
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "_check_completed_trajectory_feasibility",
+        lambda _env: (True, {}),
+    )
+    env = OneStepCompletionEnv()
+
+    result = evaluate_single_trajectory(
+        env,
+        "Baseline-C",
+        CompleteInOneActionAgent(),
+        max_decisions=1,
+    )
+
+    assert result["decisions"] == 1
+    assert result["completed_tasks"] == 1
+    assert result["success"] is True
+    assert result["feasible"] is True
+    assert result["termination_reason"] == "completed"
 
 
 def test_heuristic_limit_has_no_fake_transfer_label(baseline_path: Path) -> None:
