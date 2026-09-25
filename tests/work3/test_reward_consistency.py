@@ -92,6 +92,35 @@ def test_start_time_cost_uses_cycle_relative_offset(baseline_path: str) -> None:
     assert evaluate_trajectory_objective(env, weights=weights).d_time == pytest.approx(0.0)
 
 
+@pytest.mark.parametrize("actual_start", [8.0, 12.0])
+def test_start_time_cost_is_symmetric_around_baseline_offset(
+    baseline_path: str,
+    actual_start: float,
+) -> None:
+    """周期相对开工偏移1/5相对基准偏移3，费用都为2/H0。"""
+    weights = ObjectiveWeights(
+        w_h=0.0,
+        w_t=1.0,
+        w_w=0.0,
+        w_p=0.0,
+        normalize_by_n=False,
+    )
+    env = AirLineEnvWork3(baseline_json_path=baseline_path, weights=weights)
+    env.reset()
+    task = next(iter(env.state.tasks.values()))
+    task.in_station_offset = 3.0
+    task.assigned_team = list(task.base_team)
+    env.state.last_transfer_time = 7.0
+
+    env._on_task_started(task, start_time=actual_start)
+
+    expected_cost = 2.0 / env.state.h0
+    assert env.cost_time == pytest.approx(expected_cost)
+    assert evaluate_trajectory_objective(env, weights=weights).d_time == pytest.approx(
+        expected_cost
+    )
+
+
 def test_postpone_incremental_consistency(baseline_path: str) -> None:
     """测试 2: 工序后移改派的增量扣费与终局账本绝对一致。"""
     weights = ObjectiveWeights(w_h=1.0, w_t=0.20, w_w=0.05, w_p=1.0, lambda_1=0.15, lambda_2=0.30)
