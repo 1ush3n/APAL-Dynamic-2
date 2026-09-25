@@ -18,9 +18,9 @@ import time
 from pathlib import Path
 import pytest
 import torch
-from torch_geometric.data import HeteroData
+from torch_geometric.data import Batch, HeteroData
 
-from envs.work3.core_types import ActionBranch
+from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.graph_builder import MultiAircraftGraphBuilder, Work3ResourceConfig
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
@@ -164,3 +164,55 @@ def test_task_status_one_hot_encoding(baseline_path: str) -> None:
     env.state.tasks[first_task_key].status = TaskStatus.COMPLETED
     data = builder.build_graph(env)
     assert data["task"].x[first_idx, 1:5].sum().item() == 0.0
+
+
+def test_same_task_id_state_isolation_and_heterogeneous_batch_edges(
+    baseline_path: str,
+) -> None:
+    """同编号异架次任务状态独立，两个图批处理后边仍留在各自图内。"""
+    baseline = MultiAircraftBaseline.load_from_json(baseline_path)
+    builder = MultiAircraftGraphBuilder(baseline)
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    env.reset()
+
+    task_keys_by_id: dict[int, list[str]] = {}
+    for key in builder.task_keys:
+        task_id = baseline.tasks[key].task_id
+        task_keys_by_id.setdefault(task_id, []).append(key)
+    target_key, other_key = next(
+        keys[:2] for keys in task_keys_by_id.values() if len(keys) >= 2
+    )
+    target_index = builder.task_key_to_idx[target_key]
+    other_index = builder.task_key_to_idx[other_key]
+    assert target_key != other_key
+    assert baseline.tasks[target_key].task_id == baseline.tasks[other_key].task_id
+    assert baseline.tasks[target_key].aircraft_id != baseline.tasks[other_key].aircraft_id
+
+    env.state.tasks[target_key].status = TaskStatus.UNREADY
+    env.state.tasks[other_key].status = TaskStatus.UNREADY
+    graph_before = builder.build_graph(env)
+    env.state.tasks[target_key].status = TaskStatus.READY
+    graph_after = builder.build_graph(env)
+
+    changed_task_rows = torch.nonzero(
+        torch.any(graph_before["task"].x != graph_after["task"].x, dim=1),
+        as_tuple=False,
+    ).flatten()
+    assert changed_task_rows.tolist() == [target_index]
+    assert graph_after["task"].x[target_index, 1].item() == 1.0
+    assert graph_after["task"].x[other_index, 1:5].sum().item() == 0.0
+    assert torch.equal(
+        graph_before["task"].x[other_index],
+        graph_after["task"].x[other_index],
+    )
+
+    batch = Batch.from_data_list([graph_before, graph_after])
+    assert batch["task"].batch.tolist().count(0) == builder.num_tasks
+    assert batch["task"].batch.tolist().count(1) == builder.num_tasks
+    for edge_type in batch.edge_types:
+        edge_index = batch[edge_type].edge_index
+        if edge_index.numel() == 0:
+            continue
+        source_graphs = batch[edge_type[0]].batch[edge_index[0]]
+        target_graphs = batch[edge_type[2]].batch[edge_index[1]]
+        assert torch.equal(source_graphs, target_graphs), edge_type
