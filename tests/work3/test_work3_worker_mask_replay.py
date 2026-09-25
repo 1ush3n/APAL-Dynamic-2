@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -44,28 +45,46 @@ def _assert_probability_round_trip(
 
 
 def test_stay_replay_uses_sampled_skill_masks_after_live_state_changes() -> None:
-    """技能受限的两人团队在采样与重放中应具有同一条件概率。"""
+    """三名合格工人下逐人条件概率及完整联合log-prob应一致。"""
     env = _new_env()
     task = env.get_action_candidates()[0]
 
-    # 使用实际站位1的四人工池：仅18、65具备技能3，需求两人。
+    # 使用实际站位1的四人工池：恰有三人具备技能3，需求两人。
     # 将当前测试任务和飞机置于该站，保留环境的真实团队补全校验。
     task.current_station = 1
     task.skill = 3
     task.demand = 2
     env.state.aircraft[task.aircraft_id].current_station = 1
     station_workers = env.state.station_worker_bindings[1]
+    eligible_workers = set(station_workers[:3])
+    for worker_id in station_workers:
+        skills = set(env.worker_skills[worker_id])
+        if worker_id in eligible_workers:
+            skills.add(task.skill)
+        else:
+            skills.discard(task.skill)
+        env.worker_skills[worker_id] = frozenset(skills)
     eligible = set(env.valid_team_completion_workers(task, []))
     assert len(station_workers) == 4
-    assert len(eligible) == 2
+    assert eligible == eligible_workers
+    assert len(eligible) == 3
     assert eligible < set(station_workers)
     env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
 
     actor = ActorCriticWork3(hidden_dim=32)
     actor.eval()
     with torch.no_grad():
-        actor.branch_head[-1].bias[0] = 100.0
+        for module in (
+            actor.branch_head,
+            actor.worker_score_fc,
+            actor.worker_graph_score,
+            actor.align_head,
+        ):
+            for parameter in module.parameters():
+                parameter.zero_()
+        actor.branch_head[-1].bias[0] = 0.0
         actor.branch_head[-1].bias[1] = -100.0
+        actor.align_head[-1].bias[1] = math.log(3.0)
     state_feat, urgency = _inputs()
     action, sampled_log_prob, _, record = actor.select_action(
         env, state_feat, urgency, deterministic=True
@@ -74,7 +93,22 @@ def test_stay_replay_uses_sampled_skill_masks_after_live_state_changes() -> None
     assert action is not None
     assert action["branch"] == ActionBranch.STATION_EXECUTE
     assert len(record["chosen_worker_indices"]) == 2
-    assert set(action["team"]) == eligible
+    assert len(action["team"]) == task.demand
+    assert set(action["team"]) <= eligible
+    assert record["align"] == 1
+    assert record["advance_available"] is False
+
+    first_worker_log_prob = -math.log(3.0)
+    second_worker_log_prob = -math.log(2.0)
+    alignment_log_prob = math.log(0.75)
+    expected_joint_log_prob = (
+        math.log(1.0)  # 单一候选工序
+        + math.log(1.0)  # 唯一有效留站分支
+        + first_worker_log_prob
+        + second_worker_log_prob
+        + alignment_log_prob
+    )
+    assert sampled_log_prob == pytest.approx(expected_joint_log_prob, abs=1e-6)
 
     # 更改现场技能后，旧动作仍必须按采样时图和掩码重放。
     for worker_id in station_workers:
