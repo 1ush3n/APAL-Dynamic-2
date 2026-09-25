@@ -449,6 +449,12 @@ def test_n02_translating_timeline_and_baseline_anchor_preserves_cycle_offset(
             base_task.baseline_start + shift
         )
         assert shifted_task.baseline_end == pytest.approx(base_task.baseline_end + shift)
+        assert shifted_task.nominal_station_entry == pytest.approx(
+            base_task.nominal_station_entry + shift
+        )
+        assert shifted_task.nominal_station_exit == pytest.approx(
+            base_task.nominal_station_exit + shift
+        )
         assert shifted_task.in_station_offset == pytest.approx(base_task.in_station_offset)
 
     assert shifted_env.state.h0 == pytest.approx(base_env.state.h0)
@@ -466,6 +472,19 @@ def test_n02_translating_timeline_and_baseline_anchor_preserves_cycle_offset(
     assert shifted_env.state.current_time == pytest.approx(
         base_env.state.current_time + shift
     )
+    for aircraft_id, base_aircraft in base_env.state.aircraft.items():
+        shifted_aircraft = shifted_env.state.aircraft[aircraft_id]
+        assert shifted_aircraft.current_station == base_aircraft.current_station
+        assert shifted_aircraft.entry_times.keys() == base_aircraft.entry_times.keys()
+        assert shifted_aircraft.exit_times.keys() == base_aircraft.exit_times.keys()
+        for station_id, base_time in base_aircraft.entry_times.items():
+            assert shifted_aircraft.entry_times[station_id] == pytest.approx(
+                base_time + shift
+            )
+        for station_id, base_time in base_aircraft.exit_times.items():
+            assert shifted_aircraft.exit_times[station_id] == pytest.approx(
+                base_time + shift
+            )
 
     for task_key, base_task in base_env.state.tasks.items():
         shifted_task = shifted_env.state.tasks[task_key]
