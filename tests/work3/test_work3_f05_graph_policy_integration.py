@@ -9,6 +9,7 @@ import pytest
 import torch
 from torch_geometric.data import HeteroData
 
+from envs.work3.core_types import ActionBranch
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
@@ -54,7 +55,18 @@ def test_sampling_record_contains_immutable_graph_snapshot(env: AirLineEnvWork3)
     assert isinstance(record["graph_snapshot"], HeteroData)
     assert record["graph_version"] == GRAPH_FEATURE_VERSION
     assert len(record["candidate_task_node_indices"]) == len(record["cand_feats"])
-    assert record["worker_node_indices"]
+    assert record["candidate_task_node_indices"]
+    if (
+        record["action_type"] == "schedule"
+        and record["branch"] == int(ActionBranch.STATION_EXECUTE)
+    ):
+        assert record["worker_node_indices"]
+    elif record["action_type"] == "schedule":
+        assert record["branch"] == int(ActionBranch.POSTPONE)
+        assert record["worker_node_indices"] == ()
+    else:
+        assert record["action_type"] == "advance_to_next_event"
+        assert record["worker_node_indices"] == ()
 
 
 def test_graph_encoder_receives_policy_gradient(env: AirLineEnvWork3) -> None:
@@ -67,11 +79,19 @@ def test_graph_encoder_receives_policy_gradient(env: AirLineEnvWork3) -> None:
     _, log_probs, _ = net.evaluate_action_log_probs(
         state_feat.unsqueeze(0), urgency.unsqueeze(0), [record]
     )
-    (-log_probs.mean()).backward()
+    advantages = torch.ones_like(log_probs)
+    policy_loss = -(log_probs * advantages).mean()
+    assert torch.isfinite(policy_loss)
+    policy_loss.backward()
 
     graph_parameters = [p for p in net.graph_encoder.parameters() if p.requires_grad]
     assert graph_parameters
-    assert any(parameter.grad is not None for parameter in graph_parameters)
+    graph_gradients = [
+        parameter.grad for parameter in graph_parameters if parameter.grad is not None
+    ]
+    assert graph_gradients
+    assert all(torch.isfinite(gradient).all() for gradient in graph_gradients)
+    assert any(torch.count_nonzero(gradient).item() > 0 for gradient in graph_gradients)
     assert any(parameter.grad is not None for parameter in net.encoder.parameters())
 
 
