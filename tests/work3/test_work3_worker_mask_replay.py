@@ -643,6 +643,136 @@ def test_postpone_probability_and_entropy_ignore_dummy_team_and_alignment() -> N
     assert torch.equal(base_entropy, dummy_entropy)
 
 
+def test_conditional_entropy_uses_only_heads_active_on_sampled_branch() -> None:
+    """留站熵包含选人/对齐，后移熵不调用未激活动作头。"""
+    stay_env = _new_env()
+    stay_task = stay_env.get_action_candidates()[0]
+    stay_task.current_station = 1
+    stay_task.skill = 3
+    stay_task.demand = 2
+    stay_env.state.aircraft[stay_task.aircraft_id].current_station = 1
+    station_workers = stay_env.state.station_worker_bindings[1]
+    eligible_workers = set(station_workers[:3])
+    for worker_id in station_workers:
+        skills = set(stay_env.worker_skills[worker_id])
+        if worker_id in eligible_workers:
+            skills.add(stay_task.skill)
+        else:
+            skills.discard(stay_task.skill)
+        stay_env.worker_skills[worker_id] = frozenset(skills)
+    assert stay_env.get_action_branch_mask(stay_task) == (True, True)
+    stay_env.get_action_candidates = lambda: [stay_task]  # type: ignore[method-assign]
+
+    def make_actor(branch_bias: tuple[float, float]) -> ActorCriticWork3:
+        policy = ActorCriticWork3(hidden_dim=32).eval()
+        with torch.no_grad():
+            for module in (
+                policy.task_score_fc,
+                policy.branch_head,
+                policy.worker_score_fc,
+                policy.worker_graph_score,
+                policy.align_head,
+            ):
+                for parameter in module.parameters():
+                    parameter.zero_()
+            policy.branch_head[-1].bias[0] = branch_bias[0]
+            policy.branch_head[-1].bias[1] = branch_bias[1]
+            policy.worker_score_fc[-1].bias[:3] = torch.tensor([0.0, 1.0, 0.0])
+            policy.align_head[-1].bias[1] = 1.0
+        return policy
+
+    stay_actor = make_actor((2.0, -2.0))
+    postpone_actor = make_actor((-2.0, 2.0))
+    state_features, time_features = _inputs()
+    stay_snapshot = stay_actor.make_decision_snapshot(
+        stay_env, state_features, time_features
+    )
+    postpone_snapshot = postpone_actor.make_decision_snapshot(
+        stay_env, state_features, time_features
+    )
+    assert stay_snapshot.branch_masks == postpone_snapshot.branch_masks == ((True, True),)
+    stay_action, stay_log_prob, _, stay_record = stay_actor.select_snapshot(
+        stay_snapshot, deterministic=True
+    )
+    postpone_action, postpone_log_prob, _, postpone_record = postpone_actor.select_snapshot(
+        postpone_snapshot, deterministic=True
+    )
+    assert stay_action is not None and stay_action["branch"] == ActionBranch.STATION_EXECUTE
+    assert postpone_action is not None and postpone_action["branch"] == ActionBranch.POSTPONE
+
+    worker_head_calls = 0
+    alignment_head_calls = 0
+
+    def count_worker_calls(_module, _inputs, _output) -> None:
+        nonlocal worker_head_calls
+        worker_head_calls += 1
+
+    def count_alignment_calls(_module, _inputs, _output) -> None:
+        nonlocal alignment_head_calls
+        alignment_head_calls += 1
+
+    worker_hook = stay_actor.worker_score_fc.register_forward_hook(count_worker_calls)
+    alignment_hook = stay_actor.align_head.register_forward_hook(count_alignment_calls)
+    try:
+        _, stay_replay_log_prob, stay_entropy = stay_actor.evaluate_action_log_probs(
+            state_features.unsqueeze(0), time_features.unsqueeze(0), [stay_record]
+        )
+    finally:
+        worker_hook.remove()
+        alignment_hook.remove()
+
+    assert worker_head_calls == stay_task.demand
+    assert alignment_head_calls == 1
+    assert torch.isfinite(stay_entropy).all()
+    assert float(stay_entropy[0]) > 0.0
+    branch_entropy = Categorical(logits=torch.tensor([2.0, -2.0])).entropy()
+    expected_stay_entropy = (
+        branch_entropy
+        + Categorical(logits=torch.tensor([0.0, 1.0, 0.0])).entropy()
+        + torch.log(torch.tensor(2.0))
+        + Categorical(logits=torch.tensor([0.0, 1.0])).entropy()
+    )
+    assert float(stay_entropy[0]) == pytest.approx(
+        float(expected_stay_entropy), abs=1e-6
+    )
+    _assert_probability_round_trip(stay_log_prob, stay_replay_log_prob)
+
+    worker_head_calls = 0
+    alignment_head_calls = 0
+    worker_hook = postpone_actor.worker_score_fc.register_forward_hook(count_worker_calls)
+    alignment_hook = postpone_actor.align_head.register_forward_hook(count_alignment_calls)
+    try:
+        _, postpone_replay_log_prob, postpone_entropy = (
+            postpone_actor.evaluate_action_log_probs(
+                state_features.unsqueeze(0),
+                time_features.unsqueeze(0),
+                [postpone_record],
+            )
+        )
+    finally:
+        worker_hook.remove()
+        alignment_hook.remove()
+
+    assert worker_head_calls == alignment_head_calls == 0
+    assert torch.isfinite(postpone_entropy).all()
+    assert float(postpone_entropy[0]) == pytest.approx(float(branch_entropy), abs=1e-6)
+    _assert_probability_round_trip(postpone_log_prob, postpone_replay_log_prob)
+
+    with torch.no_grad():
+        for module in (
+            postpone_actor.worker_score_fc,
+            postpone_actor.worker_graph_score,
+            postpone_actor.align_head,
+        ):
+            for parameter in module.parameters():
+                parameter.add_(0.25)
+    _, changed_log_prob, changed_entropy = postpone_actor.evaluate_action_log_probs(
+        state_features.unsqueeze(0), time_features.unsqueeze(0), [postpone_record]
+    )
+    assert torch.equal(postpone_replay_log_prob, changed_log_prob)
+    assert torch.equal(postpone_entropy, changed_entropy)
+
+
 def test_explicit_advance_replay_has_no_worker_masks() -> None:
     env = _new_env()
     task = env.get_ready_tasks()[0]
