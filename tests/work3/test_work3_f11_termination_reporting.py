@@ -215,9 +215,11 @@ def test_evaluation_decision_limit_is_not_success(baseline_path: Path) -> None:
     assert result["completed_tasks"] == 0
 
 
-def test_evaluation_accepts_real_completion_on_exact_decision_limit(
+@pytest.mark.parametrize("trajectory_feasible", [True, False])
+def test_evaluation_completion_on_exact_decision_limit_requires_feasibility(
     baseline_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    trajectory_feasible: bool,
 ) -> None:
     """最后一个额度内动作真实完成批次时，不能误报decision_limit。"""
     task = SimpleNamespace(
@@ -271,7 +273,7 @@ def test_evaluation_accepts_real_completion_on_exact_decision_limit(
     monkeypatch.setattr(
         evaluation_module,
         "_check_completed_trajectory_feasibility",
-        lambda _env: (True, {}),
+        lambda _env: (trajectory_feasible, {}),
     )
     env = OneStepCompletionEnv()
 
@@ -284,8 +286,8 @@ def test_evaluation_accepts_real_completion_on_exact_decision_limit(
 
     assert result["decisions"] == 1
     assert result["completed_tasks"] == 1
-    assert result["success"] is True
-    assert result["feasible"] is True
+    assert result["success"] is trajectory_feasible
+    assert result["feasible"] is trajectory_feasible
     assert result["termination_reason"] == "completed"
 
 
