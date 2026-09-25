@@ -75,6 +75,52 @@ def test_failed_terminal_transition_does_not_bootstrap_across_episode() -> None:
     assert buffer.target_values.tolist() == [0.0]
 
 
+def test_l01_single_success_terminal_step_uses_zero_bootstrap() -> None:
+    """真实终止单步样本用零后继值，TD残差为r−V。"""
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.95, normalize_advantages=False)
+    buffer.add(
+        PPOTransition(
+            state_feat=torch.zeros(32),
+            time_urgency=torch.zeros(2),
+            sample_record={},
+            reward=2.0,
+            raw_reward=2.0,
+            value=1.0,
+            log_prob=0.0,
+            done=True,
+            terminated=True,
+        )
+    )
+
+    buffer.finish_trajectory(last_value=99.0)
+
+    assert buffer.advantages.tolist() == pytest.approx([1.0])
+    assert buffer.target_values.tolist() == pytest.approx([2.0])
+
+
+def test_l02_single_nonterminal_step_uses_segment_bootstrap() -> None:
+    """非终止采样段末步使用V_next=4，TD残差为4.6。"""
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.95, normalize_advantages=False)
+    buffer.add(
+        PPOTransition(
+            state_feat=torch.zeros(32),
+            time_urgency=torch.zeros(2),
+            sample_record={},
+            reward=2.0,
+            raw_reward=2.0,
+            value=1.0,
+            log_prob=0.0,
+            done=False,
+            terminated=False,
+        )
+    )
+
+    buffer.finish_trajectory(last_value=4.0)
+
+    assert buffer.advantages.tolist() == pytest.approx([4.6])
+    assert buffer.target_values.tolist() == pytest.approx([5.6])
+
+
 def test_gae_does_not_cross_adjacent_episodes_in_one_worker_segment() -> None:
     """同一worker同一采样段内，真实终止必须切断相邻episode的GAE。"""
     buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.8, normalize_advantages=False)
@@ -282,6 +328,49 @@ def test_advance_without_valid_future_event_is_failed_termination(baseline_path:
     assert info["termination_reason"] == "deadlock"
 
 
+def test_l07_deadlock_is_failed_terminal_without_bootstrap_or_transfer_label(
+    baseline_path: Path,
+) -> None:
+    """deadlock失败终止切断价值bootstrap，未发生转站的周期不生成标签。"""
+    env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
+    env.reset()
+    env.event_queue.reset(start_time=env.state.current_time)
+    cycle_id = env.state.current_cycle
+    _obs, reward, terminated, truncated, info = env.step(
+        {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    )
+
+    assert terminated is True
+    assert truncated is False
+    assert info["success"] is False
+    assert info["termination_reason"] == "deadlock"
+
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.95, normalize_advantages=False)
+    buffer.add(
+        PPOTransition(
+            state_feat=torch.zeros(32),
+            time_urgency=torch.zeros(2),
+            sample_record={},
+            reward=reward,
+            raw_reward=reward,
+            value=1.0,
+            log_prob=0.0,
+            done=True,
+            terminated=True,
+            truncated=False,
+        )
+    )
+    buffer.finish_trajectory(last_value=99.0)
+    assert buffer.advantages.tolist() == pytest.approx([reward - 1.0])
+    assert buffer.target_values.tolist() == pytest.approx([reward])
+
+    records = [{"cycle_idx": cycle_id, "estimated_cmax": 10.0}]
+    attach_transfer_labels(records, list(env.state.transfer_history), env.state.h0)
+    assert records[0]["label_available"] is False
+    assert records[0]["actual_transfer_time"] is None
+    assert records[0]["label_y"] is None
+
+
 class _AlwaysAdvanceAgent:
     def select_action(self, env: AirLineEnvWork3) -> dict[str, ActionBranch]:
         return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
@@ -311,3 +400,40 @@ def test_trajectory_entrypoints_report_advance_deadlock_as_failure(
     assert result["success"] is False
     assert result["termination_reason"] == "deadlock"
     assert result["completed_tasks"] == 0
+
+
+def test_l09_completed_tasks_do_not_terminate_before_aircraft_exit(
+    baseline_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """所有工序状态完成但飞机仍停在末站时，评测必须判为未成功。"""
+    env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
+    original_reset = env.reset
+
+    def reset_with_aircraft_still_at_final_station() -> None:
+        original_reset()
+        for task in env.state.tasks.values():
+            task.status = TaskStatus.COMPLETED
+        for aircraft in env.state.aircraft.values():
+            aircraft.current_station = env.state.num_stations - 1
+        env.event_queue.reset(start_time=env.state.current_time)
+        assert env._check_terminated() is False
+
+    monkeypatch.setattr(env, "reset", reset_with_aircraft_still_at_final_station)
+
+    result = evaluate_single_trajectory(
+        env,
+        "Baseline-C",
+        HeuristicAgentWork3(name="Baseline-C"),
+        max_decisions=1,
+    )
+
+    assert result["success"] is False
+    assert result["termination_reason"] == "completed"
+    assert result["completed_tasks"] == len(env.state.tasks)
+    assert env._check_terminated() is True
+    assert all(aircraft.is_completed for aircraft in env.state.aircraft.values())
+    assert all(
+        env.state.num_stations - 1 in aircraft.exit_times
+        for aircraft in env.state.aircraft.values()
+    )
