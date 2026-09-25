@@ -81,7 +81,19 @@ def test_signed_labels_are_all_used_by_offline_regression() -> None:
     assert fitted[1].item() > 0.2
 
 
-def test_physical_time_lower_bound_remains_after_negative_correction() -> None:
+@pytest.mark.parametrize(
+    ("estimated_cmax", "current_time", "delta", "expected_time"),
+    [
+        pytest.param(101.0, 100.0, -2.0, 100.0, id="strong-negative-correction"),
+        pytest.param(12.0, 5.0, -1.0, 5.0, id="H03-exact-boundary"),
+    ],
+)
+def test_physical_time_lower_bound_remains_after_negative_correction(
+    estimated_cmax: float,
+    current_time: float,
+    delta: float,
+    expected_time: float,
+) -> None:
     """有符号残差不能突破实际当前时刻下界。"""
     head = TimeResidualHead(in_dim=2, hidden_dim=8)
     with torch.no_grad():
@@ -89,15 +101,15 @@ def test_physical_time_lower_bound_remains_after_negative_correction() -> None:
             if isinstance(module, torch.nn.Linear):
                 module.weight.zero_()
                 module.bias.zero_()
-        head.reg_fc[-1].bias.fill_(-2.0)
+        head.reg_fc[-1].bias.fill_(delta)
 
     corrected, remaining, _ = head.predict_corrected_time(
         state_feat=torch.zeros(1, 2),
-        estimated_cmax=101.0,
-        current_time=100.0,
+        estimated_cmax=estimated_cmax,
+        current_time=current_time,
         h0=10.0,
     )
-    assert corrected.item() == pytest.approx(100.0)
+    assert corrected.item() == pytest.approx(expected_time)
     assert remaining.item() == pytest.approx(0.0)
 
 
