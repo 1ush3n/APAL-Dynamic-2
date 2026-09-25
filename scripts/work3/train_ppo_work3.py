@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 from contextlib import AbstractContextManager, nullcontext
 from contextvars import ContextVar
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from functools import wraps
 import hashlib
@@ -617,11 +617,16 @@ def run_training(
     resolved_config_yaml: str | None = None,
     resolved_config_sha256: str | None = None,
     amp_dtype: str = "fp32",
+    warmup_mode: str = "none",
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
     if run_mode not in {"smoke", "pilot"}:
         raise ValueError("run_mode必须是'smoke'或'pilot'；正式训练预算尚未定义")
+    if warmup_mode not in {"none", "uniform_baseline"}:
+        raise ValueError("warmup_mode必须为none或uniform_baseline")
+    if run_mode == "smoke" and warmup_mode != "none":
+        raise ValueError("smoke只能使用warmup_mode=none")
     if (
         (num_iterations is not None and num_iterations < 1)
         or steps_per_iter < 1
@@ -803,6 +808,7 @@ def run_training(
     config = {
         "run_mode": run_mode,
         "disturbance_enabled": run_mode == "pilot",
+        "warmup_mode": warmup_mode,
         "method_variant": profile.name,
         "method_profile": {
             "graph_policy": profile.graph_policy,
@@ -858,6 +864,7 @@ def run_training(
 
     history: list[dict[str, Any]] = []
     total_env_steps = 0
+    warmup_env_steps = 0
     start_time = run_started
     pending_time_labels = PendingTimeLabelCache()
     scenario_log: list[dict[str, Any]] = []
@@ -895,7 +902,7 @@ def run_training(
         )
 
     def start_episode_wave() -> None:
-        nonlocal worker_states
+        nonlocal worker_states, total_env_steps, warmup_env_steps, stop_reason
         wave = episode_wave_index
         plan_offset = (wave % len(episode_plan)) * num_envs
         plan_entries = worker_event_plan[plan_offset : plan_offset + num_envs]
@@ -907,7 +914,23 @@ def run_training(
             scenarios=[scenario if run_mode == "pilot" else None for scenario in scenarios],
             episode_ids=episode_ids,
             episode_indices=[wave] * num_envs,
+            warmup_mode=warmup_mode,
+            max_total_steps=max_decisions,
+            wall_clock_deadline=(
+                None if max_wall_seconds is None else start_time + max_wall_seconds
+            ),
         )
+        warmup_steps_this_wave = sum(
+            0 if item.warmup_result is None else item.warmup_result.step_count
+            for item in reset_results
+        )
+        total_env_steps += warmup_steps_this_wave
+        warmup_env_steps += warmup_steps_this_wave
+        if env.total_env_steps != total_env_steps:
+            raise RuntimeError(
+                "训练入口与spawn环境累计step不一致："
+                f"training={total_env_steps}, vector={env.total_env_steps}"
+            )
         snapshots = env.snapshots()
         worker_states = []
         for worker_id, (scenario, reset_result, snapshot) in enumerate(
@@ -943,6 +966,12 @@ def run_training(
                 "success": None,
                 "truncated": False,
                 "termination_reason": None,
+                "scenario_started": bool(reset_result.scenario_status.get("started")),
+                "warmup": (
+                    None
+                    if reset_result.warmup_result is None
+                    else asdict(reset_result.warmup_result)
+                ),
             }
             state = _TrainingWorkerEpisode(
                 worker_id=worker_id,
@@ -953,25 +982,71 @@ def run_training(
                 snapshot=snapshot,
                 scenario_log=scenario_log_entry,
             )
-            if shaper is not None:
+            if shaper is not None and (
+                reset_result.warmup_result is None
+                or reset_result.warmup_result.completed
+            ):
                 state.predictor_version = shaper.begin_episode(
                     worker_id=worker_id,
                     episode_id=episode_id,
                 )
+            if (
+                reset_result.warmup_result is not None
+                and not reset_result.warmup_result.completed
+            ):
+                reason = reset_result.warmup_result.termination_reason
+                state.done = True
+                state.success = False
+                state.termination_reason = f"warmup_{reason}"
+                scenario_log_entry.update({
+                    "completed": False,
+                    "success": False,
+                    "truncated": True,
+                    "termination_reason": state.termination_reason,
+                })
             scenario_log_entry["potential_snapshot_version"] = state.predictor_version
             worker_states.append(state)
             scenario_log.append(scenario_log_entry)
             update_scenario_effect_log(state)
             logger.info(
-                "加载训练worker=%s episode=%s scenario=%s disturbance=%s timing=%s intensity=%s station=%s",
+                "加载训练worker=%s episode=%s scenario=%s disturbance=%s warmup=%s timing=%s intensity=%s station=%s",
                 worker_id,
                 episode_id,
                 scenario["scenario_id"],
                 run_mode == "pilot",
+                (
+                    None
+                    if reset_result.warmup_result is None
+                    else reset_result.warmup_result.termination_reason
+                ),
                 scenario["timing"],
                 scenario["intensity"],
                 scenario["station_id"],
             )
+        warmup_incomplete = any(
+            item.warmup_result is not None and not item.warmup_result.completed
+            for item in reset_results
+        )
+        if warmup_incomplete and current_budget_reason() is None:
+            stop_reason = "warmup_incomplete"
+            for state in worker_states:
+                if state.done:
+                    continue
+                state.done = True
+                state.success = False
+                state.termination_reason = stop_reason
+                state.scenario_log.update({
+                    "completed": False,
+                    "success": False,
+                    "truncated": True,
+                    "termination_reason": stop_reason,
+                })
+                if shaper is not None and state.predictor_version is not None:
+                    shaper.end_episode(
+                        worker_id=state.worker_id,
+                        episode_id=state.episode_id,
+                    )
+                    state.predictor_version = None
 
     def record_unlabelled_cycles(worker_id: int, target_episode_id: int) -> None:
         if not profile.use_time_auxiliary:
@@ -1709,6 +1784,8 @@ def run_training(
             else "process_peak_working_set_or_rss"
         ),
         "total_decisions": total_env_steps,
+        "warmup_env_steps": warmup_env_steps,
+        "policy_decision_steps": total_env_steps - warmup_env_steps,
         "lightning_optimization_steps": int(lightning_module.optimization_steps),
         "lightning_optimizer_step_attempts": int(
             lightning_module.optimizer_step_attempts
@@ -1829,6 +1906,7 @@ def run_training(
         },
         "trainer_global_step": int(lightning_module.optimization_steps),
         "environment_steps": int(total_env_steps),
+        "warmup_environment_steps": int(warmup_env_steps),
         "event_plan_position": {
             str(worker_id): sum(
                 int(item.get("worker_id", -1)) == worker_id
@@ -1901,6 +1979,12 @@ def main() -> None:
     parser.add_argument("--successful-batch-target", type=int, default=None)
     parser.add_argument("--max-decisions", type=int, default=None)
     parser.add_argument("--max-wall-seconds", type=float, default=None)
+    parser.add_argument(
+        "--warmup-mode",
+        choices=("none", "uniform_baseline"),
+        default=None,
+        help="统一基准暖机仅在配置确认的pilot中启用",
+    )
     parser.add_argument("--time-auxiliary-epochs", type=int, default=None)
     parser.add_argument("--time-auxiliary-batch-size", type=int, default=None)
     parser.add_argument("--lr", type=float, default=None, help="学习率")
@@ -1934,6 +2018,7 @@ def main() -> None:
         "runtime.successful_batch_target": args.successful_batch_target,
         "runtime.total_env_steps": args.max_decisions,
         "runtime.max_wall_seconds": args.max_wall_seconds,
+        "runtime.warmup_mode": args.warmup_mode,
         "runtime.method_profile": args.method,
         "runtime.device": args.device,
         "runtime.main_num_threads": args.main_num_threads,
@@ -2004,6 +2089,7 @@ def main() -> None:
         time_head_ckpt=Path(runtime_config.paths.time_head_checkpoint),
         device=str(runtime_config.runtime.device),
         amp_dtype=str(runtime_config.runtime.amp_dtype),
+        warmup_mode=str(runtime_config.runtime.warmup_mode),
         output_ckpt=output_path,
         report_path=report_path,
         paired_report_path=args.paired_report,

@@ -12,6 +12,7 @@ runtime:
   settle_timeout_seconds: 2.0
   device: cuda:0
   amp_dtype: bf16
+  warmup_mode: none
   main_num_threads: 1
   env_num_threads: 1
   dataloader_num_workers: 0

@@ -25,6 +25,7 @@ _REQUIRED_CONFIG_KEYS = (
     "runtime.settle_timeout_seconds",
     "runtime.device",
     "runtime.amp_dtype",
+    "runtime.warmup_mode",
     "runtime.main_num_threads",
     "runtime.env_num_threads",
     "runtime.dataloader_num_workers",
@@ -85,6 +86,10 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
 
     if config.runtime.run_mode not in {"smoke", "pilot"}:
         raise ValueError("runtime.run_mode仅支持smoke或pilot")
+    if config.runtime.warmup_mode not in {"none", "uniform_baseline"}:
+        raise ValueError("runtime.warmup_mode仅支持none或uniform_baseline")
+    if config.runtime.run_mode == "smoke" and config.runtime.warmup_mode != "none":
+        raise ValueError("smoke必须使用runtime.warmup_mode=none")
     successful_batch_target = OmegaConf.select(
         config,
         "runtime.successful_batch_target",

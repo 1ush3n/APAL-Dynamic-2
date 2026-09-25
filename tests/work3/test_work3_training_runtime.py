@@ -78,6 +78,7 @@ def test_runtime_config_loads_smoke_defaults_and_hashes_resolved_yaml() -> None:
     assert config.runtime.method_profile == "C"
     assert config.runtime.num_envs == 1
     assert config.runtime.amp_dtype == "fp32"
+    assert config.runtime.warmup_mode == "none"
     assert config.runtime.start_method == "spawn"
     assert config.runtime.dataloader_num_workers == 0
     assert config.runtime.total_env_steps == 64
@@ -100,6 +101,7 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
         "ppo.steps_per_iter=8",
         "runtime.device=cuda",
         "runtime.amp_dtype=bf16",
+        "runtime.warmup_mode=none",
     )
     resolved_config = runtime_config_module.load_work3_runtime_config(
         DEFAULT_CONFIG,
@@ -138,6 +140,7 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
     assert captured["env_num_threads"] == 1
     assert captured["settle_timeout_seconds"] == 2.0
     assert captured["amp_dtype"] == "bf16"
+    assert captured["warmup_mode"] == "none"
     assert captured["resolved_config_yaml"] == resolved_yaml
     assert captured["resolved_config_sha256"] == fingerprint
 
@@ -352,6 +355,8 @@ def test_runtime_config_rejects_missing_required_fields(tmp_path: Path) -> None:
         "runtime.total_env_steps=0",
         "runtime.dataloader_num_workers=1",
         "runtime.start_method=fork",
+        "runtime.warmup_mode=unknown",
+        "runtime.warmup_mode=uniform_baseline",
         "ppo.gamma=1.2",
         "paths.baseline=",
         "paths.baseline=' '",

@@ -183,6 +183,73 @@ def test_training_records_forced_advance_from_spawn_worker(
     assert result["lightning_fit_calls"] == 1
 
 
+def test_pilot_warmup_uses_interaction_budget_without_policy_sample(
+    tmp_path: Path,
+) -> None:
+    """预算只够一条暖机step时，不加载扰动或向Actor采样。"""
+    report = run_training(
+        run_mode="pilot",
+        warmup_mode="uniform_baseline",
+        successful_batch_target=1,
+        max_decisions=1,
+        max_wall_seconds=120.0,
+        steps_per_iter=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=43,
+        method_variant="C",
+        num_envs=1,
+        output_ckpt=str(tmp_path / "pilot_warmup_budget.pt"),
+    )
+
+    assert report["training_config"]["warmup_mode"] == "uniform_baseline"
+    assert report["total_decisions"] == 1
+    assert report["policy_decision_steps"] == 0
+    assert report["worker_step_counts"] == [1]
+    assert report["lightning_fit_calls"] == 0
+    episode = report["scenario_log"][0]
+    assert episode["warmup"]["completed"] is False
+    assert episode["warmup"]["step_count"] == 1
+    assert episode["scenario_started"] is False
+    assert episode["success"] is False
+    assert episode["termination_reason"] == "warmup_step_limit"
+    assert report["termination_reason"] == "decision_limit"
+
+
+def test_pilot_starts_policy_only_after_complete_uniform_warmup(
+    tmp_path: Path,
+) -> None:
+    report = run_training(
+        run_mode="pilot",
+        warmup_mode="uniform_baseline",
+        successful_batch_target=1,
+        max_decisions=3000,
+        max_wall_seconds=180.0,
+        num_iterations=1,
+        steps_per_iter=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=44,
+        method_variant="C",
+        num_envs=1,
+        output_ckpt=str(tmp_path / "pilot_after_uniform_warmup.pt"),
+    )
+
+    episode = report["scenario_log"][0]
+    assert episode["warmup"]["completed"] is True
+    assert episode["warmup"]["transfer_count"] == (
+        episode["warmup"]["first_full_station_transfer_count"] + 1
+    )
+    assert episode["scenario_started"] is True
+    assert episode["disturbance_triggered"] is False
+    assert episode["warmup"]["prefix_sha256"]
+    assert report["warmup_env_steps"] == episode["warmup"]["step_count"]
+    assert report["policy_decision_steps"] == 1
+    assert report["total_decisions"] == episode["warmup"]["step_count"] + 1
+    assert report["worker_step_counts"] == [report["total_decisions"]]
+    assert report["history"][0]["environment_steps"] == 1
+
+
 def test_resolved_yaml_and_fingerprint_are_saved_in_report_and_checkpoint(
     tmp_path: Path,
 ) -> None:

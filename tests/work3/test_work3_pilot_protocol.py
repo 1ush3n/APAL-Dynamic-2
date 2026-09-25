@@ -43,6 +43,7 @@ def test_frozen_trial_config_records_protected_runtime_and_training_only_inputs(
     assert config.runtime.settle_timeout_seconds == 2.0
     assert config.runtime.device == "cuda:0"
     assert config.runtime.amp_dtype == "bf16"
+    assert config.runtime.warmup_mode == "none"
     assert config.runtime.main_num_threads == 1
     assert config.runtime.env_num_threads == 1
     assert config.runtime.dataloader_num_workers == 0
