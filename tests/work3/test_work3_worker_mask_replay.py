@@ -11,7 +11,7 @@ import pytest
 import torch
 from torch.distributions import Categorical
 
-from envs.work3.core_types import ActionBranch
+from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.decision_snapshot import DecisionSnapshot, TeamCompletionContext, WorkerSnapshot
 from envs.work3.environment import AirLineEnvWork3
 from envs.work3.event_queue import EventType
@@ -497,6 +497,93 @@ def test_postpone_replay_truncates_before_worker_head() -> None:
         state_feat.unsqueeze(0), urgency.unsqueeze(0), [record]
     )
     _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
+
+
+def test_reserved_revision_replay_uses_saved_branch_mask_after_position_changes() -> None:
+    """预约修订采样后现场分支变非法，旧动作仍按采样时掩码重放。"""
+    env = _new_env()
+    task = next(
+        task
+        for task in env.get_action_candidates()
+        if env.can_reserve(task) and not env.can_postpone(task) and task.skill >= 0
+    )
+    team = tuple(env.valid_team_completion_workers(task, [])[: task.demand])
+    task.in_station_offset = 20.0
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team,
+            "align": 1,
+        }
+    )
+    assert task.status == TaskStatus.RESERVED
+    assert env.get_action_branch_mask(task) == (True, False)
+    env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
+
+    actor = ActorCriticWork3(hidden_dim=32).eval()
+    with torch.no_grad():
+        for parameter in actor.branch_head.parameters():
+            parameter.zero_()
+        actor.branch_head[-1].bias[0] = 100.0
+        actor.branch_head[-1].bias[1] = -100.0
+    state_features, time_features = _inputs()
+    snapshot = actor.make_decision_snapshot(env, state_features, time_features)
+    assert snapshot.branch_masks == ((True, False),)
+    assert snapshot.advance_available
+
+    action, sampled_log_prob, _, record = actor.select_snapshot(
+        snapshot, deterministic=True
+    )
+    assert action is not None
+    assert action["branch"] == ActionBranch.STATION_EXECUTE
+    assert record["candidate_branch_masks"] == ((True, False),)
+    assert record["can_reserve"] is True and record["can_postpone"] is False
+
+    env.state.aircraft[task.aircraft_id].current_station = task.current_station + 1
+    assert env.get_action_branch_mask(task) == (False, False)
+    _, replay_log_prob, _ = actor.evaluate_action_log_probs(
+        state_features.unsqueeze(0), time_features.unsqueeze(0), [record]
+    )
+    _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
+
+
+def test_postpone_replay_uses_saved_branch_mask_after_position_changes() -> None:
+    """仅后移合法的真实工序在采样后失去资格，重放仍使用旧分支掩码。"""
+    env = _new_env()
+    task = next(
+        task
+        for task in env.get_action_candidates()
+        if env.get_action_branch_mask(task) == (False, True)
+    )
+    assert task.status == TaskStatus.UNREADY
+    env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
+
+    actor = ActorCriticWork3(hidden_dim=32).eval()
+    with torch.no_grad():
+        for parameter in actor.branch_head.parameters():
+            parameter.zero_()
+        actor.branch_head[-1].bias[0] = -100.0
+        actor.branch_head[-1].bias[1] = 100.0
+    state_features, time_features = _inputs()
+    snapshot = actor.make_decision_snapshot(env, state_features, time_features)
+    assert snapshot.branch_masks == ((False, True),)
+    assert not snapshot.advance_available
+
+    action, sampled_log_prob, _, record = actor.select_snapshot(
+        snapshot, deterministic=True
+    )
+    assert action is not None and action["branch"] == ActionBranch.POSTPONE
+    assert record["candidate_branch_masks"] == ((False, True),)
+    assert "worker_valid_masks" not in record
+
+    env.state.aircraft[task.aircraft_id].current_station = task.current_station + 1
+    assert env.get_action_branch_mask(task) == (False, False)
+    _, replay_log_prob, entropy = actor.evaluate_action_log_probs(
+        state_features.unsqueeze(0), time_features.unsqueeze(0), [record]
+    )
+    _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
+    assert torch.isfinite(entropy).all()
 
 
 def test_postpone_probability_and_entropy_ignore_dummy_team_and_alignment() -> None:
