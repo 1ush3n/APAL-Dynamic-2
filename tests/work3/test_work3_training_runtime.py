@@ -1163,6 +1163,21 @@ def test_time_label_cache_is_worker_scoped_and_outlives_rollout_clear() -> None:
     assert cache.pending_cycle_counts(worker_id=1, episode_id=3) == {2: 1}
     assert cache.drain_ready() is None
 
+    next_rollout = RolloutBufferWork3(normalize_advantages=False)
+    next_rollout.add(
+        PPOTransition(
+            state_feat=torch.ones(32),
+            time_urgency=torch.zeros(2),
+            sample_record={},
+            reward=0.0,
+            raw_reward=0.0,
+            value=0.0,
+            log_prob=0.0,
+        )
+    )
+    assert len(next_rollout) == 1
+    assert cache.pending_cycle_counts(worker_id=0, episode_id=3) == {2: 1}
+
     assert cache.attach_transfer(
         worker_id=0,
         episode_id=3,
@@ -1174,6 +1189,9 @@ def test_time_label_cache_is_worker_scoped_and_outlives_rollout_clear() -> None:
     assert ready["worker_ids"] == [0]
     assert ready["episode_ids"] == [3]
     assert ready["target_residuals"].tolist() == pytest.approx([1.0])
+    assert ready["estimated_cmax"].tolist() == pytest.approx([10.0])
+    assert ready["graph_snapshots"] == [{"worker": 0}]
+    assert len(next_rollout) == 1
     assert cache.pending_cycle_counts(worker_id=1, episode_id=3) == {2: 1}
     assert cache.drain_ready() is None
     cache.discard_episode(worker_id=1, episode_id=3)
