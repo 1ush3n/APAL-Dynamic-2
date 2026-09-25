@@ -177,8 +177,10 @@ def test_collector_defaults_to_one_nominal_trajectory(
         baseline_path: str,
         scenario: dict[str, object] | None = None,
         trajectory_id: int = 0,
+        warmup_mode: str = "none",
+        warmup_max_steps: int | None = None,
     ) -> dict[str, object]:
-        del agent, baseline_path
+        del agent, baseline_path, warmup_mode, warmup_max_steps
         return {
             "trajectory_id": trajectory_id,
             "scenario_id": "NOMINAL_BASELINE" if scenario is None else "SCENARIO",

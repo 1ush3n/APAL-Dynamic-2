@@ -23,6 +23,7 @@ import argparse
 import json
 import logging
 import math
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,11 @@ from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import extract_compact_state_features
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from utils.work3.uniform_baseline_warmup import (
+    UniformBaselineWarmupResult,
+    run_uniform_baseline_warmup,
+    validate_scenario_after_warmup,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -85,10 +91,21 @@ def collect_single_trajectory(
     baseline_path: str,
     scenario: dict[str, Any] | None = None,
     trajectory_id: int = 0,
+    warmup_mode: str = "none",
+    warmup_max_steps: int | None = None,
 ) -> dict[str, Any]:
     """使用基线 C 策略运行单条完整生产流水线，收集带时间残差标签的决策样本。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     env.reset()
+    warmup_result: UniformBaselineWarmupResult | None = None
+    if warmup_mode == "uniform_baseline":
+        warmup_result = run_uniform_baseline_warmup(
+            env,
+            max_steps=warmup_max_steps,
+        )
+        validate_scenario_after_warmup(scenario, warmup_result)
+    elif warmup_mode != "none":
+        raise ValueError("warmup_mode必须为none或uniform_baseline")
     if scenario is not None:
         env.load_scenario(scenario)
 
@@ -145,6 +162,13 @@ def collect_single_trajectory(
     return {
         "trajectory_id": trajectory_id,
         "scenario_id": scenario["scenario_id"] if scenario else "NOMINAL_BASELINE",
+        "warmup_mode": warmup_mode,
+        "warmup": None if warmup_result is None else asdict(warmup_result),
+        "warmup_env_steps": 0 if warmup_result is None else warmup_result.step_count,
+        "policy_env_steps": max(
+            0,
+            int(env.step_count) - (0 if warmup_result is None else warmup_result.step_count),
+        ),
         "h0": h0,
         "total_steps": len(steps_data),
         "makespan": float(env.state.current_time),
@@ -161,6 +185,8 @@ def collect_all_trajectories(
     num_nominal: int = 1,
     scenario_ids: list[str] | None = None,
     scenario_split_path: str | Path | None = None,
+    warmup_mode: str = "none",
+    warmup_max_steps: int | None = None,
 ) -> list[dict[str, Any]]:
     """收集指定规模的验证轨迹并落盘为 PyTorch 数据集。"""
     agent = HeuristicAgentWork3()
@@ -186,7 +212,12 @@ def collect_all_trajectories(
     logger.info(f"开始收集 {num_nominal} 条名义基准轨迹...")
     for i in range(num_nominal):
         traj = collect_single_trajectory(
-            agent, baseline_path, scenario=None, trajectory_id=traj_idx
+            agent,
+            baseline_path,
+            scenario=None,
+            trajectory_id=traj_idx,
+            warmup_mode=warmup_mode,
+            warmup_max_steps=warmup_max_steps,
         )
         all_trajectories.append(traj)
         traj_idx += 1
@@ -199,7 +230,12 @@ def collect_all_trajectories(
     logger.info(f"开始收集 {len(scenarios)} 条 9 类解耦扰动场景轨迹...")
     for sc in scenarios:
         traj = collect_single_trajectory(
-            agent, baseline_path, scenario=sc, trajectory_id=traj_idx
+            agent,
+            baseline_path,
+            scenario=sc,
+            trajectory_id=traj_idx,
+            warmup_mode=warmup_mode,
+            warmup_max_steps=warmup_max_steps,
         )
         all_trajectories.append(traj)
         traj_idx += 1
@@ -228,6 +264,13 @@ if __name__ == "__main__":
     parser.add_argument("--max_scenarios", type=int, default=None)
     parser.add_argument("--num_nominal", type=int, default=1)
     parser.add_argument("--scenario_split", type=str, default=None)
+    parser.add_argument(
+        "--warmup-mode",
+        choices=("none", "uniform_baseline"),
+        default="uniform_baseline",
+        help="正式训练/验证轨迹默认使用统一基准暖机",
+    )
+    parser.add_argument("--warmup-max-steps", type=int, default=3000)
     args = parser.parse_args()
 
     collect_all_trajectories(
@@ -237,4 +280,6 @@ if __name__ == "__main__":
         max_scenarios=args.max_scenarios,
         num_nominal=args.num_nominal,
         scenario_split_path=args.scenario_split,
+        warmup_mode=args.warmup_mode,
+        warmup_max_steps=args.warmup_max_steps,
     )

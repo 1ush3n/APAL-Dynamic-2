@@ -17,10 +17,12 @@ import torch
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+import scripts.work3.collect_validation_trajectories as collection_module
 from scripts.work3.collect_validation_trajectories import (
     collect_single_trajectory,
     extract_compact_state_features,
 )
+from utils.work3.uniform_baseline_warmup import UniformBaselineWarmupResult
 
 
 @pytest.fixture
@@ -62,6 +64,65 @@ def test_trajectory_collection_and_label_consistency(baseline_path: str) -> None
         p_est = step["estimated_cmax"]
         expected_y = (p_actual - p_est) / h0
         assert abs(step["label_y"] - expected_y) < 1e-5, "监督残差标签计算不一致"
+
+
+def test_collection_loads_fixed_scenario_only_after_uniform_warmup(
+    baseline_path: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class StopAtFirstPolicyDecision(Exception):
+        pass
+
+    scenario = {
+        "scenario_id": "COLLECTION_AFTER_WARMUP",
+        "tau": 1000.0,
+        "recovery_time": 1001.0,
+        "affected_task_keys": ["missing-task"],
+    }
+    warmup_results: list[UniformBaselineWarmupResult] = []
+    scenario_loads: list[tuple[float, float]] = []
+    policy_observations: list[tuple[float, bool]] = []
+    original_warmup = collection_module.run_uniform_baseline_warmup
+    original_load_scenario = AirLineEnvWork3.load_scenario
+
+    def record_warmup(
+        env: AirLineEnvWork3,
+        **kwargs: object,
+    ) -> UniformBaselineWarmupResult:
+        result = original_warmup(env, **kwargs)
+        warmup_results.append(result)
+        return result
+
+    def record_scenario_load(
+        env: AirLineEnvWork3,
+        candidate: dict[str, object],
+    ) -> None:
+        scenario_loads.append((float(env.state.current_time), float(candidate["tau"])))
+        original_load_scenario(env, candidate)
+
+    class ProbeAgent:
+        def select_action(self, env: AirLineEnvWork3) -> None:
+            policy_observations.append(
+                (float(env.state.current_time), bool(env.disturbance_event_triggered))
+            )
+            raise StopAtFirstPolicyDecision
+
+    monkeypatch.setattr(collection_module, "run_uniform_baseline_warmup", record_warmup)
+    monkeypatch.setattr(AirLineEnvWork3, "load_scenario", record_scenario_load)
+    with pytest.raises(StopAtFirstPolicyDecision):
+        collect_single_trajectory(
+            ProbeAgent(),  # type: ignore[arg-type]
+            baseline_path=baseline_path,
+            scenario=scenario,
+            trajectory_id=2,
+            warmup_mode="uniform_baseline",
+        )
+
+    assert len(warmup_results) == 1
+    warmup = warmup_results[0]
+    assert warmup.completed is True
+    assert scenario_loads == [(warmup.completion_time, scenario["tau"])]
+    assert policy_observations == [(warmup.completion_time, False)]
 
 
 def test_dataset_serialization_roundtrip(baseline_path: str) -> None:
