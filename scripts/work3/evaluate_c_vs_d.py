@@ -808,6 +808,14 @@ def _sanitize_for_json(value: Any) -> Any:
     return value
 
 
+def _sha256_file(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def compare_c_vs_d_pair(
     res_c: dict[str, Any],
     res_d: dict[str, Any],
@@ -1109,13 +1117,51 @@ def run_benchmark_evaluation(
         logger.info("-" * 105)
 
     credibility_summary = summarize_benchmark_credibility(results)
+    scenario_manifest_sha256 = (
+        _sha256_file(scenario_split_path)
+        if scenario_split_path is not None
+        else hashlib.sha256(
+            json.dumps(
+                scenarios,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
+    )
+    cudnn_backend = getattr(torch.backends, "cudnn", None)
     report = {
         "schema_version": "work3_eval_c_vs_d_v2",
         "evaluation_protocol": {
+            "device": str(torch_device),
+            "torch_deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
+            "cudnn_deterministic": (
+                None if cudnn_backend is None else bool(cudnn_backend.deterministic)
+            ),
+            "cudnn_benchmark": (
+                None if cudnn_backend is None else bool(cudnn_backend.benchmark)
+            ),
+            "policy_action_selection": "greedy_argmax",
+            "max_decisions": max_decisions,
             "warmup_mode": warmup_mode,
             "max_warmup_steps": max_warmup_steps,
             "reported_cost_includes_warmup_prefix": (
                 warmup_mode == "uniform_baseline"
+            ),
+        },
+        "evaluation_inputs": {
+            "baseline_sha256": _sha256_file(baseline_path),
+            "scenario_pool_sha256": _sha256_file(scenarios_path),
+            "scenario_manifest_sha256": scenario_manifest_sha256,
+            "method_c_checkpoint_sha256": (
+                _sha256_file(method_c_ckpt)
+                if Path(method_c_ckpt).is_file()
+                else None
+            ),
+            "method_d_checkpoint_sha256": (
+                _sha256_file(method_d_ckpt)
+                if Path(method_d_ckpt).is_file()
+                else None
             ),
         },
         "nominal_method_c": nominal_method_c,

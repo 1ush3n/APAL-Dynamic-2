@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import hashlib
 from pathlib import Path
 import subprocess
@@ -756,3 +756,136 @@ def test_training_log_separates_fixed_target_count_from_actual_hit_count(
     assert entry["disturbance_triggered"] is True
     assert entry["actual_hit_count"] == 1
     assert entry["actual_hit_task_keys"] == ["0_15"]
+
+
+def test_m08_repeated_benchmark_uses_same_checkpoints_and_manifest(
+    tmp_path: Path,
+) -> None:
+    """测试用profile检查点只验复现链路，不代表训练后模型或科研评测结果。"""
+    import torch
+
+    from scripts.work3.evaluate_c_vs_d import run_benchmark_evaluation
+    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+
+    baseline_source_path = Path("data/work3/real_283_k10_baseline.json")
+    if not baseline_source_path.is_file():
+        pytest.skip(f"基准实例不存在: {baseline_source_path}")
+    source = MultiAircraftBaseline.load_from_json(baseline_source_path)
+    fixed_tasks = ((1, 15), (2, 18), (3, 12), (4, 20), (5, 24))
+    tasks: dict[str, Any] = {}
+    for station_id, task_id in fixed_tasks:
+        task = source.get_task(0, task_id)
+        assert task.station_id == station_id
+        tasks[task.task_key] = replace(
+            task,
+            in_station_offset=0.0,
+            baseline_start=0.0,
+            baseline_end=task.duration,
+        )
+    small_baseline_path = tmp_path / "m08_baseline.json"
+    MultiAircraftBaseline(
+        num_aircraft=1,
+        num_stations=5,
+        h0=source.h0,
+        tasks=tasks,
+        station_workers=source.station_workers,
+    ).save_to_json(small_baseline_path)
+
+    scenario = {
+        "scenario_id": "M08_FIXED_EVENT",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "delta": 1.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenario_pool_path = tmp_path / "scenario_pool.json"
+    manifest_path = tmp_path / "test_manifest.json"
+    scenario_pool_path.write_text(
+        json.dumps([scenario], sort_keys=True), encoding="utf-8"
+    )
+    manifest_path.write_text(
+        json.dumps([{"scenario_id": scenario["scenario_id"]}], sort_keys=True),
+        encoding="utf-8",
+    )
+
+    rng_state = torch.get_rng_state()
+    try:
+        torch.manual_seed(42)
+        c_checkpoint = _save_profile_checkpoint(tmp_path / "method_c.pt", "C")
+        torch.manual_seed(42)
+        d_checkpoint = _save_profile_checkpoint(
+            tmp_path / "method_d.pt",
+            "D",
+            time_supervision_optimizer_updates=1,
+        )
+    finally:
+        torch.set_rng_state(rng_state)
+
+    def sha256(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    input_fingerprints = {
+        "baseline_sha256": sha256(small_baseline_path),
+        "scenario_pool_sha256": sha256(scenario_pool_path),
+        "scenario_manifest_sha256": sha256(manifest_path),
+        "method_c_checkpoint_sha256": sha256(c_checkpoint),
+        "method_d_checkpoint_sha256": sha256(d_checkpoint),
+    }
+    deterministic_before = torch.are_deterministic_algorithms_enabled()
+    torch.use_deterministic_algorithms(True)
+    try:
+        reports: list[dict[str, Any]] = []
+        for run_name in ("first", "second"):
+            reports.append(
+                run_benchmark_evaluation(
+                    baseline_path=str(small_baseline_path),
+                    scenarios_path=str(scenario_pool_path),
+                    scenario_split_path=manifest_path,
+                    method_c_ckpt=c_checkpoint,
+                    method_d_ckpt=d_checkpoint,
+                    output_json=tmp_path / f"m08_{run_name}.json",
+                    device="cpu",
+                    max_decisions=32,
+                    warmup_mode="none",
+                )
+            )
+    finally:
+        torch.use_deterministic_algorithms(deterministic_before)
+
+    for run_name, report in zip(("first", "second"), reports, strict=True):
+        assert report["evaluation_inputs"] == input_fingerprints
+        persisted = json.loads(
+            (tmp_path / f"m08_{run_name}.json").read_text(encoding="utf-8")
+        )
+        assert persisted["evaluation_inputs"] == input_fingerprints
+        protocol = report["evaluation_protocol"]
+        assert protocol["device"] == "cpu"
+        assert protocol["torch_deterministic_algorithms"] is True
+        assert protocol["policy_action_selection"] == "greedy_argmax"
+        assert "cudnn_deterministic" in protocol
+        assert "cudnn_benchmark" in protocol
+        assert [item["scenario_id"] for item in report["scenario_results"]] == [
+            scenario["scenario_id"]
+        ]
+
+    def assert_semantically_equal(actual: Any, expected: Any, path: str = "report") -> None:
+        ignored_timing_fields = {"evaluation_time_s", "time_c_s", "time_d_s"}
+        if isinstance(actual, dict) and isinstance(expected, dict):
+            assert actual.keys() == expected.keys(), path
+            for key in actual.keys() - ignored_timing_fields:
+                assert_semantically_equal(actual[key], expected[key], f"{path}.{key}")
+        elif isinstance(actual, list) and isinstance(expected, list):
+            assert len(actual) == len(expected), path
+            for index, (left, right) in enumerate(zip(actual, expected, strict=True)):
+                assert_semantically_equal(left, right, f"{path}[{index}]")
+        elif isinstance(actual, float) and isinstance(expected, float):
+            assert actual == pytest.approx(expected, rel=0.0, abs=1e-6), path
+        else:
+            assert actual == expected, path
+
+    assert_semantically_equal(reports[0], reports[1])
