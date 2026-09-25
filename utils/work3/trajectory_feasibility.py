@@ -30,6 +30,7 @@ class TrajectoryExecutionRecord:
     material_ready_time: float = 0.0
     station_entry_time: float | None = None
     aircraft_station_at_start: int | None = None
+    station_exit_time: float | None = None
 
 
 @dataclass(frozen=True)
@@ -93,6 +94,15 @@ def validate_trajectory(
             and record.start < record.station_entry_time - tolerance
         ):
             add("station_entry", record, entry_time=record.station_entry_time)
+        if (
+            record.station_exit_time is not None
+            and record.end > record.station_exit_time + tolerance
+        ):
+            add(
+                "processing_across_transfer",
+                record,
+                exit_time=record.station_exit_time,
+            )
         if (
             record.aircraft_station_at_start is not None
             and int(record.aircraft_station_at_start) != int(record.station_id)

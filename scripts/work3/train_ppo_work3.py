@@ -304,6 +304,10 @@ def _independent_feasibility_from_audit(audit: Any) -> list[dict[str, Any]]:
                     else float(item["station_entry_time"])
                 ),
                 aircraft_station_at_start=int(item["aircraft_station_at_start"]),
+                station_exit_time=(
+                    None if item.get("station_exit_time") is None
+                    else float(item["station_exit_time"])
+                ),
             )
             for item in records_data
         ]

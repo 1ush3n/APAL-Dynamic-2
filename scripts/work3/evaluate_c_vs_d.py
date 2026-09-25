@@ -461,6 +461,9 @@ def _check_completed_trajectory_feasibility(
         if task.actual_start is None or task.actual_end is None:
             return False, {"missing_execution_interval": 1}
         aircraft = env.state.aircraft[task.aircraft_id]
+        station_exit_time = aircraft.exit_times.get(task.current_station)
+        if station_exit_time is None:
+            return False, {"missing_station_exit_time": 1}
         records.append(
             TrajectoryExecutionRecord(
                 aircraft_id=task.aircraft_id,
@@ -472,6 +475,7 @@ def _check_completed_trajectory_feasibility(
                 material_ready_time=float(task.material_ready_time),
                 station_entry_time=aircraft.entry_times.get(task.current_station),
                 aircraft_station_at_start=task.current_station,
+                station_exit_time=float(station_exit_time),
             )
         )
 

@@ -116,6 +116,7 @@ def test_five_station_fixed_actions_match_manual_time_and_costs(tmp_path: Path) 
                 end=task.actual_end,
                 station_entry_time=aircraft.entry_times[station_id - 1],
                 aircraft_station_at_start=station_id - 1,
+                station_exit_time=aircraft.exit_times[station_id - 1],
             )
         )
 

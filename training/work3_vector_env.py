@@ -93,6 +93,7 @@ def _execution_record(
         "material_ready_time": float(task.material_ready_time),
         "station_entry_time": aircraft.entry_times.get(station_id),
         "aircraft_station_at_start": start_station_by_task[task_key],
+        "station_exit_time": aircraft.exit_times.get(station_id),
     }
 
 
