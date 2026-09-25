@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 import subprocess
 import sys
@@ -179,6 +180,23 @@ def test_method_d_without_transfer_labels_reports_skipped_supervision(tmp_path: 
     assert all(label["actual_transfer_time"] is None for label in result["cycle_time_labels"])
     assert result["history"][0]["time_label_count"] == 0
     assert result["history"][0]["time_supervision_status"] == "skipped_no_real_transfer_labels"
+    assert result["history"][0]["time_supervision_steps"] == 0
+    assert result["history"][0]["time_supervision_optimizer_updates"] == 0
+    assert result["history"][0]["ppo_updates"] > 0
+    assert result["history"][0]["lightning_optimization_steps"] > 0
+    assert all(
+        math.isfinite(result["history"][0][metric])
+        for metric in (
+            "policy_loss",
+            "value_loss",
+            "entropy",
+            "total_loss",
+            "approx_kl",
+            "clip_fraction",
+            "grad_norm",
+            "time_loss",
+        )
+    )
     assert result["time_head_training_status"] == "untrained_no_successful_online_update"
     assert result["time_supervision_optimizer_updates"] == 0
     assert result["scenario_log"][0]["truncated"] is True
