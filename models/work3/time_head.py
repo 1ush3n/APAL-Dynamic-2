@@ -18,6 +18,8 @@
 
 from __future__ import annotations
 
+import math
+
 import torch
 import torch.nn as nn
 
@@ -77,6 +79,10 @@ class TimeResidualHead(nn.Module):
         Returns:
             (p_corrected, r_estimated, h_estimated) 均为张量
         """
+        h0_value = float(h0)
+        if not math.isfinite(h0_value) or h0_value <= 0.0:
+            raise ValueError("H0必须为有限正数")
+
         device = state_feat.device
         delta = self.forward(state_feat)  # (...)
 
@@ -91,7 +97,7 @@ class TimeResidualHead(nn.Module):
             t_tensor = current_time.to(device)
 
         # 1. 修正完工时间：P^_q = max{t, P^_q^h + H_0 · δ_ψ(s)}
-        p_raw = est_tensor + (float(h0) * delta)
+        p_raw = est_tensor + (h0_value * delta)
         p_corrected = torch.maximum(t_tensor, p_raw)
 
         # 2. 估计剩余耗时：R^ = P^_q - t
@@ -106,5 +112,24 @@ class TimeResidualHead(nn.Module):
             h_estimated = torch.clamp(p_corrected - p_last_tensor, min=0.0)
         else:
             h_estimated = r_estimated
+
+        values_to_check = [
+            delta,
+            est_tensor,
+            t_tensor,
+            p_raw,
+            p_corrected,
+            r_estimated,
+            h_estimated,
+        ]
+        if last_transfer_time is not None:
+            values_to_check.append(p_last_tensor)
+        # 有限性标量检查堆叠为[N]，在设备侧合并后只同步一次。
+        finite_checks = torch.stack([
+            torch.isfinite(value).all()
+            for value in values_to_check
+        ])
+        if not bool(finite_checks.all().item()):
+            raise FloatingPointError("修正时间预测结果包含NaN或Inf")
 
         return p_corrected, r_estimated, h_estimated

@@ -155,6 +155,51 @@ def test_positive_residual_applies_exact_heuristic_time_correction() -> None:
     assert remaining.item() == pytest.approx(9.0)
 
 
+@pytest.mark.parametrize("h0", [0.0, -1.0, float("nan"), float("inf")])
+def test_time_head_rejects_nonpositive_or_nonfinite_h0(h0: float) -> None:
+    head = TimeResidualHead(in_dim=2, hidden_dim=8)
+
+    with pytest.raises(ValueError, match="H0"):
+        head.predict_corrected_time(
+            state_feat=torch.zeros(1, 2),
+            estimated_cmax=12.0,
+            current_time=5.0,
+            h0=h0,
+        )
+
+
+@pytest.mark.parametrize("delta", [float("nan"), float("inf"), float("-inf")])
+def test_time_head_rejects_nonfinite_residual_prediction(delta: float) -> None:
+    head = TimeResidualHead(in_dim=2, hidden_dim=8)
+    with torch.no_grad():
+        head.reg_fc[-1].weight.zero_()
+        head.reg_fc[-1].bias.fill_(delta)
+
+    with pytest.raises(FloatingPointError):
+        head.predict_corrected_time(
+            state_feat=torch.zeros(1, 2),
+            estimated_cmax=12.0,
+            current_time=5.0,
+            h0=10.0,
+        )
+
+
+@pytest.mark.parametrize(
+    "estimated_cmax",
+    [float("nan"), float("inf"), float("-inf")],
+)
+def test_time_head_rejects_nonfinite_heuristic_prediction(estimated_cmax: float) -> None:
+    head = TimeResidualHead(in_dim=2, hidden_dim=8)
+
+    with pytest.raises(FloatingPointError):
+        head.predict_corrected_time(
+            state_feat=torch.zeros(1, 2),
+            estimated_cmax=estimated_cmax,
+            current_time=5.0,
+            h0=10.0,
+        )
+
+
 def test_time_auxiliary_loss_reaches_shared_graph_encoder(env: AirLineEnvWork3) -> None:
     """时间辅助损失更新共享编码器与时间头，但不更新Critic。"""
     torch.manual_seed(23)
