@@ -110,6 +110,88 @@ def test_worker_calendar_changes_graph_policy_input(env: AirLineEnvWork3) -> Non
     )
 
 
+@pytest.mark.parametrize("changed_input", ["calendar", "skill", "baseline_team"])
+def test_worker_context_changes_reach_worker_selection_head(
+    env: AirLineEnvWork3,
+    changed_input: str,
+) -> None:
+    """单独改变工人资源/关系信息后，变化应送达工人选人评分头。"""
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=32).eval()
+    task = next(
+        item
+        for item in env.state.tasks.values()
+        if item.current_station >= 0 and item.base_team
+    )
+    builder = actor._get_graph_builder(env)
+    graph_before = actor.build_graph_snapshot(env)
+
+    if changed_input == "calendar":
+        worker_id = task.base_team[0]
+        intervals = env.state.workers[worker_id].intervals
+        start = max(
+            (interval.end for interval in intervals),
+            default=env.state.current_time,
+        ) + 1.0
+        env.state.workers[worker_id].add_interval(
+            start,
+            start + 1.0,
+            "calendar_probe",
+        )
+        graph_after = actor.build_graph_snapshot(env)
+        assert not torch.equal(
+            graph_before["worker"].x[builder.worker_id_to_idx[worker_id]],
+            graph_after["worker"].x[builder.worker_id_to_idx[worker_id]],
+        )
+        changed_worker_id = worker_id
+    elif changed_input == "skill":
+        worker_id = next(
+            worker
+            for worker in env.state.station_worker_bindings[task.current_station]
+            if len(env.worker_skills[worker]) < 5
+        )
+        available_skills = set(env.worker_skills[worker_id])
+        added_skill = next(skill for skill in range(5) if skill not in available_skills)
+        env.worker_skills[worker_id] = frozenset((*available_skills, added_skill))
+        graph_after = actor.build_graph_snapshot(env)
+        assert not torch.equal(
+            graph_before["worker"].x[builder.worker_id_to_idx[worker_id]],
+            graph_after["worker"].x[builder.worker_id_to_idx[worker_id]],
+        )
+        changed_worker_id = worker_id
+    else:
+        team = tuple(task.base_team)
+        changed_worker_id = next(
+            worker
+            for worker in env.state.station_worker_bindings[task.current_station]
+            if worker not in team
+        )
+        task.base_team = (changed_worker_id, *team[1:])
+        graph_after = actor.build_graph_snapshot(env)
+        assert not torch.equal(
+            graph_before["task", "baseline_team", "worker"].edge_index,
+            graph_after["task", "baseline_team", "worker"].edge_index,
+        )
+
+    with torch.no_grad():
+        worker_nodes_before = actor.graph_encoder(graph_before)[2]
+        worker_nodes_after = actor.graph_encoder(graph_after)[2]
+    worker_index = builder.worker_id_to_idx[changed_worker_id]
+    observed_head_inputs: list[torch.Tensor] = []
+    hook = actor.worker_graph_score.register_forward_pre_hook(
+        lambda _module, inputs: observed_head_inputs.append(
+            inputs[0].detach().cpu().clone()
+        )
+    )
+    try:
+        actor.worker_graph_score(worker_nodes_before[worker_index].unsqueeze(0))
+        actor.worker_graph_score(worker_nodes_after[worker_index].unsqueeze(0))
+    finally:
+        hook.remove()
+
+    assert len(observed_head_inputs) == 2
+    assert not torch.equal(observed_head_inputs[0], observed_head_inputs[1])
+
+
 def test_training_entry_traces_graph_policy_and_updates_graph_parameters(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
