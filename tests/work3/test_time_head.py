@@ -56,6 +56,17 @@ def test_zero_residual_fallback() -> None:
     assert torch.allclose(r_est, torch.tensor(p_h - t, dtype=torch.float)), "零残差下 R^ 应严格等于 P_q^h - t"
     assert torch.allclose(h_est, torch.tensor(p_h - 50.0, dtype=torch.float)), "零残差下 H^_q 应严格等于 P_q^h - P_{q-1}"
 
+    p_corr, r_est, h_est = head.predict_corrected_time(
+        state_feat=x,
+        estimated_cmax=4.0,
+        current_time=5.0,
+        h0=10.0,
+        last_transfer_time=3.0,
+    )
+    assert torch.allclose(p_corr, torch.full((5,), 5.0)), "P_h<t时零残差应受当前时刻下界约束"
+    assert torch.allclose(r_est, torch.zeros(5)), "P_h<t时剩余时间应为零"
+    assert torch.allclose(h_est, torch.full((5,), 2.0)), "预计节拍应基于受约束后的转站时间"
+
 
 def test_time_monotonicity_and_physical_bound() -> None:
     """测试当网络预测大幅负向残差时，物理时间下界严格生效，绝不早于当前时刻 t。"""
