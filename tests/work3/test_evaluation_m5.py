@@ -132,20 +132,22 @@ def test_repeated_evaluation_does_not_update_actor_or_time_predictor(
             env,
             "Method-D",
             agent,
-            max_decisions=1,
+            max_decisions=64,
             device="cpu",
         )
-        assert result["decisions"] == 1
+        assert result["decisions"] == 64
+        assert result["transfers"] > 0
+        assert result["time_prediction_metrics"]["sample_count"] > 0
         assert agent.last_time_prediction is not None
+        assert all(
+            torch.equal(actor_before[name], value)
+            for name, value in agent.actor_critic.state_dict().items()
+        )
+        assert all(
+            torch.equal(time_head_before[name], value)
+            for name, value in agent.time_head.state_dict().items()
+        )
 
-    assert all(
-        torch.equal(actor_before[name], value)
-        for name, value in agent.actor_critic.state_dict().items()
-    )
-    assert all(
-        torch.equal(time_head_before[name], value)
-        for name, value in agent.time_head.state_dict().items()
-    )
     assert all(parameter.grad is None for parameter in agent.actor_critic.parameters())
     assert all(parameter.grad is None for parameter in agent.time_head.parameters())
 
