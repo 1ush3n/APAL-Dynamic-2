@@ -3,6 +3,7 @@
 import copy
 from itertools import permutations
 from pathlib import Path
+import random
 
 import pytest
 
@@ -59,6 +60,68 @@ def mark_station_intervals(
         task.execution_duration = end - start
         env._station_occupied_tasks[station_id].add(task.task_key)
     return [task.task_key for task in tasks]
+
+
+def endpoint_oracle_capacity_available(
+    intervals: list[tuple[float, float]],
+    capacity: int,
+    start: float,
+    end: float,
+) -> bool:
+    """用独立端点分段枚举判断半开候选区间是否满足容量。"""
+    if end <= start:
+        return True
+    points = {start, end}
+    for interval_start, interval_end in intervals:
+        if interval_start < end and start < interval_end:
+            points.add(max(start, interval_start))
+            points.add(min(end, interval_end))
+
+    ordered_points = sorted(points)
+    for left, right in zip(ordered_points, ordered_points[1:]):
+        if left >= right:
+            continue
+        active = sum(
+            interval_start <= left < interval_end
+            for interval_start, interval_end in intervals
+        )
+        if active >= capacity:
+            return False
+    return True
+
+
+def endpoint_oracle_earliest_start(
+    station_intervals: list[tuple[float, float]],
+    worker_intervals: list[list[tuple[float, float]]],
+    capacity: int,
+    search_start: float,
+    duration: float,
+) -> float:
+    """枚举搜索起点与资源释放端点，独立求最早联合可行时刻。"""
+    all_intervals = [*station_intervals, *(iv for rows in worker_intervals for iv in rows)]
+    candidate_starts = {search_start}
+    candidate_starts.update(
+        interval_end
+        for _, interval_end in all_intervals
+        if interval_end >= search_start
+    )
+    for candidate_start in sorted(candidate_starts):
+        candidate_end = candidate_start + duration
+        workers_available = all(
+            not any(
+                candidate_start < interval_end and interval_start < candidate_end
+                for interval_start, interval_end in intervals
+            )
+            for intervals in worker_intervals
+        )
+        if workers_available and endpoint_oracle_capacity_available(
+            station_intervals,
+            capacity,
+            candidate_start,
+            candidate_end,
+        ):
+            return candidate_start
+    raise AssertionError("有限资源端点后应存在联合可行时刻")
 
 
 def test_station_capacity_scans_entire_candidate_interval(env: AirLineEnvWork3) -> None:
@@ -207,6 +270,119 @@ def test_capacity_tolerance_does_not_hide_material_overlap(
     assert not env._is_station_slot_available(0, 2.0 - 2.0 * tolerance, 3.0)
     assert env._is_station_slot_available(0, 2.0 - tolerance / 2.0, 3.0)
     assert env._is_station_slot_available(0, 2.0 + 2.0 * tolerance, 3.0)
+
+
+def test_n03_random_resource_calendars_match_independent_endpoint_oracle(
+    env: AirLineEnvWork3,
+) -> None:
+    """固定种子的随机小日历，其容量与最早联合预约均匹配独立端点oracle。"""
+    rng = random.Random(20260926)
+    assert not endpoint_oracle_capacity_available([(2.0, 3.0)], 1, 0.0, 10.0)
+    assert endpoint_oracle_capacity_available([(2.0, 3.0)], 1, 3.0, 4.0)
+    saw_available = False
+    saw_conflict = False
+    saw_station_intervals = False
+    saw_worker_intervals = False
+    saw_delayed_start = False
+    saw_worker_caused_delay = False
+    saw_station_caused_delay = False
+
+    for case_index in range(40):
+        for task in env.state.tasks.values():
+            if task.current_station == 0:
+                task.scheduled_start = None
+                task.execution_duration = None
+        env._station_occupied_tasks[0].clear()
+        for calendar in env.state.workers.values():
+            calendar.intervals.clear()
+
+        capacity = rng.randint(1, 3)
+        env.max_slots_per_station = capacity
+        station_intervals = [
+            (float(start), float(start + duration))
+            for start, duration in (
+                (rng.randint(0, 14), rng.randint(1, 5))
+                for _ in range(rng.randint(0, 5))
+            )
+        ]
+        saw_station_intervals |= bool(station_intervals)
+        mark_station_intervals(env, 0, station_intervals)
+
+        station_worker_ids = env.state.station_worker_bindings[0]
+        team = rng.sample(station_worker_ids, k=rng.randint(1, 2))
+        worker_intervals: list[list[tuple[float, float]]] = []
+        for team_index, worker_id in enumerate(team):
+            intervals: list[tuple[float, float]] = []
+            for interval_index in range(rng.randint(0, 4)):
+                start = float(rng.randint(0, 14))
+                end = start + float(rng.randint(1, 4))
+                if all(
+                    not (start < prior_end and prior_start < end)
+                    for prior_start, prior_end in intervals
+                ):
+                    intervals.append((start, end))
+                    env.state.workers[worker_id].add_interval(
+                        start,
+                        end,
+                        f"n03_{case_index}_{team_index}_{interval_index}",
+                    )
+            worker_intervals.append(intervals)
+        saw_worker_intervals |= any(worker_intervals)
+
+        probe_start = float(rng.randint(0, 16))
+        probe_duration = float(rng.randint(1, 5))
+        expected_available = endpoint_oracle_capacity_available(
+            station_intervals,
+            capacity,
+            probe_start,
+            probe_start + probe_duration,
+        )
+        actual_available = env._is_station_slot_available(
+            0,
+            probe_start,
+            probe_start + probe_duration,
+        )
+        assert actual_available is expected_available, f"容量用例 {case_index}"
+        saw_available |= expected_available
+        saw_conflict |= not expected_available
+
+        search_start = float(rng.randint(0, 12))
+        duration = float(rng.randint(1, 5))
+        expected_start = endpoint_oracle_earliest_start(
+            station_intervals,
+            worker_intervals,
+            capacity,
+            search_start,
+            duration,
+        )
+        station_only_start = endpoint_oracle_earliest_start(
+            station_intervals,
+            [],
+            capacity,
+            search_start,
+            duration,
+        )
+        worker_only_start = endpoint_oracle_earliest_start(
+            [],
+            worker_intervals,
+            capacity,
+            search_start,
+            duration,
+        )
+        actual_start = env._find_team_earliest_slot(
+            station_id=0,
+            team=team,
+            search_start=search_start,
+            duration=duration,
+        )
+        assert actual_start == pytest.approx(expected_start), f"预约用例 {case_index}"
+        saw_delayed_start |= expected_start > search_start
+        saw_worker_caused_delay |= expected_start > station_only_start
+        saw_station_caused_delay |= expected_start > worker_only_start
+
+    assert saw_available and saw_conflict
+    assert saw_station_intervals and saw_worker_intervals and saw_delayed_start
+    assert saw_worker_caused_delay and saw_station_caused_delay
 
 
 def test_failed_reservation_search_restores_old_reservation_transaction(
