@@ -258,3 +258,46 @@ def test_formal_evaluation_reports_an_event_that_has_not_triggered(
     assert result["disturbance_effects"]["unhit_reasons"] == {
         "missing-target": "event_not_triggered"
     }
+
+
+def test_renamed_semantic_duplicate_is_not_counted_as_an_independent_event() -> None:
+    """只改scenario_id的重复扰动在三子集切分前应合并为一个事件。"""
+    scenarios = [
+        {
+            "scenario_id": f"S{station_id}_E{event_index}",
+            "station_id": station_id,
+            "aircraft_id": station_id,
+            "affected_task_keys": [f"{station_id}_{event_index}"],
+            "tau": float(event_index + 1),
+            "recovery_time": float(event_index + 2),
+            "valid": True,
+        }
+        for station_id in range(5)
+        for event_index in range(3)
+    ]
+    renamed_duplicate = {
+        **scenarios[0],
+        "scenario_id": "RENAMED_SAME_EVENT",
+    }
+
+    splits = split_scenarios(
+        scenarios + [renamed_duplicate],
+        seed=2026,
+    )
+    output = [item for split in splits.values() for item in split]
+    fingerprints = [
+        (
+            int(item["aircraft_id"]),
+            tuple(sorted(str(key) for key in item["affected_task_keys"])),
+            round(float(item["tau"]), 4),
+            round(float(item["recovery_time"]), 4),
+        )
+        for item in output
+    ]
+
+    assert len(output) == 15
+    assert len(fingerprints) == len(set(fingerprints))
+    assert sum(
+        item["scenario_id"] in {scenarios[0]["scenario_id"], "RENAMED_SAME_EVENT"}
+        for item in output
+    ) == 1
