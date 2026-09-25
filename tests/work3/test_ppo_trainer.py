@@ -97,6 +97,66 @@ def test_buffer_gae_calculation() -> None:
     assert abs(buffer.target_values[0].item() - 5.0536) < 1e-4
 
 
+def test_buffer_gae_two_nonterminal_steps_match_hand_calculation() -> None:
+    """非终止两步样本保留段尾bootstrap并按GAE递推。"""
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.8, normalize_advantages=False)
+    dummy_feat = torch.zeros(32)
+    dummy_urgency = torch.zeros(2)
+
+    for reward, value in ((1.0, 0.5), (2.0, 1.0)):
+        buffer.add(PPOTransition(
+            state_feat=dummy_feat,
+            time_urgency=dummy_urgency,
+            sample_record={},
+            reward=reward,
+            raw_reward=reward,
+            value=value,
+            log_prob=0.0,
+            done=False,
+            terminated=False,
+        ))
+
+    buffer.finish_trajectory(last_value=3.0)
+
+    # delta=[1.4, 3.7]；末步A1=delta1，A0=delta0+0.9*0.8*A1。
+    assert buffer.advantages.tolist() == pytest.approx([4.064, 3.7], abs=1e-6)
+    deltas = [
+        buffer.advantages[0].item() - 0.9 * 0.8 * buffer.advantages[1].item(),
+        buffer.advantages[1].item(),
+    ]
+    assert deltas == pytest.approx([1.4, 3.7], abs=1e-6)
+
+
+def test_buffer_gae_second_step_termination_stops_recursion() -> None:
+    """两步样本第二步真实终止时不使用段尾bootstrap或后续优势。"""
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.8, normalize_advantages=False)
+    dummy_feat = torch.zeros(32)
+    dummy_urgency = torch.zeros(2)
+
+    for reward, value, terminated in ((1.0, 0.5, False), (2.0, 1.0, True)):
+        buffer.add(PPOTransition(
+            state_feat=dummy_feat,
+            time_urgency=dummy_urgency,
+            sample_record={},
+            reward=reward,
+            raw_reward=reward,
+            value=value,
+            log_prob=0.0,
+            done=terminated,
+            terminated=terminated,
+        ))
+
+    buffer.finish_trajectory(last_value=3.0)
+
+    # delta1=A1=2-1=1；delta0=1+0.9*1-0.5=1.4；A0=1.4+0.72=2.12。
+    assert buffer.advantages.tolist() == pytest.approx([2.12, 1.0], abs=1e-6)
+    assert buffer.advantages[1].item() == pytest.approx(1.0, abs=1e-6)
+    assert (
+        buffer.advantages[0].item() - 0.9 * 0.8 * buffer.advantages[1].item()
+        == pytest.approx(1.4, abs=1e-6)
+    )
+
+
 def test_buffer_batches_generator() -> None:
     """测试 Mini-batch 生成器输出维度与样本字典对齐。"""
     buffer = RolloutBufferWork3(gamma=0.99, gae_lambda=0.95, normalize_advantages=True)
