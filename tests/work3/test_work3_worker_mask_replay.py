@@ -158,6 +158,78 @@ def test_stay_replay_uses_sampled_skill_masks_after_live_state_changes() -> None
     )
 
 
+def test_sampled_worker_order_replays_after_environment_sorts_execution_team() -> None:
+    """执行团队可排序，PPO仍按采样时逐人选择顺序重放。"""
+    env = _new_env()
+    actor = ActorCriticWork3(hidden_dim=32)
+    task = next(
+        task
+        for task in env.get_action_candidates()
+        if env.can_reserve(task)
+        and 2 <= len(env.state.station_worker_bindings[task.current_station])
+        <= actor.max_station_workers
+    )
+    station_workers = env.state.station_worker_bindings[task.current_station]
+    task.skill = 3
+    task.demand = 2
+    eligible_workers = set(station_workers[:2])
+    for worker_id in station_workers:
+        skills = set(env.worker_skills[worker_id])
+        if worker_id in eligible_workers:
+            skills.add(task.skill)
+        else:
+            skills.discard(task.skill)
+        env.worker_skills[worker_id] = frozenset(skills)
+    assert set(env.valid_team_completion_workers(task, [])) == eligible_workers
+    env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
+
+    actor.eval()
+    first_local_index, second_local_index = sorted(
+        range(2), key=lambda index: station_workers[index], reverse=True
+    )[:2]
+    with torch.no_grad():
+        for module in (
+            actor.branch_head,
+            actor.worker_score_fc,
+            actor.worker_graph_score,
+            actor.align_head,
+        ):
+            for parameter in module.parameters():
+                parameter.zero_()
+        actor.branch_head[-1].bias[1] = -100.0
+        actor.worker_score_fc[-1].bias[first_local_index] = 2.0
+        actor.worker_score_fc[-1].bias[second_local_index] = 1.0
+
+    state_feat, urgency = _inputs()
+    action, sampled_log_prob, _, record = actor.select_action(
+        env, state_feat, urgency, deterministic=True
+    )
+    assert action is not None
+    assert tuple(record["chosen_worker_indices"]) == (
+        first_local_index,
+        second_local_index,
+    )
+    assert tuple(action["team"]) == tuple(record["chosen_team"])
+    assert tuple(action["team"]) == (
+        station_workers[first_local_index],
+        station_workers[second_local_index],
+    )
+    assert tuple(action["team"]) != tuple(sorted(action["team"]))
+
+    replay_inputs = (state_feat.unsqueeze(0), urgency.unsqueeze(0), [record])
+    _, replay_before, _ = actor.evaluate_action_log_probs(*replay_inputs)
+    _assert_probability_round_trip(sampled_log_prob, replay_before)
+
+    execution_action = dict(action)
+    execution_action["team"] = tuple(sorted(action["team"]))
+    env.step(execution_action)
+    assert task.assigned_team == list(execution_action["team"])
+    assert set(task.assigned_team) == eligible_workers
+
+    _, replay_after, _ = actor.evaluate_action_log_probs(*replay_inputs)
+    _assert_probability_round_trip(sampled_log_prob, replay_after)
+
+
 def test_postpone_replay_truncates_before_worker_head() -> None:
     env = _new_env()
     for task in env.get_ready_tasks():
