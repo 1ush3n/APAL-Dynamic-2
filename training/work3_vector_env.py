@@ -25,6 +25,11 @@ from models.work3.graph_builder import (
 )
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from utils.work3.uniform_baseline_warmup import (
+    UniformBaselineWarmupResult,
+    run_uniform_baseline_warmup,
+    validate_scenario_after_warmup,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +53,8 @@ class Work3ResetResult:
 
     observation: dict[str, Any]
     scenario_status: dict[str, Any]
+    warmup_result: UniformBaselineWarmupResult | None = None
+    scenario_error: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -285,26 +292,60 @@ def _worker_main(
                     known_completed.clear()
                     start_station_by_task.clear()
                     last_info = {}
-                    current_scenario = request.get("scenario")
-                    if current_scenario is not None:
-                        current_scenario = dict(current_scenario)
+                    requested_scenario = request.get("scenario")
+                    if requested_scenario is not None:
+                        requested_scenario = dict(requested_scenario)
                     baseline_material_ready_by_task = {
                         str(task_key): float(env.state.tasks[task_key].material_ready_time)
-                        for task_key in (current_scenario or {}).get("affected_task_keys", ())
+                        for task_key in (requested_scenario or {}).get("affected_task_keys", ())
                         if task_key in env.state.tasks
                     }
+                    warmup_result: UniformBaselineWarmupResult | None = None
+                    scenario_error: str | None = None
+                    current_scenario: dict[str, Any] | None = None
+                    warmup_mode = request.get("warmup_mode", "none")
+                    if warmup_mode not in {"none", "uniform_baseline"}:
+                        raise ValueError(f"未知暖机模式: {warmup_mode}")
+                    if warmup_mode == "uniform_baseline":
+                        warmup_result = run_uniform_baseline_warmup(
+                            env,
+                            max_steps=request.get("max_warmup_steps"),
+                            wall_clock_deadline=request.get("wall_clock_deadline"),
+                        )
+                        known_completed.update(
+                            task.task_key
+                            for task in env.state.tasks.values()
+                            if task.actual_end is not None
+                        )
+                        if warmup_result.completed:
+                            try:
+                                validate_scenario_after_warmup(
+                                    requested_scenario,
+                                    warmup_result,
+                                )
+                            except ValueError as exc:
+                                scenario_error = str(exc)
+                            else:
+                                current_scenario = requested_scenario
+                    else:
+                        current_scenario = requested_scenario
                     if current_scenario is not None:
                         env.load_scenario(current_scenario)
                         observation = env._get_observation()
                     processed_events.clear()
+                    scenario_status = _scenario_status(
+                        env,
+                        requested_scenario,
+                        baseline_material_ready_by_task=baseline_material_ready_by_task,
+                        in_flight=not env._check_terminated(),
+                    )
+                    if warmup_mode == "uniform_baseline" and current_scenario is None:
+                        scenario_status["started"] = False
                     result: Any = Work3ResetResult(
                         observation=observation,
-                        scenario_status=_scenario_status(
-                            env,
-                            current_scenario,
-                            baseline_material_ready_by_task=baseline_material_ready_by_task,
-                            in_flight=not env._check_terminated(),
-                        ),
+                        scenario_status=scenario_status,
+                        warmup_result=warmup_result,
+                        scenario_error=scenario_error,
                     )
                 elif command == "snapshot":
                     estimated_cmax = compute_cycle_heuristic_cmax(env.state)
@@ -516,7 +557,7 @@ class Work3VectorEnv:
 
     @property
     def step_settlement_requests(self) -> int:
-        """已发送并等待worker回执的step请求数，包含超时或中断请求。"""
+        """已计入交互预算的环境step数，含暖机实际步数和超时step请求。"""
         return self._budget_reserved_steps
 
     def _next_request_id(self) -> int:
@@ -706,6 +747,9 @@ class Work3VectorEnv:
         scenarios: Sequence[dict[str, Any] | None],
         episode_ids: Sequence[int],
         episode_indices: Sequence[int],
+        warmup_mode: str = "none",
+        max_total_steps: int | None = None,
+        wall_clock_deadline: float | None = None,
     ) -> tuple[Work3ResetResult, ...]:
         if not (
             len(scenarios)
@@ -714,6 +758,23 @@ class Work3VectorEnv:
             == self._num_envs
         ):
             raise ValueError("reset_all必须为每个worker提供场景、episode_id和episode_index")
+        if warmup_mode not in {"none", "uniform_baseline"}:
+            raise ValueError("warmup_mode必须为none或uniform_baseline")
+        if max_total_steps is not None and (
+            type(max_total_steps) is not int
+            or max_total_steps < self._budget_reserved_steps
+        ):
+            raise ValueError("max_total_steps不得小于已计入的环境交互步数")
+        if wall_clock_deadline is not None and not math.isfinite(wall_clock_deadline):
+            raise ValueError("wall_clock_deadline必须为有限monotonic时间戳")
+        warmup_limits: list[int | None] = [None] * self._num_envs
+        if warmup_mode == "uniform_baseline" and max_total_steps is not None:
+            remaining = max_total_steps - self._budget_reserved_steps
+            base_limit, extra = divmod(remaining, self._num_envs)
+            warmup_limits = [
+                base_limit + int(worker_id < extra)
+                for worker_id in range(self._num_envs)
+            ]
         commands: dict[int, tuple[str, dict[str, Any]]] = {}
         for worker_id, (scenario, episode_id, episode_index) in enumerate(
             zip(scenarios, episode_ids, episode_indices, strict=True)
@@ -732,17 +793,46 @@ class Work3VectorEnv:
                     "scenario": scenario,
                     "episode_id": episode_id,
                     "episode_index": episode_index,
+                    "warmup_mode": warmup_mode,
+                    "max_warmup_steps": warmup_limits[worker_id],
+                    "wall_clock_deadline": wall_clock_deadline,
                 },
             )
         results = self._request_many(commands)
         resets = tuple(results[index] for index in range(self._num_envs))
         if not all(isinstance(result, Work3ResetResult) for result in resets):
             raise TypeError("环境worker返回了非Work3ResetResult结果")
+        warmup_results = [result.warmup_result for result in resets]
+        if warmup_mode == "uniform_baseline":
+            if any(result is None for result in warmup_results):
+                raise TypeError("worker未返回统一基准暖机结果")
+            for worker_id, warmup in enumerate(warmup_results):
+                assert warmup is not None
+                if warmup.step_count > int(warmup_limits[worker_id] or 0) and max_total_steps is not None:
+                    raise RuntimeError("worker暖机步数超过预分配交互预算")
+                self._total_env_steps += warmup.step_count
+                self._budget_reserved_steps += warmup.step_count
+                self._worker_step_counts[worker_id] += warmup.step_count
+        elif any(result is not None for result in warmup_results):
+            raise TypeError("未启用暖机的reset不应返回暖机结果")
+        scenario_errors = [
+            (worker_id, result.scenario_error)
+            for worker_id, result in enumerate(resets)
+            if result.scenario_error is not None
+        ]
+        if scenario_errors:
+            raise ValueError(f"暖机后固定场景校验失败: {scenario_errors}")
+        if max_total_steps is not None and self._budget_reserved_steps > max_total_steps:
+            raise RuntimeError("reset_all实际交互步数超过总预算")
         return resets
 
     def reset_from_plan(
         self,
         plan: Sequence[dict[str, Any]],
+        *,
+        warmup_mode: str = "none",
+        max_total_steps: int | None = None,
+        wall_clock_deadline: float | None = None,
     ) -> tuple[Work3ResetResult, ...]:
         """按冻结的worker/episode坐标装载一轮场景，不按完成先后重抽。"""
         if len(plan) != self._num_envs:
@@ -769,6 +859,9 @@ class Work3VectorEnv:
             scenarios=[item["scenario"] for item in ordered],
             episode_ids=[item["episode_id"] for item in ordered],
             episode_indices=[item["episode_index"] for item in ordered],
+            warmup_mode=warmup_mode,
+            max_total_steps=max_total_steps,
+            wall_clock_deadline=wall_clock_deadline,
         )
 
     def snapshot(self, *, worker_id: int = 0) -> DecisionSnapshot:

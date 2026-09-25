@@ -8,6 +8,7 @@ import json
 import os
 import random
 import sys
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
@@ -2511,3 +2512,65 @@ def test_pilot_success_target_waits_for_started_episodes_to_finish() -> None:
         successful_batch_count=0,
         active_episode_count=0,
     )
+
+
+def test_spawn_reset_runs_uniform_warmup_before_loading_fixed_scenario() -> None:
+    from training.work3_vector_env import Work3VectorEnv
+
+    vector = Work3VectorEnv(
+        env_kwargs={
+            "baseline_json_path": str(
+                ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+            )
+        },
+        num_envs=1,
+        worker_torch_num_threads=1,
+        start_method="spawn",
+    )
+    scenario = {
+        "scenario_id": "WARMUP_THEN_FIXED_EVENT",
+        "tau": 1000.0,
+        "affected_task_keys": [],
+    }
+    try:
+        reset = vector.reset_all(
+            scenarios=[scenario],
+            episode_ids=[3],
+            episode_indices=[0],
+            warmup_mode="uniform_baseline",
+            max_total_steps=3000,
+            wall_clock_deadline=time.monotonic() + 120.0,
+        )[0]
+
+        assert reset.warmup_result is not None
+        assert reset.warmup_result.completed is True
+        assert reset.warmup_result.first_full_station_transfer_count is not None
+        assert reset.warmup_result.transfer_count == (
+            reset.warmup_result.first_full_station_transfer_count + 1
+        )
+        assert reset.scenario_status["started"] is True
+        assert reset.scenario_status["event_triggered"] is False
+        assert vector.total_env_steps == reset.warmup_result.step_count
+        assert vector.budget_reserved_steps == reset.warmup_result.step_count
+        assert vector.worker_step_counts == (reset.warmup_result.step_count,)
+        assert vector.snapshot().current_time == pytest.approx(
+            reset.warmup_result.completion_time
+        )
+
+        prior_steps = vector.total_env_steps
+        capped_reset = vector.reset_all(
+            scenarios=[scenario],
+            episode_ids=[4],
+            episode_indices=[0],
+            warmup_mode="uniform_baseline",
+            max_total_steps=prior_steps,
+            wall_clock_deadline=time.monotonic() + 30.0,
+        )[0]
+        assert capped_reset.warmup_result is not None
+        assert capped_reset.warmup_result.completed is False
+        assert capped_reset.warmup_result.step_count == 0
+        assert capped_reset.scenario_status["started"] is False
+        assert vector.total_env_steps == prior_steps
+        assert vector.budget_reserved_steps == prior_steps
+    finally:
+        vector.close()
