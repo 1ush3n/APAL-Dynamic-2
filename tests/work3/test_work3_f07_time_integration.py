@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import tempfile
 
@@ -16,7 +17,10 @@ from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, Rollou
 from models.work3.ppo_trainer import PPOTrainerWork3
 from models.work3.time_head import TimeResidualHead
 from models.work3.action_fusion import compute_time_urgency_vector
-from scripts.work3.train_ppo_work3 import compute_online_time_inputs
+from scripts.work3.train_ppo_work3 import (
+    compute_online_snapshot_time_inputs,
+    compute_online_time_inputs,
+)
 
 
 @pytest.fixture
@@ -270,6 +274,106 @@ def test_auxiliary_supervision_calls_do_not_scale_with_ppo_batch_size(
         call_counts.append(count)
 
     assert call_counts == [2, 2]
+
+
+def test_ppo_replay_uses_saved_time_input_after_online_head_changes(
+    env: AirLineEnvWork3,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PPO重放保留采样时显式时间输入，不按更新后的时间头重算。"""
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
+    actor.eval()
+    head = TimeResidualHead(in_dim=16, hidden_dim=16)
+    _zero_head(head, 0.0)
+    cmax = compute_cycle_heuristic_cmax(env.state)
+    state_feat = extract_compact_state_features(env.state, cmax)
+    base_snapshot = actor.make_decision_snapshot(
+        env,
+        state_feat,
+        torch.zeros(2),
+        estimated_cmax=cmax,
+    )
+    graph_snapshot, sampled_time_input, _ = compute_online_snapshot_time_inputs(
+        actor, head, base_snapshot
+    )
+    action_snapshot = replace(base_snapshot, time_features=sampled_time_input)
+    action, old_log_prob, value, record = actor.select_snapshot(
+        action_snapshot, deterministic=True
+    )
+    assert action is not None
+
+    buffer = RolloutBufferWork3(normalize_advantages=False)
+    buffer.add(PPOTransition(
+        state_feat=state_feat,
+        time_urgency=sampled_time_input,
+        sample_record=record,
+        reward=1.0,
+        raw_reward=1.0,
+        value=value,
+        log_prob=old_log_prob,
+        done=True,
+        terminated=True,
+        action_dict=action,
+    ))
+    buffer.finish_trajectory()
+    saved_time_input = buffer.transitions[0].time_urgency.clone()
+
+    with torch.no_grad():
+        head.reg_fc[-1].bias.add_(0.5)
+    _, changed_time_input, _ = compute_online_snapshot_time_inputs(
+        actor, head, base_snapshot
+    )
+    assert not torch.equal(sampled_time_input, changed_time_input)
+
+    trainer = PPOTrainerWork3(
+        actor_critic=actor,
+        time_head=head,
+        time_loss_coef=1.0,
+    )
+    observed_time_inputs: list[torch.Tensor] = []
+    original_evaluate = actor.evaluate_action_log_probs
+
+    def capture_time_inputs(
+        *,
+        state_feats: torch.Tensor,
+        time_urgencies: torch.Tensor,
+        sample_records: list[dict[str, object]],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        observed_time_inputs.append(time_urgencies.detach().cpu().clone())
+        return original_evaluate(
+            state_feats=state_feats,
+            time_urgencies=time_urgencies,
+            sample_records=sample_records,
+        )
+
+    monkeypatch.setattr(actor, "evaluate_action_log_probs", capture_time_inputs)
+    head_before_update = {
+        name: parameter.detach().clone()
+        for name, parameter in head.named_parameters()
+    }
+    metrics = trainer.train_step(
+        buffer,
+        ppo_epochs=1,
+        batch_size=1,
+        time_auxiliary_batch={
+            "state_feats": state_feat.unsqueeze(0),
+            "graph_snapshots": [graph_snapshot],
+            "target_residuals": torch.tensor([-0.3]),
+            "worker_ids": [0],
+            "episode_ids": [1],
+            "cycle_ids": [base_snapshot.cycle_id],
+            "decision_ids": [0],
+        },
+    )
+
+    assert len(observed_time_inputs) == 1
+    assert torch.equal(observed_time_inputs[0], saved_time_input.unsqueeze(0))
+    assert torch.equal(buffer.transitions[0].time_urgency, saved_time_input)
+    assert metrics["time_supervision_steps"] == 1
+    assert any(
+        not torch.equal(head_before_update[name], parameter.detach())
+        for name, parameter in head.named_parameters()
+    )
 
 
 def test_shaping_snapshot_freezes_graph_and_time_head_until_update(env: AirLineEnvWork3) -> None:
