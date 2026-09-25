@@ -261,11 +261,17 @@ def worker_completion_mask(
 - [x] 以`rag_env`执行完整工作三测试集（包含全部runtime测试）；结果`304 passed, 3 skipped in 1576.95s`。3个检查点/轨迹条件skip不计通过；未运行全仓`pytest -q`，不声称全仓通过。
 - [x] RTX 4060上执行明确受限的双worker BF16 smoke：2个聚合step均实际命中固定目标，完成1次Lightning优化更新，worker未初始化CUDA；严格检查点/方法profile规则由Task7C测试覆盖。此项只证明链路，不代表正式训练。
 - [x] 运行`num_envs=2` FP32与RTX 4060 BF16双worker AMP集成验收；均保留截断/未完成状态，不据此作性能比较。FP16探索曾发生非有限梯度并被GradScaler跳过（成功更新0、跳过1、scale降至32768）；当前硬件通路测试用BF16，不据此冻结完整试点精度。
-- [ ] 所有门槛通过后，只冻结下一步完整批次试点的配置、训练集事件清单及哈希、种子、总聚合step/墙钟限制、`num_envs`、精度、batch/rollout和C/D初始权重指纹；提交冻结记录。此任务不自动授权正式测试集评测或方法优劣结论。
+- [x] 所有门槛通过后，只冻结下一步完整批次试点的配置、训练集事件清单及哈希、种子、总聚合step/墙钟限制、`num_envs`、精度、batch/rollout和C/D初始权重指纹；提交冻结记录。此任务不自动授权正式测试集评测或方法优劣结论。
 
 **Task8执行记录（2026-09-25）：** 资源遥测反例先证明CUDA和CPU训练报告都缺少分设备字段；新增字段保留旧`memory_peak_bytes`兼容行为，并将`host_memory_peak_bytes`明确限定为训练主进程峰值常驻内存。定向CUDA BF16及CPU C/D固定事件用例`2 passed`。新增D端到端有限预算测试由固定命中事件触发真实转站，检查缓存中的残差同时包含正负值、时间监督有成功优化更新、episode内势函数版本固定；不完整周期的真实转站标签继续缺失。该测试首轮因错误地断言所有周期都已完成而失败，修正为核验未完成周期不伪造标签后通过。代码提交`cd90e23`，D有符号残差集成测试提交`98b031e`。定向测试`1 passed, 47 deselected in 54.50s`；整套`tests/work3`（含该测试）`304 passed, 3 skipped in 1576.95s`；`py_compile`和`git diff --check`通过。试点预算/设备/场景清单及C/D真实初始权重指纹尚未冻结，未启动完整批次或正式比较；未推送。
 
-**成功目标退出边界复核（2026-09-25）：** 对照设计稿“达到成功批次目标后停止分配新episode；已启动episode在预算允许时继续到终态”，发现旧入口在第一个成功episode后立即结束当前rollout wave，并将仍活动worker截断。新增测试先因缺少“活动episode数参与停止判定”的逻辑失败（`1 failed`）；修复后`tests/work3/test_work3_training_runtime.py`、`tests/work3/test_work3_r08_training_reproducibility.py`及`tests/work3/test_train_ppo.py`合计`64 passed in 642.15s`，相关`py_compile`与`git diff --check`通过。实现/测试提交`13ad3c9`。现在只有成功目标已达且活动episode数为0才正常停止；若步数或墙钟预算先耗尽，活动episode仍按预算截断语义记录。完整批次试点协议仍未冻结。
+**成功目标退出边界复核（2026-09-25）：** 对照设计稿“达到成功批次目标后停止分配新episode；已启动episode在预算允许时继续到终态”，发现旧入口在第一个成功episode后立即结束当前rollout wave，并将仍活动worker截断。新增测试先因缺少“活动episode数参与停止判定”的逻辑失败（`1 failed`）；修复后`tests/work3/test_work3_training_runtime.py`、`tests/work3/test_work3_r08_training_reproducibility.py`及`tests/work3/test_train_ppo.py`合计`64 passed in 642.15s`，相关`py_compile`与`git diff --check`通过。实现/测试提交`13ad3c9`。现在只有成功目标已达且活动episode数为0才正常停止；若步数或墙钟预算先耗尽，活动episode仍按预算截断语义记录。完整批次试点协议随后完成冻结，见下文。
+
+**完整批次试点协议冻结（2026-09-25）：** 新增`conf/work3/pilot_trial_20260925.yaml`，仅冻结训练集可行性试点，不构成正式性能实验：C先于D；seed 42；2个spawn环境；RTX 4060 Laptop GPU、BF16；总交互上限12000个所有环境实际step、墙钟上限5400秒、成功批次目标1；每段64步、PPO epoch 1、batch 64；线程均为1，worker结算时限2秒。达到目标后不派发新wave，但同一轮已启动的轨迹会在预算允许时继续到终态。
+
+训练输入仅用train拆分的25个场景；完整事件ID顺序和manifest位于冻结YAML，`episode_plan_sha256=b5f331765ecc7f9db8e706ed26c338ccd7998ecf7008521402527d153d27f724`，双worker固定映射`worker_event_plan_sha256=1d70bbe08cd7f12000b55edfb364e89c5cd433c14726b9556c0fe7d8816bbfc6`。场景池、拆分及基线SHA分别为`ecd2ff2fbca9f535195c1b2257896efc1571a9e9e39f9e946c04c856861ab10b`、`f43fd5145eb5cc97e04540e9145d7add6fdacdcb0ea0e3057e1777b0e97ec98f`、`d38f827460ec7142493da940bb48648d694234f414193e8d536ecf8e8d175a56`。C/D唯一配置覆盖差异为`runtime.method_profile`；resolved YAML SHA分别为`15b492dd265fef6ce5836503330fccf1bedc0164217fda6f103715ca1934878d`和`4fc7eff7b14523d0b7e970c469938c81f4e0e58b988ffc7ddf0682d935917418`。共同初始Actor指纹为`1b3525dbbf0d67ff9dce95f18f9812e64bd11bc4b715bb24d23da170f4877bb2`。D不加载来源不明的旧时间头，随机初始化后仅使用训练期间获得的真实转站标签在线监督；配置测试验证该预训练路径不存在。
+
+配置文件SHA256=`8b7aff26f63d99b0e4d2b4fa0b7f3db28cf5ee09726a0a05c96612e476a77191`；首轮协议测试先以`3 failed`确认冻结配置缺失，配置固化后`tests/work3/test_work3_pilot_protocol.py`为`3 passed in 20.65s`，覆盖预算/硬件、D无预训练、原始文件/事件计划哈希、actor指纹及C/D除profile外配置一致。另用真实C训练入口执行1步CPU FP32 smoke，报告初始Actor指纹与冻结值一致、单次更新完成；该截断烟测不计为完整生产试点。实机预核验Python 3.11.15、PyTorch 2.12.0+cu132、Lightning 2.6.5、NumPy 2.4.6，RTX 4060硬件BF16可用。配置/测试提交`6b84d0f`；冻结记录另行提交。完整C/D试点尚未运行。
 
 ## 任务提交和记录规则
 
