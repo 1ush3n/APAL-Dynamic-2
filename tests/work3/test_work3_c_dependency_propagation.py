@@ -13,6 +13,7 @@ from envs.work3.core_types import ActionBranch, TaskRuntimeState, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from envs.work3.event_queue import EventType
 from models.work3.actor_critic import ActorCriticWork3
+from utils.work3.objective_evaluator import evaluate_trajectory_objective
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")
@@ -137,6 +138,19 @@ def _assert_task_resources_released(env: AirLineEnvWork3, task: TaskRuntimeState
     )
 
 
+def _alternative_valid_team(
+    env: AirLineEnvWork3,
+    task: TaskRuntimeState,
+    previous_team: tuple[int, ...],
+) -> tuple[int, ...]:
+    workers = env.valid_team_completion_workers(task, [])
+    return next(
+        tuple(team)
+        for team in combinations(workers, task.demand)
+        if set(team) != set(previous_team) and _team_is_valid(env, task, tuple(team))
+    )
+
+
 def test_parent_reservation_invalidation_cancels_child_immediately() -> None:
     """父预约因恢复推迟而失效时，子预约同步失效并释放资源。"""
     env = _new_env()
@@ -205,6 +219,165 @@ def test_parent_delay_propagates_through_chain_but_preserves_unrelated_booking()
         worker_id: tuple(env.state.workers[worker_id].intervals)
         for worker_id in unrelated_team
     } == unrelated_intervals
+
+
+def test_parent_disturbance_cancels_chain_then_reselects_teams_and_balances_ledger() -> None:
+    """父预约受扰后整条预约链失效，逐级重选并保持旧事件/费用账本正确。"""
+    env = _new_env()
+    parent = env.state.tasks["0_165"]
+    child = env.state.tasks["0_166"]
+    grandchild = env.state.tasks["0_172"]
+    chain = (parent, child, grandchild)
+    chain_keys = {task.task_key for task in chain}
+    for task in chain:
+        _complete_non_chain_predecessors(env, task, chain_keys)
+
+    # 用正式step建立旧预约链，开工位置与基准安排相同，初始费用为零。
+    next_start = 8.0
+    for task in chain:
+        task.in_station_offset = next_start
+        task.baseline_assignment = {
+            "station": task.current_station,
+            "team": list(task.base_team),
+            "position": next_start,
+        }
+        task.last_published_assignment = task.baseline_assignment.copy()
+        _, reward, terminated, truncated, info = env.step(
+            {
+                "task_key": task.task_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": tuple(task.base_team),
+                "align": 1,
+            }
+        )
+        assert not terminated and not truncated
+        assert reward == pytest.approx(0.0)
+        assert task.status == TaskStatus.RESERVED
+        assert task.scheduled_start == pytest.approx(next_start)
+        assert info["revision_changed"] is False
+        assert task.execution_duration is not None
+        next_start = task.scheduled_start + task.execution_duration
+
+    old_starts = {task.task_key: task.scheduled_start for task in chain}
+    old_generations = {task.task_key: task.generation for task in chain}
+    old_events = {
+        task.task_key: tuple(
+            event
+            for event in env.event_queue._heap
+            if event.task_key == task.task_key
+            and event.event_type == EventType.TASK_START
+        )
+        for task in chain
+    }
+    assert all(old_events.values())
+    original_baselines = {
+        task.task_key: task.baseline_assignment.copy() for task in chain
+    }
+
+    env.load_scenario(
+        {
+            "scenario_id": "M03_PARENT_RESERVATION_DELAY",
+            "tau": 5.0,
+            "recovery_time": 20.0,
+            "affected_task_keys": [parent.task_key],
+        }
+    )
+    _, disturbance_reward, terminated, truncated, info = env.step(
+        {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    )
+    assert info["advanced"] is True
+    assert env.state.current_time == pytest.approx(5.0)
+    assert disturbance_reward == pytest.approx(0.0)
+    assert not terminated and not truncated
+    assert env.disturbance_event_results["M03_PARENT_RESERVATION_DELAY"][
+        "actual_hit_task_keys"
+    ] == (parent.task_key,)
+    for task in chain:
+        assert task.status == TaskStatus.UNREADY
+        assert task.generation > old_generations[task.task_key]
+        _assert_task_resources_released(env, task)
+        for event in old_events[task.task_key]:
+            assert event.timestamp == pytest.approx(old_starts[task.task_key])
+            assert not env.event_queue._is_event_valid(event)
+
+    # 每一层都改用不同合法团队重新发布，后继时刻从新父预约重新计算。
+    new_teams: dict[str, tuple[int, ...]] = {}
+    for task in chain:
+        old_team = tuple(task.base_team)
+        new_team = _alternative_valid_team(env, task, old_team)
+        new_teams[task.task_key] = new_team
+        _, reward, terminated, truncated, info = env.step(
+            {
+                "task_key": task.task_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": new_team,
+                "align": 0,
+            }
+        )
+        assert not terminated and not truncated
+        assert info["revision_changed"] is True
+        assert set(task.assigned_team) != set(old_team)
+        assert task.status == TaskStatus.RESERVED
+        assert task.scheduled_start is not None
+        assert task.scheduled_start >= 20.0
+        assert task.baseline_assignment == original_baselines[task.task_key]
+        assert len(task.revision_history) == 1
+        assert reward == pytest.approx(-info["step_cost"])
+
+    assert parent.scheduled_start == pytest.approx(20.0)
+    assert child.scheduled_start is not None
+    assert child.scheduled_start >= parent.scheduled_start + parent.execution_duration
+    assert grandchild.scheduled_start is not None
+    assert grandchild.scheduled_start >= child.scheduled_start + child.execution_duration
+
+    # 旧的8/10/12小时开工事件不能启动任务；到新预约时刻只启动新代数。
+    while parent.status != TaskStatus.RUNNING:
+        _, _, terminated, truncated, info = env.step(
+            {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+        )
+        assert info["advanced"] is True
+        assert not terminated and not truncated
+        if parent.status != TaskStatus.RUNNING:
+            assert all(task.actual_start is None for task in chain)
+    assert parent.actual_start == pytest.approx(parent.scheduled_start)
+    assert child.status == TaskStatus.RESERVED and child.actual_start is None
+    assert grandchild.status == TaskStatus.RESERVED and grandchild.actual_start is None
+
+    for task in chain:
+        while task.status != TaskStatus.COMPLETED:
+            _, _, terminated, truncated, info = env.step(
+                {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+            )
+            assert info["advanced"] is True
+            assert not terminated and not truncated
+        assert task.actual_start == pytest.approx(task.scheduled_start)
+
+    for task in chain:
+        task_intervals = {
+            worker_id: [
+                interval
+                for interval in calendar.intervals
+                if interval.task_key == task.task_key
+            ]
+            for worker_id, calendar in env.state.workers.items()
+        }
+        task_intervals = {
+            worker_id: intervals
+            for worker_id, intervals in task_intervals.items()
+            if intervals
+        }
+        assert set(task_intervals) == set(new_teams[task.task_key])
+        assert all(len(intervals) == 1 for intervals in task_intervals.values())
+        assert all(
+            intervals[0].start == pytest.approx(task.scheduled_start)
+            and intervals[0].end
+            == pytest.approx(task.scheduled_start + task.execution_duration)
+            for intervals in task_intervals.values()
+        )
+
+    objective = evaluate_trajectory_objective(env, weights=env.weights)
+    assert env.cumulative_cost == pytest.approx(objective.j_total, abs=1e-8)
+    assert sum(env.step_rewards) == pytest.approx(-objective.j_total, abs=1e-8)
 
 
 def test_parent_team_duration_change_revalidates_child_but_preserves_unrelated_booking() -> None:
