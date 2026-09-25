@@ -10,10 +10,11 @@ import torch
 from torch_geometric.data import HeteroData
 
 from envs.work3.core_types import ActionBranch
+from envs.work3.decision_snapshot import DecisionSnapshot, TeamCompletionContext, WorkerSnapshot
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-from models.work3.graph_builder import GRAPH_FEATURE_VERSION
+from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 
 
@@ -44,6 +45,100 @@ def _state_inputs(env: AirLineEnvWork3) -> tuple[torch.Tensor, torch.Tensor]:
     return state_feat, urgency
 
 
+def _small_graph(task_count: int, worker_count: int, marker: float) -> HeteroData:
+    graph = HeteroData()
+    graph["task"].x = torch.full((task_count, GRAPH_FEATURE_DIMS["task"]), marker)
+    graph["worker"].x = torch.zeros((worker_count, GRAPH_FEATURE_DIMS["worker"]))
+    graph["worker"].x[:, 0] = torch.arange(worker_count, dtype=torch.float) + marker
+    graph["station"].x = torch.zeros((1, GRAPH_FEATURE_DIMS["station"]))
+    graph["skill"].x = torch.zeros((5, GRAPH_FEATURE_DIMS["skill"]))
+    for edge_type, edge in {
+        ("task", "precedes", "task"): torch.empty((2, 0), dtype=torch.long),
+        ("task", "assigned_to", "station"): torch.tensor(
+            [list(range(task_count)), [0] * task_count], dtype=torch.long
+        ),
+        ("station", "has_task", "task"): torch.tensor(
+            [[0] * task_count, list(range(task_count))], dtype=torch.long
+        ),
+        ("worker", "has_skill", "skill"): torch.tensor(
+            [list(range(worker_count)), [0] * worker_count], dtype=torch.long
+        ),
+        ("skill", "required_by", "task"): torch.tensor(
+            [[0] * task_count, list(range(task_count))], dtype=torch.long
+        ),
+        ("task", "requires", "skill"): torch.tensor(
+            [list(range(task_count)), [0] * task_count], dtype=torch.long
+        ),
+        ("skill", "provided_by", "worker"): torch.tensor(
+            [[0] * worker_count, list(range(worker_count))], dtype=torch.long
+        ),
+        ("task", "done_by", "worker"): torch.empty((2, 0), dtype=torch.long),
+        ("task", "baseline_team", "worker"): torch.tensor(
+            [[0] * min(task_count, worker_count), list(range(min(task_count, worker_count)))],
+            dtype=torch.long,
+        ),
+        ("task", "last_published_team", "worker"): torch.empty(
+            (2, 0), dtype=torch.long
+        ),
+    }.items():
+        graph[edge_type].edge_index = edge
+    return graph
+
+
+def _small_snapshot(
+    *,
+    worker_id: int,
+    task_count: int,
+    worker_ids: tuple[int, ...],
+    candidate_indices: tuple[int, ...],
+    demands: tuple[int, ...],
+    marker: float,
+) -> DecisionSnapshot:
+    contexts = tuple(
+        TeamCompletionContext(
+            task_key=f"env{worker_id}_task{task_index}",
+            station_id=worker_id,
+            required_skill=0,
+            demand=demand,
+            workers=tuple(
+                WorkerSnapshot(
+                    worker_id=identity,
+                    skills=(0,),
+                    efficiency=1.0,
+                    calendar_intervals=(),
+                )
+                for identity in worker_ids
+            ),
+        )
+        for task_index, demand in zip(candidate_indices, demands, strict=True)
+    )
+    keys = tuple(context.task_key for context in contexts)
+    return DecisionSnapshot(
+        worker_id=worker_id,
+        episode_id=worker_id,
+        episode_index=0,
+        state_features=torch.full((32,), marker),
+        time_features=torch.tensor([marker, marker + 0.5]),
+        graph_snapshot=_small_graph(task_count, len(worker_ids), marker),
+        candidate_task_keys=keys,
+        candidate_task_features=torch.full((len(keys), 8), marker),
+        branch_masks=tuple((True, False) for _ in keys),
+        team_contexts=contexts,
+        candidate_task_node_indices=candidate_indices,
+        worker_node_indices=tuple(
+            tuple(range(len(worker_ids))) for _ in candidate_indices
+        ),
+        reserved_flags=tuple(False for _ in keys),
+        advance_available=False,
+        current_time=0.0,
+        cycle_id=0,
+        estimated_cmax=1.0,
+        h0=1.0,
+        last_transfer_time=0.0,
+        graph_version=GRAPH_FEATURE_VERSION,
+    )
+
+
 def test_sampling_record_contains_immutable_graph_snapshot(env: AirLineEnvWork3) -> None:
     """采样时必须保存图快照，不能在现场变化后用新状态重构旧动作。"""
     net = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=32)
@@ -67,6 +162,89 @@ def test_sampling_record_contains_immutable_graph_snapshot(env: AirLineEnvWork3)
     else:
         assert record["action_type"] == "advance_to_next_event"
         assert record["worker_node_indices"] == ()
+
+
+def test_minibatch_keeps_local_candidate_and_worker_indices_across_graph_sizes() -> None:
+    """异构图样本尺寸不同时，候选节点及工人身份仍按各自图的本地索引解释。"""
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16).eval()
+    snapshots = (
+        _small_snapshot(
+            worker_id=0,
+            task_count=3,
+            worker_ids=(10, 11),
+            candidate_indices=(2, 0),
+            demands=(1, 2),
+            marker=0.1,
+        ),
+        _small_snapshot(
+            worker_id=1,
+            task_count=5,
+            worker_ids=(100, 101, 102, 103, 104),
+            candidate_indices=(4,),
+            demands=(3,),
+            marker=0.9,
+        ),
+    )
+    with torch.no_grad():
+        actor.branch_head[-1].bias[0] = 10.0
+        actor.branch_head[-1].bias[1] = -10.0
+
+    sampled = [actor.select_snapshot(snapshot, deterministic=True) for snapshot in snapshots]
+    actions = [result[0] for result in sampled]
+    old_log_probs = torch.tensor([result[1] for result in sampled], dtype=torch.float32)
+    records = [result[3] for result in sampled]
+
+    assert [snapshot.graph_snapshot["task"].num_nodes for snapshot in snapshots] == [3, 5]
+    assert [snapshot.graph_snapshot["worker"].num_nodes for snapshot in snapshots] == [2, 5]
+    assert [len(snapshot.candidate_task_keys) for snapshot in snapshots] == [2, 1]
+    assert [record["candidate_task_node_indices"] for record in records] == [(2, 0), (4,)]
+    for snapshot, action, record in zip(snapshots, actions, records, strict=True):
+        chosen_index = record["task_idx"]
+        assert action["task_key"] == snapshot.candidate_task_keys[chosen_index]
+        assert record["candidate_task_node_indices"][chosen_index] == (
+            snapshot.candidate_task_node_indices[chosen_index]
+        )
+        context = snapshot.team_contexts[chosen_index]
+        expected_team = tuple(
+            context.workers[index].worker_id
+            for index in record["chosen_worker_indices"]
+        )
+        assert action["team"] == expected_team
+        assert set(action["team"]) <= {worker.worker_id for worker in context.workers}
+
+    task_graph_sizes: list[int] = []
+    worker_graph_sizes: list[int] = []
+    task_hook = actor.task_graph_proj.register_forward_pre_hook(
+        lambda _module, inputs: task_graph_sizes.append(int(inputs[0].shape[0]))
+    )
+    worker_hook = actor.worker_graph_score.register_forward_pre_hook(
+        lambda _module, inputs: worker_graph_sizes.append(int(inputs[0].shape[0]))
+    )
+    try:
+        batched_values, batched_log_probs, batched_entropies = actor.evaluate_action_log_probs(
+            torch.stack([snapshot.state_features for snapshot in snapshots]),
+            torch.stack([snapshot.time_features for snapshot in snapshots]),
+            records,
+        )
+    finally:
+        task_hook.remove()
+        worker_hook.remove()
+
+    assert task_graph_sizes == [2, 1]
+    assert worker_graph_sizes == [2, 5]
+    assert batched_values.shape == batched_log_probs.shape == batched_entropies.shape == (2,)
+    assert torch.isfinite(batched_log_probs).all()
+    assert torch.allclose(torch.exp(batched_log_probs - old_log_probs), torch.ones(2), atol=1e-5)
+
+    for index in range(2):
+        value, log_prob, entropy = actor.evaluate_action_log_probs(
+            snapshots[index].state_features.unsqueeze(0),
+            snapshots[index].time_features.unsqueeze(0),
+            [records[index]],
+        )
+        assert torch.allclose(batched_values[index : index + 1], value, atol=1e-6)
+        assert torch.allclose(batched_log_probs[index : index + 1], log_prob, atol=1e-6)
+        assert torch.allclose(batched_entropies[index : index + 1], entropy, atol=1e-6)
 
 
 def test_graph_encoder_receives_policy_gradient(env: AirLineEnvWork3) -> None:
