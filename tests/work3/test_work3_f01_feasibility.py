@@ -385,6 +385,45 @@ def test_n03_random_resource_calendars_match_independent_endpoint_oracle(
     assert saw_worker_caused_delay and saw_station_caused_delay
 
 
+def test_n04_more_capacity_or_removed_occupancy_never_delays_static_search(
+    env: AirLineEnvWork3,
+) -> None:
+    """固定站位日历下增加容量或删除占用，只能保持或提前最早预约。"""
+    occupied_keys = mark_station_intervals(
+        env,
+        0,
+        [(0.0, 3.0), (4.0, 6.0)],
+    )
+    worker_id = env.state.station_worker_bindings[0][0]
+    search_args = {
+        "station_id": 0,
+        "team": [worker_id],
+        "search_start": 0.0,
+        "duration": 2.0,
+    }
+    original_occupancy = frozenset(env._station_occupied_tasks[0])
+    original_worker_intervals = tuple(env.state.workers[worker_id].intervals)
+
+    earliest_capacity_one = env._find_team_earliest_slot(**search_args)
+    env.max_slots_per_station = 2
+    earliest_capacity_two = env._find_team_earliest_slot(**search_args)
+
+    assert earliest_capacity_one == pytest.approx(6.0)
+    assert earliest_capacity_two == pytest.approx(0.0)
+    assert frozenset(env._station_occupied_tasks[0]) == original_occupancy
+    assert tuple(env.state.workers[worker_id].intervals) == original_worker_intervals
+
+    env.max_slots_per_station = 1
+    removed_key = occupied_keys[1]
+    env._station_occupied_tasks[0].remove(removed_key)
+    env.state.tasks[removed_key].scheduled_start = None
+    env.state.tasks[removed_key].execution_duration = None
+    earliest_after_removal = env._find_team_earliest_slot(**search_args)
+
+    assert earliest_after_removal == pytest.approx(3.0)
+    assert earliest_after_removal <= earliest_capacity_one
+
+
 def test_failed_reservation_search_restores_old_reservation_transaction(
     env: AirLineEnvWork3,
     monkeypatch: pytest.MonkeyPatch,
