@@ -50,12 +50,15 @@ def test_fixed_disturbance_hits_and_completes_full_batch_with_consistent_ledger(
     target_key = "5_2"
 
     assert env.state.current_time == pytest.approx(tau, abs=1e-8)
-    occupied_stations = {
-        aircraft.current_station
-        for aircraft in env.state.aircraft.values()
-        if not aircraft.is_completed and aircraft.current_station >= 0
-    }
-    assert occupied_stations == set(range(env.state.num_stations))
+    station_counts = [
+        sum(
+            aircraft.current_station == station_id and not aircraft.is_completed
+            for aircraft in env.state.aircraft.values()
+        )
+        for station_id in range(env.state.num_stations)
+    ]
+    assert len(env.state.transfer_history) == 5
+    assert station_counts == [1] * env.state.num_stations
     target = env.state.tasks[target_key]
     assert target.current_station == 0
     assert target.status == TaskStatus.READY
