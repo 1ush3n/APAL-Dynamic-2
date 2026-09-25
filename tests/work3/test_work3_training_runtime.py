@@ -1611,6 +1611,18 @@ def test_lightning_counts_only_successful_real_time_label_updates(tmp_path: Path
     assert module.last_metrics["time_supervision_optimizer_updates"] == 1
     assert module.time_supervision_optimizer_updates == 1
     assert module.optimization_steps == 2
+    optimizer = module.configure_optimizers()
+    graph_parameter = next(actor.graph_encoder.parameters())
+    time_parameter = next(time_head.parameters())
+    optimizer_parameter_ids = [
+        id(parameter)
+        for group in optimizer.param_groups
+        for parameter in group["params"]
+    ]
+    assert optimizer_parameter_ids.count(id(graph_parameter)) == 1
+    assert optimizer_parameter_ids.count(id(time_parameter)) == 1
+    assert optimizer.state[graph_parameter]["step"].item() == 2
+    assert optimizer.state[time_parameter]["step"].item() == 1
 
 
 def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
