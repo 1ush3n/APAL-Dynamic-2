@@ -121,6 +121,38 @@ def test_start_time_cost_is_symmetric_around_baseline_offset(
     )
 
 
+def test_alignment_does_not_wait_past_earliest_resource_slot(
+    baseline_path: str,
+) -> None:
+    """对齐目标10但团队忙至12时，预约应从12开始而非继续等待。"""
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    env.reset()
+    task = env.get_ready_tasks()[0]
+    task.in_station_offset = 3.0
+    env.state.last_transfer_time = 7.0
+    team = tuple(
+        env.valid_team_completion_workers(task, [])[: task.demand]
+    )
+    assert len(team) == task.demand
+    for worker_id in team:
+        env.state.workers[worker_id].add_interval(
+            start=0.0,
+            end=12.0,
+            task_key=f"j03-resource-block-{worker_id}",
+        )
+
+    _obs, _reward, _terminated, _truncated, info = env.step({
+        "task_key": task.task_key,
+        "branch": ActionBranch.STATION_EXECUTE,
+        "team": team,
+        "align": 1,
+    })
+
+    assert task.status == TaskStatus.RESERVED
+    assert info["scheduled_start"] == pytest.approx(12.0)
+    assert task.scheduled_start == pytest.approx(12.0)
+
+
 def test_postpone_incremental_consistency(baseline_path: str) -> None:
     """测试 2: 工序后移改派的增量扣费与终局账本绝对一致。"""
     weights = ObjectiveWeights(w_h=1.0, w_t=0.20, w_w=0.05, w_p=1.0, lambda_1=0.15, lambda_2=0.30)
