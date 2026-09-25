@@ -296,6 +296,22 @@ def _independent_feasibility_from_audit(audit: Any) -> list[dict[str, Any]]:
     return results
 
 
+def _should_stop_after_success_target(
+    *,
+    run_mode: str,
+    successful_batch_target: int | None,
+    successful_batch_count: int,
+    active_episode_count: int,
+) -> bool:
+    """成功目标达成后，仅在所有已启动episode结束时停止。"""
+    return (
+        run_mode == "pilot"
+        and successful_batch_target is not None
+        and successful_batch_count >= successful_batch_target
+        and active_episode_count == 0
+    )
+
+
 def _cpu_state_dict(module: torch.nn.Module) -> dict[str, torch.Tensor]:
     return {
         name: tensor.detach().cpu().clone()
@@ -1006,10 +1022,13 @@ def run_training(
         while steps_this_rollout < steps_per_iter and stop_reason is None:
             # ponytail: 同步episode wave简化事件配对与势函数版本引用；轨迹时长差异明显时再改为异步补位。
             if all(state.done for state in worker_states):
-                if (
-                    run_mode == "pilot"
-                    and sum(item.get("success") is True for item in scenario_log)
-                    >= int(successful_batch_target or 0)
+                if _should_stop_after_success_target(
+                    run_mode=run_mode,
+                    successful_batch_target=successful_batch_target,
+                    successful_batch_count=sum(
+                        item.get("success") is True for item in scenario_log
+                    ),
+                    active_episode_count=0,
                 ):
                     stop_reason = "successful_batch_target_reached"
                     break
@@ -1303,10 +1322,13 @@ def run_training(
                 total_env_steps += 1
                 steps_this_rollout += 1
 
-            if (
-                run_mode == "pilot"
-                and sum(item.get("success") is True for item in scenario_log)
-                >= int(successful_batch_target or 0)
+            if _should_stop_after_success_target(
+                run_mode=run_mode,
+                successful_batch_target=successful_batch_target,
+                successful_batch_count=sum(
+                    item.get("success") is True for item in scenario_log
+                ),
+                active_episode_count=sum(not state.done for state in worker_states),
             ):
                 stop_reason = "successful_batch_target_reached"
                 break

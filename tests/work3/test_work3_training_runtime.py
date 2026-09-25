@@ -1931,3 +1931,27 @@ def test_work3_cuda_bf16_two_worker_pilot_records_real_hits_and_resource_state(
         item["status"] == "incomplete_not_assessed" and item["feasible"] is None
         for item in report["independent_feasibility"]
     )
+
+
+def test_pilot_success_target_waits_for_started_episodes_to_finish() -> None:
+    """达成成功批次目标后，只要仍有已启动轨迹就不得结束试点。"""
+    from scripts.work3.train_ppo_work3 import _should_stop_after_success_target
+
+    assert not _should_stop_after_success_target(
+        run_mode="pilot",
+        successful_batch_target=1,
+        successful_batch_count=1,
+        active_episode_count=1,
+    )
+    assert _should_stop_after_success_target(
+        run_mode="pilot",
+        successful_batch_target=1,
+        successful_batch_count=1,
+        active_episode_count=0,
+    )
+    assert not _should_stop_after_success_target(
+        run_mode="pilot",
+        successful_batch_target=1,
+        successful_batch_count=0,
+        active_episode_count=0,
+    )
