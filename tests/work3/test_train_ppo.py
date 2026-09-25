@@ -392,8 +392,8 @@ def test_cli_training_loads_and_hits_each_planned_scenario(
             "valid": True,
         },
         {
-            "scenario_id": "K01_MIDDLE_HIT",
-            "timing": "MIDDLE",
+            "scenario_id": "K01_EARLY_SECOND_HIT",
+            "timing": "EARLY",
             "intensity": "LOW",
             "station_id": 0,
             "aircraft_id": 0,
