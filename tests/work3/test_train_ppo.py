@@ -177,6 +177,8 @@ def test_training_records_forced_advance_from_spawn_worker(
     assert result["scenario_log"][0]["unhit_reasons"] == {
         "missing-task": "target_not_in_instance"
     }
+    assert result["scenario_log"][0]["material_ready_advanced_task_keys"] == []
+    assert result["scenario_log"][0]["material_ready_advanced_count"] == 0
     assert result["trajectory_audit"]["step_count"] == 1
     assert result["lightning_fit_calls"] == 1
 

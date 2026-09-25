@@ -17,7 +17,6 @@ import torch
 from envs.work3.core_types import TaskRuntimeState
 from envs.work3.decision_snapshot import DecisionSnapshot, build_decision_snapshot
 from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import extract_compact_state_features
 from models.work3.graph_builder import (
@@ -155,31 +154,38 @@ def _scenario_status(
     env: AirLineEnvWork3,
     scenario: dict[str, Any] | None,
     *,
-    event_triggered: bool,
-    unhit_reasons_at_event: dict[str, str],
     baseline_material_ready_by_task: dict[str, float],
     in_flight: bool,
 ) -> dict[str, Any]:
     target_keys = tuple(
         str(task_key) for task_key in (scenario or {}).get("affected_task_keys", ())
     )
+    event_triggered = bool(env.disturbance_event_triggered)
+    event_result = env.disturbance_event_results.get(
+        str((scenario or {}).get("scenario_id", "")),
+        {},
+    )
+    recorded_hit_keys = set(event_result.get("actual_hit_task_keys", ()))
     hit_keys = tuple(
         task_key
         for task_key in target_keys
-        if event_triggered
-        and task_key in env.state.tasks
-        and env.state.tasks[task_key].material_ready_time
+        if task_key in recorded_hit_keys
+    )
+    material_ready_advanced_keys = tuple(
+        task_key
+        for task_key in hit_keys
+        if env.state.tasks[task_key].material_ready_time
         > baseline_material_ready_by_task.get(task_key, 0.0) + env.tolerance
     )
     unhit_reasons = {
         task_key: (
             "event_not_triggered"
             if not event_triggered
-            else unhit_reasons_at_event.get(
+            else event_result.get("unhit_reasons", {}).get(
                 task_key,
                 "target_not_in_instance"
                 if task_key not in env.state.tasks
-                else "no_material_delay_recorded",
+                else "already_started_or_completed_at_event",
             )
         )
         for task_key in target_keys
@@ -192,6 +198,8 @@ def _scenario_status(
         "scheduled_target_count": len(target_keys),
         "actual_hit_task_keys": hit_keys,
         "actual_hit_count": len(hit_keys),
+        "material_ready_advanced_task_keys": material_ready_advanced_keys,
+        "material_ready_advanced_count": len(material_ready_advanced_keys),
         "unhit_reasons": unhit_reasons,
         "in_flight": bool(in_flight),
     }
@@ -218,13 +226,10 @@ def _worker_main(
         )
         processed_events: list[tuple[float, str, int, str | None, int]] = []
         current_scenario: dict[str, Any] | None = None
-        scenario_event_triggered = False
-        unhit_reasons_at_event: dict[str, str] = {}
         baseline_material_ready_by_task: dict[str, float] = {}
         original_pop = env.event_queue.pop
 
         def traced_pop() -> Any:
-            nonlocal scenario_event_triggered
             event = original_pop()
             if event is not None:
                 processed_events.append(
@@ -236,22 +241,6 @@ def _worker_main(
                         int(event.generation),
                     )
                 )
-                if event.event_type == EventType.DISTURBANCE:
-                    payload = event.payload
-                    if (
-                        current_scenario is not None
-                        and payload.get("scenario_id") == current_scenario.get("scenario_id")
-                    ):
-                        scenario_event_triggered = True
-                        for task_key_value in payload.get("affected_task_keys", ()):
-                            task_key = str(task_key_value)
-                            task = env.state.tasks.get(task_key)
-                            if task is None:
-                                unhit_reasons_at_event[task_key] = "target_not_in_instance"
-                            elif task.status.name in {"RUNNING", "COMPLETED"}:
-                                unhit_reasons_at_event[task_key] = (
-                                    "already_started_or_completed_at_event"
-                                )
             return event
 
         env.event_queue.pop = traced_pop  # type: ignore[method-assign]
@@ -299,8 +288,6 @@ def _worker_main(
                     current_scenario = request.get("scenario")
                     if current_scenario is not None:
                         current_scenario = dict(current_scenario)
-                    scenario_event_triggered = False
-                    unhit_reasons_at_event.clear()
                     baseline_material_ready_by_task = {
                         str(task_key): float(env.state.tasks[task_key].material_ready_time)
                         for task_key in (current_scenario or {}).get("affected_task_keys", ())
@@ -315,8 +302,6 @@ def _worker_main(
                         scenario_status=_scenario_status(
                             env,
                             current_scenario,
-                            event_triggered=scenario_event_triggered,
-                            unhit_reasons_at_event=unhit_reasons_at_event,
                             baseline_material_ready_by_task=baseline_material_ready_by_task,
                             in_flight=not env._check_terminated(),
                         ),
@@ -374,8 +359,6 @@ def _worker_main(
                         scenario_status=_scenario_status(
                             env,
                             current_scenario,
-                            event_triggered=scenario_event_triggered,
-                            unhit_reasons_at_event=unhit_reasons_at_event,
                             baseline_material_ready_by_task=baseline_material_ready_by_task,
                             in_flight=not (terminated or truncated),
                         ),

@@ -150,12 +150,14 @@ def test_effect_report_distinguishes_hit_wait_and_cross_aircraft_impact() -> Non
     assert report["target_count"] == 1
     assert report["actual_hit_count"] == 1
     assert report["actual_hit_rate"] == pytest.approx(1.0)
+    assert report["material_ready_advanced_task_keys"] == ["target"]
+    assert report["material_ready_advanced_count"] == 1
     assert report["observed_added_wait_hours"] == pytest.approx(15.0)
     assert report["cross_aircraft_affected_task_count"] == 1
     assert report["cross_aircraft_affected_aircraft_ids"] == [2]
 
 
-def test_effect_report_explains_each_unhit_target() -> None:
+def test_effect_report_separates_unstarted_hit_from_unhit_targets() -> None:
     tasks = {
         "started-before-event": SimpleNamespace(
             aircraft_id=1,
@@ -183,9 +185,12 @@ def test_effect_report_explains_each_unhit_target() -> None:
         baseline_start_by_key={},
     )
 
+    assert report["actual_hit_task_keys"] == ["not-delayed"]
+    assert report["actual_hit_count"] == 1
+    assert report["material_ready_advanced_task_keys"] == []
+    assert report["material_ready_advanced_count"] == 0
     assert report["unhit_reasons"] == {
         "started-before-event": "already_started_or_completed_at_event",
-        "not-delayed": "no_material_delay_recorded",
         "missing-target": "target_not_in_instance",
     }
 

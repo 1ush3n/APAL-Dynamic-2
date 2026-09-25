@@ -240,6 +240,7 @@ def test_disturbance_does_not_interrupt_a_task_that_already_started() -> None:
 
     env.load_scenario(
         {
+            "scenario_id": "DISTURBANCE_AFTER_TASK_START",
             "tau": env.state.current_time,
             "recovery_time": env.state.current_time + 20.0,
             "affected_task_keys": [task.task_key],
@@ -249,6 +250,11 @@ def test_disturbance_does_not_interrupt_a_task_that_already_started() -> None:
     assert task.status == TaskStatus.RUNNING
     assert (task.actual_start, task.execution_duration, tuple(task.assigned_team)) == original
     assert task.material_ready_time == 0.0
+    event_result = env.disturbance_event_results["DISTURBANCE_AFTER_TASK_START"]
+    assert event_result["actual_hit_task_keys"] == ()
+    assert event_result["unhit_reasons"] == {
+        task.task_key: "already_started_or_completed_at_event"
+    }
     assert env.event_queue.peek() is not None
     assert env.event_queue.peek().event_type == EventType.TASK_FINISH
     hit_report = summarize_disturbance_effects(
@@ -256,8 +262,10 @@ def test_disturbance_does_not_interrupt_a_task_that_already_started() -> None:
         {
             "affected_task_keys": [task.task_key],
             "aircraft_id": task.aircraft_id,
+            "tau": env.state.current_time,
         },
         baseline_start_by_key={task.task_key: task.in_station_offset},
+        event_result=event_result,
     )
     assert hit_report["actual_hit_count"] == 0
     assert hit_report["actual_hit_rate"] == 0.0

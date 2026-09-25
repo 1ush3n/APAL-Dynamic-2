@@ -73,6 +73,8 @@ class AirLineEnvWork3:
         self._attach_task_domain_metadata()
         self.event_queue: DiscreteEventQueue = DiscreteEventQueue()
         self.disturbance_event_triggered: bool = False
+        # 按场景记录事件处理时的目标命中与未命中原因，避免用最终时刻反推同刻顺序。
+        self.disturbance_event_results: dict[str, dict[str, Any]] = {}
         self._transfer_scheduled_for_cycle: int = 0
         self.total_tasks: int = len(self.state.tasks)
         self._station_occupied_tasks: dict[int, set[str]] = {
@@ -104,6 +106,7 @@ class AirLineEnvWork3:
         self._attach_task_domain_metadata()
         self.event_queue.reset(start_time=0.0)
         self.disturbance_event_triggered = False
+        self.disturbance_event_results.clear()
         self._transfer_scheduled_for_cycle = 0
         self.total_tasks = len(self.state.tasks)
         self._station_occupied_tasks = {s: set() for s in range(self.state.num_stations)}
@@ -1133,16 +1136,23 @@ class AirLineEnvWork3:
         """
         recovery_time = float(payload["recovery_time"])
         affected_keys = payload.get("affected_task_keys", [])
+        scenario_id = str(payload.get("scenario_id", ""))
+        hit_task_keys: list[str] = []
+        unhit_reasons: dict[str, str] = {}
 
-        for task_key in affected_keys:
+        for raw_task_key in affected_keys:
+            task_key = str(raw_task_key)
             task = self.state.tasks.get(task_key)
             if task is None:
+                unhit_reasons[task_key] = "target_not_in_instance"
                 continue
 
             if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
                 # 物理规则 3：实际已开工与已完工作业硬冻结，绝不强制打断
+                unhit_reasons[task_key] = "already_started_or_completed_at_event"
                 continue
 
+            hit_task_keys.append(task_key)
             # 统一建模尚未开工工序的物料开工下界：
             # r_{k*,i}^{new} = max(r_{k*,i}^{old}, R)。
             task.material_ready_time = max(task.material_ready_time, recovery_time)
@@ -1179,6 +1189,11 @@ class AirLineEnvWork3:
 
             elif task.status in (TaskStatus.UNREADY, TaskStatus.POSTPONED):
                 pass
+
+        self.disturbance_event_results[scenario_id] = {
+            "actual_hit_task_keys": tuple(hit_task_keys),
+            "unhit_reasons": unhit_reasons,
+        }
 
     def _on_task_started(self, task: TaskRuntimeState, start_time: float) -> None:
         """工序正式进入 RUNNING 状态，结算基准开工位置偏差 D_time 与团队替换 D_team 增量。"""

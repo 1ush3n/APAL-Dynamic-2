@@ -503,15 +503,18 @@ def summarize_disturbance_effects(
     baseline_start_by_key: dict[str, float],
     baseline_material_ready_by_key: dict[str, float] | None = None,
     event_triggered: bool = True,
+    event_result: dict[str, Any] | None = None,
     tolerance: float = 1e-5,
 ) -> dict[str, Any]:
-    """区分预设目标、实际命中、观察等待和其他飞机传播。"""
+    """分别统计事件命中、可用下界推进、实际开工偏差与跨飞机影响。"""
     if scenario is None:
         return {
             "target_count": 0,
             "actual_hit_count": 0,
             "actual_hit_rate": 0.0,
             "actual_hit_task_keys": [],
+            "material_ready_advanced_count": 0,
+            "material_ready_advanced_task_keys": [],
             "unhit_reasons": {},
             "observed_added_wait_hours": 0.0,
             "cross_aircraft_affected_task_count": 0,
@@ -522,16 +525,37 @@ def summarize_disturbance_effects(
     baseline_ready = baseline_material_ready_by_key or {}
     target_keys = [str(key) for key in scenario.get("affected_task_keys", [])]
     target_aircraft_ids = {int(scenario["aircraft_id"])}
-    actual_hit_keys = [
-        key
-        for key in target_keys
-        if key in task_records
-        and float(getattr(task_records[key], "material_ready_time", 0.0))
-        > float(baseline_ready.get(key, 0.0)) + tolerance
-    ]
-    actual_hit_key_set = set(actual_hit_keys)
     tau_value = scenario.get("tau")
     tau = None if tau_value is None else float(tau_value)
+    recorded_hit_keys = (
+        None
+        if event_result is None
+        else set(event_result.get("actual_hit_task_keys", ()))
+    )
+    actual_hit_keys: list[str] = []
+    for key in target_keys:
+        task = task_records.get(key)
+        if not event_triggered or task is None:
+            continue
+        if recorded_hit_keys is not None:
+            if key in recorded_hit_keys:
+                actual_hit_keys.append(key)
+            continue
+        actual_start = getattr(task, "actual_start", None)
+        if (
+            tau is not None
+            and actual_start is not None
+            and float(actual_start) < tau - tolerance
+        ):
+            continue
+        actual_hit_keys.append(key)
+    actual_hit_key_set = set(actual_hit_keys)
+    material_ready_advanced_keys = [
+        key
+        for key in actual_hit_keys
+        if float(getattr(task_records[key], "material_ready_time", 0.0))
+        > float(baseline_ready.get(key, 0.0)) + tolerance
+    ]
     unhit_reasons: dict[str, str] = {}
     for key in target_keys:
         if key in actual_hit_key_set:
@@ -540,16 +564,10 @@ def summarize_disturbance_effects(
             unhit_reasons[key] = "event_not_triggered"
         elif key not in task_records:
             unhit_reasons[key] = "target_not_in_instance"
+        elif event_result is not None and key in event_result.get("unhit_reasons", {}):
+            unhit_reasons[key] = str(event_result["unhit_reasons"][key])
         else:
-            actual_start = getattr(task_records[key], "actual_start", None)
-            if (
-                tau is not None
-                and actual_start is not None
-                and float(actual_start) < tau - tolerance
-            ):
-                unhit_reasons[key] = "already_started_or_completed_at_event"
-            else:
-                unhit_reasons[key] = "no_material_delay_recorded"
+            unhit_reasons[key] = "already_started_or_completed_at_event"
 
     added_wait = 0.0
     for key in actual_hit_keys:
@@ -579,6 +597,8 @@ def summarize_disturbance_effects(
         "actual_hit_count": len(actual_hit_keys),
         "actual_hit_rate": len(actual_hit_keys) / target_count if target_count else 0.0,
         "actual_hit_task_keys": actual_hit_keys,
+        "material_ready_advanced_count": len(material_ready_advanced_keys),
+        "material_ready_advanced_task_keys": material_ready_advanced_keys,
         "unhit_reasons": unhit_reasons,
         "observed_added_wait_hours": added_wait,
         "cross_aircraft_affected_task_count": len(cross_aircraft_keys),
@@ -600,6 +620,10 @@ def evaluate_single_trajectory(
     if isinstance(agent, FormalEvaluationAgent):
         agent.last_time_prediction = None
     env.reset()
+    baseline_material_ready_by_key = {
+        task_key: float(task.material_ready_time)
+        for task_key, task in env.state.tasks.items()
+    }
     if scenario is not None:
         env.load_scenario(scenario)
 
@@ -689,7 +713,15 @@ def evaluate_single_trajectory(
         env.state.tasks,
         scenario,
         baseline_start_by_key=baseline_start_by_key,
+        baseline_material_ready_by_key=baseline_material_ready_by_key,
         event_triggered=env.disturbance_event_triggered,
+        event_result=(
+            None
+            if scenario is None
+            else env.disturbance_event_results.get(
+                str(scenario.get("scenario_id", ""))
+            )
+        ),
         tolerance=env.tolerance,
     )
 

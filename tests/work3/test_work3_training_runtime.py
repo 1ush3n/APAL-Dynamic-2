@@ -1041,6 +1041,73 @@ def test_vector_worker_keeps_started_disturbance_target_fixed_and_unhit() -> Non
     }
 
 
+def test_disturbance_hit_with_later_existing_release_has_zero_added_wait() -> None:
+    from types import SimpleNamespace
+
+    from envs.work3.core_types import TaskStatus
+    from envs.work3.environment import AirLineEnvWork3
+    from scripts.work3.evaluate_c_vs_d import summarize_disturbance_effects
+    from scripts.work3.train_ppo_work3 import count_actual_scenario_hits
+    from training.work3_vector_env import _scenario_status
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
+    env.reset()
+
+    target_key = "0_15"
+    target = env.state.tasks[target_key]
+    target.status = TaskStatus.UNREADY
+    target.material_ready_time = 10.0
+    scenario = {
+        "scenario_id": "RECOVERY_BEFORE_EXISTING_RELEASE",
+        "aircraft_id": 0,
+        "tau": 0.0,
+        "recovery_time": 5.0,
+        "affected_task_keys": [target_key],
+    }
+    env.load_scenario(scenario)
+
+    assert env.disturbance_event_triggered is True
+    assert target.material_ready_time == pytest.approx(10.0)
+    event_result = env.disturbance_event_results[scenario["scenario_id"]]
+    assert event_result["actual_hit_task_keys"] == (target_key,)
+    assert event_result["unhit_reasons"] == {}
+    assert count_actual_scenario_hits(env, scenario) == 1
+
+    worker_status = _scenario_status(
+        env,
+        scenario,
+        baseline_material_ready_by_task={target_key: 10.0},
+        in_flight=True,
+    )
+    evaluation_status = summarize_disturbance_effects(
+        {
+            target_key: SimpleNamespace(
+                aircraft_id=0,
+                material_ready_time=10.0,
+                actual_start=10.0,
+            )
+        },
+        scenario,
+        baseline_start_by_key={target_key: 10.0},
+        baseline_material_ready_by_key={target_key: 10.0},
+        event_triggered=env.disturbance_event_triggered,
+        event_result=event_result,
+    )
+
+    assert worker_status["actual_hit_task_keys"] == (target_key,)
+    assert worker_status["actual_hit_count"] == 1
+    assert worker_status["material_ready_advanced_task_keys"] == ()
+    assert worker_status["material_ready_advanced_count"] == 0
+    assert worker_status["unhit_reasons"] == {}
+    assert evaluation_status["actual_hit_task_keys"] == [target_key]
+    assert evaluation_status["actual_hit_count"] == 1
+    assert evaluation_status["material_ready_advanced_task_keys"] == []
+    assert evaluation_status["material_ready_advanced_count"] == 0
+    assert evaluation_status["unhit_reasons"] == {}
+    assert evaluation_status["observed_added_wait_hours"] == pytest.approx(0.0)
+
+
 def test_vector_worker_errors_and_incomplete_step_timeouts_are_explicit_and_cleaned() -> None:
     from envs.work3.core_types import ActionBranch
     from models.work3.actor_critic import ActorCriticWork3
@@ -2124,6 +2191,8 @@ def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
         assert report["scenario_log"][0]["disturbance_triggered"] is True
         assert report["scenario_log"][0]["actual_hit_task_keys"] == ["0_15"]
         assert report["scenario_log"][0]["actual_hit_count"] == 1
+        assert report["scenario_log"][0]["material_ready_advanced_task_keys"] == ["0_15"]
+        assert report["scenario_log"][0]["material_ready_advanced_count"] == 1
         assert report["scenario_log"][0]["success"] is False
         assert report["scenario_log"][0]["truncated"] is True
         expected_snapshot_version = 0 if report["method_variant"] == "D" else None

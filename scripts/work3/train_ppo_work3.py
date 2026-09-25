@@ -499,17 +499,17 @@ def actual_scenario_hit_task_keys(
     env: AirLineEnvWork3,
     scenario: dict[str, Any],
 ) -> list[str]:
-    """返回实际受到恢复时刻约束的目标工序。"""
-    return [
-        str(task_key)
-        for task_key in scenario.get("affected_task_keys", [])
-        if task_key in env.state.tasks
-        and float(env.state.tasks[task_key].material_ready_time) > env.tolerance
-    ]
+    """返回事件发生时存在且尚未开工的固定目标工序。"""
+    event_result = env.disturbance_event_results.get(
+        str(scenario.get("scenario_id", ""))
+    )
+    if not env.disturbance_event_triggered or event_result is None:
+        return []
+    return list(event_result["actual_hit_task_keys"])
 
 
 def count_actual_scenario_hits(env: AirLineEnvWork3, scenario: dict[str, Any]) -> int:
-    """按实际物料恢复时间统计已揭示的目标工序数量。"""
+    """统计事件发生时存在且尚未开工的固定目标数量。"""
     return len(actual_scenario_hit_task_keys(env, scenario))
 
 
@@ -881,6 +881,15 @@ def run_training(
         hit_keys = list(state.scenario_status.get("actual_hit_task_keys", ()))
         state.scenario_log["actual_hit_task_keys"] = hit_keys
         state.scenario_log["actual_hit_count"] = len(hit_keys)
+        material_ready_advanced_keys = list(
+            state.scenario_status.get("material_ready_advanced_task_keys", ())
+        )
+        state.scenario_log["material_ready_advanced_task_keys"] = (
+            material_ready_advanced_keys
+        )
+        state.scenario_log["material_ready_advanced_count"] = len(
+            material_ready_advanced_keys
+        )
         state.scenario_log["unhit_reasons"] = dict(
             state.scenario_status.get("unhit_reasons", {})
         )
@@ -926,6 +935,8 @@ def run_training(
                 "disturbance_triggered": False,
                 "actual_hit_task_keys": [],
                 "actual_hit_count": 0,
+                "material_ready_advanced_task_keys": [],
+                "material_ready_advanced_count": 0,
                 "unhit_reasons": {},
                 "actual_transfer_times": [],
                 "completed": False,
