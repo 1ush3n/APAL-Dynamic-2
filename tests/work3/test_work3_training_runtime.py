@@ -1245,7 +1245,7 @@ def test_episode_potential_versions_survive_overlapping_worker_episodes() -> Non
     assert shaper.end_episode(worker_id=0, episode_id=8) is True
 
 
-def test_training_refreshes_potential_between_completed_episodes(
+def test_training_preserves_rollout_boundary_potential_and_refreshes_episodes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1268,6 +1268,7 @@ def test_training_refreshes_potential_between_completed_episodes(
             self.episode_ids: tuple[int, ...] = ()
             self.episode_indices: tuple[int, ...] = ()
             self.worker_step_counts = [0]
+            self.episode_step_counts = [0]
             self.step_settlement_requests = 0
 
         @property
@@ -1291,6 +1292,7 @@ def test_training_refreshes_potential_between_completed_episodes(
         ) -> tuple[SimpleNamespace, ...]:
             self.episode_ids = tuple(episode_ids)
             self.episode_indices = tuple(episode_indices)
+            self.episode_step_counts = [0 for _ in episode_ids]
             return tuple(
                 SimpleNamespace(scenario_status={}) for _ in episode_ids
             )
@@ -1312,7 +1314,7 @@ def test_training_refreshes_potential_between_completed_episodes(
                     worker_node_indices=(),
                     reserved_flags=(),
                     advance_available=True,
-                    current_time=float(episode_id),
+                    current_time=float(self.episode_step_counts[worker_id]),
                     cycle_id=0,
                     estimated_cmax=20.0,
                     h0=10.0,
@@ -1338,12 +1340,17 @@ def test_training_refreshes_potential_between_completed_episodes(
             results: list[Work3StepResult | None] = [None] * len(actions)
             for worker_id in dispatched:
                 self.worker_step_counts[worker_id] += 1
+                self.episode_step_counts[worker_id] += 1
+                episode_finished = self.episode_step_counts[worker_id] == 2
                 results[worker_id] = Work3StepResult(
                     observation={},
-                    raw_reward=-1.0,
-                    terminated=True,
+                    raw_reward=0.0,
+                    terminated=episode_finished,
                     truncated=False,
-                    info={"success": True, "termination_reason": "completed"},
+                    info={
+                        "success": episode_finished,
+                        "termination_reason": "completed" if episode_finished else None,
+                    },
                     processed_events=(),
                     completed_execution_records=(),
                     step_count=1,
@@ -1428,7 +1435,8 @@ def test_training_refreshes_potential_between_completed_episodes(
         version = shaper._episode_versions[(worker_id, episode_id)]
         last_potential_context = (episode_id, version)
         events.append(("potential", episode_id, version))
-        return float(version + 1)
+        current_time = float(kwargs["current_time"])
+        return {0.0: -3.0, 1.0: -2.0}[current_time]
 
     def record_shape(
         shaper: PotentialRewardShaper,
@@ -1437,13 +1445,15 @@ def test_training_refreshes_potential_between_completed_episodes(
         phi_next: float,
     ) -> float:
         assert last_potential_context is not None
+        shaped_reward = original_shape(shaper, actual_reward, phi_current, phi_next)
         events.append((
             "shape",
             *last_potential_context,
             float(phi_current),
             float(phi_next),
+            float(shaped_reward),
         ))
-        return original_shape(shaper, actual_reward, phi_current, phi_next)
+        return shaped_reward
 
     scenarios = [
         {
@@ -1475,6 +1485,11 @@ def test_training_refreshes_potential_between_completed_episodes(
             0.0,
         ),
     )
+    monkeypatch.setattr(
+        training.ActorCriticWork3,
+        "encode_state",
+        lambda self, *args, **kwargs: (torch.tensor([0.0]), None),
+    )
     monkeypatch.setattr(PotentialRewardShaper, "begin_episode", record_begin)
     monkeypatch.setattr(PotentialRewardShaper, "end_episode", record_end)
     monkeypatch.setattr(PotentialRewardShaper, "update_snapshot", record_update)
@@ -1485,13 +1500,14 @@ def test_training_refreshes_potential_between_completed_episodes(
     report = training.run_training(
         run_mode="pilot",
         successful_batch_target=2,
-        max_decisions=2,
+        max_decisions=4,
         max_wall_seconds=30.0,
-        num_iterations=1,
-        steps_per_iter=2,
+        num_iterations=4,
+        steps_per_iter=1,
         ppo_epochs=1,
-        batch_size=2,
+        batch_size=1,
         num_envs=1,
+        gamma=0.9,
         baseline_path=Path("data/work3/real_283_k10_baseline.json"),
         scenarios_path=Path("unused-scenarios.json"),
         scenario_split_path=Path("data/work3/experiment_splits/train.json"),
@@ -1502,11 +1518,20 @@ def test_training_refreshes_potential_between_completed_episodes(
     )
 
     assert report["successful_batch_count"] == 2
+    shaped_events = [event for event in events if event[0] == "shape"]
+    assert shaped_events == [
+        ("shape", 0, 0, -3.0, -2.0, 1.2),
+        ("shape", 0, 0, -2.0, 0.0, 2.0),
+        ("shape", 1, 1, -3.0, -2.0, 1.2),
+        ("shape", 1, 1, -2.0, 0.0, 2.0),
+    ]
+    segment_rewards = [event[-1] for event in shaped_events[:2]]
+    assert segment_rewards[0] + 0.9 * segment_rewards[1] == pytest.approx(3.0)
     assert [event for event in events if event[0] == "begin"] == [
         ("begin", 0, 0),
         ("begin", 1, 1),
     ]
-    first_tail = events.index(("shape", 0, 0, 1.0, 0.0))
+    first_tail = events.index(("shape", 0, 0, -2.0, 0.0, 2.0))
     first_end = events.index(("end", 0, 0))
     refresh = events.index(("update", 1))
     second_begin = events.index(("begin", 1, 1))
