@@ -51,6 +51,17 @@ def test_truncated_rollout_bootstraps_instead_of_zeroing() -> None:
     assert buffer.target_values.tolist() == [4.5]
 
 
+def test_legacy_truncated_transition_does_not_treat_done_as_termination() -> None:
+    """旧调用未显式传terminated时，truncated优先于done完成bootstrap。"""
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.95, normalize_advantages=False)
+    buffer.add(_transition(terminated=None, truncated=True, done=True))
+
+    buffer.finish_trajectory(last_value=5.0)
+
+    assert buffer.advantages.tolist() == [3.5]
+    assert buffer.target_values.tolist() == [4.5]
+
+
 def test_failed_terminal_transition_does_not_bootstrap_across_episode() -> None:
     """失败终止与自然终止一样切断bootstrap，不能接到下一episode。"""
     buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.95, normalize_advantages=False)

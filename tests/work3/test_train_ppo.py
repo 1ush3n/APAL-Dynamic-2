@@ -34,8 +34,12 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
     from training.work3_vector_env import Work3VectorEnv
 
     prediction_times: list[float] = []
+    snapshot_state_features: list[tuple[torch.Tensor, ...]] = []
+    bootstrap_state_features: list[torch.Tensor] = []
     original_prediction = train_module.compute_online_snapshot_time_inputs
     original_step_all = Work3VectorEnv.step_all
+    original_snapshots = Work3VectorEnv.snapshots
+    original_encode_state = ActorCriticWork3.encode_state
 
     def record_prediction(
         actor_critic: ActorCriticWork3,
@@ -52,6 +56,28 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
     )
 
     if environment_truncated:
+        def record_snapshots(environment: Work3VectorEnv) -> tuple[Any, ...]:
+            snapshots = original_snapshots(environment)
+            snapshot_state_features.append(tuple(
+                snapshot.state_features.detach().cpu().clone()
+                for snapshot in snapshots
+            ))
+            return snapshots
+
+        def record_bootstrap_state(
+            actor_critic: ActorCriticWork3,
+            state_feat: torch.Tensor,
+            time_urgency: torch.Tensor,
+            graph_data: Any = None,
+        ) -> Any:
+            bootstrap_state_features.append(state_feat.detach().cpu().clone())
+            return original_encode_state(
+                actor_critic,
+                state_feat,
+                time_urgency,
+                graph_data=graph_data,
+            )
+
         def truncate_worker_result(
             environment: Work3VectorEnv,
             **kwargs: Any,
@@ -62,7 +88,9 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
             results[0] = replace(results[0], truncated=True)
             return replace(batch, results=tuple(results))
 
+        monkeypatch.setattr(Work3VectorEnv, "snapshots", record_snapshots)
         monkeypatch.setattr(Work3VectorEnv, "step_all", truncate_worker_result)
+        monkeypatch.setattr(ActorCriticWork3, "encode_state", record_bootstrap_state)
 
     result = run_training(
         run_mode="pilot",
@@ -82,6 +110,13 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
 
     assert result["total_decisions"] == 1
     assert len(prediction_times) == 2
+    if environment_truncated:
+        assert len(snapshot_state_features) >= 2
+        initial_state = snapshot_state_features[0][0]
+        final_state = snapshot_state_features[-1][0]
+        assert not torch.equal(initial_state, final_state)
+        assert len(bootstrap_state_features) == 1
+        assert torch.equal(bootstrap_state_features[0], final_state)
 
 
 def test_ppo_training_pipeline_sanity() -> None:

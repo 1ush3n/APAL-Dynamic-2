@@ -41,6 +41,13 @@ class PPOTransition:
     worker_id: int = 0
     episode_id: int = 0
     segment_id: int = 0
+
+    @property
+    def is_terminated(self) -> bool:
+        """兼容旧done字段；截断不是吸收终止，必须保留bootstrap。"""
+        if self.terminated is not None:
+            return bool(self.terminated)
+        return bool(self.done and not self.truncated)
     done: bool = False                # 旧接口兼容字段
     action_dict: dict[str, Any] = field(default_factory=dict)
     terminated: bool | None = None   # 真实终止；None 时回退到旧 done 语义
@@ -300,11 +307,7 @@ class RolloutBufferWork3:
 
         for key, indices in indices_by_segment.items():
             last_transition = self.transitions[indices[-1]]
-            is_terminal = (
-                last_transition.done
-                if last_transition.terminated is None
-                else last_transition.terminated
-            )
+            is_terminal = last_transition.is_terminated
             if not is_terminal and key not in last_values_by_segment:
                 raise ValueError(f"非终止轨迹段缺少bootstrap value：{key}")
             next_value = 0.0 if is_terminal else float(last_values_by_segment[key])
@@ -313,11 +316,7 @@ class RolloutBufferWork3:
             # 每个复合键独立逆序；worker交错插入不改变其时间顺序。
             for index in reversed(indices):
                 transition = self.transitions[index]
-                is_step_terminal = (
-                    transition.done
-                    if transition.terminated is None
-                    else transition.terminated
-                )
+                is_step_terminal = transition.is_terminated
                 non_terminal = 1.0 - float(is_step_terminal)
                 delta = (
                     transition.reward
