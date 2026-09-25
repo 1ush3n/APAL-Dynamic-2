@@ -62,6 +62,40 @@ def test_failed_terminal_transition_does_not_bootstrap_across_episode() -> None:
     assert buffer.target_values.tolist() == [0.0]
 
 
+def test_gae_does_not_cross_adjacent_episodes_in_one_worker_segment() -> None:
+    """同一worker同一采样段内，真实终止必须切断相邻episode的GAE。"""
+    buffer = RolloutBufferWork3(gamma=0.9, gae_lambda=0.8, normalize_advantages=False)
+    dummy_feat = torch.zeros(32)
+    dummy_time = torch.zeros(2)
+
+    for episode_id, reward, value, terminated in (
+        (7, 2.0, 1.0, True),
+        (8, 10.0, 3.0, False),
+        (8, 20.0, 4.0, True),
+    ):
+        buffer.add(
+            PPOTransition(
+                state_feat=dummy_feat,
+                time_urgency=dummy_time,
+                sample_record={},
+                reward=reward,
+                raw_reward=reward,
+                value=value,
+                log_prob=0.0,
+                done=terminated,
+                terminated=terminated,
+                worker_id=0,
+                episode_id=episode_id,
+                segment_id=0,
+            )
+        )
+
+    buffer.finish_trajectories(last_values_by_segment={})
+
+    assert buffer.advantages.tolist() == pytest.approx([1.0, 22.12, 16.0])
+    assert buffer.target_values.tolist() == pytest.approx([2.0, 25.12, 20.0])
+
+
 def test_missing_transfer_label_is_explicitly_unavailable() -> None:
     """没有真实转站时刻时不得使用当前时刻伪造标签。"""
     records = [
