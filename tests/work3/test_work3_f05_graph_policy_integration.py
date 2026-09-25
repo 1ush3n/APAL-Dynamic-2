@@ -95,6 +95,38 @@ def test_graph_encoder_receives_policy_gradient(env: AirLineEnvWork3) -> None:
     assert any(parameter.grad is not None for parameter in net.encoder.parameters())
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="需要CUDA验证图快照设备隔离")
+def test_graph_encoder_does_not_move_replay_snapshot_to_cuda(
+    env: AirLineEnvWork3,
+) -> None:
+    """图编码器应把CPU回放快照作为只读输入，避免整批历史图滞留显存。"""
+    actor = ActorCriticWork3(
+        state_dim=32,
+        task_feat_dim=8,
+        hidden_dim=32,
+    ).cuda().eval()
+    graph = actor.build_graph_snapshot(env)
+    assert all(
+        value.device.type == "cpu"
+        for store in graph.stores
+        for value in store.values()
+        if isinstance(value, torch.Tensor)
+    )
+
+    with torch.no_grad():
+        context, task_embeddings, worker_embeddings = actor.graph_encoder(graph)
+
+    assert context.device.type == "cuda"
+    assert task_embeddings.device.type == "cuda"
+    assert worker_embeddings.device.type == "cuda"
+    assert all(
+        value.device.type == "cpu"
+        for store in graph.stores
+        for value in store.values()
+        if isinstance(value, torch.Tensor)
+    )
+
+
 def test_worker_calendar_changes_graph_policy_input(env: AirLineEnvWork3) -> None:
     """同一物理状态下改变具体工人日历，图输入必须发生变化。"""
     net = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=32)

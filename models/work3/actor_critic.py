@@ -96,11 +96,13 @@ class Work3GraphEncoder(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """返回全局上下文、任务节点嵌入和工人节点嵌入。"""
         device = next(self.parameters()).device
-        graph = graph.to(device)
-        raw_x = graph.x_dict
+        raw_x = {node_type: features.to(device) for node_type, features in graph.x_dict.items()}
         assert set(("task", "worker", "station", "skill")) <= set(raw_x)
         x_dict = self.embedder(raw_x)
-        edge_index_dict = graph.edge_index_dict
+        edge_index_dict = {
+            edge_type: edge_index.to(device)
+            for edge_type, edge_index in graph.edge_index_dict.items()
+        }
         encoded = self.message_passing(x_dict, edge_index_dict)
 
         task_emb = encoded["task"]
