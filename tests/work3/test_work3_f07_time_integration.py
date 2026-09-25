@@ -101,6 +101,34 @@ def test_pending_time_labels_survive_rollout_buffer_boundary() -> None:
     assert cache.pending_count == 0
 
 
+def test_time_label_uses_heuristic_snapshot_captured_at_decision() -> None:
+    """实际转站标签使用决策时P_h=12，而非由后续状态替换的数值。"""
+    cache = PendingTimeLabelCache()
+    cache.add(
+        episode_id=3,
+        cycle_id=2,
+        decision_id=0,
+        state_feat=torch.ones(32),
+        graph_snapshot="decision-time-graph",
+        estimated_cmax=12.0,
+        current_time=5.0,
+        h0=10.0,
+        predictor_version=7,
+    )
+
+    assert cache.attach_transfer(
+        episode_id=3,
+        cycle_id=2,
+        actual_transfer_time=9.0,
+    )
+    batch = cache.drain_ready()
+
+    assert batch is not None
+    assert batch["estimated_cmax"].tolist() == pytest.approx([12.0])
+    assert batch["actual_transfer_times"].tolist() == pytest.approx([9.0])
+    assert batch["target_residuals"].tolist() == pytest.approx([-0.3])
+
+
 def test_all_decision_states_receive_their_own_cycle_label_without_episode_mixing() -> None:
     cache = PendingTimeLabelCache()
     snapshots = [
