@@ -44,7 +44,12 @@ EXPECTED_TASK_DURATIONS = (
 )
 
 
-def _small_five_station_baseline(path: Path, *, time_scale: float = 1.0) -> None:
+def _small_five_station_baseline(
+    path: Path,
+    *,
+    time_scale: float = 1.0,
+    time_shift: float = 0.0,
+) -> None:
     source = MultiAircraftBaseline.load_from_json(BASELINE_PATH)
     tasks = {}
     for station_id, task_id in FIXED_TASKS:
@@ -55,10 +60,14 @@ def _small_five_station_baseline(path: Path, *, time_scale: float = 1.0) -> None
             task,
             duration=task.duration * time_scale,
             in_station_offset=0.0,
-            baseline_start=0.0,
-            baseline_end=task.duration * time_scale,
-            nominal_station_entry=task.nominal_station_entry * time_scale,
-            nominal_station_exit=task.nominal_station_exit * time_scale,
+            baseline_start=time_shift,
+            baseline_end=time_shift + task.duration * time_scale,
+            nominal_station_entry=(
+                task.nominal_station_entry * time_scale + time_shift
+            ),
+            nominal_station_exit=(
+                task.nominal_station_exit * time_scale + time_shift
+            ),
         )
 
     MultiAircraftBaseline(
@@ -74,6 +83,7 @@ def _run_scaled_disturbed_batch(
     baseline_path: Path,
     *,
     time_scale: float,
+    time_shift: float = 0.0,
 ) -> tuple[
     AirLineEnvWork3,
     list[float],
@@ -81,14 +91,33 @@ def _run_scaled_disturbed_batch(
     ObjectiveBreakdown,
     TrajectoryFeasibilityReport,
 ]:
-    _small_five_station_baseline(baseline_path, time_scale=time_scale)
+    _small_five_station_baseline(
+        baseline_path,
+        time_scale=time_scale,
+        time_shift=time_shift,
+    )
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     env.reset()
-    recovery_time = 400.0 * time_scale
+    if time_shift:
+        env.state.current_time = time_shift
+        env.state.last_transfer_time = time_shift
+        env.event_queue.reset(start_time=time_shift)
+        for task in env.state.tasks.values():
+            task.material_ready_time += time_shift
+        for aircraft in env.state.aircraft.values():
+            aircraft.entry_times = {
+                station_id: time + time_shift
+                for station_id, time in aircraft.entry_times.items()
+            }
+            aircraft.exit_times = {
+                station_id: time + time_shift
+                for station_id, time in aircraft.exit_times.items()
+            }
+    recovery_time = time_shift + 400.0 * time_scale
     scenario = {
-        "scenario_id": "N01_FIXED_SCALE_EVENT",
-        "tau": 0.0,
-        "delta": recovery_time,
+        "scenario_id": "FIXED_DISTURBANCE_EVENT",
+        "tau": time_shift,
+        "delta": 400.0 * time_scale,
         "recovery_time": recovery_time,
         "affected_task_keys": ["0_15"],
     }
@@ -389,3 +418,81 @@ def test_n01_uniform_time_scaling_preserves_feasibility_and_normalized_cost(
         rel=0.0,
         abs=1e-7,
     )
+
+
+def test_n02_translating_timeline_and_baseline_anchor_preserves_cycle_offset(
+    tmp_path: Path,
+) -> None:
+    """整体平移事件和基准绝对时刻后，固定动作的周期相对偏差不变。"""
+    if not BASELINE_PATH.is_file():
+        pytest.skip(f"{BASELINE_PATH} 不存在")
+
+    shift = 250.0
+    base_path = tmp_path / "n02_base.json"
+    shifted_path = tmp_path / "n02_shifted.json"
+    base_env, _base_rewards, _base_signatures, base_objective, base_check = (
+        _run_scaled_disturbed_batch(base_path, time_scale=1.0)
+    )
+    shifted_env, _shifted_rewards, _shifted_signatures, shifted_objective, shifted_check = (
+        _run_scaled_disturbed_batch(
+            shifted_path,
+            time_scale=1.0,
+            time_shift=shift,
+        )
+    )
+
+    base_baseline = MultiAircraftBaseline.load_from_json(base_path)
+    shifted_baseline = MultiAircraftBaseline.load_from_json(shifted_path)
+    for task_key, base_task in base_baseline.tasks.items():
+        shifted_task = shifted_baseline.tasks[task_key]
+        assert shifted_task.baseline_start == pytest.approx(
+            base_task.baseline_start + shift
+        )
+        assert shifted_task.baseline_end == pytest.approx(base_task.baseline_end + shift)
+        assert shifted_task.in_station_offset == pytest.approx(base_task.in_station_offset)
+
+    assert shifted_env.state.h0 == pytest.approx(base_env.state.h0)
+    assert shifted_env.disturbance_event_results[
+        "FIXED_DISTURBANCE_EVENT"
+    ]["actual_hit_task_keys"] == base_env.disturbance_event_results[
+        "FIXED_DISTURBANCE_EVENT"
+    ]["actual_hit_task_keys"] == ("0_15",)
+    assert _shifted_signatures == _base_signatures
+    assert base_env.state.tasks["0_15"].actual_start == pytest.approx(400.0)
+    assert shifted_env.state.tasks["0_15"].actual_start == pytest.approx(400.0 + shift)
+    assert shifted_env.state.transfer_history == pytest.approx(
+        [time + shift for time in base_env.state.transfer_history]
+    )
+    assert shifted_env.state.current_time == pytest.approx(
+        base_env.state.current_time + shift
+    )
+
+    for task_key, base_task in base_env.state.tasks.items():
+        shifted_task = shifted_env.state.tasks[task_key]
+        assert shifted_task.status == base_task.status == TaskStatus.COMPLETED
+        assert shifted_task.in_station_offset == pytest.approx(base_task.in_station_offset)
+        assert shifted_task.assigned_team == base_task.assigned_team
+        for field_name in (
+            "material_ready_time",
+            "scheduled_start",
+            "actual_start",
+            "actual_end",
+            "cycle_start_time",
+        ):
+            base_value = getattr(base_task, field_name)
+            shifted_value = getattr(shifted_task, field_name)
+            if base_value is None:
+                assert shifted_value is None, f"{task_key}.{field_name}"
+            else:
+                assert shifted_value == pytest.approx(
+                    base_value + shift
+                ), f"{task_key}.{field_name}"
+        assert shifted_task.execution_duration == pytest.approx(
+            base_task.execution_duration
+        )
+
+    assert base_check.is_feasible, base_check.violations
+    assert shifted_check.is_feasible, shifted_check.violations
+    assert shifted_check.violations == base_check.violations == {}
+    assert shifted_env.cost_time == pytest.approx(base_env.cost_time)
+    assert shifted_objective.d_time == pytest.approx(base_objective.d_time)
