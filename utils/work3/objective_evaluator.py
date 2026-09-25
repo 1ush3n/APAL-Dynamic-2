@@ -95,7 +95,13 @@ def evaluate_trajectory_objective(
 
     state: MultiAircraftState = getattr(state_or_env, "state", state_or_env)
     h0 = float(state.h0)
-    total_tasks = len(state.tasks)
+    total_tasks = int(
+        getattr(
+            state,
+            "normalization_task_count",
+            getattr(state_or_env, "total_tasks", len(state.tasks)),
+        )
+    )
     scale = (1.0 / total_tasks) if (weights.normalize_by_n and total_tasks > 0) else 1.0
 
     # 1. 节拍超期 J_takt 计算

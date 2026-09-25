@@ -313,11 +313,13 @@ class MultiAircraftState:
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
     workers: dict[int, WorkerCalendar] = field(default_factory=dict)
     station_worker_bindings: dict[int, list[int]] = field(default_factory=dict)
+    normalization_task_count: int = field(init=False)
     _ac_station_tasks: dict[tuple[int, int], list[TaskRuntimeState]] = field(
         default_factory=dict, init=False, repr=False, compare=False
     )
 
     def __post_init__(self) -> None:
+        self.normalization_task_count = len(self.tasks)
         self._rebuild_ac_station_tasks()
 
     def _rebuild_ac_station_tasks(self) -> None:

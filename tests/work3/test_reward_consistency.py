@@ -121,6 +121,58 @@ def test_start_time_cost_is_symmetric_around_baseline_offset(
     )
 
 
+def test_objective_normalization_uses_fixed_task_count_when_records_are_added(
+    baseline_path: str,
+) -> None:
+    """新增未开工任务记录不得稀释已发生的归一化费用。"""
+    weights = ObjectiveWeights(
+        w_h=0.0,
+        w_t=1.0,
+        w_w=1.0,
+        w_p=0.0,
+        normalize_by_n=True,
+        w_revision_time=1.0,
+        w_revision_team=1.0,
+    )
+    env = AirLineEnvWork3(baseline_json_path=baseline_path, weights=weights)
+    env.reset()
+    fixed_task_count = env.total_tasks
+
+    started_task = next(iter(env.state.tasks.values()))
+    started_task.in_station_offset = 0.0
+    started_task.assigned_team = list(started_task.base_team)
+    started_task.revision_history.append(
+        {"time_change": 1.0, "team_change": 0.5}
+    )
+    env._on_task_started(started_task, start_time=10.0)
+    before_env = evaluate_trajectory_objective(env, weights=weights)
+    before_state = evaluate_trajectory_objective(env.state, weights=weights)
+    cumulative_cost = env.cumulative_cost
+
+    added_task = next(
+        task for task in env.state.tasks.values() if task is not started_task
+    ).copy()
+    added_task.task_key = f"pending-extra-{added_task.task_key}"
+    added_task._state_ref = None
+    env.state.tasks[added_task.task_key] = added_task
+
+    after_env = evaluate_trajectory_objective(env, weights=weights)
+    after_state = evaluate_trajectory_objective(env.state, weights=weights)
+
+    assert env.total_tasks == fixed_task_count
+    for before, after in ((before_env, after_env), (before_state, after_state)):
+        assert before.total_tasks == fixed_task_count
+        assert after.total_tasks == fixed_task_count
+        assert after.d_time == pytest.approx(before.d_time)
+        assert after.d_team == pytest.approx(before.d_team)
+        assert after.revision_time == pytest.approx(before.revision_time)
+        assert after.revision_team == pytest.approx(before.revision_team)
+        assert after.j_total == pytest.approx(before.j_total)
+    assert after_env.d_time > 0.0
+    assert after_env.revision_time > 0.0
+    assert env.cumulative_cost == pytest.approx(cumulative_cost)
+
+
 def test_alignment_does_not_wait_past_earliest_resource_slot(
     baseline_path: str,
 ) -> None:
