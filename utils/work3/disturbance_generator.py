@@ -1,7 +1,7 @@
 """工作三 9 类解耦扰动场景库生成器 (Task 4.1)。
 
 核心规范：
-- 锚定稳态第 6 周期 (P_5 = 5*H_0 到 P_6 = 6*H_0)；
+- 默认锚定稳态第 6 周期 (P_5 = 5*H_0 到 P_6 = 6*H_0)；cycle_offset只改变基准周期和对应飞机编号；
 - 3 时机使用同一目标站位内基准开工跨度的相对位置；
 - 3 强度：低 (Delta=0.15 H_0, rho=5%)、中 (Delta=0.35 H_0, rho=10%)、高 (Delta=0.60 H_0, rho=18%)；
 - 空间覆盖：站位 0~4 分别对应在场飞机 5~1，合计 3 x 3 x 5 = 45 个离线确定性基准测试场景；
@@ -195,26 +195,38 @@ def summarize_scenario_diagnostics(
 
 def generate_9class_scenarios(
     baseline_json_path: str = "data/work3/real_283_k10_baseline.json",
-    output_json_path: str = "data/work3/scenarios_9class.json",
+    output_json_path: str | Path | None = None,
+    *,
+    cycle_offset: int = 0,
 ) -> list[DisturbanceScenario]:
-    """生成 9 类正交解耦场景库 (45 个确定性测试用例) 并保存至 JSON。"""
+    """生成九类×五站确定性场景；cycle_offset可选后续脉动周期作独立清单。"""
+    if isinstance(cycle_offset, bool) or not isinstance(cycle_offset, int):
+        raise TypeError("cycle_offset必须为整数")
+    if cycle_offset < 0:
+        raise ValueError("cycle_offset必须为非负整数")
+
     baseline = MultiAircraftBaseline.load_from_json(baseline_json_path)
     h0 = baseline.h0
-    p5 = 5.0 * h0
+    cycle_start = (5.0 + cycle_offset) * h0
 
     scenarios: list[DisturbanceScenario] = []
 
-    for station_id, aircraft_id in CYCLE_6_STATION_AIRCRAFT.items():
+    for station_id, cycle_6_aircraft_id in CYCLE_6_STATION_AIRCRAFT.items():
+        aircraft_id = cycle_6_aircraft_id + cycle_offset
         # 收集该飞机在该站位的所有工序 (baseline station_id 为 1-based: station_id + 1)
         st_tasks = [
             t for t in baseline.tasks.values()
             if t.aircraft_id == aircraft_id and t.station_id == station_id + 1
         ]
+        if not st_tasks:
+            raise ValueError(
+                f"cycle_offset={cycle_offset}时站位S{station_id}没有飞机{aircraft_id}的基准工序"
+            )
         # 任务表已明确禁止把尚未确定的绝对时刻擅自写成 H0 下界；
         # 当前首版只固定站内相对位置，实际小时量随场景元数据记录。
         t_span = max((float(t.in_station_offset) for t in st_tasks), default=0.0)
         for timing, t_ratio in TIMING_OFFSETS.items():
-            tau = round(p5 + t_ratio * t_span, 4)
+            tau = round(cycle_start + t_ratio * t_span, 4)
 
             for intensity, spec in INTENSITY_SPECS.items():
                 delta_ratio = float(spec["delta_ratio"])
@@ -223,6 +235,8 @@ def generate_9class_scenarios(
                 rho = float(spec["rho"])
 
                 scenario_id = f"{timing}_{intensity}_S{station_id}"
+                if cycle_offset:
+                    scenario_id += f"_CYCLE{6 + cycle_offset}"
 
                 candidates, invalid_reason = select_unstarted_candidates(st_tasks, tau)
 
@@ -260,7 +274,16 @@ def generate_9class_scenarios(
                 )
                 scenarios.append(scenario)
 
-    out_path = Path(output_json_path)
+    default_name = (
+        "scenarios_9class.json"
+        if cycle_offset == 0
+        else f"scenarios_9class_cycle{6 + cycle_offset}.json"
+    )
+    out_path = Path(
+        output_json_path
+        if output_json_path is not None
+        else Path("data/work3") / default_name
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump([s.to_dict() for s in scenarios], f, indent=2)
@@ -484,4 +507,3 @@ def write_experiment_splits(
 if __name__ == "__main__":
     generated = generate_9class_scenarios()
     print(f"成功生成 {len(generated)} 个 9 类解耦扰动基准场景至 data/work3/scenarios_9class.json")
-

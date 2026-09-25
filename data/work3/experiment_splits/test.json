@@ -1,199 +1,2210 @@
 [
   {
-    "scenario_id": "EARLY_LOW_S0",
+    "scenario_id": "EARLY_LOW_S0_CYCLE7",
     "timing": "EARLY",
     "intensity": "LOW",
     "station_id": 0,
-    "aircraft_id": 5,
-    "tau": 1465.2455,
+    "aircraft_id": 6,
+    "tau": 1757.8181,
     "delta": 43.8859,
-    "recovery_time": 1509.1314,
+    "recovery_time": 1801.704,
     "candidate_count": 5,
     "affected_count": 1,
     "affected_task_keys": [
-      "5_16"
+      "6_16"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.2,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_16"
+      ],
+      1757.8181,
+      1801.704
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_16"
+      ]
+    ]
   },
   {
-    "scenario_id": "EARLY_LOW_S2",
+    "scenario_id": "EARLY_MID_S0_CYCLE7",
     "timing": "EARLY",
-    "intensity": "LOW",
-    "station_id": 2,
-    "aircraft_id": 3,
-    "tau": 1463.2233,
-    "delta": 43.8859,
-    "recovery_time": 1507.1092,
-    "candidate_count": 3,
+    "intensity": "MID",
+    "station_id": 0,
+    "aircraft_id": 6,
+    "tau": 1757.8181,
+    "delta": 102.4004,
+    "recovery_time": 1860.2185,
+    "candidate_count": 5,
     "affected_count": 1,
     "affected_task_keys": [
-      "3_27"
+      "6_16"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.2,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_16"
+      ],
+      1757.8181,
+      1860.2185
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_16"
+      ]
+    ]
   },
   {
-    "scenario_id": "EARLY_LOW_S4",
+    "scenario_id": "EARLY_HIGH_S0_CYCLE7",
     "timing": "EARLY",
-    "intensity": "LOW",
-    "station_id": 4,
-    "aircraft_id": 1,
-    "tau": 1526.5008,
-    "delta": 43.8859,
-    "recovery_time": 1570.3867,
-    "candidate_count": 226,
-    "affected_count": 12,
-    "affected_task_keys": [
-      "1_39",
-      "1_67",
-      "1_68",
-      "1_69",
-      "1_70",
-      "1_65",
-      "1_66",
-      "1_107",
-      "1_108",
-      "1_63",
-      "1_64",
-      "1_71"
-    ],
-    "timing_reference": "station_task_span",
-    "valid": true,
-    "invalid_reason": null
-  },
-  {
-    "scenario_id": "LATE_HIGH_S3",
-    "timing": "LATE",
     "intensity": "HIGH",
-    "station_id": 3,
-    "aircraft_id": 2,
-    "tau": 1465.2548,
+    "station_id": 0,
+    "aircraft_id": 6,
+    "tau": 1757.8181,
     "delta": 175.5436,
-    "recovery_time": 1640.7984,
-    "candidate_count": 1,
+    "recovery_time": 1933.3617,
+    "candidate_count": 5,
     "affected_count": 1,
     "affected_task_keys": [
-      "2_21"
+      "6_16"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.2,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_16"
+      ],
+      1757.8181,
+      1933.3617
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_16"
+      ]
+    ]
   },
   {
-    "scenario_id": "LATE_LOW_S2",
+    "scenario_id": "MID_LOW_S0_CYCLE7",
+    "timing": "MID",
+    "intensity": "LOW",
+    "station_id": 0,
+    "aircraft_id": 6,
+    "tau": 1759.6712,
+    "delta": 43.8859,
+    "recovery_time": 1803.5571,
+    "candidate_count": 4,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "6_7"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.25,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_7"
+      ],
+      1759.6712,
+      1803.5571
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_7"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_MID_S0_CYCLE7",
+    "timing": "MID",
+    "intensity": "MID",
+    "station_id": 0,
+    "aircraft_id": 6,
+    "tau": 1759.6712,
+    "delta": 102.4004,
+    "recovery_time": 1862.0716,
+    "candidate_count": 4,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "6_7"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.25,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_7"
+      ],
+      1759.6712,
+      1862.0716
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_7"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_HIGH_S0_CYCLE7",
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 0,
+    "aircraft_id": 6,
+    "tau": 1759.6712,
+    "delta": 175.5436,
+    "recovery_time": 1935.2148,
+    "candidate_count": 4,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "6_7"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.25,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_7"
+      ],
+      1759.6712,
+      1935.2148
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_7"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_LOW_S0_CYCLE7",
     "timing": "LATE",
     "intensity": "LOW",
-    "station_id": 2,
-    "aircraft_id": 3,
-    "tau": 1463.7837,
+    "station_id": 0,
+    "aircraft_id": 6,
+    "tau": 1761.5243,
     "delta": 43.8859,
-    "recovery_time": 1507.6696,
-    "candidate_count": 3,
+    "recovery_time": 1805.4102,
+    "candidate_count": 2,
     "affected_count": 1,
     "affected_task_keys": [
-      "3_27"
+      "6_4"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_4"
+      ],
+      1761.5243,
+      1805.4102
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_4"
+      ]
+    ]
   },
   {
-    "scenario_id": "LATE_MID_S0",
+    "scenario_id": "LATE_MID_S0_CYCLE7",
     "timing": "LATE",
     "intensity": "MID",
     "station_id": 0,
-    "aircraft_id": 5,
-    "tau": 1468.9517,
+    "aircraft_id": 6,
+    "tau": 1761.5243,
     "delta": 102.4004,
-    "recovery_time": 1571.3521,
+    "recovery_time": 1863.9247,
     "candidate_count": 2,
     "affected_count": 1,
     "affected_task_keys": [
-      "5_4"
+      "6_4"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_4"
+      ],
+      1761.5243,
+      1863.9247
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_4"
+      ]
+    ]
   },
   {
-    "scenario_id": "LATE_MID_S3",
+    "scenario_id": "LATE_HIGH_S0_CYCLE7",
     "timing": "LATE",
-    "intensity": "MID",
-    "station_id": 3,
-    "aircraft_id": 2,
-    "tau": 1465.2548,
-    "delta": 102.4004,
-    "recovery_time": 1567.6552,
-    "candidate_count": 1,
+    "intensity": "HIGH",
+    "station_id": 0,
+    "aircraft_id": 6,
+    "tau": 1761.5243,
+    "delta": 175.5436,
+    "recovery_time": 1937.0679,
+    "candidate_count": 2,
     "affected_count": 1,
     "affected_task_keys": [
-      "2_21"
+      "6_4"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      6,
+      [
+        "6_4"
+      ],
+      1761.5243,
+      1937.0679
+    ],
+    "target_group_key": [
+      0,
+      6,
+      [
+        "6_4"
+      ]
+    ]
   },
   {
-    "scenario_id": "LATE_MID_S4",
-    "timing": "LATE",
-    "intensity": "MID",
-    "station_id": 4,
-    "aircraft_id": 1,
-    "tau": 1625.4928,
-    "delta": 102.4004,
-    "recovery_time": 1727.8932,
-    "candidate_count": 70,
-    "affected_count": 7,
+    "scenario_id": "EARLY_LOW_S1_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "station_id": 1,
+    "aircraft_id": 5,
+    "tau": 1756.0606,
+    "delta": 43.8859,
+    "recovery_time": 1799.9465,
+    "candidate_count": 2,
+    "affected_count": 1,
     "affected_task_keys": [
-      "1_166",
-      "1_187",
-      "1_174",
-      "1_177",
-      "1_172",
-      "1_210",
-      "1_211"
+      "5_25"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1756.0606,
+      1799.9465
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
   },
   {
-    "scenario_id": "MID_LOW_S1",
+    "scenario_id": "EARLY_MID_S1_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "MID",
+    "station_id": 1,
+    "aircraft_id": 5,
+    "tau": 1756.0606,
+    "delta": 102.4004,
+    "recovery_time": 1858.461,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "5_25"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1756.0606,
+      1858.461
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_HIGH_S1_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "HIGH",
+    "station_id": 1,
+    "aircraft_id": 5,
+    "tau": 1756.0606,
+    "delta": 175.5436,
+    "recovery_time": 1931.6042,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "5_25"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1756.0606,
+      1931.6042
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_LOW_S1_CYCLE7",
     "timing": "MID",
     "intensity": "LOW",
     "station_id": 1,
-    "aircraft_id": 4,
-    "tau": 1463.9741,
+    "aircraft_id": 5,
+    "tau": 1756.5467,
     "delta": 43.8859,
-    "recovery_time": 1507.86,
+    "recovery_time": 1800.4326,
     "candidate_count": 2,
     "affected_count": 1,
     "affected_task_keys": [
-      "4_25"
+      "5_25"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1756.5467,
+      1800.4326
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
   },
   {
-    "scenario_id": "MID_MID_S1",
+    "scenario_id": "MID_MID_S1_CYCLE7",
     "timing": "MID",
     "intensity": "MID",
     "station_id": 1,
-    "aircraft_id": 4,
-    "tau": 1463.9741,
+    "aircraft_id": 5,
+    "tau": 1756.5467,
     "delta": 102.4004,
-    "recovery_time": 1566.3745,
+    "recovery_time": 1858.9471,
     "candidate_count": 2,
     "affected_count": 1,
     "affected_task_keys": [
-      "4_25"
+      "5_25"
     ],
     "timing_reference": "station_task_span",
     "valid": true,
-    "invalid_reason": null
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1756.5467,
+      1858.9471
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_HIGH_S1_CYCLE7",
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 1,
+    "aircraft_id": 5,
+    "tau": 1756.5467,
+    "delta": 175.5436,
+    "recovery_time": 1932.0903,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "5_25"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1756.5467,
+      1932.0903
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_LOW_S1_CYCLE7",
+    "timing": "LATE",
+    "intensity": "LOW",
+    "station_id": 1,
+    "aircraft_id": 5,
+    "tau": 1757.0328,
+    "delta": 43.8859,
+    "recovery_time": 1800.9187,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "5_25"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1757.0328,
+      1800.9187
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_MID_S1_CYCLE7",
+    "timing": "LATE",
+    "intensity": "MID",
+    "station_id": 1,
+    "aircraft_id": 5,
+    "tau": 1757.0328,
+    "delta": 102.4004,
+    "recovery_time": 1859.4332,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "5_25"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1757.0328,
+      1859.4332
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_HIGH_S1_CYCLE7",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "station_id": 1,
+    "aircraft_id": 5,
+    "tau": 1757.0328,
+    "delta": 175.5436,
+    "recovery_time": 1932.5764,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "5_25"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      5,
+      [
+        "5_25"
+      ],
+      1757.0328,
+      1932.5764
+    ],
+    "target_group_key": [
+      1,
+      5,
+      [
+        "5_25"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_LOW_S2_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1755.7959,
+    "delta": 43.8859,
+    "recovery_time": 1799.6818,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1755.7959,
+      1799.6818
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_MID_S2_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "MID",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1755.7959,
+    "delta": 102.4004,
+    "recovery_time": 1858.1963,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1755.7959,
+      1858.1963
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_HIGH_S2_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "HIGH",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1755.7959,
+    "delta": 175.5436,
+    "recovery_time": 1931.3395,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1755.7959,
+      1931.3395
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_LOW_S2_CYCLE7",
+    "timing": "MID",
+    "intensity": "LOW",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1756.0761,
+    "delta": 43.8859,
+    "recovery_time": 1799.962,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1756.0761,
+      1799.962
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_MID_S2_CYCLE7",
+    "timing": "MID",
+    "intensity": "MID",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1756.0761,
+    "delta": 102.4004,
+    "recovery_time": 1858.4765,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1756.0761,
+      1858.4765
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_HIGH_S2_CYCLE7",
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1756.0761,
+    "delta": 175.5436,
+    "recovery_time": 1931.6197,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1756.0761,
+      1931.6197
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_LOW_S2_CYCLE7",
+    "timing": "LATE",
+    "intensity": "LOW",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1756.3563,
+    "delta": 43.8859,
+    "recovery_time": 1800.2422,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1756.3563,
+      1800.2422
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_MID_S2_CYCLE7",
+    "timing": "LATE",
+    "intensity": "MID",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1756.3563,
+    "delta": 102.4004,
+    "recovery_time": 1858.7567,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1756.3563,
+      1858.7567
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_HIGH_S2_CYCLE7",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 1756.3563,
+    "delta": 175.5436,
+    "recovery_time": 1931.8999,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_27"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      4,
+      [
+        "4_27"
+      ],
+      1756.3563,
+      1931.8999
+    ],
+    "target_group_key": [
+      2,
+      4,
+      [
+        "4_27"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_LOW_S3_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1756.3715,
+    "delta": 43.8859,
+    "recovery_time": 1800.2574,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_10"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_10"
+      ],
+      1756.3715,
+      1800.2574
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_10"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_MID_S3_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "MID",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1756.3715,
+    "delta": 102.4004,
+    "recovery_time": 1858.7719,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_10"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_10"
+      ],
+      1756.3715,
+      1858.7719
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_10"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_HIGH_S3_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "HIGH",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1756.3715,
+    "delta": 175.5436,
+    "recovery_time": 1931.9151,
+    "candidate_count": 3,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_10"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.333333,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_10"
+      ],
+      1756.3715,
+      1931.9151
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_10"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_LOW_S3_CYCLE7",
+    "timing": "MID",
+    "intensity": "LOW",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1757.0995,
+    "delta": 43.8859,
+    "recovery_time": 1800.9854,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_17"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_17"
+      ],
+      1757.0995,
+      1800.9854
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_17"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_MID_S3_CYCLE7",
+    "timing": "MID",
+    "intensity": "MID",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1757.0995,
+    "delta": 102.4004,
+    "recovery_time": 1859.4999,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_17"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_17"
+      ],
+      1757.0995,
+      1859.4999
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_17"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_HIGH_S3_CYCLE7",
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1757.0995,
+    "delta": 175.5436,
+    "recovery_time": 1932.6431,
+    "candidate_count": 2,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_17"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 0.5,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_17"
+      ],
+      1757.0995,
+      1932.6431
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_17"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_LOW_S3_CYCLE7",
+    "timing": "LATE",
+    "intensity": "LOW",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1757.8274,
+    "delta": 43.8859,
+    "recovery_time": 1801.7133,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_21"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 1.0,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_21"
+      ],
+      1757.8274,
+      1801.7133
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_21"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_MID_S3_CYCLE7",
+    "timing": "LATE",
+    "intensity": "MID",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1757.8274,
+    "delta": 102.4004,
+    "recovery_time": 1860.2278,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_21"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 1.0,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_21"
+      ],
+      1757.8274,
+      1860.2278
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_21"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_HIGH_S3_CYCLE7",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "station_id": 3,
+    "aircraft_id": 3,
+    "tau": 1757.8274,
+    "delta": 175.5436,
+    "recovery_time": 1933.371,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_21"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 1,
+    "actual_hit_count": 1,
+    "actual_fraction": 1.0,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": "discrete_candidate_saturation",
+    "event_fingerprint": [
+      3,
+      [
+        "3_21"
+      ],
+      1757.8274,
+      1933.371
+    ],
+    "target_group_key": [
+      3,
+      3,
+      [
+        "3_21"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_LOW_S4_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1819.0734,
+    "delta": 43.8859,
+    "recovery_time": 1862.9593,
+    "candidate_count": 226,
+    "affected_count": 12,
+    "affected_task_keys": [
+      "2_39",
+      "2_67",
+      "2_68",
+      "2_69",
+      "2_70",
+      "2_65",
+      "2_66",
+      "2_107",
+      "2_108",
+      "2_63",
+      "2_64",
+      "2_71"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 12,
+    "actual_hit_count": 12,
+    "actual_fraction": 0.053097,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_107",
+        "2_108",
+        "2_39",
+        "2_63",
+        "2_64",
+        "2_65",
+        "2_66",
+        "2_67",
+        "2_68",
+        "2_69",
+        "2_70",
+        "2_71"
+      ],
+      1819.0734,
+      1862.9593
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_107",
+        "2_108",
+        "2_39",
+        "2_63",
+        "2_64",
+        "2_65",
+        "2_66",
+        "2_67",
+        "2_68",
+        "2_69",
+        "2_70",
+        "2_71"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_MID_S4_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "MID",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1819.0734,
+    "delta": 102.4004,
+    "recovery_time": 1921.4738,
+    "candidate_count": 226,
+    "affected_count": 23,
+    "affected_task_keys": [
+      "2_39",
+      "2_67",
+      "2_68",
+      "2_69",
+      "2_70",
+      "2_65",
+      "2_66",
+      "2_107",
+      "2_108",
+      "2_63",
+      "2_64",
+      "2_71",
+      "2_122",
+      "2_90",
+      "2_93",
+      "2_104",
+      "2_106",
+      "2_94",
+      "2_40",
+      "2_42",
+      "2_44",
+      "2_83",
+      "2_41"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 23,
+    "actual_hit_count": 23,
+    "actual_fraction": 0.10177,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_104",
+        "2_106",
+        "2_107",
+        "2_108",
+        "2_122",
+        "2_39",
+        "2_40",
+        "2_41",
+        "2_42",
+        "2_44",
+        "2_63",
+        "2_64",
+        "2_65",
+        "2_66",
+        "2_67",
+        "2_68",
+        "2_69",
+        "2_70",
+        "2_71",
+        "2_83",
+        "2_90",
+        "2_93",
+        "2_94"
+      ],
+      1819.0734,
+      1921.4738
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_104",
+        "2_106",
+        "2_107",
+        "2_108",
+        "2_122",
+        "2_39",
+        "2_40",
+        "2_41",
+        "2_42",
+        "2_44",
+        "2_63",
+        "2_64",
+        "2_65",
+        "2_66",
+        "2_67",
+        "2_68",
+        "2_69",
+        "2_70",
+        "2_71",
+        "2_83",
+        "2_90",
+        "2_93",
+        "2_94"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "EARLY_HIGH_S4_CYCLE7",
+    "timing": "EARLY",
+    "intensity": "HIGH",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1819.0734,
+    "delta": 175.5436,
+    "recovery_time": 1994.617,
+    "candidate_count": 226,
+    "affected_count": 41,
+    "affected_task_keys": [
+      "2_39",
+      "2_67",
+      "2_68",
+      "2_69",
+      "2_70",
+      "2_65",
+      "2_66",
+      "2_107",
+      "2_108",
+      "2_63",
+      "2_64",
+      "2_71",
+      "2_122",
+      "2_90",
+      "2_93",
+      "2_104",
+      "2_106",
+      "2_94",
+      "2_40",
+      "2_42",
+      "2_44",
+      "2_83",
+      "2_41",
+      "2_43",
+      "2_85",
+      "2_109",
+      "2_111",
+      "2_86",
+      "2_125",
+      "2_126",
+      "2_45",
+      "2_103",
+      "2_127",
+      "2_128",
+      "2_131",
+      "2_132",
+      "2_133",
+      "2_134",
+      "2_135",
+      "2_136",
+      "2_137"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 41,
+    "actual_hit_count": 41,
+    "actual_fraction": 0.181416,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_103",
+        "2_104",
+        "2_106",
+        "2_107",
+        "2_108",
+        "2_109",
+        "2_111",
+        "2_122",
+        "2_125",
+        "2_126",
+        "2_127",
+        "2_128",
+        "2_131",
+        "2_132",
+        "2_133",
+        "2_134",
+        "2_135",
+        "2_136",
+        "2_137",
+        "2_39",
+        "2_40",
+        "2_41",
+        "2_42",
+        "2_43",
+        "2_44",
+        "2_45",
+        "2_63",
+        "2_64",
+        "2_65",
+        "2_66",
+        "2_67",
+        "2_68",
+        "2_69",
+        "2_70",
+        "2_71",
+        "2_83",
+        "2_85",
+        "2_86",
+        "2_90",
+        "2_93",
+        "2_94"
+      ],
+      1819.0734,
+      1994.617
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_103",
+        "2_104",
+        "2_106",
+        "2_107",
+        "2_108",
+        "2_109",
+        "2_111",
+        "2_122",
+        "2_125",
+        "2_126",
+        "2_127",
+        "2_128",
+        "2_131",
+        "2_132",
+        "2_133",
+        "2_134",
+        "2_135",
+        "2_136",
+        "2_137",
+        "2_39",
+        "2_40",
+        "2_41",
+        "2_42",
+        "2_43",
+        "2_44",
+        "2_45",
+        "2_63",
+        "2_64",
+        "2_65",
+        "2_66",
+        "2_67",
+        "2_68",
+        "2_69",
+        "2_70",
+        "2_71",
+        "2_83",
+        "2_85",
+        "2_86",
+        "2_90",
+        "2_93",
+        "2_94"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_LOW_S4_CYCLE7",
+    "timing": "MID",
+    "intensity": "LOW",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1868.5694,
+    "delta": 43.8859,
+    "recovery_time": 1912.4553,
+    "candidate_count": 131,
+    "affected_count": 7,
+    "affected_task_keys": [
+      "2_110",
+      "2_57",
+      "2_55",
+      "2_56",
+      "2_58",
+      "2_105",
+      "2_59"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 7,
+    "actual_hit_count": 7,
+    "actual_fraction": 0.053435,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_105",
+        "2_110",
+        "2_55",
+        "2_56",
+        "2_57",
+        "2_58",
+        "2_59"
+      ],
+      1868.5694,
+      1912.4553
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_105",
+        "2_110",
+        "2_55",
+        "2_56",
+        "2_57",
+        "2_58",
+        "2_59"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_MID_S4_CYCLE7",
+    "timing": "MID",
+    "intensity": "MID",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1868.5694,
+    "delta": 102.4004,
+    "recovery_time": 1970.9698,
+    "candidate_count": 131,
+    "affected_count": 14,
+    "affected_task_keys": [
+      "2_110",
+      "2_57",
+      "2_55",
+      "2_56",
+      "2_58",
+      "2_105",
+      "2_59",
+      "2_60",
+      "2_62",
+      "2_181",
+      "2_190",
+      "2_208",
+      "2_165",
+      "2_182"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 14,
+    "actual_hit_count": 14,
+    "actual_fraction": 0.10687,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_105",
+        "2_110",
+        "2_165",
+        "2_181",
+        "2_182",
+        "2_190",
+        "2_208",
+        "2_55",
+        "2_56",
+        "2_57",
+        "2_58",
+        "2_59",
+        "2_60",
+        "2_62"
+      ],
+      1868.5694,
+      1970.9698
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_105",
+        "2_110",
+        "2_165",
+        "2_181",
+        "2_182",
+        "2_190",
+        "2_208",
+        "2_55",
+        "2_56",
+        "2_57",
+        "2_58",
+        "2_59",
+        "2_60",
+        "2_62"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "MID_HIGH_S4_CYCLE7",
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1868.5694,
+    "delta": 175.5436,
+    "recovery_time": 2044.113,
+    "candidate_count": 131,
+    "affected_count": 24,
+    "affected_task_keys": [
+      "2_110",
+      "2_57",
+      "2_55",
+      "2_56",
+      "2_58",
+      "2_105",
+      "2_59",
+      "2_60",
+      "2_62",
+      "2_181",
+      "2_190",
+      "2_208",
+      "2_165",
+      "2_182",
+      "2_183",
+      "2_170",
+      "2_171",
+      "2_191",
+      "2_178",
+      "2_179",
+      "2_180",
+      "2_167",
+      "2_222",
+      "2_184"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 24,
+    "actual_hit_count": 24,
+    "actual_fraction": 0.183206,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_105",
+        "2_110",
+        "2_165",
+        "2_167",
+        "2_170",
+        "2_171",
+        "2_178",
+        "2_179",
+        "2_180",
+        "2_181",
+        "2_182",
+        "2_183",
+        "2_184",
+        "2_190",
+        "2_191",
+        "2_208",
+        "2_222",
+        "2_55",
+        "2_56",
+        "2_57",
+        "2_58",
+        "2_59",
+        "2_60",
+        "2_62"
+      ],
+      1868.5694,
+      2044.113
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_105",
+        "2_110",
+        "2_165",
+        "2_167",
+        "2_170",
+        "2_171",
+        "2_178",
+        "2_179",
+        "2_180",
+        "2_181",
+        "2_182",
+        "2_183",
+        "2_184",
+        "2_190",
+        "2_191",
+        "2_208",
+        "2_222",
+        "2_55",
+        "2_56",
+        "2_57",
+        "2_58",
+        "2_59",
+        "2_60",
+        "2_62"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_LOW_S4_CYCLE7",
+    "timing": "LATE",
+    "intensity": "LOW",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1918.0655,
+    "delta": 43.8859,
+    "recovery_time": 1961.9514,
+    "candidate_count": 70,
+    "affected_count": 4,
+    "affected_task_keys": [
+      "2_166",
+      "2_187",
+      "2_174",
+      "2_177"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.05,
+    "intended_count": 4,
+    "actual_hit_count": 4,
+    "actual_fraction": 0.057143,
+    "delta_h0_ratio": 0.15,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_166",
+        "2_174",
+        "2_177",
+        "2_187"
+      ],
+      1918.0655,
+      1961.9514
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_166",
+        "2_174",
+        "2_177",
+        "2_187"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_MID_S4_CYCLE7",
+    "timing": "LATE",
+    "intensity": "MID",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1918.0655,
+    "delta": 102.4004,
+    "recovery_time": 2020.4659,
+    "candidate_count": 70,
+    "affected_count": 7,
+    "affected_task_keys": [
+      "2_166",
+      "2_187",
+      "2_174",
+      "2_177",
+      "2_172",
+      "2_210",
+      "2_211"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.1,
+    "intended_count": 7,
+    "actual_hit_count": 7,
+    "actual_fraction": 0.1,
+    "delta_h0_ratio": 0.35,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_166",
+        "2_172",
+        "2_174",
+        "2_177",
+        "2_187",
+        "2_210",
+        "2_211"
+      ],
+      1918.0655,
+      2020.4659
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_166",
+        "2_172",
+        "2_174",
+        "2_177",
+        "2_187",
+        "2_210",
+        "2_211"
+      ]
+    ]
+  },
+  {
+    "scenario_id": "LATE_HIGH_S4_CYCLE7",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 1918.0655,
+    "delta": 175.5436,
+    "recovery_time": 2093.6091,
+    "candidate_count": 70,
+    "affected_count": 13,
+    "affected_task_keys": [
+      "2_166",
+      "2_187",
+      "2_174",
+      "2_177",
+      "2_172",
+      "2_210",
+      "2_211",
+      "2_226",
+      "2_225",
+      "2_228",
+      "2_229",
+      "2_230",
+      "2_231"
+    ],
+    "timing_reference": "station_task_span",
+    "valid": true,
+    "invalid_reason": null,
+    "intended_rho": 0.18,
+    "intended_count": 13,
+    "actual_hit_count": 13,
+    "actual_fraction": 0.185714,
+    "delta_h0_ratio": 0.6,
+    "seed": null,
+    "degeneracy_reason": null,
+    "event_fingerprint": [
+      2,
+      [
+        "2_166",
+        "2_172",
+        "2_174",
+        "2_177",
+        "2_187",
+        "2_210",
+        "2_211",
+        "2_225",
+        "2_226",
+        "2_228",
+        "2_229",
+        "2_230",
+        "2_231"
+      ],
+      1918.0655,
+      2093.6091
+    ],
+    "target_group_key": [
+      4,
+      2,
+      [
+        "2_166",
+        "2_172",
+        "2_174",
+        "2_177",
+        "2_187",
+        "2_210",
+        "2_211",
+        "2_225",
+        "2_226",
+        "2_228",
+        "2_229",
+        "2_230",
+        "2_231"
+      ]
+    ]
   }
 ]

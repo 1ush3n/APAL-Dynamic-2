@@ -1,6 +1,7 @@
 {
   "seed": 2026,
-  "source": "scenarios_9class.json",
+  "seed_scope": "2026仅对应原训练/验证划分；测试清单由cycle_offset=1确定性生成，不使用随机种子",
+  "source": "训练/验证沿用scenarios_9class.json划分；测试由generate_9class_scenarios(cycle_offset=1)独立生成",
   "split_names": [
     "train",
     "validation",
@@ -9,6 +10,14 @@
   "scenario_counts": {
     "train": 25,
     "validation": 10,
-    "test": 10
+    "test": 45
+  },
+  "test_generation": {
+    "function": "utils.work3.disturbance_generator.generate_9class_scenarios",
+    "cycle_offset": 1,
+    "pulse_cycle": 7,
+    "minimum_coverage_cells": 45,
+    "coverage_is_sample_size_claim": false,
+    "isolated_from_train_validation_by_event_fingerprint_and_target_group": true
   }
 }
