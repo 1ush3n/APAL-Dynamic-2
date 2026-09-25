@@ -502,6 +502,7 @@ def summarize_disturbance_effects(
     *,
     baseline_start_by_key: dict[str, float],
     baseline_material_ready_by_key: dict[str, float] | None = None,
+    event_triggered: bool = True,
     tolerance: float = 1e-5,
 ) -> dict[str, Any]:
     """区分预设目标、实际命中、观察等待和其他飞机传播。"""
@@ -511,9 +512,11 @@ def summarize_disturbance_effects(
             "actual_hit_count": 0,
             "actual_hit_rate": 0.0,
             "actual_hit_task_keys": [],
+            "unhit_reasons": {},
             "observed_added_wait_hours": 0.0,
             "cross_aircraft_affected_task_count": 0,
             "cross_aircraft_affected_aircraft_ids": [],
+            "event_triggered": False,
         }
 
     baseline_ready = baseline_material_ready_by_key or {}
@@ -526,6 +529,27 @@ def summarize_disturbance_effects(
         and float(getattr(task_records[key], "material_ready_time", 0.0))
         > float(baseline_ready.get(key, 0.0)) + tolerance
     ]
+    actual_hit_key_set = set(actual_hit_keys)
+    tau_value = scenario.get("tau")
+    tau = None if tau_value is None else float(tau_value)
+    unhit_reasons: dict[str, str] = {}
+    for key in target_keys:
+        if key in actual_hit_key_set:
+            continue
+        if not event_triggered:
+            unhit_reasons[key] = "event_not_triggered"
+        elif key not in task_records:
+            unhit_reasons[key] = "target_not_in_instance"
+        else:
+            actual_start = getattr(task_records[key], "actual_start", None)
+            if (
+                tau is not None
+                and actual_start is not None
+                and float(actual_start) < tau - tolerance
+            ):
+                unhit_reasons[key] = "already_started_or_completed_at_event"
+            else:
+                unhit_reasons[key] = "no_material_delay_recorded"
 
     added_wait = 0.0
     for key in actual_hit_keys:
@@ -555,9 +579,11 @@ def summarize_disturbance_effects(
         "actual_hit_count": len(actual_hit_keys),
         "actual_hit_rate": len(actual_hit_keys) / target_count if target_count else 0.0,
         "actual_hit_task_keys": actual_hit_keys,
+        "unhit_reasons": unhit_reasons,
         "observed_added_wait_hours": added_wait,
         "cross_aircraft_affected_task_count": len(cross_aircraft_keys),
         "cross_aircraft_affected_aircraft_ids": cross_aircraft_ids,
+        "event_triggered": bool(event_triggered),
     }
 
 
@@ -663,6 +689,7 @@ def evaluate_single_trajectory(
         env.state.tasks,
         scenario,
         baseline_start_by_key=baseline_start_by_key,
+        event_triggered=env.disturbance_event_triggered,
         tolerance=env.tolerance,
     )
 

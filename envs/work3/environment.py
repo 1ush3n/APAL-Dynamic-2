@@ -72,6 +72,7 @@ class AirLineEnvWork3:
         self.constraint_engine = self._load_domain_metadata()
         self._attach_task_domain_metadata()
         self.event_queue: DiscreteEventQueue = DiscreteEventQueue()
+        self.disturbance_event_triggered: bool = False
         self._transfer_scheduled_for_cycle: int = 0
         self.total_tasks: int = len(self.state.tasks)
         self._station_occupied_tasks: dict[int, set[str]] = {
@@ -102,6 +103,7 @@ class AirLineEnvWork3:
         self.state = initialize_multi_aircraft_state(self.baseline_json_path)
         self._attach_task_domain_metadata()
         self.event_queue.reset(start_time=0.0)
+        self.disturbance_event_triggered = False
         self._transfer_scheduled_for_cycle = 0
         self.total_tasks = len(self.state.tasks)
         self._station_occupied_tasks = {s: set() for s in range(self.state.num_stations)}
@@ -1057,6 +1059,7 @@ class AirLineEnvWork3:
         elif event.event_type == EventType.SYNCHRONOUS_TRANSFER:
             self._execute_synchronous_transfer(event.timestamp)
         elif event.event_type == EventType.DISTURBANCE:
+            self.disturbance_event_triggered = True
             self._handle_disturbance_event(event.timestamp, event.payload)
 
     def _handle_task_start_event(self, event: SimulationEvent) -> None:

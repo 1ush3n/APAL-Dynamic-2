@@ -9,7 +9,10 @@ from types import SimpleNamespace
 import pytest
 
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
-from scripts.work3.evaluate_c_vs_d import summarize_disturbance_effects
+from scripts.work3.evaluate_c_vs_d import (
+    evaluate_single_trajectory,
+    summarize_disturbance_effects,
+)
 from utils.work3.disturbance_generator import (
     CYCLE_6_STATION_AIRCRAFT,
     INTENSITY_SPECS,
@@ -150,3 +153,108 @@ def test_effect_report_distinguishes_hit_wait_and_cross_aircraft_impact() -> Non
     assert report["observed_added_wait_hours"] == pytest.approx(15.0)
     assert report["cross_aircraft_affected_task_count"] == 1
     assert report["cross_aircraft_affected_aircraft_ids"] == [2]
+
+
+def test_effect_report_explains_each_unhit_target() -> None:
+    tasks = {
+        "started-before-event": SimpleNamespace(
+            aircraft_id=1,
+            material_ready_time=0.0,
+            actual_start=5.0,
+        ),
+        "not-delayed": SimpleNamespace(
+            aircraft_id=1,
+            material_ready_time=0.0,
+            actual_start=12.0,
+        ),
+    }
+
+    report = summarize_disturbance_effects(
+        tasks,
+        {
+            "affected_task_keys": [
+                "started-before-event",
+                "not-delayed",
+                "missing-target",
+            ],
+            "aircraft_id": 1,
+            "tau": 10.0,
+        },
+        baseline_start_by_key={},
+    )
+
+    assert report["unhit_reasons"] == {
+        "started-before-event": "already_started_or_completed_at_event",
+        "not-delayed": "no_material_delay_recorded",
+        "missing-target": "target_not_in_instance",
+    }
+
+    untriggered_report = summarize_disturbance_effects(
+        tasks,
+        {
+            "affected_task_keys": ["started-before-event", "missing-target"],
+            "aircraft_id": 1,
+            "tau": 10.0,
+        },
+        baseline_start_by_key={},
+        event_triggered=False,
+    )
+    assert untriggered_report["unhit_reasons"] == {
+        "started-before-event": "event_not_triggered",
+        "missing-target": "event_not_triggered",
+    }
+
+
+def test_environment_tracks_whether_a_scenario_disturbance_was_processed(
+    baseline_path: Path,
+) -> None:
+    from envs.work3.environment import AirLineEnvWork3
+
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    env.reset()
+    assert env.disturbance_event_triggered is False
+
+    env.load_scenario({
+        "scenario_id": "IMMEDIATE_EVENT",
+        "tau": 0.0,
+        "recovery_time": 1.0,
+        "affected_task_keys": ["missing-target"],
+    })
+    assert env.disturbance_event_triggered is True
+
+    env.reset()
+    env.load_scenario({
+        "scenario_id": "FUTURE_EVENT",
+        "tau": 100.0,
+        "recovery_time": 101.0,
+        "affected_task_keys": ["missing-target"],
+    })
+    assert env.disturbance_event_triggered is False
+    assert env._advance_to_next_event() is True
+    assert env.disturbance_event_triggered is True
+
+
+def test_formal_evaluation_reports_an_event_that_has_not_triggered(
+    baseline_path: Path,
+) -> None:
+    from envs.work3.environment import AirLineEnvWork3
+
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    result = evaluate_single_trajectory(
+        env,
+        "Baseline-C",
+        None,
+        scenario={
+            "scenario_id": "NOT_YET_TRIGGERED",
+            "aircraft_id": 0,
+            "tau": 100.0,
+            "recovery_time": 101.0,
+            "affected_task_keys": ["missing-target"],
+        },
+        max_decisions=0,
+    )
+
+    assert result["disturbance_effects"]["event_triggered"] is False
+    assert result["disturbance_effects"]["unhit_reasons"] == {
+        "missing-target": "event_not_triggered"
+    }
