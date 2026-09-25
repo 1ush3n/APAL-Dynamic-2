@@ -47,9 +47,16 @@ def compute_station_estimated_finish(
     if not st_tasks:
         return current_time
 
+    def estimated_duration(task: TaskRuntimeState) -> float:
+        return float(
+            task.execution_duration
+            if task.execution_duration is not None
+            else task.duration
+        )
+
     # 1. 正在执行任务 (RUNNING) 的确定性完工时刻下界
     running_finishes = [
-        float(t.actual_start + t.duration)
+        float(t.actual_start + estimated_duration(t))
         for t in st_tasks
         if t.status == TaskStatus.RUNNING and t.actual_start is not None
     ]
@@ -65,7 +72,12 @@ def compute_station_estimated_finish(
 
     # 3. 站内未排工序工作量与工人供给下界：t + W_remain / M_s
     # 已正式后移 (POSTPONED) 的工序当前站位已被置为 s+1，自然不出现在 st_tasks 中
-    w_remain = sum(float(t.duration) for t in st_tasks)
+    w_remain = sum(
+        max(0.0, t.actual_start + estimated_duration(t) - current_time)
+        if t.status == TaskStatus.RUNNING and t.actual_start is not None
+        else estimated_duration(t)
+        for t in st_tasks
+    )
     num_workers = len(state.station_worker_bindings.get(station_id, []))
     m_s = max(1, num_workers)
     f_workload = current_time + (w_remain / m_s)

@@ -13,7 +13,13 @@ from __future__ import annotations
 from pathlib import Path
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
+from envs.work3.core_types import (
+    ActionBranch,
+    AircraftRuntimeState,
+    MultiAircraftState,
+    TaskRuntimeState,
+    TaskStatus,
+)
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.heuristic_estimator import (
     compute_cycle_heuristic_cmax,
@@ -121,3 +127,35 @@ def test_estimator_monotonicity_and_drainout(baseline_path: str) -> None:
         est = compute_cycle_heuristic_cmax(env.state)
         # 断言绝对不发生时间倒退；H0不构成估计硬下界
         assert est >= env.state.current_time - 1e-4
+
+
+def test_running_task_workload_uses_only_remaining_processing_time() -> None:
+    """团队实际工时10小时且已完成8小时的任务只剩2小时。"""
+    running = TaskRuntimeState(
+        aircraft_id=0,
+        task_id=0,
+        task_key="0_0",
+        base_station=0,
+        current_station=0,
+        status=TaskStatus.RUNNING,
+        duration=12.0,
+        in_station_offset=0.0,
+        demand=1,
+        skill=0,
+        ao_code="",
+        predecessors=(),
+        actual_start=0.0,
+        execution_duration=10.0,
+    )
+    state = MultiAircraftState(
+        num_aircraft=1,
+        num_stations=1,
+        h0=10.0,
+        current_time=8.0,
+        aircraft={0: AircraftRuntimeState(aircraft_id=0, current_station=0)},
+        tasks={running.task_key: running},
+        station_worker_bindings={0: [0, 1]},
+    )
+
+    # 手算：团队工时10、已加工8，完工下界为10；剩余2除以2人得9；最终取max为10。
+    assert compute_station_estimated_finish(state, 0, state.h0) == 10.0
