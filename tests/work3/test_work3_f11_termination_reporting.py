@@ -383,6 +383,25 @@ class _AlwaysAdvanceHeuristic(HeuristicAgentWork3):
         return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
 
 
+def test_l08_evaluation_propagates_software_exception_without_success_report(
+    baseline_path: Path,
+) -> None:
+    """评测中的软件异常必须显式失败，不能被包装为成功轨迹。"""
+    class FailingAgent:
+        def select_action(self, _env: AirLineEnvWork3) -> dict[str, object]:
+            raise RuntimeError("simulated policy failure")
+
+    env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
+
+    with pytest.raises(RuntimeError, match="simulated policy failure"):
+        evaluate_single_trajectory(
+            env,
+            "Baseline-C",
+            FailingAgent(),
+            max_decisions=1,
+        )
+
+
 @pytest.mark.parametrize("entrypoint", ["evaluation", "heuristic"])
 def test_trajectory_entrypoints_report_advance_deadlock_as_failure(
     baseline_path: Path,
