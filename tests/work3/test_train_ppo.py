@@ -141,7 +141,7 @@ def test_training_records_forced_advance_from_spawn_worker(
         "aircraft_id": 0,
         "tau": 0.0,
         "recovery_time": 0.0,
-        "affected_task_keys": [],
+        "affected_task_keys": ["missing-task"],
     }
     monkeypatch.setattr(train_module, "load_training_scenarios", lambda *_args: [scenario])
 
@@ -174,6 +174,9 @@ def test_training_records_forced_advance_from_spawn_worker(
     assert result["history"][0]["total_steps"] == 1
     assert result["history"][0]["environment_steps"] == 1
     assert result["scenario_log"][0]["disturbance_triggered"] is True
+    assert result["scenario_log"][0]["unhit_reasons"] == {
+        "missing-task": "target_not_in_instance"
+    }
     assert result["trajectory_audit"]["step_count"] == 1
     assert result["lightning_fit_calls"] == 1
 

@@ -881,6 +881,9 @@ def run_training(
         hit_keys = list(state.scenario_status.get("actual_hit_task_keys", ()))
         state.scenario_log["actual_hit_task_keys"] = hit_keys
         state.scenario_log["actual_hit_count"] = len(hit_keys)
+        state.scenario_log["unhit_reasons"] = dict(
+            state.scenario_status.get("unhit_reasons", {})
+        )
 
     def start_episode_wave() -> None:
         nonlocal worker_states
@@ -923,6 +926,7 @@ def run_training(
                 "disturbance_triggered": False,
                 "actual_hit_task_keys": [],
                 "actual_hit_count": 0,
+                "unhit_reasons": {},
                 "actual_transfer_times": [],
                 "completed": False,
                 "success": None,
