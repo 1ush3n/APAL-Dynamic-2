@@ -126,6 +126,50 @@ def test_future_reservation_times_and_replay_snapshot_are_distinguishable(
     assert replay_log_prob.item() == pytest.approx(old_log_prob, abs=1e-6)
 
 
+def test_unlaunched_aircraft_load_changes_future_not_current_station_feature(
+    baseline_path: Path,
+) -> None:
+    """未进线飞机新增工作量只能改变站位未来负荷，不得污染当前负荷。"""
+    env = _make_env(baseline_path)
+    unlaunched_aircraft_id = next(
+        aircraft_id
+        for aircraft_id, aircraft in env.state.aircraft.items()
+        if aircraft.current_station == -1
+    )
+    future_task = next(
+        task
+        for task in env.state.tasks.values()
+        if task.aircraft_id == unlaunched_aircraft_id
+        and task.current_station == 0
+        and task.status != TaskStatus.COMPLETED
+    )
+    assert env.state.get_aircraft_at_station(0) == 0
+    assert env.state.aircraft[unlaunched_aircraft_id].current_station == -1
+
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
+    graph_before = actor.build_graph_snapshot(env)
+    station_index = future_task.current_station
+    remaining_load_before = graph_before["station"].x[station_index, 0].item()
+    current_load_before = graph_before["station"].x[station_index, 4].item()
+    future_load_before = graph_before["station"].x[station_index, 5].item()
+    assert current_load_before > 0.0
+    assert future_load_before > 0.0
+    added_work = env.state.h0 * 0.25
+    future_task.duration += added_work
+
+    graph_after = actor.build_graph_snapshot(env)
+
+    assert graph_after["station"].x[station_index, 4].item() == pytest.approx(
+        current_load_before
+    )
+    assert graph_after["station"].x[station_index, 5].item() == pytest.approx(
+        future_load_before + 0.25
+    )
+    assert graph_after["station"].x[station_index, 0].item() == pytest.approx(
+        remaining_load_before + 0.25
+    )
+
+
 def test_previous_published_team_is_separate_from_p0_and_changes_worker_input(
     baseline_path: Path,
 ) -> None:
