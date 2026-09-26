@@ -591,12 +591,17 @@ class Work3VectorEnv:
         self,
         pending: dict[Connection, tuple[int, int]],
         timeout_seconds: float,
+        *,
+        wall_clock_deadline: float | None = None,
     ) -> tuple[dict[int, Any], list[tuple[int, str]], set[int], tuple[int, ...]]:
         results: dict[int, Any] = {}
         errors: list[tuple[int, str]] = []
         invoked: list[int] = []
         acknowledged: set[int] = set()
-        deadline = time.monotonic() + timeout_seconds
+        wait_started_at = time.monotonic()
+        deadline = wait_started_at + timeout_seconds
+        if wall_clock_deadline is not None and deadline >= wall_clock_deadline:
+            deadline = max(wait_started_at, wall_clock_deadline) + timeout_seconds
         while pending:
             remaining = max(0.0, deadline - time.monotonic())
             ready = wait(tuple(pending), timeout=remaining)
@@ -973,6 +978,7 @@ class Work3VectorEnv:
                 self._request_timeout_seconds
                 if settle_timeout_seconds is None
                 else settle_timeout_seconds,
+                wall_clock_deadline=wall_clock_deadline,
             )
             errors.extend(response_errors)
             for worker_id, _message in errors:

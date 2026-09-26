@@ -1209,6 +1209,69 @@ def test_vector_expired_wall_clock_deadline_stops_dispatch_without_fake_result()
     assert vector.workers_alive == (False,)
 
 
+def test_vector_step_collects_full_settlement_window_after_wall_clock_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vector_module = _work3_vector_env_module()
+    clock = [0.0]
+    deadline = 1.0
+
+    class FakeConnection:
+        def __init__(self, response: dict[str, Any], ready_at: float | None) -> None:
+            self.response = response
+            self.ready_at = ready_at
+
+        def recv(self) -> dict[str, Any]:
+            return self.response
+
+    completed = FakeConnection(
+        {"request_id": 10, "ok": True, "result": "complete"},
+        ready_at=2.9,
+    )
+    delayed_forever = FakeConnection(
+        {"request_id": 11, "ok": True, "result": "too_late"},
+        ready_at=None,
+    )
+    waits: list[float] = []
+
+    def fake_wait(
+        connections: tuple[FakeConnection, ...], timeout: float
+    ) -> list[FakeConnection]:
+        waits.append(timeout)
+        available = [
+            connection
+            for connection in connections
+            if connection.ready_at is not None
+            and connection.ready_at <= clock[0] + timeout
+        ]
+        if available:
+            clock[0] = min(
+                connection.ready_at
+                for connection in available
+                if connection.ready_at is not None
+            )
+            return available
+        clock[0] += timeout
+        return []
+
+    monkeypatch.setattr(vector_module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(vector_module, "wait", fake_wait)
+    vector = object.__new__(vector_module.Work3VectorEnv)
+
+    results, errors, timed_out, invoked = vector._collect_responses(
+        {completed: (0, 10), delayed_forever: (1, 11)},
+        timeout_seconds=2.0,
+        wall_clock_deadline=deadline,
+    )
+
+    assert results == {0: "complete"}
+    assert errors == []
+    assert timed_out == {1}
+    assert invoked == ()
+    assert clock[0] == pytest.approx(3.0)
+    assert waits == [pytest.approx(3.0), pytest.approx(0.1)]
+
+
 def test_gae_is_partitioned_by_worker_episode_and_segment() -> None:
     from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
 
@@ -2823,3 +2886,134 @@ def test_spawn_reset_runs_uniform_warmup_before_loading_fixed_scenario() -> None
         assert vector.budget_reserved_steps == prior_steps
     finally:
         vector.close()
+
+
+def test_training_keeps_completed_peer_step_when_other_worker_response_is_lost(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from dataclasses import replace
+
+    from scripts.work3.train_ppo_work3 import run_training
+
+    scenario = {
+        "scenario_id": "INTERRUPTED_STEP_DISTURBANCE_UNKNOWN",
+        "timing": "EARLY",
+        "intensity": "LOW",
+        "station_id": 0,
+        "aircraft_id": 0,
+        "tau": 1.0,
+        "delta": 1.0,
+        "recovery_time": 2.0,
+        "affected_task_keys": ["0_15"],
+        "valid": True,
+    }
+    scenarios_path = tmp_path / "interrupted_scenarios.json"
+    split_path = tmp_path / "interrupted_train.json"
+    scenarios_path.write_text(json.dumps([scenario]), encoding="utf-8")
+    split_path.write_text(json.dumps([scenario]), encoding="utf-8")
+
+    vector_module = _work3_vector_env_module()
+    original_step_all = vector_module.Work3VectorEnv.step_all
+    original_reset_all = vector_module.Work3VectorEnv.reset_all
+    reset_scenario_statuses: list[dict[str, Any]] = []
+
+    def capture_reset_statuses(self: Any, **kwargs: Any) -> Any:
+        results = original_reset_all(self, **kwargs)
+        reset_scenario_statuses.extend(
+            dict(result.scenario_status) for result in results
+        )
+        return results
+
+    monkeypatch.setattr(
+        vector_module.Work3VectorEnv,
+        "reset_all",
+        capture_reset_statuses,
+    )
+
+    def lose_second_response(self: Any, **kwargs: Any) -> Any:
+        batch = original_step_all(self, **kwargs)
+        assert batch.dispatched_worker_ids == (0, 1)
+        assert all(result is not None for result in batch.results)
+        assert reset_scenario_statuses[1]["event_triggered"] is False
+        self._terminate_worker(1)
+        return replace(
+            batch,
+            results=(batch.results[0], None),
+            interrupted_worker_ids=(1,),
+            worker_errors=((1, "simulated response loss after env.step"),),
+        )
+
+    monkeypatch.setattr(
+        vector_module.Work3VectorEnv,
+        "step_all",
+        lose_second_response,
+    )
+    report = run_training(
+        run_mode="pilot",
+        successful_batch_target=1,
+        steps_per_iter=2,
+        ppo_epochs=1,
+        batch_size=2,
+        seed=42,
+        max_decisions=2,
+        method_variant="C",
+        baseline_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json",
+        scenarios_path=scenarios_path,
+        scenario_split_path=split_path,
+        device="cpu",
+        num_envs=2,
+        output_ckpt=tmp_path / "partial_response.pt",
+        report_path=tmp_path / "partial_response.json",
+    )
+
+    assert report["run_status"] == "infrastructure_interrupted"
+    assert report["termination_reason"] == "worker_infrastructure_interrupted"
+    assert report["total_decisions"] == 2
+    assert report["completed_transition_count"] == 1
+    assert report["worker_step_counts"] == [1, 1]
+    assert report["history"][0]["environment_steps"] == 1
+    assert report["lightning_optimization_steps"] > 0
+    episodes = {item["worker_id"]: item for item in report["scenario_log"]}
+    assert episodes[0]["truncated"] is True
+    assert episodes[0]["success"] is False
+    assert episodes[0]["termination_reason"] == "cohort_truncated_after_worker_interruption"
+    assert episodes[0]["infrastructure_interrupted"] is False
+    assert episodes[1]["infrastructure_interrupted"] is True
+    assert episodes[1]["termination_reason"] == "worker_infrastructure_interrupted"
+    assert episodes[1]["truncated"] is True
+    assert episodes[1]["actual_hit_status"] == "unknown"
+    assert report["actual_disturbance_hit_count"] == 0
+    assert report["actual_disturbance_hit_unknown_episode_count"] == 1
+    assert report["actual_disturbance_hit_count_complete"] is False
+    assert report["infrastructure_interrupted_workers"] == [
+        {
+            "worker_id": 1,
+            "reason": "simulated response loss after env.step",
+        }
+    ]
+
+
+def test_checkpoint_evaluation_is_rejected_after_worker_interruption() -> None:
+    from scripts.work3.train_ppo_work3 import _is_checkpoint_evaluation_eligible
+
+    assert not _is_checkpoint_evaluation_eligible(
+        run_mode="pilot",
+        successful_batch_count=1,
+        optimization_steps=1,
+        resolved_config_valid=True,
+        required_data_hashes_valid=True,
+        use_time_auxiliary=False,
+        time_head_training_status="not_applicable_method_c",
+        infrastructure_interrupted=True,
+    )
+    assert _is_checkpoint_evaluation_eligible(
+        run_mode="pilot",
+        successful_batch_count=1,
+        optimization_steps=1,
+        resolved_config_valid=True,
+        required_data_hashes_valid=True,
+        use_time_auxiliary=False,
+        time_head_training_status="not_applicable_method_c",
+        infrastructure_interrupted=False,
+    )

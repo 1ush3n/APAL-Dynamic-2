@@ -354,6 +354,31 @@ def _should_stop_after_success_target(
     )
 
 
+def _is_checkpoint_evaluation_eligible(
+    *,
+    run_mode: str,
+    successful_batch_count: int,
+    optimization_steps: int,
+    resolved_config_valid: bool,
+    required_data_hashes_valid: bool,
+    use_time_auxiliary: bool,
+    time_head_training_status: str,
+    infrastructure_interrupted: bool,
+) -> bool:
+    return bool(
+        run_mode == "pilot"
+        and successful_batch_count > 0
+        and optimization_steps > 0
+        and resolved_config_valid
+        and required_data_hashes_valid
+        and not infrastructure_interrupted
+        and (
+            not use_time_auxiliary
+            or time_head_training_status == "trained_online"
+        )
+    )
+
+
 def _cpu_state_dict(module: torch.nn.Module) -> dict[str, torch.Tensor]:
     return {
         name: tensor.detach().cpu().clone()
@@ -872,6 +897,7 @@ def run_training(
     start_time = run_started
     pending_time_labels = PendingTimeLabelCache()
     scenario_log: list[dict[str, Any]] = []
+    infrastructure_interruptions: dict[int, str] = {}
     cycle_time_labels: list[dict[str, Any]] = []
     lightning_fit_calls = 0
     lightning_grad_scaler_enabled: bool | None = None
@@ -889,6 +915,14 @@ def run_training(
         state.scenario_log["disturbance_triggered"] = bool(
             state.scenario_status.get("event_triggered", False)
         )
+        if state.scenario_log.get("scenario_id") is None:
+            state.scenario_log["actual_hit_status"] = "not_applicable"
+        else:
+            state.scenario_log["actual_hit_status"] = (
+                "observed"
+                if state.scenario_status.get("event_triggered", False)
+                else "not_triggered_at_last_observation"
+            )
         hit_keys = list(state.scenario_status.get("actual_hit_task_keys", ()))
         state.scenario_log["actual_hit_task_keys"] = hit_keys
         state.scenario_log["actual_hit_count"] = len(hit_keys)
@@ -970,6 +1004,7 @@ def run_training(
                 "success": None,
                 "truncated": False,
                 "termination_reason": None,
+                "infrastructure_interrupted": False,
                 "scenario_started": bool(reset_result.scenario_status.get("started")),
                 "warmup": (
                     None
@@ -1071,9 +1106,14 @@ def run_training(
                 "label_available": False,
             })
 
-    def mark_budget_truncated(reason: str) -> None:
+    def mark_budget_truncated(
+        reason: str,
+        *,
+        episode_reason: str | None = None,
+    ) -> None:
         nonlocal stop_reason
         stop_reason = reason
+        truncation_reason = episode_reason or reason
         for state in worker_states:
             if state.done:
                 continue
@@ -1082,11 +1122,11 @@ def run_training(
                 "completed": False,
                 "success": False,
                 "truncated": True,
-                "termination_reason": reason,
+                "termination_reason": truncation_reason,
             })
             state.done = True
             state.success = False
-            state.termination_reason = reason
+            state.termination_reason = truncation_reason
             record_unlabelled_cycles(state.worker_id, state.episode_id)
             pending_time_labels.discard_episode(
                 state.episode_id,
@@ -1108,6 +1148,50 @@ def run_training(
                         transition.done = True
                         transition.truncated = True
                     break
+
+    def mark_worker_infrastructure_interrupted(
+        worker_id: int,
+        reason: str,
+    ) -> None:
+        state = worker_states[worker_id]
+        if state.done:
+            return
+        update_scenario_effect_log(state)
+        state.scenario_log.update({
+            "completed": False,
+            "success": False,
+            "truncated": True,
+            "termination_reason": "worker_infrastructure_interrupted",
+            "infrastructure_interrupted": True,
+            "infrastructure_error": reason,
+        })
+        if state.scenario_log.get("scenario_id") is not None:
+            state.scenario_log["actual_hit_status"] = "unknown"
+        state.done = True
+        state.success = False
+        state.termination_reason = "worker_infrastructure_interrupted"
+        infrastructure_interruptions[worker_id] = reason
+        record_unlabelled_cycles(worker_id, state.episode_id)
+        pending_time_labels.discard_episode(
+            state.episode_id,
+            worker_id=worker_id,
+        )
+        if shaper is not None and state.predictor_version is not None:
+            shaper.end_episode(
+                worker_id=worker_id,
+                episode_id=state.episode_id,
+            )
+            state.predictor_version = None
+        for transition in reversed(buffer.transitions):
+            if (
+                transition.worker_id == worker_id
+                and transition.episode_id == state.episode_id
+                and transition.segment_id == iter_idx
+            ):
+                if not transition.terminated:
+                    transition.done = True
+                    transition.truncated = True
+                break
 
     def current_budget_reason() -> str | None:
         if max_decisions is not None and total_env_steps >= max_decisions:
@@ -1274,25 +1358,49 @@ def run_training(
                 settle_timeout_seconds=settle_timeout_seconds,
                 wall_clock_deadline=deadline,
             )
-            if step_batch.worker_errors or step_batch.interrupted_worker_ids:
-                env.close()
+            worker_error_by_id = {
+                worker_id: message
+                for worker_id, message in step_batch.worker_errors
+            }
+            interrupted_worker_ids = (
+                set(step_batch.interrupted_worker_ids)
+                | set(worker_error_by_id)
+            )
+            completed_worker_ids = tuple(
+                worker_id
+                for worker_id in step_batch.dispatched_worker_ids
+                if step_batch.results[worker_id] is not None
+            )
+            missing_unexplained_results = tuple(
+                worker_id
+                for worker_id in step_batch.dispatched_worker_ids
+                if step_batch.results[worker_id] is None
+                and worker_id not in interrupted_worker_ids
+            )
+            if missing_unexplained_results:
                 raise RuntimeError(
-                    "向量环境step未完整结算："
-                    f"errors={step_batch.worker_errors}, "
-                    f"interrupted={step_batch.interrupted_worker_ids}"
+                    "向量环境step缺少结果但未报告worker中断："
+                    f"{missing_unexplained_results}"
                 )
-            if not step_batch.dispatched_worker_ids:
+            if not step_batch.dispatched_worker_ids and not interrupted_worker_ids:
                 reason = current_budget_reason() or "no_worker_dispatched"
                 mark_budget_truncated(reason)
                 break
-            if any(
-                step_batch.results[worker_id] is None
-                for worker_id in step_batch.dispatched_worker_ids
-            ):
-                raise RuntimeError("向量环境step缺少已派发worker的结果")
-            next_snapshots = env.snapshots()
+            if interrupted_worker_ids:
+                for worker_id in sorted(interrupted_worker_ids):
+                    reason = worker_error_by_id.get(
+                        worker_id,
+                        "worker请求未在结算期限内返回完整响应",
+                    )
+                    mark_worker_infrastructure_interrupted(worker_id, reason)
+                next_snapshots = {
+                    worker_id: env.snapshot(worker_id=worker_id)
+                    for worker_id in completed_worker_ids
+                }
+            else:
+                next_snapshots = dict(enumerate(env.snapshots()))
 
-            for worker_id in step_batch.dispatched_worker_ids:
+            for worker_id in completed_worker_ids:
                 state = worker_states[worker_id]
                 context = action_contexts[worker_id]
                 snapshot = next_snapshots[worker_id]
@@ -1455,6 +1563,30 @@ def run_training(
                 step_shaped_rewards.append(shaped_reward)
                 total_env_steps += 1
                 steps_this_rollout += 1
+
+            if interrupted_worker_ids:
+                stop_reason = "worker_infrastructure_interrupted"
+                mark_budget_truncated(
+                    stop_reason,
+                    episode_reason="cohort_truncated_after_worker_interruption",
+                )
+                break
+
+            if step_batch.wall_clock_expired:
+                if _should_stop_after_success_target(
+                    run_mode=run_mode,
+                    successful_batch_target=successful_batch_target,
+                    successful_batch_count=sum(
+                        item.get("success") is True for item in scenario_log
+                    ),
+                    active_episode_count=sum(
+                        not state.done for state in worker_states
+                    ),
+                ):
+                    stop_reason = "successful_batch_target_reached"
+                else:
+                    mark_budget_truncated("wall_time_limit")
+                break
 
             if _should_stop_after_success_target(
                 run_mode=run_mode,
@@ -1715,30 +1847,34 @@ def run_training(
         and hashlib.sha256(resolved_config_yaml.encode("utf-8")).hexdigest()
         == resolved_config_sha256
     )
-    checkpoint_evaluation_eligible = bool(
-        run_mode == "pilot"
-        and successful_batch_count > 0
-        and lightning_module.optimization_steps > 0
-        and resolved_config_valid
-        and all(
-            isinstance(value, str)
-            and len(value) == 64
-            and all(character in "0123456789abcdef" for character in value)
-            for value in required_data_hashes
-        )
-        and (
-            not profile.use_time_auxiliary
-            or time_head_training_status == "trained_online"
-        )
+    required_data_hashes_valid = all(
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+        for value in required_data_hashes
+    )
+    checkpoint_evaluation_eligible = _is_checkpoint_evaluation_eligible(
+        run_mode=run_mode,
+        successful_batch_count=successful_batch_count,
+        optimization_steps=int(lightning_module.optimization_steps),
+        resolved_config_valid=resolved_config_valid,
+        required_data_hashes_valid=required_data_hashes_valid,
+        use_time_auxiliary=profile.use_time_auxiliary,
+        time_head_training_status=time_head_training_status,
+        infrastructure_interrupted=bool(infrastructure_interruptions),
     )
     report: dict[str, Any] = {
         "report_version": "work3_training_run_v1",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "run_mode": run_mode,
         "disturbance_enabled": run_mode == "pilot",
-        "run_status": "successful_batch_target_reached"
-        if stop_reason == "successful_batch_target_reached"
-        else "budget_or_iteration_ended",
+        "run_status": (
+            "infrastructure_interrupted"
+            if stop_reason == "worker_infrastructure_interrupted"
+            else "successful_batch_target_reached"
+            if stop_reason == "successful_batch_target_reached"
+            else "budget_or_iteration_ended"
+        ),
         "terminated": stop_reason == "successful_batch_target_reached",
         "truncated": stop_reason != "successful_batch_target_reached",
         "termination_reason": stop_reason,
@@ -1787,7 +1923,8 @@ def run_training(
             "cuda_max_memory_allocated" if torch_device.type == "cuda"
             else "process_peak_working_set_or_rss"
         ),
-        "total_decisions": total_env_steps,
+        "total_decisions": int(env.total_env_steps),
+        "completed_transition_count": int(total_env_steps - warmup_env_steps),
         "warmup_env_steps": warmup_env_steps,
         "policy_decision_steps": total_env_steps - warmup_env_steps,
         "lightning_optimization_steps": int(lightning_module.optimization_steps),
@@ -1807,8 +1944,23 @@ def run_training(
         }),
         "successful_batch_count": int(successful_batch_count),
         "failure_reasons": failure_reasons,
+        "infrastructure_interrupted_workers": [
+            {"worker_id": worker_id, "reason": reason}
+            for worker_id, reason in sorted(infrastructure_interruptions.items())
+        ],
         "actual_disturbance_hit_count": sum(
             int(item.get("actual_hit_count") or 0) for item in scenario_log
+        ),
+        "actual_disturbance_hit_unknown_episode_count": sum(
+            item.get("actual_hit_status") == "unknown" for item in scenario_log
+        ),
+        "actual_disturbance_hit_incomplete_episode_count": sum(
+            item.get("actual_hit_status") == "not_triggered_at_last_observation"
+            for item in scenario_log
+        ),
+        "actual_disturbance_hit_count_complete": all(
+            item.get("actual_hit_status") in {"observed", "not_applicable"}
+            for item in scenario_log
         ),
         "actual_disturbance_hit_episode_count": sum(
             int(item.get("actual_hit_count") or 0) > 0 for item in scenario_log
