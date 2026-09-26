@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -25,11 +26,15 @@ CSV_PATH = PROJECT_ROOT / "data" / "3182.csv"
 
 def test_3182_is_reproducible_from_authoritative_excel() -> None:
     config = load_mapping_config(CONFIG_PATH)
-    workbook_path = Path(config["source"]["workbook"])
+    configured_workbook = os.environ.get("APAL_3182_SOURCE_WORKBOOK")
+    workbook_path = Path(
+        configured_workbook or config["source"]["workbook"]
+    )
     if not workbook_path.is_absolute():
         workbook_path = PROJECT_ROOT / workbook_path
     if not workbook_path.is_file():
         pytest.skip(f"权威Excel不存在，不能验证来源重建：{workbook_path}")
+    config["source"]["workbook"] = str(workbook_path)
     expected, _legacy = build_dataset(config)
     actual = pd.read_csv(CSV_PATH)
 
