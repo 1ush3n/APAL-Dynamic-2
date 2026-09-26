@@ -23,12 +23,17 @@ import argparse
 import json
 import logging
 import math
+import sys
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import torch
+
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskStatus
 from envs.work3.environment import AirLineEnvWork3

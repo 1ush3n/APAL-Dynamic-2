@@ -9,8 +9,12 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
+
 import pytest
 import torch
 
@@ -23,6 +27,28 @@ from scripts.work3.collect_validation_trajectories import (
     extract_compact_state_features,
 )
 from utils.work3.uniform_baseline_warmup import UniformBaselineWarmupResult
+
+
+def test_collector_script_cli_runs_from_repository_root_without_pythonpath() -> None:
+    """直接脚本入口应自行解析仓库内模块，不依赖调用者配置PYTHONPATH。"""
+    repo_root = Path(__file__).resolve().parents[2]
+    script_path = repo_root / "scripts" / "work3" / "collect_validation_trajectories.py"
+    clean_env = os.environ.copy()
+    clean_env.pop("PYTHONPATH", None)
+
+    result = subprocess.run(
+        [sys.executable, str(script_path), "--help"],
+        cwd=repo_root,
+        env=clean_env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "--scenario_split" in result.stdout
 
 
 @pytest.fixture
