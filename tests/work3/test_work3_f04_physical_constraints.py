@@ -11,6 +11,7 @@ from envs.work3.environment import AirLineEnvWork3
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")
 WORKER_POOL_PATH = Path("data/worker_pool_fixed.csv")
+RAW_DATA_PATH = Path("data/283.csv")
 
 
 def load_worker_profiles() -> dict[int, dict[str, float]]:
@@ -77,7 +78,33 @@ def test_duration_for_team_uses_efficiency_and_team_synergy(env: AirLineEnvWork3
 
     assert duration_a != pytest.approx(duration_b)
     assert duration_a == pytest.approx(
-        task.duration * task.demand / profiles[team_a[0]]["efficiency"]
+        task.standard_duration * task.demand / profiles[team_a[0]]["efficiency"]
+    )
+
+
+def test_duration_for_team_uses_raw_standard_time_not_baseline_team_duration(
+    env: AirLineEnvWork3,
+) -> None:
+    """原始CSV工时乘需求再按团队效率折算，不能重复折算基准团队工时。"""
+    from core.constraints import calculate_team_synergy_factor
+
+    task = env.state.tasks["0_12"]
+    with RAW_DATA_PATH.open("r", encoding="utf-8-sig", newline="") as handle:
+        row = next(
+            item
+            for item in csv.DictReader(handle)
+            if int(float(item["序号"])) - 1 == task.task_id
+        )
+    standard_duration = float(row["加工时间/h"])
+    base_team = task.base_team
+    expected_duration = standard_duration * task.demand / (
+        sum(env.worker_efficiencies[worker_id] for worker_id in base_team)
+        * calculate_team_synergy_factor(len(base_team))
+    )
+
+    assert env.duration_for_team(task, base_team) == pytest.approx(
+        expected_duration,
+        abs=1e-4,
     )
 
 

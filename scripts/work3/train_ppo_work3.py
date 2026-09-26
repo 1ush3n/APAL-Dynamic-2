@@ -287,6 +287,10 @@ def _independent_feasibility_from_audit(audit: Any) -> list[dict[str, Any]]:
                     None if item["max_allowed_station"] is None
                     else int(item["max_allowed_station"])
                 ),
+                standard_duration=(
+                    None if item.get("standard_duration") is None
+                    else float(item["standard_duration"])
+                ),
             )
             for task_id, item in worker_audit["task_constraints"].items()
         }
@@ -303,7 +307,10 @@ def _independent_feasibility_from_audit(audit: Any) -> list[dict[str, Any]]:
                     None if item["station_entry_time"] is None
                     else float(item["station_entry_time"])
                 ),
-                aircraft_station_at_start=int(item["aircraft_station_at_start"]),
+                aircraft_station_at_start=(
+                    None if item.get("aircraft_station_at_start") is None
+                    else int(item["aircraft_station_at_start"])
+                ),
                 station_exit_time=(
                     None if item.get("station_exit_time") is None
                     else float(item["station_exit_time"])
@@ -318,6 +325,14 @@ def _independent_feasibility_from_audit(audit: Any) -> list[dict[str, Any]]:
                 int(worker): tuple(int(skill) for skill in skills)
                 for worker, skills in worker_audit["worker_skills"].items()
             },
+            worker_efficiencies=(
+                None
+                if worker_audit.get("worker_efficiencies") is None
+                else {
+                    int(worker): float(efficiency)
+                    for worker, efficiency in worker_audit["worker_efficiencies"].items()
+                }
+            ),
             worker_station_bindings={
                 int(worker): int(station)
                 for worker, station in worker_audit["worker_station_bindings"].items()

@@ -67,6 +67,7 @@ class AirLineEnvWork3:
         self.step_count: int = 0
 
         self.state: MultiAircraftState = initialize_multi_aircraft_state(self.baseline_json_path)
+        self._raw_task_durations: np.ndarray = np.empty(0, dtype=float)
         self.worker_efficiencies: dict[int, float] = {}
         self.worker_skills: dict[int, frozenset[int]] = {}
         self.constraint_engine = self._load_domain_metadata()
@@ -283,6 +284,7 @@ class AirLineEnvWork3:
 
         self._raw_required_skills = required_skills
         self._raw_demands = demands
+        self._raw_task_durations = durations.copy()
         return engine.with_max_allowed_stations(max_allowed)
 
     def _attach_task_domain_metadata(self) -> None:
@@ -297,6 +299,7 @@ class AirLineEnvWork3:
                 raise ValueError(f"任务 {task.task_key} 的技能与原始工艺数据不一致")
             if int(task.demand) != int(self._raw_demands[task_id]):
                 raise ValueError(f"任务 {task.task_key} 的需求人数与原始工艺数据不一致")
+            task.standard_duration = float(self._raw_task_durations[task_id])
             fixed_station = int(self.constraint_engine.fixed_stations[task_id])
             task.fixed_station = fixed_station if fixed_station >= 0 else None
             task.max_allowed_station = int(self.constraint_engine.max_allowed_stations[task_id])
@@ -479,13 +482,15 @@ class AirLineEnvWork3:
         del start_time  # 当前工作三域数据没有疲劳状态，保留参数以保持工时接口可扩展。
         team_tuple = tuple(int(worker_id) for worker_id in team)
         self._validate_team_for_task(task, team_tuple)
-        if task.duration <= self.tolerance:
+        if task.standard_duration is None:
+            raise ValueError(f"任务 {task.task_key} 缺少原始实例标准工时")
+        if task.standard_duration <= self.tolerance:
             return 0.0
         efficiency_sum = sum(self.worker_efficiencies[worker_id] for worker_id in team_tuple)
         effective_capacity = efficiency_sum * calculate_team_synergy_factor(len(team_tuple))
         if effective_capacity <= self.tolerance:
             raise ValueError(f"团队 {team_tuple} 的有效工时能力不足")
-        return float(task.duration * task.demand / effective_capacity)
+        return float(task.standard_duration * task.demand / effective_capacity)
 
     def _assignment_snapshot(
         self,
@@ -1201,7 +1206,11 @@ class AirLineEnvWork3:
 
     def _on_task_started(self, task: TaskRuntimeState, start_time: float) -> None:
         """工序正式进入 RUNNING 状态，结算基准开工位置偏差 D_time 与团队替换 D_team 增量。"""
-        task.start_work(current_time=start_time, cycle_start_time=self.state.last_transfer_time)
+        task.start_work(
+            current_time=start_time,
+            cycle_start_time=self.state.last_transfer_time,
+            actual_start_station=self.state.aircraft[task.aircraft_id].current_station,
+        )
         if task.start_cost_confirmed:
             return
 

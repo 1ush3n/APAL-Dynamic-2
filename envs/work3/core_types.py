@@ -125,16 +125,18 @@ class TaskRuntimeState:
     base_station: int           # 原始基准站位 (0-based: 0 ~ 4)
     current_station: int        # 当前排定执行站位 (0-based: 0 ~ 4)
     status: TaskStatus
-    duration: float
+    duration: float                 # 基准模板团队的实际加工工时
     in_station_offset: float     # 单机模板站内周期偏移量 b_i^0
     demand: int
     skill: int
     ao_code: str
     predecessors: tuple[int, ...]  # 本机内部紧前工序 ID 列表
+    standard_duration: float | None = None  # 原始实例中的标准加工工时
 
     assigned_team: list[int] = field(default_factory=list)
     scheduled_start: float | None = None
     actual_start: float | None = None
+    actual_start_station: int | None = None
     actual_end: float | None = None
 
     material_ready_time: float = 0.0  # 开工可用性到达时刻 R（受扰后继承）
@@ -180,9 +182,16 @@ class TaskRuntimeState:
         self.status = TaskStatus.READY
         self.generation += 1
 
-    def start_work(self, current_time: float, cycle_start_time: float | None = None) -> None:
+    def start_work(
+        self,
+        current_time: float,
+        cycle_start_time: float | None = None,
+        actual_start_station: int | None = None,
+    ) -> None:
         """实际开工。"""
         self.actual_start = float(current_time)
+        if self.actual_start_station is None and actual_start_station is not None:
+            self.actual_start_station = int(actual_start_station)
         if cycle_start_time is not None:
             self.cycle_start_time = float(cycle_start_time)
         self.status = TaskStatus.RUNNING
@@ -234,6 +243,7 @@ class TaskRuntimeState:
             current_station=self.current_station,
             status=self.status,
             duration=self.duration,
+            standard_duration=self.standard_duration,
             in_station_offset=self.in_station_offset,
             demand=self.demand,
             skill=self.skill,
@@ -242,6 +252,7 @@ class TaskRuntimeState:
             assigned_team=list(self.assigned_team),
             scheduled_start=self.scheduled_start,
             actual_start=self.actual_start,
+            actual_start_station=self.actual_start_station,
             actual_end=self.actual_end,
             material_ready_time=self.material_ready_time,
             postpone_count=self.postpone_count,

@@ -14,7 +14,6 @@ from typing import Any
 
 import torch
 
-from envs.work3.core_types import TaskRuntimeState
 from envs.work3.decision_snapshot import DecisionSnapshot, build_decision_snapshot
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import compute_time_urgency_vector
@@ -74,13 +73,13 @@ class Work3VectorStepBatch:
 def _execution_record(
     env: AirLineEnvWork3,
     task_key: str,
-    start_station_by_task: dict[str, int],
 ) -> dict[str, Any]:
     task = env.state.tasks[task_key]
     assignment = task.last_published_assignment or task.baseline_assignment
     station_id = int(assignment.get("station", task.current_station))
     aircraft = env.state.aircraft[task.aircraft_id]
-    if task_key not in start_station_by_task:
+    actual_start_station = getattr(task, "actual_start_station", None)
+    if actual_start_station is None:
         raise RuntimeError(f"工序{task_key}缺少真实开工站位记录")
     return {
         "task_key": task.task_key,
@@ -92,7 +91,7 @@ def _execution_record(
         "end": float(task.actual_end),
         "material_ready_time": float(task.material_ready_time),
         "station_entry_time": aircraft.entry_times.get(station_id),
-        "aircraft_station_at_start": start_station_by_task[task_key],
+        "aircraft_station_at_start": int(actual_start_station),
         "station_exit_time": aircraft.exit_times.get(station_id),
     }
 
@@ -100,10 +99,9 @@ def _execution_record(
 def _trajectory_audit(
     env: AirLineEnvWork3,
     last_info: dict[str, Any],
-    start_station_by_task: dict[str, int],
 ) -> dict[str, Any]:
     execution_records = [
-        _execution_record(env, task.task_key, start_station_by_task)
+        _execution_record(env, task.task_key)
         for task in env.state.tasks.values()
         if task.actual_start is not None and task.actual_end is not None
     ]
@@ -114,6 +112,7 @@ def _trajectory_audit(
             "predecessors": tuple(int(item) for item in task.predecessors),
             "fixed_station": task.fixed_station,
             "max_allowed_station": task.max_allowed_station,
+            "standard_duration": float(task.standard_duration),
         }
         for task in env.state.tasks.values()
     }
@@ -149,6 +148,10 @@ def _trajectory_audit(
         "worker_skills": {
             int(worker_id): tuple(sorted(int(skill) for skill in skills))
             for worker_id, skills in env.worker_skills.items()
+        },
+        "worker_efficiencies": {
+            int(worker_id): float(efficiency)
+            for worker_id, efficiency in env.worker_efficiencies.items()
         },
         "worker_station_bindings": worker_station_bindings,
         "station_capacities": {
@@ -252,17 +255,6 @@ def _worker_main(
             return event
 
         env.event_queue.pop = traced_pop  # type: ignore[method-assign]
-        start_station_by_task: dict[str, int] = {}
-        original_started = env._on_task_started
-
-        def traced_started(task: TaskRuntimeState, start_time: float) -> None:
-            original_started(task, start_time)
-            if task.actual_start is not None:
-                start_station_by_task[task.task_key] = int(
-                    env.state.aircraft[task.aircraft_id].current_station
-                )
-
-        env._on_task_started = traced_started  # type: ignore[method-assign]
         known_completed: set[str] = set()
         episode_id = 0
         episode_index = 0
@@ -291,7 +283,6 @@ def _worker_main(
                     episode_index = int(request.get("episode_index", 0))
                     observation = env.reset()
                     known_completed.clear()
-                    start_station_by_task.clear()
                     last_info = {}
                     requested_scenario = request.get("scenario")
                     if requested_scenario is not None:
@@ -386,7 +377,7 @@ def _worker_main(
                             continue
                         known_completed.add(task.task_key)
                         completed_records.append(
-                            _execution_record(env, task.task_key, start_station_by_task)
+                            _execution_record(env, task.task_key)
                         )
                     episode_index += 1
                     result = Work3StepResult(
@@ -406,7 +397,7 @@ def _worker_main(
                         ),
                     )
                 elif command == "close":
-                    result = _trajectory_audit(env, last_info, start_station_by_task)
+                    result = _trajectory_audit(env, last_info)
                     connection.send({"request_id": request_id, "ok": True, "result": result})
                     break
                 else:

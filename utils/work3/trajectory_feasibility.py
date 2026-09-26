@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import heapq
+import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Iterable, Mapping, Sequence
+
+from core.constraints import calculate_team_synergy_factor
 
 if TYPE_CHECKING:
     from envs.work3.environment import AirLineEnvWork3
@@ -18,6 +22,7 @@ class TaskConstraintRecord:
     predecessors: tuple[int, ...] = ()
     fixed_station: int | None = None
     max_allowed_station: int | None = None
+    standard_duration: float | None = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +60,7 @@ def validate_trajectory(
     worker_skills: Mapping[int, set[int] | frozenset[int] | Sequence[int]],
     worker_station_bindings: Mapping[int, int],
     station_capacities: Mapping[int, int],
+    worker_efficiencies: Mapping[int, float] | None = None,
     tolerance: float = 1e-5,
 ) -> TrajectoryFeasibilityReport:
     """独立扫描执行记录中的资源、工艺、恢复、位置和转站约束。"""
@@ -106,10 +112,9 @@ def validate_trajectory(
                 record,
                 exit_time=record.station_exit_time,
             )
-        if (
-            record.aircraft_station_at_start is not None
-            and int(record.aircraft_station_at_start) != int(record.station_id)
-        ):
+        if record.aircraft_station_at_start is None:
+            add("missing_actual_start_station", record)
+        elif int(record.aircraft_station_at_start) != int(record.station_id):
             add("aircraft_position", record)
 
         if constraint.fixed_station is not None and record.station_id != constraint.fixed_station:
@@ -131,6 +136,51 @@ def validate_trajectory(
                 add("worker_station", record, worker_id=worker_id)
             worker_intervals.setdefault(worker_id, []).append(record)
         station_intervals.setdefault(record.station_id, []).append(record)
+
+        if worker_efficiencies is not None:
+            if constraint.standard_duration is None:
+                add("missing_duration_inputs", record, field="standard_duration")
+            elif constraint.standard_duration < -tolerance:
+                add(
+                    "invalid_duration_inputs",
+                    record,
+                    standard_duration=constraint.standard_duration,
+                )
+            elif len(record.team) == int(constraint.demand) and len(set(record.team)) == len(record.team):
+                if any(worker_id not in worker_efficiencies for worker_id in record.team):
+                    add("missing_duration_inputs", record, field="worker_efficiencies")
+                else:
+                    efficiencies = [float(worker_efficiencies[worker_id]) for worker_id in record.team]
+                    if any(not math.isfinite(value) or value <= 0.0 for value in efficiencies):
+                        add("invalid_duration_inputs", record, field="worker_efficiencies")
+                    elif constraint.standard_duration <= tolerance:
+                        expected_duration = 0.0
+                    else:
+                        effective_capacity = sum(efficiencies) * calculate_team_synergy_factor(
+                            len(record.team)
+                        )
+                        if effective_capacity <= tolerance:
+                            add("invalid_duration_inputs", record, field="effective_capacity")
+                        else:
+                            expected_duration = (
+                                float(constraint.standard_duration)
+                                * int(constraint.demand)
+                                / effective_capacity
+                            )
+                            actual_duration = record.end - record.start
+                            if (
+                                not math.isfinite(expected_duration)
+                                or not math.isfinite(actual_duration)
+                            ):
+                                add("invalid_duration_inputs", record, field="duration")
+                            elif abs(expected_duration - actual_duration) > 1e-4:
+                                add(
+                                    "duration_mismatch",
+                                    record,
+                                    expected_duration=expected_duration,
+                                    actual_duration=actual_duration,
+                                    tolerance_hours=1e-4,
+                                )
 
     for (aircraft_id, task_id), record in keyed.items():
         constraint = task_constraints.get(task_id)
@@ -157,23 +207,23 @@ def validate_trajectory(
             for record in intervals:
                 add("unknown_station_capacity", record)
             continue
-        events: list[tuple[float, int, TrajectoryExecutionRecord]] = []
-        for record in intervals:
-            if record.end > record.start + tolerance:
-                events.extend(((record.start, 1, record), (record.end, -1, record)))
-        active = 0
-        events.sort(key=lambda item: (item[0], item[1]))
-        for event_time, delta, record in events:
-            active += delta
-            if active > int(capacity):
+        active_ends: list[float] = []
+        ordered_intervals = sorted(intervals, key=lambda item: (item.start, item.end))
+        for record in ordered_intervals:
+            if record.end <= record.start + tolerance:
+                continue
+            while active_ends and active_ends[0] <= record.start + tolerance:
+                heapq.heappop(active_ends)
+            if len(active_ends) >= int(capacity):
                 add(
                     "station_capacity",
                     record,
                     station_id=station_id,
-                    time=event_time,
+                    time=record.start,
                     capacity=capacity,
                 )
                 break
+            heapq.heappush(active_ends, record.end)
 
     return TrajectoryFeasibilityReport(violations=counts, examples=examples)
 
@@ -194,9 +244,17 @@ def check_environment_trajectory_feasibility(
             predecessors=tuple(task.predecessors),
             fixed_station=task.fixed_station,
             max_allowed_station=task.max_allowed_station,
+            standard_duration=(
+                None
+                if getattr(task, "standard_duration", None) is None
+                else float(task.standard_duration)
+            ),
         )
         if task.actual_start is None or task.actual_end is None:
             return False, {"missing_execution_interval": 1}
+        actual_start_station = getattr(task, "actual_start_station", None)
+        if actual_start_station is None:
+            return False, {"missing_actual_start_station": 1}
         aircraft = env.state.aircraft[task.aircraft_id]
         station_exit_time = aircraft.exit_times.get(task.current_station)
         if station_exit_time is None:
@@ -211,7 +269,7 @@ def check_environment_trajectory_feasibility(
                 end=float(task.actual_end),
                 material_ready_time=float(task.material_ready_time),
                 station_entry_time=aircraft.entry_times.get(task.current_station),
-                aircraft_station_at_start=task.current_station,
+                aircraft_station_at_start=int(actual_start_station),
                 station_exit_time=float(station_exit_time),
             )
         )
@@ -220,6 +278,7 @@ def check_environment_trajectory_feasibility(
         records,
         task_constraints=constraints,
         worker_skills=env.worker_skills,
+        worker_efficiencies=env.worker_efficiencies,
         worker_station_bindings={
             worker_id: station_id
             for station_id, worker_ids in env.state.station_worker_bindings.items()
