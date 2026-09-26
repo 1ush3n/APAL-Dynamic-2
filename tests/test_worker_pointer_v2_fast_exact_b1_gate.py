@@ -86,9 +86,12 @@ def _restore_random_state():
     deterministic = torch.are_deterministic_algorithms_enabled()
     cudnn_deterministic = torch.backends.cudnn.deterministic
     cudnn_benchmark = torch.backends.cudnn.benchmark
+    matmul_precision = torch.get_float32_matmul_precision()
+    torch.set_float32_matmul_precision("highest")
     try:
         yield
     finally:
+        torch.set_float32_matmul_precision(matmul_precision)
         random.setstate(python_state)
         np.random.set_state(numpy_state)
         torch.set_rng_state(torch_state)
