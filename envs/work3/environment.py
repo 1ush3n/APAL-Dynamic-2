@@ -866,6 +866,10 @@ class AirLineEnvWork3:
             # 后移可能使得当前周期站位放行条件满足，检查是否可安排转站
             self._check_and_schedule_transfer()
 
+        if not explicit_advance:
+            # 动作可能产生同刻完工或转站事件；向策略返回状态前结算到稳定状态。
+            self.process_due_events()
+
         # 没有任何合法调度动作时自动推进；存在 RESERVED 修订候选时交给显式推进动作决定。
         if not explicit_advance and no_change_revision:
             info["advanced"] = self._advance_to_next_event()

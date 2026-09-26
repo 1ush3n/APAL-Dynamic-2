@@ -7,7 +7,7 @@ import random
 
 import pytest
 
-from envs.work3.core_types import ActionBranch
+from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3, NoFeasibleSlotError
 from envs.work3.event_queue import EventType
 
@@ -543,6 +543,35 @@ def test_team_search_rejects_invalid_duration(
             search_start=0.0,
             duration=duration,
         )
+
+
+def test_zero_duration_task_finishes_before_next_policy_observation(
+    env: AirLineEnvWork3,
+) -> None:
+    """A11：合法零工时任务应在同刻完成，不以RUNNING暴露给下一次决策。"""
+    task = env.get_ready_tasks()[0]
+    team = tuple(env.valid_team_completion_workers(task, [])[: task.demand])
+    assert len(team) == task.demand
+    assert len(env.get_action_candidates()) > 1
+    task.duration = 0.0
+
+    _, _, terminated, _, _ = env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team,
+            "align": 0,
+        }
+    )
+
+    assert task.status == TaskStatus.COMPLETED
+    assert task.actual_start == pytest.approx(0.0)
+    assert task.actual_end == pytest.approx(0.0)
+    assert task.task_key not in env._station_occupied_tasks[task.current_station]
+    assert all(
+        env.state.workers[worker_id].is_available(0.0, 1.0) for worker_id in team
+    )
+    assert not terminated
 
 
 def test_station_capacity_blocks_distinct_workers_from_overlapping_future_slots(
