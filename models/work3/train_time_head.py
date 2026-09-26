@@ -229,6 +229,7 @@ def train_time_head(
     weight_decay: float = 1e-4,
     checkpoint_path: str | None = "models/work3/checkpoints/time_head_best.pt",
     device: str = "cpu",
+    data_provenance: dict[str, Any] | None = None,
 ) -> tuple[TimeResidualHead, dict[str, Any]]:
     """训练时间修正头并执行离线验证，保存最佳检查点。"""
     torch_device = torch.device(device)
@@ -295,6 +296,7 @@ def train_time_head(
                     "hidden_dim": hidden_dim,
                     "model_version": "signed_residual_v1",
                     "metrics": best_eval_metrics,
+                    "data_provenance": data_provenance,
                 }, ckpt_p)
 
     logger.info(

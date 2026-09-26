@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 import pytest
@@ -62,6 +63,44 @@ def _create_synthetic_trajectory(
         "total_steps": num_steps,
         "steps": steps,
     }
+
+
+def _write_official_split_inputs(
+    tmp_path: Path,
+    train_ids: list[str],
+    validation_ids: list[str],
+    test_ids: list[str],
+    train_artifact_ids: list[str] | None = None,
+) -> dict[str, Path]:
+    """构造独立事件清单和对应小型监督轨迹文件。"""
+    manifests = {
+        "train": train_ids,
+        "validation": validation_ids,
+        "test": test_ids,
+    }
+    paths: dict[str, Path] = {}
+    for split_name, scenario_ids in manifests.items():
+        manifest_path = tmp_path / f"{split_name}.json"
+        manifest_path.write_text(
+            json.dumps({"scenarios": [{"scenario_id": item} for item in scenario_ids]}),
+            encoding="utf-8",
+        )
+        paths[f"{split_name}_split"] = manifest_path
+
+    for split_name, scenario_ids in (
+        ("train", train_ids if train_artifact_ids is None else train_artifact_ids),
+        ("validation", validation_ids),
+    ):
+        artifact_path = tmp_path / f"{split_name}_trajectories.pt"
+        torch.save(
+            [
+                _create_synthetic_trajectory(index, scenario_id)
+                for index, scenario_id in enumerate(scenario_ids)
+            ],
+            artifact_path,
+        )
+        paths[f"{split_name}_trajectories"] = artifact_path
+    return paths
 
 
 def test_step_residual_dataset_and_collate() -> None:
@@ -165,6 +204,156 @@ def test_distinct_states_from_one_training_scenario_stay_in_training() -> None:
     assert train_scenarios.isdisjoint(val_scenarios)
 
 
+def test_time_predictor_rejects_legacy_pooled_trajectory_input(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """时间头入口不得再对采集后混合轨迹执行随机训练/验证切分。"""
+    import sys
+
+    from scripts.work3 import train_time_predictor
+
+    pooled_path = tmp_path / "pooled.pt"
+    pooled_path.touch()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_time_predictor.py",
+            "--trajectories",
+            str(pooled_path),
+            "--checkpoint",
+            str(tmp_path / "unused.pt"),
+        ],
+    )
+    monkeypatch.setattr(
+        train_time_predictor.torch,
+        "load",
+        lambda *_args, **_kwargs: [
+            _create_synthetic_trajectory(1, "TRAIN_EVENT"),
+            _create_synthetic_trajectory(2, "VALIDATION_EVENT"),
+            _create_synthetic_trajectory(3, "TEST_EVENT"),
+        ],
+    )
+    monkeypatch.setattr(
+        train_time_predictor,
+        "train_time_head",
+        lambda **_kwargs: (
+            None,
+            {
+                "mae_raw_hours": 1.0,
+                "mae_corrected_hours": 0.5,
+                "mae_improvement_pct": 50.0,
+                "total_val_samples": 50,
+            },
+        ),
+    )
+
+    with pytest.raises(SystemExit) as error:
+        train_time_predictor.main()
+
+    assert error.value.code == 2
+
+
+def test_time_predictor_trains_only_on_exact_official_split_manifests(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """训练入口按预先划分的事件清单加载训练与验证轨迹。"""
+    import sys
+
+    from scripts.work3 import train_time_predictor
+
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A", "TRAIN_B"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_time_predictor.py",
+            "--train-trajectories",
+            str(paths["train_trajectories"]),
+            "--validation-trajectories",
+            str(paths["validation_trajectories"]),
+            "--train-split",
+            str(paths["train_split"]),
+            "--validation-split",
+            str(paths["validation_split"]),
+            "--test-split",
+            str(paths["test_split"]),
+            "--checkpoint",
+            str(tmp_path / "time_head.pt"),
+        ],
+    )
+    captured: dict[str, object] = {}
+
+    def capture_training(**kwargs: object) -> tuple[None, dict[str, float]]:
+        captured.update(kwargs)
+        return None, {
+            "mae_raw_hours": 1.0,
+            "mae_corrected_hours": 0.5,
+            "mae_improvement_pct": 50.0,
+            "total_val_samples": 50,
+        }
+
+    monkeypatch.setattr(train_time_predictor, "train_time_head", capture_training)
+
+    train_time_predictor.main()
+
+    train_ids = {item["scenario_id"] for item in captured["train_trajectories"]}
+    validation_ids = {
+        item["scenario_id"] for item in captured["val_trajectories"]
+    }
+    assert train_ids == {"TRAIN_A", "TRAIN_B"}
+    assert validation_ids == {"VALIDATION_A"}
+    provenance = captured["data_provenance"]
+    assert provenance["scenario_ids"]["test"] == ["TEST_A"]
+
+
+def test_time_predictor_rejects_trajectory_from_another_official_split(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """train轨迹文件包含validation/test事件时，训练必须在拟合前失败。"""
+    import sys
+
+    from scripts.work3 import train_time_predictor
+
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+        train_artifact_ids=["TRAIN_A", "TEST_A"],
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_time_predictor.py",
+            "--train-trajectories",
+            str(paths["train_trajectories"]),
+            "--validation-trajectories",
+            str(paths["validation_trajectories"]),
+            "--train-split",
+            str(paths["train_split"]),
+            "--validation-split",
+            str(paths["validation_split"]),
+            "--test-split",
+            str(paths["test_split"]),
+            "--checkpoint",
+            str(tmp_path / "time_head.pt"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="不属于train场景清单"):
+        train_time_predictor.main()
+
+
 def test_collector_defaults_to_one_nominal_trajectory(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -213,6 +402,14 @@ def test_train_time_head_convergence_and_checkpoint() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         ckpt_path = str(Path(tmpdir) / "time_head_test.pt")
+        provenance = {
+            "protocol": "official_event_scenario_split_v1",
+            "scenario_ids": {
+                "train": ["TRAIN_0", "TRAIN_1", "TRAIN_2", "TRAIN_3"],
+                "validation": ["VAL_0", "VAL_1"],
+                "test": ["TEST_0"],
+            },
+        }
         model, metrics = train_time_head(
             train_trajectories=train_trajs,
             val_trajectories=val_trajs,
@@ -220,6 +417,7 @@ def test_train_time_head_convergence_and_checkpoint() -> None:
             batch_size=32,
             lr=5e-3,
             checkpoint_path=ckpt_path,
+            data_provenance=provenance,
         )
 
         assert Path(ckpt_path).is_file(), "检查点文件未成功保存"
@@ -229,6 +427,7 @@ def test_train_time_head_convergence_and_checkpoint() -> None:
 
         # 验证检查点加载恢复
         ckpt = torch.load(ckpt_path, weights_only=False)
+        assert ckpt["data_provenance"] == provenance
         loaded_model = TimeResidualHead(in_dim=32, hidden_dim=64)
         loaded_model.load_state_dict(ckpt["model_state_dict"])
         loaded_metrics = evaluate_time_head(loaded_model, val_trajs)
@@ -237,28 +436,47 @@ def test_train_time_head_convergence_and_checkpoint() -> None:
 
 def test_milestone_m4_checkpoint_acceptance() -> None:
     """【里程碑 M4 硬性验收测试】：断言真实最佳检查点在验证集上 MAE 降低幅度 >= 15.0%。"""
-    ckpt_path = Path("models/work3/checkpoints/time_head_best.pt")
-    traj_path = Path("data/work3/val_trajectories.pt")
+    from scripts.work3.train_time_predictor import load_official_trajectory_splits
 
-    if not ckpt_path.is_file() or not traj_path.is_file():
-        pytest.skip("检查点或轨迹数据集尚未就绪，跳过 M4 验收测试")
+    ckpt_path = Path("models/work3/checkpoints/time_head_m4_official.pt")
+    train_path = Path("data/work3/m4_train_trajectories.pt")
+    validation_path = Path("data/work3/m4_validation_trajectories.pt")
+
+    if not ckpt_path.is_file() or not train_path.is_file() or not validation_path.is_file():
+        pytest.skip("当前官方事件划分的M4轨迹或时间头检查点尚未生成")
+
+    _, val_trajectories, provenance = load_official_trajectory_splits(
+        train_trajectories_path=train_path,
+        validation_trajectories_path=validation_path,
+        train_split_path=Path("data/work3/experiment_splits/train.json"),
+        validation_split_path=Path("data/work3/experiment_splits/validation.json"),
+        test_split_path=Path("data/work3/experiment_splits/test.json"),
+    )
 
     ckpt = torch.load(ckpt_path, weights_only=False)
     if ckpt.get("model_version") != "signed_residual_v1":
-        pytest.skip("现有检查点属于旧门控非负残差版本")
+        pytest.fail("M4正式检查点不是signed_residual_v1版本")
+    saved_provenance = ckpt.get("data_provenance", {})
+    assert saved_provenance.get("protocol") == provenance["protocol"]
+    assert saved_provenance.get("scenario_ids") == provenance["scenario_ids"]
+    for artifact_group in ("manifests", "trajectory_artifacts"):
+        assert {
+            split: item["sha256"]
+            for split, item in saved_provenance.get(artifact_group, {}).items()
+        } == {
+            split: item["sha256"]
+            for split, item in provenance[artifact_group].items()
+        }, f"M4检查点的{artifact_group}指纹与当前官方划分不一致"
     metrics = ckpt.get("metrics", {})
     impr = metrics.get("mae_improvement_pct", 0.0)
 
     assert impr >= 15.0, f"里程碑 M4 验收未通过：验证集误差改善幅度 {impr:.2f}% 低于 15.0% 门槛！"
 
-    # 在验证集上重新评估断言
-    trajectories = torch.load(traj_path, weights_only=False)
-    _, val_trajs = split_trajectories_by_scenario(trajectories, val_ratio=0.25, seed=2026)
-
+    # 直接在预先隔离的官方validation轨迹上重新评估，不做事后随机切分。
     model = TimeResidualHead(in_dim=32, hidden_dim=64)
     model.load_state_dict(ckpt["model_state_dict"])
 
-    eval_metrics = evaluate_time_head(model, val_trajs)
+    eval_metrics = evaluate_time_head(model, val_trajectories)
     assert eval_metrics["mae_improvement_pct"] >= 15.0, (
         f"重新评估不通过: 原始 MAE={eval_metrics['mae_raw_hours']:.3f}h, "
         f"修正 MAE={eval_metrics['mae_corrected_hours']:.3f}h, "
