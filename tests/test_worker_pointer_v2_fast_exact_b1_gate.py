@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import copy
 import math
+import random
 from pathlib import Path
 
+import numpy as np
 import pytest
 import torch
 
@@ -26,7 +28,7 @@ from environment import AirLineEnv_Graph
 from models.hb_gat_pn import HBGATPN
 from ppo_agent import PPOAgent
 from runtime.configuration import validate_runtime_config
-from tests.runtime_safety import temporary_config
+from tests.runtime_safety import seed_everything, temporary_config
 from tests.test_joint_experiment_architecture import (
     DATA_PATH,
     _advance_to_ready_physical_task,
@@ -73,6 +75,28 @@ def _make_gate_agent(*, config: Config | None = None, k_epochs: int = 1) -> PPOA
         total_timesteps=1,
         config=cfg,
     )
+
+
+@pytest.fixture
+def _restore_random_state():
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    torch_state = torch.get_rng_state()
+    cuda_states = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+    deterministic = torch.are_deterministic_algorithms_enabled()
+    cudnn_deterministic = torch.backends.cudnn.deterministic
+    cudnn_benchmark = torch.backends.cudnn.benchmark
+    try:
+        yield
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        torch.set_rng_state(torch_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
+        torch.use_deterministic_algorithms(deterministic)
+        torch.backends.cudnn.deterministic = cudnn_deterministic
+        torch.backends.cudnn.benchmark = cudnn_benchmark
 
 
 def _collect_multi_step_rollout(
@@ -372,8 +396,9 @@ def test_gate_7_edge_cases_virtual_station_and_worker() -> None:
             assert math.isfinite(val)
 
 
-def test_gate_8_parameter_delta_parity() -> None:
+def test_gate_8_parameter_delta_parity(_restore_random_state) -> None:
     """Gate 8: physical_group 与 logical_batch_v1 从相同初始参数出发的 Parameter-Delta (Δθ) 权重更新等价性。"""
+    seed_everything(2026)
     overrides = _gate_fast_exact_b1_overrides(
         lightning_precision="32-true",
         worker_pointer_v2_fast_replay_batching="physical_group",
@@ -387,8 +412,11 @@ def test_gate_8_parameter_delta_parity() -> None:
         builder = GPUExactBatchBuilder(config=configs, env=env, device=_DEVICE)
 
         init_state = {k: v.clone() for k, v in agent_pg.policy.state_dict().items()}
+        agent_lb = _make_gate_agent()
+        agent_lb.policy.load_state_dict(init_state)
 
         configs.worker_pointer_v2_fast_replay_batching = "physical_group"
+        seed_everything(2027)
         agent_pg._run_v2_fast_exact_replay_update(
             memory=memory,
             env=env,
@@ -408,9 +436,7 @@ def test_gate_8_parameter_delta_parity() -> None:
         }
 
         configs.worker_pointer_v2_fast_replay_batching = "logical_batch_v1"
-        agent_lb = _make_gate_agent()
-        agent_lb.policy.load_state_dict(init_state)
-
+        seed_everything(2027)
         agent_lb._run_v2_fast_exact_replay_update(
             memory=memory,
             env=env,
