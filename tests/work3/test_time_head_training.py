@@ -53,12 +53,19 @@ def _create_synthetic_trajectory(
             "estimated_cmax": p_est,
             "actual_transfer_time": p_actual,
             "label_y": label_y,
+            "label_available": True,
             "state_feat": feat,
         })
 
     return {
         "trajectory_id": traj_id,
         "scenario_id": scenario_id,
+        "success": True,
+        "termination_reason": "completed",
+        "completed_tasks": 1,
+        "total_tasks": 1,
+        "feasible": True,
+        "constraint_violations": {},
         "h0": h0,
         "total_steps": num_steps,
         "steps": steps,
@@ -358,6 +365,58 @@ def test_time_predictor_rejects_trajectory_from_another_official_split(
 
     with pytest.raises(ValueError, match="不属于train场景清单"):
         train_time_predictor.main()
+
+
+def test_time_predictor_rejects_incomplete_or_infeasible_official_trajectories(
+    tmp_path: Path,
+) -> None:
+    """正式M4入口不得接受失败、截断或独立可行性检查未通过的轨迹。"""
+    from scripts.work3.train_time_predictor import load_official_trajectory_splits
+
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["success"] = False
+    trajectories[0]["termination_reason"] = "rollout_truncated"
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match="非完整或不可行轨迹"):
+        load_official_trajectory_splits(
+            train_trajectories_path=paths["train_trajectories"],
+            validation_trajectories_path=paths["validation_trajectories"],
+            train_split_path=paths["train_split"],
+            validation_split_path=paths["validation_split"],
+            test_split_path=paths["test_split"],
+        )
+
+    trajectories[0]["success"] = True
+    trajectories[0]["termination_reason"] = "completed"
+    trajectories[0]["steps"][0]["label_available"] = False
+    torch.save(trajectories, paths["train_trajectories"])
+    with pytest.raises(ValueError, match="非完整或不可行轨迹"):
+        load_official_trajectory_splits(
+            train_trajectories_path=paths["train_trajectories"],
+            validation_trajectories_path=paths["validation_trajectories"],
+            train_split_path=paths["train_split"],
+            validation_split_path=paths["validation_split"],
+            test_split_path=paths["test_split"],
+        )
+
+    trajectories[0]["steps"][0]["label_available"] = True
+    trajectories[0]["feasible"] = False
+    torch.save(trajectories, paths["train_trajectories"])
+    with pytest.raises(ValueError, match="非完整或不可行轨迹"):
+        load_official_trajectory_splits(
+            train_trajectories_path=paths["train_trajectories"],
+            validation_trajectories_path=paths["validation_trajectories"],
+            train_split_path=paths["train_split"],
+            validation_split_path=paths["validation_split"],
+            test_split_path=paths["test_split"],
+        )
 
 
 def test_time_predictor_cannot_replace_frozen_manifests_to_train_on_test_event(

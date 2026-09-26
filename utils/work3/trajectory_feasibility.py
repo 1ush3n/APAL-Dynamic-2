@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Iterable, Mapping, Sequence
+
+if TYPE_CHECKING:
+    from envs.work3.environment import AirLineEnvWork3
 
 
 @dataclass(frozen=True)
@@ -173,3 +176,58 @@ def validate_trajectory(
                 break
 
     return TrajectoryFeasibilityReport(violations=counts, examples=examples)
+
+
+def check_environment_trajectory_feasibility(
+    env: AirLineEnvWork3,
+) -> tuple[bool, dict[str, int]]:
+    """从环境实际执行字段独立重建完整轨迹并复核可行性。"""
+    if not env._check_terminated():
+        return False, {"incomplete_trajectory": 1}
+
+    records: list[TrajectoryExecutionRecord] = []
+    constraints: dict[int, TaskConstraintRecord] = {}
+    for task in env.state.tasks.values():
+        constraints[task.task_id] = TaskConstraintRecord(
+            demand=task.demand,
+            required_skill=task.skill,
+            predecessors=tuple(task.predecessors),
+            fixed_station=task.fixed_station,
+            max_allowed_station=task.max_allowed_station,
+        )
+        if task.actual_start is None or task.actual_end is None:
+            return False, {"missing_execution_interval": 1}
+        aircraft = env.state.aircraft[task.aircraft_id]
+        station_exit_time = aircraft.exit_times.get(task.current_station)
+        if station_exit_time is None:
+            return False, {"missing_station_exit_time": 1}
+        records.append(
+            TrajectoryExecutionRecord(
+                aircraft_id=task.aircraft_id,
+                task_id=task.task_id,
+                station_id=task.current_station,
+                team=tuple(task.assigned_team),
+                start=float(task.actual_start),
+                end=float(task.actual_end),
+                material_ready_time=float(task.material_ready_time),
+                station_entry_time=aircraft.entry_times.get(task.current_station),
+                aircraft_station_at_start=task.current_station,
+                station_exit_time=float(station_exit_time),
+            )
+        )
+
+    report = validate_trajectory(
+        records,
+        task_constraints=constraints,
+        worker_skills=env.worker_skills,
+        worker_station_bindings={
+            worker_id: station_id
+            for station_id, worker_ids in env.state.station_worker_bindings.items()
+            for worker_id in worker_ids
+        },
+        station_capacities={
+            station_id: env.max_slots_per_station
+            for station_id in range(env.state.num_stations)
+        },
+    )
+    return report.is_feasible, dict(report.violations)

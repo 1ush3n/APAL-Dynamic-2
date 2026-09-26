@@ -45,6 +45,7 @@ from utils.work3.uniform_baseline_warmup import (
     run_uniform_baseline_warmup,
     validate_scenario_after_warmup,
 )
+from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -117,16 +118,22 @@ def collect_single_trajectory(
     h0 = float(env.state.h0)
     steps_data: list[dict[str, Any]] = []
     total_decisions = 0
+    termination_reason = "decision_limit"
 
     while total_decisions < 10000:
         candidates = env.get_action_candidates()
         if not candidates:
             if env._check_terminated():
+                termination_reason = "completed"
                 break
-            _obs, _reward, terminated, truncated, _info = env.step(
+            _obs, _reward, terminated, truncated, info = env.step(
                 {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
             )
-            if terminated or truncated:
+            if terminated:
+                termination_reason = str(info.get("termination_reason", "deadlock"))
+                break
+            if truncated:
+                termination_reason = "rollout_truncated"
                 break
             continue
 
@@ -137,10 +144,14 @@ def collect_single_trajectory(
 
         action = agent.select_action(env)
         if action is None:
-            _obs, _reward, terminated, truncated, _info = env.step(
+            _obs, _reward, terminated, truncated, info = env.step(
                 {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
             )
-            if terminated or truncated:
+            if terminated:
+                termination_reason = str(info.get("termination_reason", "deadlock"))
+                break
+            if truncated:
+                termination_reason = "rollout_truncated"
                 break
             continue
 
@@ -158,15 +169,58 @@ def collect_single_trajectory(
         steps_data.append(step_record)
 
         if terminated:
+            termination_reason = str(info.get("termination_reason", "deadlock"))
             break
+        if truncated:
+            termination_reason = "rollout_truncated"
+            break
+
+    if termination_reason != "completed" or not env._check_terminated():
+        raise RuntimeError(
+            "M4轨迹采集未完整成功，拒绝保存："
+            f"termination_reason={termination_reason}, decisions={total_decisions}"
+        )
+
+    feasible, constraint_violations = check_environment_trajectory_feasibility(env)
+    if not feasible:
+        raise RuntimeError(
+            "M4轨迹未通过独立可行性检查，拒绝保存："
+            f"violations={constraint_violations}"
+        )
 
     # 回溯结算真实转站时刻；尚未转站的周期不伪造监督标签。
     transfer_history = list(env.state.transfer_history)
     attach_transfer_labels(steps_data, transfer_history, h0)
+    if any(not step["label_available"] for step in steps_data):
+        raise RuntimeError("完整生产轨迹仍含缺失转站标签，拒绝保存为正式M4样本")
+
+    completed_tasks = sum(
+        task.status == TaskStatus.COMPLETED for task in env.state.tasks.values()
+    )
+    event_result = (
+        None
+        if scenario is None
+        else env.disturbance_event_results.get(str(scenario.get("scenario_id", "")))
+    )
 
     return {
         "trajectory_id": trajectory_id,
         "scenario_id": scenario["scenario_id"] if scenario else "NOMINAL_BASELINE",
+        "success": True,
+        "termination_reason": termination_reason,
+        "completed_tasks": completed_tasks,
+        "total_tasks": len(env.state.tasks),
+        "feasible": feasible,
+        "constraint_violations": constraint_violations,
+        "actual_hit_count": len(
+            [] if event_result is None else event_result.get("actual_hit_task_keys", [])
+        ),
+        "actual_hit_task_keys": (
+            [] if event_result is None else list(event_result.get("actual_hit_task_keys", []))
+        ),
+        "unhit_reasons": (
+            {} if event_result is None else dict(event_result.get("unhit_reasons", {}))
+        ),
         "warmup_mode": warmup_mode,
         "warmup": None if warmup_result is None else asdict(warmup_result),
         "warmup_env_steps": 0 if warmup_result is None else warmup_result.step_count,

@@ -119,6 +119,33 @@ def load_official_trajectory_splits(
                 f"{split_name}轨迹与{split_name}场景清单不一致；"
                 f"不属于{split_name}场景清单={unexpected_ids}，缺失={missing_ids}"
             )
+        invalid_ids: list[str] = []
+        for item in trajectories:
+            steps = item.get("steps")
+            invalid = (
+                item.get("success") is not True
+                or item.get("termination_reason") != "completed"
+                or item.get("feasible") is not True
+                or item.get("constraint_violations") != {}
+                or type(item.get("completed_tasks")) is not int
+                or type(item.get("total_tasks")) is not int
+                or item["completed_tasks"] != item["total_tasks"]
+                or not isinstance(steps, list)
+                or not steps
+                or any(
+                    not isinstance(step, dict)
+                    or step.get("label_available") is not True
+                    or step.get("actual_transfer_time") is None
+                    or step.get("label_y") is None
+                    for step in steps
+                )
+            )
+            if invalid:
+                invalid_ids.append(str(item.get("scenario_id", "")))
+        if invalid_ids:
+            raise ValueError(
+                f"{split_name}轨迹文件包含非完整或不可行轨迹：{invalid_ids}"
+            )
         loaded[split_name] = trajectories
 
     provenance = {

@@ -78,6 +78,11 @@ def test_trajectory_collection_and_label_consistency(baseline_path: str) -> None
     traj = collect_single_trajectory(agent, baseline_path=baseline_path, scenario=None, trajectory_id=1)
 
     assert traj["trajectory_id"] == 1
+    assert traj["success"] is True
+    assert traj["termination_reason"] == "completed"
+    assert traj["completed_tasks"] == traj["total_tasks"] == 2830
+    assert traj["feasible"] is True
+    assert traj["constraint_violations"] == {}
     assert traj["total_steps"] > 0
     assert traj["transfer_count"] == 14
     h0 = traj["h0"]
@@ -90,6 +95,42 @@ def test_trajectory_collection_and_label_consistency(baseline_path: str) -> None
         p_est = step["estimated_cmax"]
         expected_y = (p_actual - p_est) / h0
         assert abs(step["label_y"] - expected_y) < 1e-5, "监督残差标签计算不一致"
+
+
+def test_collector_rejects_truncated_trajectory(
+    baseline_path: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """动作返回truncated后不得继续执行或返回正式M4轨迹。"""
+    original_step = AirLineEnvWork3.step
+    step_calls = 0
+
+    def truncate_after_first_step(env: AirLineEnvWork3, action: object):
+        nonlocal step_calls
+        step_calls += 1
+        result = original_step(env, action)
+        observation, reward, _terminated, _truncated, info = result
+        return observation, reward, False, True, {**info, "termination_reason": "rollout_truncated"}
+
+    class OneStepAgent:
+        def __init__(self) -> None:
+            self.agent = HeuristicAgentWork3()
+            self.calls = 0
+
+        def select_action(self, env: AirLineEnvWork3):
+            self.calls += 1
+            if self.calls > 1:
+                raise AssertionError("采集器在truncated后仍继续调用策略")
+            return self.agent.select_action(env)
+
+    agent = OneStepAgent()
+    monkeypatch.setattr(AirLineEnvWork3, "step", truncate_after_first_step)
+
+    with pytest.raises(RuntimeError, match="rollout_truncated"):
+        collect_single_trajectory(agent, baseline_path=baseline_path)
+
+    assert step_calls == 1
+    assert agent.calls == 1
 
 
 def test_collection_loads_fixed_scenario_only_after_uniform_warmup(
