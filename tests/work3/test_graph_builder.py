@@ -9,7 +9,7 @@
    - skill_x: 11 维；
 3. Skill Hub 双向资源拓扑完整连接；
 4. 就绪任务掩码与动作分支掩码合法性；
-5. 单步构图耗时优良 (断言 < 5ms)。
+5. 单步构图平均耗时低于 25ms。
 """
 
 from __future__ import annotations
@@ -63,6 +63,39 @@ def test_graph_builder_node_and_edge_integrity(baseline_path: str) -> None:
     # 3. 验证工艺 DAG 边数量非空
     assert data["task", "precedes", "task"].edge_index.size(1) > 0
 
+    expected_baseline_team_edges = [
+        (builder.task_key_to_idx[task_key], builder.worker_id_to_idx[worker_id])
+        for task_key in builder.task_keys
+        for worker_id in baseline.tasks[task_key].team
+        if worker_id in builder.worker_id_to_idx
+    ]
+    actual_baseline_team_edges = list(
+        zip(
+            data["task", "baseline_team", "worker"].edge_index[0].tolist(),
+            data["task", "baseline_team", "worker"].edge_index[1].tolist(),
+        )
+    )
+    assert actual_baseline_team_edges == expected_baseline_team_edges
+
+
+def test_graph_snapshots_do_not_share_mutable_baseline_team_edges(
+    baseline_path: str,
+) -> None:
+    baseline = MultiAircraftBaseline.load_from_json(baseline_path)
+    builder = MultiAircraftGraphBuilder(baseline)
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    env.reset()
+
+    first = builder.build_graph(env)
+    second = builder.build_graph(env)
+    second_edges = second["task", "baseline_team", "worker"].edge_index.clone()
+    first["task", "baseline_team", "worker"].edge_index[0, 0] = -1
+
+    assert torch.equal(
+        second["task", "baseline_team", "worker"].edge_index,
+        second_edges,
+    )
+
 
 def test_relative_station_offset_feature(baseline_path: str) -> None:
     """测试物理相对站位偏移 (s_k - m_i^0) 在图特征第 [12] 维的正确性。"""
@@ -99,7 +132,7 @@ def test_ready_mask_and_branch_masks(baseline_path: str) -> None:
 
 
 def test_graph_building_latency_performance(baseline_path: str) -> None:
-    """测试单步异构图动态组装延迟 (断言平均 < 10ms)。"""
+    """测试单步异构图动态组装延迟 (断言平均 < 25ms)。"""
     baseline = MultiAircraftBaseline.load_from_json(baseline_path)
     builder = MultiAircraftGraphBuilder(baseline)
     env = AirLineEnvWork3(baseline_json_path=baseline_path)

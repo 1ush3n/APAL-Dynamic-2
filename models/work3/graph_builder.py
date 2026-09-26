@@ -157,6 +157,21 @@ class MultiAircraftGraphBuilder:
         self.worker_id_to_idx: dict[int, int] = {w: i for i, k in enumerate(self.sorted_workers) for w in [k]}
         self.num_workers = len(self.sorted_workers)
         self.num_stations = 5
+        self.baseline_teams: tuple[tuple[int, ...], ...] = tuple(
+            tuple(baseline.tasks[key].team) for key in self.task_keys
+        )
+        baseline_team_edges: list[tuple[int, int]] = [
+            (task_idx, self.worker_id_to_idx[worker_id])
+            for task_idx, team in enumerate(self.baseline_teams)
+            for worker_id in team
+            if worker_id in self.worker_id_to_idx
+        ]
+        # 张量形状：[边数, 2] → [2, 边数]。
+        self.baseline_team_edge_index: torch.Tensor = (
+            torch.tensor(baseline_team_edges, dtype=torch.long).T.contiguous()
+            if baseline_team_edges
+            else torch.empty((2, 0), dtype=torch.long)
+        )
 
         # ------------------
         # 1. 预构建静态 Task 特征底座 (Shape: [num_tasks, 26])
@@ -253,8 +268,9 @@ class MultiAircraftGraphBuilder:
         assigned_ts_dst: list[int] = []
         done_by_src: list[int] = []
         done_by_dst: list[int] = []
-        baseline_team_src: list[int] = []
-        baseline_team_dst: list[int] = []
+        changed_baseline_task_indices: list[int] = []
+        changed_baseline_team_src: list[int] = []
+        changed_baseline_team_dst: list[int] = []
         published_team_src: list[int] = []
         published_team_dst: list[int] = []
         station_remain_workload = [0.0] * 5
@@ -268,10 +284,12 @@ class MultiAircraftGraphBuilder:
             if t_rt is None:
                 continue
 
-            for w_id in t_rt.base_team:
-                if w_id in self.worker_id_to_idx:
-                    baseline_team_src.append(idx)
-                    baseline_team_dst.append(self.worker_id_to_idx[w_id])
+            if t_rt.base_team != self.baseline_teams[idx]:
+                changed_baseline_task_indices.append(idx)
+                for w_id in t_rt.base_team:
+                    if w_id in self.worker_id_to_idx:
+                        changed_baseline_team_src.append(idx)
+                        changed_baseline_team_dst.append(self.worker_id_to_idx[w_id])
 
             last_published = t_rt.last_published_assignment or t_rt.baseline_assignment
             pub_team = last_published.get("team") if isinstance(last_published, dict) else None
@@ -461,12 +479,27 @@ class MultiAircraftGraphBuilder:
             t_w = torch.empty((2, 0), dtype=torch.long)
         data["task", "done_by", "worker"].edge_index = t_w
 
-        if baseline_team_src:
-            baseline_edges = torch.tensor(
-                [baseline_team_src, baseline_team_dst], dtype=torch.long
+        if changed_baseline_task_indices:
+            changed_task_mask = torch.zeros(self.num_tasks, dtype=torch.bool)
+            changed_task_mask[
+                torch.tensor(changed_baseline_task_indices, dtype=torch.long)
+            ] = True
+            keep_edge_mask = ~changed_task_mask[self.baseline_team_edge_index[0]]
+            changed_edges = (
+                torch.tensor(
+                    [changed_baseline_team_src, changed_baseline_team_dst],
+                    dtype=torch.long,
+                )
+                if changed_baseline_team_src
+                else torch.empty((2, 0), dtype=torch.long)
+            )
+            # 张量形状：[2, 静态边数] 与 [2, 变更边数] → [2, 总边数]。
+            baseline_edges = torch.cat(
+                (self.baseline_team_edge_index[:, keep_edge_mask], changed_edges),
+                dim=1,
             )
         else:
-            baseline_edges = torch.empty((2, 0), dtype=torch.long)
+            baseline_edges = self.baseline_team_edge_index.clone()
         data["task", "baseline_team", "worker"].edge_index = baseline_edges
 
         if published_team_src:
