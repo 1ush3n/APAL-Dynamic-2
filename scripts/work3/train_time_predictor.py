@@ -14,6 +14,8 @@ import argparse
 import hashlib
 import json
 import logging
+import math
+import numbers
 from pathlib import Path
 import sys
 from typing import Any
@@ -65,6 +67,155 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _validate_official_trajectory(trajectory: dict[str, Any], split_name: str) -> None:
+    """在拟合前核验一条正式轨迹的完成状态、数值与真实周期标签。"""
+    scenario_id = str(trajectory.get("scenario_id", ""))
+
+    def reject(field: str, reason: str, step_idx: object | None = None) -> None:
+        location = f"{split_name}轨迹scenario_id={scenario_id}"
+        if step_idx is not None:
+            location += f" step_idx={step_idx}"
+        raise ValueError(f"{location} field={field}: {reason}")
+
+    if trajectory.get("success") is not True:
+        reject("success", "轨迹未成功完成")
+    if trajectory.get("termination_reason") != "completed":
+        reject("termination_reason", "轨迹退出原因不是completed")
+    if trajectory.get("feasible") is not True:
+        reject("feasible", "独立可行性检查未通过")
+    if trajectory.get("constraint_violations") != {}:
+        reject("constraint_violations", "存在约束违规")
+
+    def positive_integer(field: str) -> int:
+        value = trajectory.get(field)
+        if isinstance(value, bool) or not isinstance(value, numbers.Integral) or value <= 0:
+            reject(field, "必须为正整数")
+        return int(value)
+
+    total_tasks = positive_integer("total_tasks")
+    completed_tasks = positive_integer("completed_tasks")
+    if completed_tasks != total_tasks:
+        reject("completed_tasks", f"完成数{completed_tasks}不等于总数{total_tasks}")
+
+    def finite_number(
+        value: object,
+        field: str,
+        step_idx: object | None = None,
+    ) -> float:
+        if isinstance(value, bool) or not isinstance(value, numbers.Real):
+            reject(field, "必须为数值且不能是布尔值或字符串", step_idx)
+        numeric_value = float(value)
+        if not math.isfinite(numeric_value):
+            reject(field, "必须为有限数值", step_idx)
+        return numeric_value
+
+    h0 = finite_number(trajectory.get("h0"), "h0")
+    if h0 <= 0.0:
+        reject("h0", "必须大于0")
+
+    raw_history = trajectory.get("transfer_history")
+    if not isinstance(raw_history, (list, tuple)) or not raw_history:
+        reject("transfer_history", "必须包含完整、非空的真实转站时刻序列")
+    transfer_history = [
+        finite_number(value, f"transfer_history[{index}]")
+        for index, value in enumerate(raw_history)
+    ]
+    transfer_count = positive_integer("transfer_count")
+    if transfer_count != len(transfer_history):
+        reject("transfer_count", "与真实转站时刻序列长度不一致")
+
+    steps = trajectory.get("steps")
+    if not isinstance(steps, list) or not steps:
+        reject("steps", "必须包含非空的决策步骤列表")
+
+    # u=2^-24覆盖可能的float32标量序列化舍入；时间容差单位为小时，
+    # 标签容差单位为H0归一化残差，另加1e-12的双精度计算保护量。
+    unit_roundoff = 2.0**-24
+    for position, step in enumerate(steps):
+        if not isinstance(step, dict):
+            reject("step", "步骤必须为字段映射", position)
+        step_idx = step.get("step_idx", position)
+        if step.get("label_available") is not True:
+            reject("label_available", "缺少真实转站监督标签", step_idx)
+
+        raw_features = step.get("state_feat")
+        if isinstance(raw_features, (list, tuple)):
+            if any(
+                isinstance(value, bool) or not isinstance(value, numbers.Real)
+                for value in raw_features
+            ):
+                reject("state_feat", "必须只包含数值且不能含布尔值", step_idx)
+        try:
+            features = torch.as_tensor(raw_features)
+        except (TypeError, ValueError, RuntimeError) as exc:
+            reject("state_feat", f"无法转换为数值张量（{type(exc).__name__}）", step_idx)
+        if (
+            features.ndim != 1
+            or features.shape[0] != 32
+            or features.dtype == torch.bool
+            or features.is_complex()
+        ):
+            reject("state_feat", "必须为恰好32维的实数向量", step_idx)
+        if not bool(torch.isfinite(features.to(dtype=torch.float64)).all()):
+            reject("state_feat", "不得包含NaN或Inf", step_idx)
+
+        current_time = finite_number(step.get("current_time"), "current_time", step_idx)
+        estimated_cmax = finite_number(
+            step.get("estimated_cmax"), "estimated_cmax", step_idx
+        )
+        actual_time = finite_number(
+            step.get("actual_transfer_time"), "actual_transfer_time", step_idx
+        )
+        label_y = finite_number(step.get("label_y"), "label_y", step_idx)
+
+        cycle_idx_value = step.get("cycle_idx")
+        if (
+            isinstance(cycle_idx_value, bool)
+            or not isinstance(cycle_idx_value, numbers.Integral)
+            or cycle_idx_value <= 0
+        ):
+            reject("cycle_idx", "必须为正整数", step_idx)
+        cycle_idx = int(cycle_idx_value)
+        if cycle_idx > len(transfer_history):
+            reject("cycle_idx", "超出真实转站历史范围", step_idx)
+
+        cycle_time = transfer_history[cycle_idx - 1]
+        time_tolerance = (
+            unit_roundoff
+            / (1.0 - unit_roundoff)
+            * (abs(actual_time) + abs(current_time) + abs(cycle_time))
+            + 1e-12
+        )
+        if not math.isfinite(time_tolerance):
+            reject("actual_transfer_time", "时间比较容差发生数值溢出", step_idx)
+        if actual_time < current_time - time_tolerance:
+            reject("actual_transfer_time", "早于该决策步骤的current_time", step_idx)
+        if abs(actual_time - cycle_time) > time_tolerance:
+            reject(
+                "actual_transfer_time",
+                f"与cycle_idx={cycle_idx}对应的transfer_history时刻不一致",
+                step_idx,
+            )
+
+        expected_label = (actual_time - estimated_cmax) / h0
+        label_tolerance = (
+            unit_roundoff * abs(label_y)
+            + unit_roundoff
+            / (1.0 - unit_roundoff)
+            * ((abs(actual_time) + abs(estimated_cmax)) / h0 + abs(label_y))
+            + 1e-12
+        )
+        if not math.isfinite(expected_label) or not math.isfinite(label_tolerance):
+            reject("label_y", "标签公式或比较容差发生数值溢出", step_idx)
+        if abs(label_y - expected_label) > label_tolerance:
+            reject(
+                "label_y",
+                "与(actual_transfer_time-estimated_cmax)/h0不一致；"
+                f"允许误差为{label_tolerance:.3g}（归一化残差单位）",
+                step_idx,
+            )
 
 
 def load_official_trajectory_splits(
@@ -119,33 +270,8 @@ def load_official_trajectory_splits(
                 f"{split_name}轨迹与{split_name}场景清单不一致；"
                 f"不属于{split_name}场景清单={unexpected_ids}，缺失={missing_ids}"
             )
-        invalid_ids: list[str] = []
         for item in trajectories:
-            steps = item.get("steps")
-            invalid = (
-                item.get("success") is not True
-                or item.get("termination_reason") != "completed"
-                or item.get("feasible") is not True
-                or item.get("constraint_violations") != {}
-                or type(item.get("completed_tasks")) is not int
-                or type(item.get("total_tasks")) is not int
-                or item["completed_tasks"] != item["total_tasks"]
-                or not isinstance(steps, list)
-                or not steps
-                or any(
-                    not isinstance(step, dict)
-                    or step.get("label_available") is not True
-                    or step.get("actual_transfer_time") is None
-                    or step.get("label_y") is None
-                    for step in steps
-                )
-            )
-            if invalid:
-                invalid_ids.append(str(item.get("scenario_id", "")))
-        if invalid_ids:
-            raise ValueError(
-                f"{split_name}轨迹文件包含非完整或不可行轨迹：{invalid_ids}"
-            )
+            _validate_official_trajectory(item, split_name)
         loaded[split_name] = trajectories
 
     provenance = {

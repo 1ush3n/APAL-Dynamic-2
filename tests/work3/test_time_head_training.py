@@ -67,6 +67,8 @@ def _create_synthetic_trajectory(
         "feasible": True,
         "constraint_violations": {},
         "h0": h0,
+        "transfer_count": 1,
+        "transfer_history": [h0 + delay_hours],
         "total_steps": num_steps,
         "steps": steps,
     }
@@ -108,6 +110,18 @@ def _write_official_split_inputs(
         )
         paths[f"{split_name}_trajectories"] = artifact_path
     return paths
+
+
+def _load_official_splits(paths: dict[str, Path]) -> tuple[list[dict], list[dict], dict]:
+    from scripts.work3.train_time_predictor import load_official_trajectory_splits
+
+    return load_official_trajectory_splits(
+        train_trajectories_path=paths["train_trajectories"],
+        validation_trajectories_path=paths["validation_trajectories"],
+        train_split_path=paths["train_split"],
+        validation_split_path=paths["validation_split"],
+        test_split_path=paths["test_split"],
+    )
 
 
 def test_step_residual_dataset_and_collate() -> None:
@@ -384,7 +398,7 @@ def test_time_predictor_rejects_incomplete_or_infeasible_official_trajectories(
     trajectories[0]["termination_reason"] = "rollout_truncated"
     torch.save(trajectories, paths["train_trajectories"])
 
-    with pytest.raises(ValueError, match="非完整或不可行轨迹"):
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*field=success"):
         load_official_trajectory_splits(
             train_trajectories_path=paths["train_trajectories"],
             validation_trajectories_path=paths["validation_trajectories"],
@@ -397,7 +411,7 @@ def test_time_predictor_rejects_incomplete_or_infeasible_official_trajectories(
     trajectories[0]["termination_reason"] = "completed"
     trajectories[0]["steps"][0]["label_available"] = False
     torch.save(trajectories, paths["train_trajectories"])
-    with pytest.raises(ValueError, match="非完整或不可行轨迹"):
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*field=label_available"):
         load_official_trajectory_splits(
             train_trajectories_path=paths["train_trajectories"],
             validation_trajectories_path=paths["validation_trajectories"],
@@ -409,7 +423,7 @@ def test_time_predictor_rejects_incomplete_or_infeasible_official_trajectories(
     trajectories[0]["steps"][0]["label_available"] = True
     trajectories[0]["feasible"] = False
     torch.save(trajectories, paths["train_trajectories"])
-    with pytest.raises(ValueError, match="非完整或不可行轨迹"):
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*field=feasible"):
         load_official_trajectory_splits(
             train_trajectories_path=paths["train_trajectories"],
             validation_trajectories_path=paths["validation_trajectories"],
@@ -417,6 +431,343 @@ def test_time_predictor_rejects_incomplete_or_infeasible_official_trajectories(
             validation_split_path=paths["validation_split"],
             test_split_path=paths["test_split"],
         )
+
+
+def test_official_time_splits_reject_nan_label(
+    tmp_path: Path,
+) -> None:
+    """正式加载入口必须拒绝非有限标签并指出划分、场景、步骤和字段。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0]["label_y"] = float("nan")
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*label_y"):
+        _load_official_splits(paths)
+
+
+def test_official_time_splits_accept_two_cycles_and_keep_warmup_indices(
+    tmp_path: Path,
+) -> None:
+    """周期标签必须对应完整真实转站历史，不能在暖机后重新编号。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectory = trajectories[0]
+    trajectory["h0"] = 10.0
+    trajectory["transfer_history"] = (5.0, 12.0, 25.0)
+    trajectory["transfer_count"] = 3
+    trajectory["steps"] = [
+        {
+            "step_idx": 0,
+            "cycle_idx": 2,
+            "current_time": 8.0,
+            "estimated_cmax": 10.0,
+            "actual_transfer_time": 12.0,
+            "label_y": 0.2,
+            "label_available": True,
+            "state_feat": torch.zeros(32, dtype=torch.float32),
+        },
+        {
+            "step_idx": 1,
+            "cycle_idx": 3,
+            "current_time": 20.0,
+            "estimated_cmax": 20.0,
+            "actual_transfer_time": 25.0,
+            "label_y": 0.5,
+            "label_available": True,
+            "state_feat": [0.0] * 32,
+        },
+    ]
+    trajectory["total_steps"] = 2
+    torch.save(trajectories, paths["train_trajectories"])
+
+    train, _validation, _provenance = _load_official_splits(paths)
+
+    assert [step["cycle_idx"] for step in train[0]["steps"]] == [2, 3]
+    assert [step["actual_transfer_time"] for step in train[0]["steps"]] == [12.0, 25.0]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "context"),
+    [
+        ("label_y", float("nan"), "step_idx=0.*label_y"),
+        ("estimated_cmax", float("inf"), "step_idx=0.*estimated_cmax"),
+        ("current_time", float("nan"), "step_idx=0.*current_time"),
+        ("actual_transfer_time", float("inf"), "step_idx=0.*actual_transfer_time"),
+        ("h0", 0.0, "h0"),
+        ("h0", float("nan"), "h0"),
+        ("h0", "292.5", "h0"),
+        ("h0", True, "h0"),
+        ("total_tasks", 0, "total_tasks"),
+    ],
+)
+def test_official_time_splits_reject_invalid_numeric_values(
+    tmp_path: Path,
+    field: str,
+    value: object,
+    context: str,
+) -> None:
+    """正式加载入口必须拒绝非有限时间、标签、H0和无效任务计数。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    if field in {"h0", "completed_tasks", "total_tasks"}:
+        trajectories[0][field] = value
+        if field == "completed_tasks":
+            trajectories[0]["total_tasks"] = 0
+        elif field == "total_tasks":
+            trajectories[0]["completed_tasks"] = 0
+    else:
+        trajectories[0]["steps"][0][field] = value
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=rf"train.*TRAIN_A.*{context}"):
+        _load_official_splits(paths)
+
+
+@pytest.mark.parametrize("feature_count", [31, 33])
+def test_official_time_splits_reject_wrong_state_feature_dimension(
+    tmp_path: Path,
+    feature_count: int,
+) -> None:
+    """正式加载入口必须拒绝非32维状态特征并指出具体轨迹步。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0]["state_feat"] = [0.0] * feature_count
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*state_feat"):
+        _load_official_splits(paths)
+
+
+@pytest.mark.parametrize(
+    ("feature", "context"),
+    [
+        ([0.0] * 31 + [float("inf")], "state_feat"),
+        ([0.0] * 31 + ["bad"], "state_feat"),
+        ([0.0] * 31 + [True], "state_feat"),
+    ],
+)
+def test_official_time_splits_reject_nonfinite_or_nonnumeric_state_feature(
+    tmp_path: Path,
+    feature: list[object],
+    context: str,
+) -> None:
+    """正式加载入口必须拒绝非有限或非数值特征元素。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0]["state_feat"] = feature
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=rf"train.*TRAIN_A.*step_idx=0.*{context}"):
+        _load_official_splits(paths)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("label_y", True),
+        ("estimated_cmax", "10.0"),
+        ("current_time", True),
+        ("actual_transfer_time", "312.5"),
+    ],
+)
+def test_official_time_splits_reject_nonnumeric_scalar(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    """字符串/布尔时间与标签值不能通过官方数据门禁。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0][field] = value
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=rf"train.*TRAIN_A.*step_idx=0.*{field}"):
+        _load_official_splits(paths)
+
+
+def test_official_time_splits_reject_finite_label_error_of_point_one(
+    tmp_path: Path,
+) -> None:
+    """有限标签偏差0.1（归一化单位）远超容差并必须被拒绝。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0]["label_y"] += 0.1
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*label_y"):
+        _load_official_splits(paths)
+
+
+def test_official_time_splits_reject_actual_time_before_current_time(
+    tmp_path: Path,
+) -> None:
+    """真实转站时间不能早于该决策状态当前时刻。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    step = trajectories[0]["steps"][0]
+    trajectories[0]["steps"] = [step]
+    step["actual_transfer_time"] = 1.0
+    step["current_time"] = 2.0
+    step["label_y"] = (1.0 - step["estimated_cmax"]) / trajectories[0]["h0"]
+    trajectories[0]["transfer_history"] = [1.0]
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*actual_transfer_time"):
+        _load_official_splits(paths)
+
+
+@pytest.mark.parametrize("cycle_idx", [0, -1, True, "1"])
+def test_official_time_splits_reject_invalid_cycle_index(
+    tmp_path: Path,
+    cycle_idx: object,
+) -> None:
+    """周期索引必须是完整转站历史中的正整数序号。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0]["cycle_idx"] = cycle_idx
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*cycle_idx"):
+        _load_official_splits(paths)
+
+
+def test_official_time_splits_reject_cycle_index_outside_transfer_history(
+    tmp_path: Path,
+) -> None:
+    """正整数周期号仍必须落在完整真实转站历史范围内。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0]["cycle_idx"] = 2
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*cycle_idx"):
+        _load_official_splits(paths)
+
+
+def test_official_time_splits_reject_self_consistent_label_from_wrong_cycle(
+    tmp_path: Path,
+) -> None:
+    """即使标签与篡改后的时刻自洽，也必须匹配同周期真实转站历史。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectory = trajectories[0]
+    trajectory["transfer_history"] = [trajectory["h0"] + 1.0, trajectory["h0"] + 2.0]
+    trajectory["transfer_count"] = 2
+    step = trajectory["steps"][0]
+    step["actual_transfer_time"] = trajectory["transfer_history"][1]
+    step["label_y"] = (
+        step["actual_transfer_time"] - step["estimated_cmax"]
+    ) / trajectory["h0"]
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*actual_transfer_time"):
+        _load_official_splits(paths)
+
+
+def test_official_cli_rejects_bad_label_before_training(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """坏标签必须在正式入口调用训练器（建模/优化）之前失败。"""
+    import sys
+
+    from scripts.work3 import train_time_predictor
+
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][0]["label_y"] = float("nan")
+    torch.save(trajectories, paths["train_trajectories"])
+    monkeypatch.setattr(
+        train_time_predictor,
+        "OFFICIAL_SPLIT_PATHS",
+        {
+            "train": paths["train_split"],
+            "validation": paths["validation_split"],
+            "test": paths["test_split"],
+        },
+    )
+    monkeypatch.setattr(
+        train_time_predictor,
+        "train_time_head",
+        lambda **_kwargs: pytest.fail("无效数据不应进入训练器"),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_time_predictor.py",
+            "--train-trajectories",
+            str(paths["train_trajectories"]),
+            "--validation-trajectories",
+            str(paths["validation_trajectories"]),
+            "--checkpoint",
+            str(tmp_path / "time_head.pt"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=0.*label_y"):
+        train_time_predictor.main()
 
 
 def test_time_predictor_cannot_replace_frozen_manifests_to_train_on_test_event(

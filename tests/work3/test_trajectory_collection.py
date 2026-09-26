@@ -85,6 +85,8 @@ def test_trajectory_collection_and_label_consistency(baseline_path: str) -> None
     assert traj["constraint_violations"] == {}
     assert traj["total_steps"] > 0
     assert traj["transfer_count"] == 14
+    assert len(traj["transfer_history"]) == traj["transfer_count"]
+    assert isinstance(traj["transfer_history"], tuple)
     h0 = traj["h0"]
 
     # 验证每步样本字段及残差标签
@@ -94,6 +96,7 @@ def test_trajectory_collection_and_label_consistency(baseline_path: str) -> None
         p_actual = step["actual_transfer_time"]
         p_est = step["estimated_cmax"]
         expected_y = (p_actual - p_est) / h0
+        assert p_actual == traj["transfer_history"][step["cycle_idx"] - 1]
         assert abs(step["label_y"] - expected_y) < 1e-5, "监督残差标签计算不一致"
 
 

@@ -232,6 +232,7 @@ def collect_single_trajectory(
         "total_steps": len(steps_data),
         "makespan": float(env.state.current_time),
         "transfer_count": len(transfer_history),
+        "transfer_history": tuple(float(item) for item in transfer_history),
         "steps": steps_data,
     }
 
