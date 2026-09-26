@@ -75,7 +75,7 @@ def _fake_collect(self: APALRolloutService, episode: int):
     return memories, metric
 
 
-def test_l2d_collect_is_one_update_with_shared_dataset(monkeypatch):
+def test_l2d_collect_is_one_update_with_shared_dataset(monkeypatch, capsys):
     vector_env = _FakeVectorEnv(num_envs=2)
     service = APALRolloutService(
         agent=SimpleNamespace(batch_size=4),
@@ -91,6 +91,7 @@ def test_l2d_collect_is_one_update_with_shared_dataset(monkeypatch):
     assert service._last_dataset_idx is not None
     assert service.num_envs == 2
     assert vector_env.switches == [service._last_dataset_idx]
+    assert "SPS=1.0" in capsys.readouterr().out
 
 
 def test_rollout_service_honors_dataset_switch_interval_in_serial_mode(monkeypatch):

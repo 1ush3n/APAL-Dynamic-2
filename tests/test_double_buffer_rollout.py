@@ -80,6 +80,10 @@ def test_double_buffer_rollout_lifecycle(num_envs: int) -> None:
             total_actions = sum(len(m.actions) for m in memories)
             assert total_actions > 0
             assert metrics.environment_steps == total_actions
+            assert math.isfinite(metrics.steps_per_second)
+            assert metrics.steps_per_second == pytest.approx(
+                metrics.environment_steps / max(metrics.total_seconds, 1e-9)
+            )
 
             # 验证每个环境的 Memory 字段等长
             for env_idx, m in enumerate(memories):
