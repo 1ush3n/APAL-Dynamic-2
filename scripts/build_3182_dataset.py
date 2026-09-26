@@ -1,4 +1,4 @@
-"""从权威原始 Excel 可复现地构建带有 5 类工种的 3182 数据集。"""
+"""使用历史工作簿生成 3182 候选文件；训练权威数据仍为 data/3182.csv。"""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def _assert_legacy_projection_equal(
     assert list(actual.columns.intersection(LEGACY_COLUMNS)) == LEGACY_COLUMNS, (
         "输出缺少旧版字段或字段顺序发生变化"
     )
-    assert len(actual) == len(expected), "输出行数与权威 Excel 不一致"
+    assert len(actual) == len(expected), "输出行数与配置工作簿投影不一致"
 
     numeric_columns = ["序号", "类型", "需求人数", "加工时间/h", "限定站位", "部位容量"]
     text_columns = ["AO号"]
@@ -82,11 +82,11 @@ def _assert_legacy_projection_equal(
     for column in numeric_columns:
         left = pd.to_numeric(actual[column], errors="coerce").to_numpy(dtype=float)
         right = pd.to_numeric(expected[column], errors="coerce").to_numpy(dtype=float)
-        assert np.allclose(left, right, equal_nan=True), f"旧字段 {column} 与权威 Excel 不一致"
+        assert np.allclose(left, right, equal_nan=True), f"旧字段 {column} 与配置工作簿投影不一致"
     for column in text_columns:
         left = _canonical_text(actual[column])
         right = _canonical_text(expected[column])
-        assert left.equals(right), f"旧字段 {column} 与权威 Excel 不一致"
+        assert left.equals(right), f"旧字段 {column} 与配置工作簿投影不一致"
 
 
 def _normalize_predecessor_tokens(value: object) -> list[str]:
@@ -160,17 +160,17 @@ def apply_registered_data_corrections(
 
 
 def build_dataset(config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """从 Excel 构建派生数据，并返回输出表与旧字段权威投影。"""
+    """从配置工作簿生成候选数据，并返回输出表与旧字段投影。"""
     source = config["source"]
     schema = config["schema"]
     workbook = _resolve_project_path(source["workbook"])
-    assert workbook.exists(), f"权威数据不存在：{workbook}"
+    assert workbook.exists(), f"候选重建输入工作簿不存在：{workbook}"
 
     raw = pd.read_excel(workbook, sheet_name=source["sheet_name"], usecols="A:M")
     raw = raw.dropna(how="all").reset_index(drop=True)
     required = set(LEGACY_COLUMNS) | {schema["source_profession_column"]}
     missing = sorted(required - set(raw.columns))
-    assert not missing, f"权威 Excel 缺少字段：{missing}"
+    assert not missing, f"配置工作簿缺少字段：{missing}"
     assert raw["AO号"].notna().all(), "AO号不得为空"
     assert raw["AO号"].astype(str).is_unique, "AO号必须唯一"
 

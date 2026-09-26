@@ -1,8 +1,12 @@
 version: 1
-source_of_truth: data/原始数据.xlsx
+source_of_truth:
+  - data/283.csv
+  - data/680.csv
+  - data/2338.csv
+  - data/3182.csv
 policy: >-
-  原始工厂数据保持不变；派生 CSV 中无法解析到源数据 AO 的悬空前驱必须显式记录，
-  不允许由加载器静默忽略。
+  上述四个 CSV 是唯一权威真实任务数据集；本文件仅记录已由数据所有者确认且已体现在权威 CSV 中的前驱修正，
+  不允许以外部工作簿或加载器行为替代这些数据，也不允许加载器静默忽略悬空前驱。
 corrections:
   - datasets:
       - data/2338.csv
@@ -10,7 +14,7 @@ corrections:
     task_ao: ABCPG6-1190
     removed_predecessor_ao: ABCPG6-1180
     retained_predecessors: []
-    reason: 源数据中不存在该前驱 AO；经数据所有者确认属于工厂数据错误。
+    reason: 经数据所有者确认，该前驱关系属于工厂数据错误；修正已体现在权威 CSV。
   - datasets:
       - data/2338.csv
       - data/3182.csv
@@ -19,4 +23,4 @@ corrections:
     retained_predecessors:
       - EGHXR1-1110
       - FAQJR1-3250
-    reason: 源数据中不存在该前驱 AO；经数据所有者确认属于工厂数据错误。
+    reason: 经数据所有者确认，该前驱关系属于工厂数据错误；修正已体现在权威 CSV。

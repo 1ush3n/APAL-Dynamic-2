@@ -1,7 +1,9 @@
 source:
+  # 仅供离线候选重建；权威真实数据仅为 data/283.csv、680.csv、2338.csv、3182.csv。
+  # 此工作簿不是训练/评测数据源，候选输出不得替换上述权威CSV。
   workbook: data/原始数据.xlsx
   sheet_name: 工艺网络数据
-  output_csv: data/3182.csv
+  output_csv: results/data_candidates/3182.csv
 
 schema:
   physical_node_type: 2
