@@ -60,6 +60,8 @@ def _create_synthetic_trajectory(
     return {
         "trajectory_id": traj_id,
         "scenario_id": scenario_id,
+        "collector_policy": "HeuristicAgentWork3",
+        "collector_role": "offline_m4_sampling_only",
         "success": True,
         "termination_reason": "completed",
         "completed_tasks": 1,
@@ -225,6 +227,36 @@ def test_distinct_states_from_one_training_scenario_stay_in_training() -> None:
     assert train_scenarios.isdisjoint(val_scenarios)
 
 
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("collector_policy", None),
+        ("collector_policy", "FormalMethodC"),
+        ("collector_role", None),
+    ],
+)
+def test_official_m4_loader_requires_heuristic_offline_provenance(
+    tmp_path: Path,
+    field: str,
+    invalid_value: object,
+) -> None:
+    """正式离线M4轨迹必须标明固定启发式采样角色，不能冒充正式C。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_EVENT"],
+        validation_ids=["VALIDATION_EVENT"],
+        test_ids=["TEST_EVENT"],
+    )
+    trajectories = torch.load(
+        paths["train_trajectories"], map_location="cpu", weights_only=False
+    )
+    trajectories[0][field] = invalid_value
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=field):
+        _load_official_splits(paths)
+
+
 def test_time_predictor_rejects_legacy_pooled_trajectory_input(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -336,6 +368,65 @@ def test_time_predictor_trains_only_on_exact_official_split_manifests(
     assert validation_ids == {"VALIDATION_A"}
     provenance = captured["data_provenance"]
     assert provenance["scenario_ids"]["test"] == ["TEST_A"]
+
+
+def test_offline_m4_pass_output_is_not_formal_cd_claim(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """離線M4達標輸出不得被理解為正式C/D方法驗收。"""
+    import sys
+
+    from scripts.work3 import train_time_predictor
+
+    monkeypatch.setattr(
+        train_time_predictor,
+        "load_official_trajectory_splits",
+        lambda **_kwargs: (
+            [{}],
+            [{}],
+            {
+                "scenario_ids": {
+                    "train": ["TRAIN"],
+                    "validation": ["VALIDATION"],
+                    "test": ["TEST"],
+                }
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        train_time_predictor,
+        "train_time_head",
+        lambda **_kwargs: (
+            None,
+            {
+                "mae_raw_hours": 1.0,
+                "mae_corrected_hours": 0.5,
+                "mae_improvement_pct": 50.0,
+                "total_val_samples": 10,
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_time_predictor.py",
+            "--train-trajectories",
+            str(tmp_path / "train.pt"),
+            "--validation-trajectories",
+            str(tmp_path / "validation.pt"),
+            "--checkpoint",
+            str(tmp_path / "time_head.pt"),
+        ],
+    )
+
+    train_time_predictor.main()
+
+    output = capsys.readouterr().out
+    assert "[OFFLINE-M4-PASS]" in output
+    assert "不代表正式方法D训练或C/D调度改进" in output
 
 
 def test_time_predictor_rejects_trajectory_from_another_official_split(

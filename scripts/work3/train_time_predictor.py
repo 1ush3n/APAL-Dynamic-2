@@ -79,6 +79,10 @@ def _validate_official_trajectory(trajectory: dict[str, Any], split_name: str) -
             location += f" step_idx={step_idx}"
         raise ValueError(f"{location} field={field}: {reason}")
 
+    if trajectory.get("collector_policy") != "HeuristicAgentWork3":
+        reject("collector_policy", "正式离线M4只接受HeuristicAgentWork3固定启发式采样轨迹")
+    if trajectory.get("collector_role") != "offline_m4_sampling_only":
+        reject("collector_role", "轨迹用途必须标记为offline_m4_sampling_only")
     if trajectory.get("success") is not True:
         reject("success", "轨迹未成功完成")
     if trajectory.get("termination_reason") != "completed":
@@ -296,7 +300,9 @@ def load_official_trajectory_splits(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="训练时间残差预测头并进行 M4 里程碑评估")
+    parser = argparse.ArgumentParser(
+        description="训练并核验离线M4时间残差头（不代表正式方法C/D调度性能）"
+    )
     parser.add_argument("--train-trajectories", type=Path, required=True)
     parser.add_argument("--validation-trajectories", type=Path, required=True)
     parser.add_argument(
@@ -341,7 +347,10 @@ def main() -> None:
     impr = best_metrics["mae_improvement_pct"]
 
     print("\n" + "=" * 70)
-    print("【工作三 里程碑 M4 验收核验报告：时间残差预测头离线回归】")
+    print(
+        "【离线 M4 时间残差可学习性核验报告：固定启发式采样轨迹；"
+        "不代表正式方法 C/D 调度性能】"
+    )
     print("=" * 70)
     print(f"验证集轨迹数量: {len(val_trajs)} 条 (总计 {best_metrics['total_val_samples']} 决策步)")
     print(f"原始无学习启发式 MAE : {mae_raw:.4f} 小时")
@@ -350,9 +359,15 @@ def main() -> None:
     print("-" * 70)
 
     if impr >= 15.0:
-        print(f"[PASS] 误差改善幅度 {impr:.2f}% >= 15.0%，顺利达到里程碑 M4 设定标准！")
+        print(
+            f"[OFFLINE-M4-PASS] 误差改善幅度 {impr:.2f}% >= 15.0%；"
+            "仅表示离线时间预测误差门槛达到，不代表正式方法D训练或C/D调度改进。"
+        )
     else:
-        print(f"[NOTICE] 误差改善幅度 {impr:.2f}% < 15.0%。")
+        print(
+            f"[OFFLINE-M4-NOT-PASS] 误差改善幅度 {impr:.2f}% < 15.0%；"
+            "该判定仅针对离线时间预测误差门槛。"
+        )
     print("=" * 70 + "\n")
 
 

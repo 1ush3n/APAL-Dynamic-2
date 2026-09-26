@@ -49,6 +49,8 @@ def test_collector_script_cli_runs_from_repository_root_without_pythonpath() -> 
 
     assert result.returncode == 0, result.stderr
     assert "--scenario_split" in result.stdout
+    assert "固定启发式采样策略" in result.stdout
+    assert "基线 C" not in result.stdout
 
 
 @pytest.fixture
@@ -79,6 +81,8 @@ def test_trajectory_collection_and_label_consistency(baseline_path: str) -> None
 
     assert traj["trajectory_id"] == 1
     assert traj["success"] is True
+    assert traj["collector_policy"] == "HeuristicAgentWork3"
+    assert traj["collector_role"] == "offline_m4_sampling_only"
     assert traj["termination_reason"] == "completed"
     assert traj["completed_tasks"] == traj["total_tasks"] == 2830
     assert traj["feasible"] is True

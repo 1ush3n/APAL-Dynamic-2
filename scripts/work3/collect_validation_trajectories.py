@@ -1,9 +1,10 @@
 """工作三 训练与验证轨迹数据集收集脚本 (Task 5.4)。
 
 功能与技术规范：
-1. 调度基线 C (HeuristicAgentWork3) 自动化运行 50 条完整生产轨迹：
-   - 包含 45 个确定性 9 类正交解耦扰动场景 (scenarios_9class.json)；
-   - 包含 5 个基准无扰动/随机扰动场景；
+1. 使用固定启发式采样策略 (HeuristicAgentWork3) 自动化运行完整生产轨迹，
+   用于离线 M4 时间残差可学习性验证；不代表正式方法 C：
+   - 扰动轨迹按调用方指定的事件场景清单采集；
+   - 无扰动轨迹数量由 num_nominal 参数指定；
 2. 逐步记录三元组与丰富物理特征：
    (s_n, P_q^h(s_n), P_q^actual, y_n)
    其中监督目标标签为归一化时间残差：
@@ -100,7 +101,7 @@ def collect_single_trajectory(
     warmup_mode: str = "none",
     warmup_max_steps: int | None = None,
 ) -> dict[str, Any]:
-    """使用基线 C 策略运行单条完整生产流水线，收集带时间残差标签的决策样本。"""
+    """使用固定启发式采样策略运行单条完整生产轨迹，收集离线M4时间残差样本。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     env.reset()
     warmup_result: UniformBaselineWarmupResult | None = None
@@ -206,6 +207,8 @@ def collect_single_trajectory(
     return {
         "trajectory_id": trajectory_id,
         "scenario_id": scenario["scenario_id"] if scenario else "NOMINAL_BASELINE",
+        "collector_policy": "HeuristicAgentWork3",
+        "collector_role": "offline_m4_sampling_only",
         "success": True,
         "termination_reason": termination_reason,
         "completed_tasks": completed_tasks,
@@ -269,7 +272,10 @@ def collect_all_trajectories(
     traj_idx = 0
 
     # 2. 收集无扰动 / 基准轨迹
-    logger.info(f"开始收集 {num_nominal} 条名义基准轨迹...")
+    logger.info(
+        "开始使用固定启发式采样策略 (HeuristicAgentWork3) 收集 "
+        f"{num_nominal} 条离线M4名义轨迹..."
+    )
     for i in range(num_nominal):
         traj = collect_single_trajectory(
             agent,
@@ -287,7 +293,10 @@ def collect_all_trajectories(
         )
 
     # 3. 收集 9 类解耦扰动场景轨迹
-    logger.info(f"开始收集 {len(scenarios)} 条 9 类解耦扰动场景轨迹...")
+    logger.info(
+        "开始使用固定启发式采样策略 (HeuristicAgentWork3) 收集 "
+        f"{len(scenarios)} 条离线M4扰动场景轨迹..."
+    )
     for sc in scenarios:
         traj = collect_single_trajectory(
             agent,
@@ -309,7 +318,8 @@ def collect_all_trajectories(
     out_file.parent.mkdir(parents=True, exist_ok=True)
     torch.save(all_trajectories, out_file)
     logger.info(
-        f"成功收集 {len(all_trajectories)} 条完整轨迹至 {output_path}, "
+        "固定启发式采样策略离线M4轨迹收集完成："
+        f"{len(all_trajectories)} 条完整轨迹至 {output_path}, "
         f"样本总步数={sum(t['total_steps'] for t in all_trajectories)}"
     )
 
@@ -317,7 +327,9 @@ def collect_all_trajectories(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="收集基线 C 验证与训练轨迹数据集")
+    parser = argparse.ArgumentParser(
+        description="收集固定启发式采样策略的离线M4轨迹（不代表正式方法C）"
+    )
     parser.add_argument("--baseline", type=str, default="data/work3/real_283_k10_baseline.json")
     parser.add_argument("--scenarios", type=str, default="data/work3/scenarios_9class.json")
     parser.add_argument("--output", type=str, default="data/work3/val_trajectories.pt")

@@ -27,6 +27,7 @@ def _save_profile_checkpoint(
     method_variant: str,
     *,
     time_supervision_optimizer_updates: int = 0,
+    time_head_in_dim: int = 64,
     config_hash_valid: bool = True,
     include_potential_snapshot: bool | None = None,
 ) -> Path:
@@ -40,7 +41,7 @@ def _save_profile_checkpoint(
     profile_data = asdict(profile)
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64)
     time_head = (
-        TimeResidualHead(in_dim=64, hidden_dim=64)
+        TimeResidualHead(in_dim=time_head_in_dim, hidden_dim=64)
         if profile.use_time_auxiliary
         else None
     )
@@ -90,7 +91,7 @@ def _save_profile_checkpoint(
                 "actor_state": actor.state_dict(),
                 "time_head_state": time_head.state_dict(),
                 "time_head_model_version": "signed_residual_v1",
-                "time_head_in_dim": 64,
+                "time_head_in_dim": time_head_in_dim,
             }
             if has_potential_snapshot
             else None
@@ -457,6 +458,19 @@ def test_formal_d_rejects_checkpoint_with_untrained_time_head(tmp_path: Path) ->
     checkpoint = _save_profile_checkpoint(tmp_path / "d_untrained.pt", "D")
 
     with pytest.raises(ValueError, match="真实转站标签"):
+        build_formal_evaluation_agent("D", checkpoint, device="cpu")
+
+
+def test_formal_d_rejects_offline_m4_time_head_dimension(tmp_path: Path) -> None:
+    """离线M4的32维输入权重不能作为正式图表征D的时间头。"""
+    checkpoint = _save_profile_checkpoint(
+        tmp_path / "d_with_offline_m4_head.pt",
+        "D",
+        time_supervision_optimizer_updates=1,
+        time_head_in_dim=32,
+    )
+
+    with pytest.raises(ValueError, match="缺少兼容的有符号时间头"):
         build_formal_evaluation_agent("D", checkpoint, device="cpu")
 
 
