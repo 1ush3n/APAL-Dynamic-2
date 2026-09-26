@@ -545,15 +545,20 @@ def test_team_search_rejects_invalid_duration(
         )
 
 
+@pytest.mark.parametrize("recovery_time", [0.0, 1.0])
 def test_zero_duration_task_finishes_before_next_policy_observation(
     env: AirLineEnvWork3,
+    recovery_time: float,
 ) -> None:
-    """A11：合法零工时任务应在同刻完成，不以RUNNING暴露给下一次决策。"""
+    """零工时任务无论立即或未来开工，都应在开工同刻完成。"""
     task = env.get_ready_tasks()[0]
     team = tuple(env.valid_team_completion_workers(task, [])[: task.demand])
     assert len(team) == task.demand
     assert len(env.get_action_candidates()) > 1
-    task.duration = 0.0
+    task.standard_duration = 0.0
+    task.material_ready_time = recovery_time
+    if recovery_time > 0.0:
+        task.status = TaskStatus.UNREADY
 
     _, _, terminated, _, _ = env.step(
         {
@@ -563,13 +568,17 @@ def test_zero_duration_task_finishes_before_next_policy_observation(
             "align": 0,
         }
     )
+    if recovery_time > 0.0:
+        assert task.status == TaskStatus.RESERVED
+        env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
 
     assert task.status == TaskStatus.COMPLETED
-    assert task.actual_start == pytest.approx(0.0)
-    assert task.actual_end == pytest.approx(0.0)
+    assert task.actual_start == pytest.approx(recovery_time)
+    assert task.actual_end == pytest.approx(recovery_time)
     assert task.task_key not in env._station_occupied_tasks[task.current_station]
     assert all(
-        env.state.workers[worker_id].is_available(0.0, 1.0) for worker_id in team
+        env.state.workers[worker_id].is_available(recovery_time, recovery_time + 1.0)
+        for worker_id in team
     )
     assert not terminated
 

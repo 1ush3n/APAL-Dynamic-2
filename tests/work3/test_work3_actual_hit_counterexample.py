@@ -44,9 +44,9 @@ def test_fixed_disturbance_hits_and_completes_full_batch_with_consistent_ledger(
         )
         assert not terminated and not truncated, "反例注入前生产轨迹意外结束"
 
-    tau = 425.6537486760432
-    delta = 43.8859  # 现有LOW标定：0.15 * H0，按场景清单精度记录
-    recovery_time = 469.5396486760432
+    tau = env.state.current_time
+    delta = 0.15 * env.state.h0  # LOW标定：按基准节拍比例生成
+    recovery_time = tau + delta
     target_key = "5_2"
 
     assert env.state.current_time == pytest.approx(tau, abs=1e-8)

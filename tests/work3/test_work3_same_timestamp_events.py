@@ -599,7 +599,8 @@ def test_real_action_accounts_for_costs_and_stops_at_legal_unready_postpone() ->
     env.state.last_transfer_time = 0.0
     target.in_station_offset = 0.0
     original_duration = env.duration_for_team(target, team)
-    target.duration *= 5.0 / original_duration
+    assert target.standard_duration is not None
+    target.standard_duration *= 5.0 / original_duration
     cost_before = env.cumulative_cost
 
     _, reward, terminated, truncated, info = env.step(

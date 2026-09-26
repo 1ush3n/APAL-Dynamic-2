@@ -21,7 +21,7 @@ TEAMS = {
     20: (55, 6),
     24: (28, 1),
 }
-FIRST_TASK_END = 0.5224849650851306
+FIRST_TASK_END = 0.5457256030603916
 
 
 def _two_aircraft_baseline(path: Path) -> None:

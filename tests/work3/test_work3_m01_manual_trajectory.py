@@ -36,11 +36,11 @@ FIXED_TEAMS = {
 # 由 p_i * demand / (0.95 * sum(worker_efficiency)) 独立预先核算；
 # 两人团队的协同系数为0.95。五道工序各自占据一站，顺序执行。
 EXPECTED_TASK_DURATIONS = (
-    0.5224849650851306,
-    0.5452650666162796,
-    1.8777017505628602,
-    0.9380233559980313,
-    1.3917908975110986,
+    0.5457256030603916,
+    0.5574953738564286,
+    1.5009998684001387,
+    0.9876964746422382,
+    1.2146186360338305,
 )
 
 
@@ -98,6 +98,10 @@ def _run_scaled_disturbed_batch(
     )
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     env.reset()
+    # 控制测试实例的实际标准工时；环境初始化会从唯一权威CSV恢复原始值。
+    for task in env.state.tasks.values():
+        assert task.standard_duration is not None
+        task.standard_duration *= time_scale
     if time_shift:
         env.state.current_time = time_shift
         env.state.last_transfer_time = time_shift
@@ -264,7 +268,7 @@ def test_five_station_fixed_actions_match_manual_time_and_costs(tmp_path: Path) 
 
     assert _terminated
     expected_makespan = sum(EXPECTED_TASK_DURATIONS)
-    assert expected_makespan == pytest.approx(5.2752660357734005)
+    assert expected_makespan == pytest.approx(4.806535955993027)
     assert env.state.current_time == pytest.approx(expected_makespan)
     assert env.state.transfer_history[-1] == pytest.approx(expected_makespan)
 

@@ -1109,7 +1109,12 @@ class AirLineEnvWork3:
         self._on_task_started(task, event.timestamp)
         self.event_queue.push(
             event_type=EventType.TASK_FINISH,
-            timestamp=event.timestamp + (task.execution_duration or task.duration),
+            timestamp=event.timestamp
+            + (
+                task.execution_duration
+                if task.execution_duration is not None
+                else task.duration
+            ),
             task_key=task.task_key,
             generation=task.generation,
         )
