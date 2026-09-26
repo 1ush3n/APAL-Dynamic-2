@@ -28,7 +28,12 @@ def test_function_screen_config_uses_three_updates_and_real_680() -> None:
     assert config.update_every_episodes == 1
     assert config.eval_freq == 3
     assert config.eval_temperature == 0.0
-    assert Path(config.train_data_path_or_dir).name == "syn_403_77.csv"
+    assert Path(config.train_data_path_or_dir).as_posix().endswith("data/scale_400_800_datasets")
+    manifest_path = PROJECT_ROOT / config.training_manifest_path
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["kind"] == "initial_schedule_training_manifest"
+    assert manifest["protocol"] == "explicit_fiveskill_v1"
+    assert 400 <= manifest["min_length"] <= manifest["max_length"] <= 800
     assert Path(config.data_file_path).name == "680.csv"
     assert config.use_lightning
     assert config.lightning_precision == "16-mixed"

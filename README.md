@@ -722,7 +722,7 @@ model:
 
 ## CUDA OOM 保护
 
-- Windows 低显存配置将 PPO batch 上限设为 `4`；Linux 不设置上限，使用实验配置的默认 batch。
+- Windows 低显存配置当前将 PPO batch 上限设为 `64`；Linux 不设置上限，使用实验配置的默认 batch。
 - GPU 图模板仅保留当前数据集，避免训练池轮换时显存逐轮累积。
 - PPO 更新发生 CUDA OOM 时会完整回滚模型、优化器、AMP 缩放器和随机状态，然后直接跳过当前 PPO 更新。
 - OOM 后不会自动降低 PPO batch size，也不会记录该轮 rollout、loss 或 eval 指标；下一轮继续使用原 batch size。

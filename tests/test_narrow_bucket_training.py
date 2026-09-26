@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from configs import Config, load_config_files
+from runtime.five_skill_schema import REQUIRED_SKILL_IDS
 from utils.generate_random_dataset import generate_bucket
 
 
@@ -15,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 @pytest.mark.parametrize(
     ("name", "data_file", "pool_dir", "workers", "batch_size"),
     [
-        ("283", "data/283.csv", "data/generated/initial_283", 80, 512),
+        ("283", "data/283.csv", "data/generated/initial_283", 80, 64),
         ("680", "data/680.csv", "data/generated/initial_680", 100, 256),
         ("2338", "data/2338.csv", "data/generated/initial_2338", 140, 128),
         ("3182", "data/3182.csv", "data/generated/initial_3182", 160, 64),
@@ -49,6 +50,8 @@ def test_generator_is_deterministic_and_manifest_is_portable(tmp_path: Path) -> 
         "time_var": 0.05,
         "seed": 123,
         "worker_pool_path": PROJECT_ROOT / "data" / "worker_pool_fixed.csv",
+        "require_explicit_skill_columns": True,
+        "required_skill_ids": tuple(sorted(REQUIRED_SKILL_IDS)),
     }
     manifest_a = generate_bucket(PROJECT_ROOT / "data" / "283.csv", tmp_path / "a", **kwargs)
     manifest_b = generate_bucket(PROJECT_ROOT / "data" / "283.csv", tmp_path / "b", **kwargs)

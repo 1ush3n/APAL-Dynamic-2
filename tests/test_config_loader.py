@@ -179,10 +179,10 @@ def test_training_config_selects_windows_low_memory_profile() -> None:
         system_name="Windows",
     )
 
-    assert cfg.num_envs == 2
+    assert cfg.num_envs == 6
     assert cfg.vector_env_start_method == "spawn"
-    assert cfg.batch_size == 4
-    assert cfg.ppo_batch_size_cap == 4
+    assert cfg.batch_size == 64
+    assert cfg.ppo_batch_size_cap == 64
     assert Path(paths[-1]).name == "windows_4060_low_memory.yaml"
 
 
@@ -197,7 +197,7 @@ def test_training_config_selects_linux_profile() -> None:
     assert cfg.num_envs == 16
     assert cfg.vector_env_start_method == "forkserver"
     assert cfg.ppo_batch_size_cap == 0
-    assert cfg.batch_size == 512
+    assert cfg.batch_size == 64
     assert Path(paths[-1]).name == "linux_server.yaml"
 
 

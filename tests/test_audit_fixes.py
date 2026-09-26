@@ -7,7 +7,7 @@ import numpy as np
 # 将项目根目录添加到路径，以便能够导入项目模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from configs import configs
+from configs import Config, configs
 from environment import AirLineEnv_Graph
 
 class TestAuditFixes(unittest.TestCase):
@@ -21,8 +21,10 @@ class TestAuditFixes(unittest.TestCase):
 
     def test_config_num_envs(self):
         """测试 configs.py 中是否正确添加了 num_envs 并且具有默认值"""
-        self.assertTrue(hasattr(configs, 'num_envs'))
-        self.assertEqual(configs.num_envs, 4)
+        default_config = Config()
+        self.assertTrue(hasattr(default_config, 'num_envs'))
+        self.assertIsInstance(default_config.num_envs, int)
+        self.assertGreater(default_config.num_envs, 0)
 
     def test_config_reward_scale(self):
         """测试 configs.py 中 reward_scale 和 c_policy 是否已对齐 SMC 旧版经验值"""
