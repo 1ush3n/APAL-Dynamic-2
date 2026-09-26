@@ -14,8 +14,10 @@
 import sys
 import os
 import copy
+from collections.abc import Iterator
 import numpy as np
 import torch
+import pytest
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
@@ -29,6 +31,15 @@ from training.memory import Memory
 TOTAL_TESTS = 0
 PASSED_TESTS = 0
 FAILED_TESTS = []
+
+
+@pytest.fixture(autouse=True)
+def _restore_global_config_after_each_case() -> Iterator[None]:
+    original = cfg.configs.to_flat_dict()
+    try:
+        yield
+    finally:
+        cfg.configs.update_from_dict(original)
 
 
 def check(condition, name):

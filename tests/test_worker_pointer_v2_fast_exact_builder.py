@@ -33,13 +33,15 @@ DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "283.csv"
 
 
 def _make_env(seed: int = 42) -> AirLineEnv_Graph:
-    env = AirLineEnv_Graph(str(DATA_PATH), seed=seed)
-    env.reset(seed=seed)
+    with temporary_config(global_configs, {"n_w": 80, "n_w_min": 80}):
+        env = AirLineEnv_Graph(str(DATA_PATH), seed=seed)
+        env.reset(seed=seed)
     return env
 
 
 def _truncate_worker(snapshot: dict, num_workers: int) -> dict:
     """截取快照中的工人相关字段，构造不同工人数的异质快照。"""
+    assert snapshot["base_worker_x"].shape[0] >= num_workers
     result = dict(snapshot)
 
     def _slice_worker_field(value: object) -> object:
