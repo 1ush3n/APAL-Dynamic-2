@@ -38,22 +38,17 @@ def select_actions_batch_compat(
         mask_station_matrix_list,
         mask_worker_list,
     )):
-        results.append(
-            agent.select_action(
-                obs,
-                mask_task=task_mask,
-                mask_station_matrix=station_mask,
-                mask_worker=worker_mask,
-                deterministic=deterministic,
-                temperature=temperature,
-                is_eval=is_eval,
-                baseline_snapshot=(
-                    baseline_snapshots[index]
-                    if baseline_snapshots is not None
-                    else None
-                ),
-            )
-        )
+        action_kwargs = {
+            "mask_task": task_mask,
+            "mask_station_matrix": station_mask,
+            "mask_worker": worker_mask,
+            "deterministic": deterministic,
+            "temperature": temperature,
+            "is_eval": is_eval,
+        }
+        if baseline_snapshots is not None:
+            action_kwargs["baseline_snapshot"] = baseline_snapshots[index]
+        results.append(agent.select_action(obs, **action_kwargs))
     return results
 
 __all__ = ["select_actions_batch_compat"]
