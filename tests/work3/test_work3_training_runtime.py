@@ -2888,6 +2888,58 @@ def test_spawn_reset_runs_uniform_warmup_before_loading_fixed_scenario() -> None
         vector.close()
 
 
+def test_spawn_reset_applies_due_event_at_uniform_warmup_boundary_before_snapshot() -> None:
+    from envs.work3.core_types import TaskStatus
+    from envs.work3.environment import AirLineEnvWork3
+    from training.work3_vector_env import Work3VectorEnv
+    from utils.work3.uniform_baseline_warmup import run_uniform_baseline_warmup
+
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
+    reference_env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    reference_env.reset()
+    warmup = run_uniform_baseline_warmup(reference_env)
+    target_key = "3_27"
+    target = reference_env.state.tasks[target_key]
+    assert warmup.completed is True
+    assert target.status == TaskStatus.READY
+    assert target.actual_start is None
+
+    scenario = {
+        "scenario_id": "WARMUP_BOUNDARY_FIXED_HIT",
+        "tau": warmup.completion_time,
+        "recovery_time": warmup.completion_time + 24.0,
+        "affected_task_keys": [target_key],
+    }
+    baseline_bytes = baseline_path.read_bytes()
+    with Work3VectorEnv(
+        env_kwargs={"baseline_json_path": str(baseline_path)},
+        num_envs=1,
+        worker_torch_num_threads=1,
+        start_method="spawn",
+    ) as vector:
+        reset = vector.reset_all(
+            scenarios=(scenario,),
+            episode_ids=(31,),
+            episode_indices=(0,),
+            warmup_mode="uniform_baseline",
+            max_total_steps=3000,
+            wall_clock_deadline=time.monotonic() + 120.0,
+        )[0]
+        first_snapshot = vector.snapshot()
+
+    assert reset.warmup_result is not None
+    assert reset.warmup_result.completed is True
+    assert reset.warmup_result.completion_time == pytest.approx(scenario["tau"])
+    assert reset.observation["current_time"] == pytest.approx(scenario["tau"])
+    assert first_snapshot.current_time == pytest.approx(scenario["tau"])
+    assert target_key not in reset.observation["ready_task_keys"]
+    assert reset.scenario_status["event_triggered"] is True
+    assert reset.scenario_status["actual_hit_task_keys"] == (target_key,)
+    assert reset.scenario_status["material_ready_advanced_task_keys"] == (target_key,)
+    assert reset.scenario_status["actual_hit_count"] == 1
+    assert baseline_path.read_bytes() == baseline_bytes
+
+
 def test_training_keeps_completed_peer_step_when_other_worker_response_is_lost(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
