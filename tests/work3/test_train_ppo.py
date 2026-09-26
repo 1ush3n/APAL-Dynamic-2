@@ -504,8 +504,11 @@ def test_training_entry_closes_other_workers_after_worker_error(
         **kwargs: Any,
     ) -> Any:
         batch = original_step_all(environment, **kwargs)
+        results = list(batch.results)
+        results[0] = None
         return replace(
             batch,
+            results=tuple(results),
             worker_errors=((0, "simulated worker failure"),),
             interrupted_worker_ids=(0,),
         )
@@ -517,22 +520,27 @@ def test_training_entry_closes_other_workers_after_worker_error(
     )
     monkeypatch.setattr(Work3VectorEnv, "step_all", report_worker_error)
 
-    with pytest.raises(RuntimeError, match="step未完整结算"):
-        run_training(
-            run_mode="smoke",
-            num_iterations=1,
-            steps_per_iter=1,
-            max_decisions=1,
-            ppo_epochs=1,
-            batch_size=1,
-            seed=23,
-            method_variant="C",
-            num_envs=2,
-            output_ckpt=str(tmp_path / "worker_error.pt"),
-        )
+    report = run_training(
+        run_mode="smoke",
+        num_iterations=1,
+        steps_per_iter=1,
+        max_decisions=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=23,
+        method_variant="C",
+        num_envs=2,
+        output_ckpt=str(tmp_path / "worker_error.pt"),
+    )
 
     assert len(created_envs) == 1
     assert created_envs[0].workers_alive == (False, False)
+    assert report["run_status"] == "infrastructure_interrupted"
+    assert report["termination_reason"] == "worker_infrastructure_interrupted"
+    assert report["checkpoint_evaluation_eligible"] is False
+    assert report["infrastructure_interrupted_workers"] == [
+        {"worker_id": 0, "reason": "simulated worker failure"}
+    ]
 
 
 def test_training_entry_closes_workers_after_actor_exception(
