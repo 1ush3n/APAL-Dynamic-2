@@ -24,6 +24,56 @@ from training.work3_runtime_config import (
 
 
 PILOT_CONFIG = ROOT_DIR / "conf" / "work3" / "pilot_trial_20260925.yaml"
+K14_PREFLIGHT_CONFIG = ROOT_DIR / "conf" / "work3" / "pilot_warmup_preflight_20260926.yaml"
+
+
+def test_k14_preflight_uses_uniform_warmup_and_preserves_frozen_event_inputs() -> None:
+    """K14轻量预检显式暖机、严格限步，并沿用原固定训练事件与共同Actor初值。"""
+    assert K14_PREFLIGHT_CONFIG.is_file(), "K14统一暖机预检配置尚未冻结"
+    config = load_work3_runtime_config(K14_PREFLIGHT_CONFIG)
+    original = load_work3_runtime_config(PILOT_CONFIG)
+
+    assert config.runtime.run_mode == "pilot"
+    assert config.runtime.method_profile == "C"
+    assert config.runtime.seed == original.runtime.seed == 42
+    assert config.runtime.deterministic is True
+    assert config.runtime.num_envs == original.runtime.num_envs == 2
+    assert config.runtime.start_method == "spawn"
+    assert config.runtime.warmup_mode == "uniform_baseline"
+    assert config.runtime.total_env_steps == 1526
+    assert config.runtime.total_env_steps == (
+        2 * config.protocol.warmup_steps_per_worker_observed
+        + config.protocol.policy_step_budget
+    )
+    assert config.protocol.protocol_stage == "uniform_warmup_link_smoke"
+    assert config.runtime.successful_batch_target == 1
+    assert config.runtime.max_wall_seconds == 180.0
+    assert config.runtime.device == original.runtime.device == "cuda:0"
+    assert config.runtime.amp_dtype == original.runtime.amp_dtype == "bf16"
+    assert config.runtime.scenario_pool_path == original.runtime.scenario_pool_path
+    assert config.runtime.scenario_split_path == original.runtime.scenario_split_path
+    assert config.paths.baseline == original.paths.baseline
+    assert config.paths.checkpoint_dir != original.paths.checkpoint_dir
+    assert config.paths.report_dir != original.paths.report_dir
+
+    for field in (
+        "training_split",
+        "training_scenario_count",
+        "episode_plan_scenario_ids",
+        "scenario_pool_sha256",
+        "scenario_split_sha256",
+        "baseline_sha256",
+        "episode_plan_sha256",
+        "worker_event_plan_sha256",
+        "initial_actor_fingerprint",
+        "time_head_initialization",
+    ):
+        assert config.protocol[field] == original.protocol[field]
+    assert config.protocol.run_order == ["C", "D"]
+    assert config.protocol.research_result_eligible is False
+    resolved_yaml, resolved_sha256 = resolved_config_fingerprint(config)
+    assert "warmup_mode: uniform_baseline" in resolved_yaml
+    assert len(resolved_sha256) == 64
 
 
 def test_frozen_trial_config_records_protected_runtime_and_training_only_inputs() -> None:
