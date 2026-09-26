@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import scripts.work3.evaluate_c_vs_d as eval_mod
 from scripts.work3.evaluate_c_vs_d import run_benchmark_evaluation
 
@@ -39,6 +41,17 @@ def test_r07_incomplete_or_infeasible_trajectory_cannot_produce_improvement_pct(
             "delta": 100.0,
             "recovery_time": 1650.0,
             "affected_task_keys": ["4_2"],
+        },
+        {
+            "scenario_id": "MISSING_COST_S2",
+            "timing": "LATE",
+            "intensity": "LOW",
+            "station_id": 2,
+            "aircraft_id": 3,
+            "tau": 1600.0,
+            "delta": 20.0,
+            "recovery_time": 1620.0,
+            "affected_task_keys": ["3_3"],
         },
     ]
     scenarios_file.write_text(json.dumps(fake_scenarios), encoding="utf-8")
@@ -86,6 +99,23 @@ def test_r07_incomplete_or_infeasible_trajectory_cannot_produce_improvement_pct(
                 "actual_disturbance_hits": 1,
                 "raw_cost_components": {"diagnostic": float("nan")},
             }
+        if sc_id == "MISSING_COST_S2":
+            result = {
+                "agent": agent_type,
+                "scenario_id": sc_id,
+                "j_takt": 1.0,
+                "d_time": 0.5,
+                "d_team": 0.2,
+                "j_postpone": 0.2,
+                "j_revision": 0.1,
+                "success": True,
+                "feasible": True,
+                "termination_reason": "completed",
+                "actual_disturbance_hits": 1,
+            }
+            if agent_type == "Method-D":
+                result["j_total"] = 1.5
+            return result
         # MID_HIGH_S1: C 与 D 均成功且可行，且实际命中 > 0
         is_c = agent_type == "Method-C"
         return {
@@ -126,10 +156,164 @@ def test_r07_incomplete_or_infeasible_trajectory_cannot_produce_improvement_pct(
     # 第二条场景双方均成功且可行，改善幅度为 (2.0 - 1.6) / 2.0 = 20%
     assert results[1]["comparison_valid"] is True
     assert abs(float(results[1]["improvement_j_total_pct"]) - 20.0) < 1e-6
+    assert results[2]["comparison_valid"] is False
+    assert results[2]["comparison_status"] == "incomplete_cost_data_missing"
+    assert results[2]["j_total_c"] is None
+    assert results[2]["j_total_d"] == 1.5
+    assert results[2]["cost_delta_j_total"] is None
     persisted = json.loads(out_file.read_text(encoding="utf-8"))
     assert persisted["scenario_results"][0]["method_c"]["raw_cost_components"]["diagnostic"] is None
     json.dumps(persisted, allow_nan=False)
     assert persisted["credibility_summary"]["valid_comparison_count"] == 1
+    assert persisted["credibility_summary"]["completed_feasible_pair_count"] == 2
+    assert persisted["credibility_summary"]["percentage_eligible_pair_count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("cost_c", "cost_d", "expected_delta", "expected_pct", "expected_status"),
+    [
+        (0.0, 0.0, 0.0, None, "completed_feasible_percentage_denominator_insufficient"),
+        (0.0, 2.0, -2.0, None, "completed_feasible_percentage_denominator_insufficient"),
+        (1e-6, 2e-6, -1e-6, None, "completed_feasible_percentage_denominator_insufficient"),
+        (10.0, 8.0, 2.0, 20.0, "valid_both_completed_zero_hit"),
+        (10.0, 12.0, -2.0, -20.0, "valid_both_completed_zero_hit"),
+    ],
+)
+def test_r07_pair_preserves_cost_delta_and_withholds_unstable_percentage(
+    cost_c, cost_d, expected_delta, expected_pct, expected_status
+):
+    pair = eval_mod.compare_c_vs_d_pair(
+        {"success": True, "feasible": True, "j_total": cost_c},
+        {"success": True, "feasible": True, "j_total": cost_d},
+    )
+
+    assert pair["completed_feasible_pair"] is True
+    assert pair["j_total_c"] == pytest.approx(cost_c)
+    assert pair["j_total_d"] == pytest.approx(cost_d)
+    assert pair["cost_delta_j_total"] == pytest.approx(expected_delta)
+    if expected_pct is None:
+        assert pair["improvement_j_total_pct"] is None
+    else:
+        assert pair["improvement_j_total_pct"] == pytest.approx(expected_pct)
+    assert pair["percentage_eligible"] is (expected_pct is not None)
+    assert pair["comparison_valid"] is (expected_pct is not None)
+    assert pair["comparison_status"] == expected_status
+
+
+@pytest.mark.parametrize(
+    ("cost_c", "cost_d"),
+    [(float("nan"), 1.0), (1.0, float("inf"))],
+)
+def test_r07_non_finite_cost_is_incomplete_data_not_a_percentage(cost_c, cost_d):
+    pair = eval_mod.compare_c_vs_d_pair(
+        {"success": True, "feasible": True, "j_total": cost_c},
+        {"success": True, "feasible": True, "j_total": cost_d},
+    )
+
+    assert pair["completed_feasible_pair"] is True
+    assert pair["comparison_valid"] is False
+    assert pair["improvement_j_total_pct"] is None
+    assert pair["cost_delta_j_total"] is None
+    assert pair["comparison_status"] == "incomplete_cost_data_non_finite"
+    json.dumps(pair, allow_nan=False)
+
+
+@pytest.mark.parametrize(
+    ("failed_side", "failed_field"),
+    [("method_c", "success"), ("method_d", "feasible")],
+)
+def test_r07_incomplete_or_infeasible_pair_keeps_raw_costs_without_delta(
+    failed_side, failed_field
+):
+    results = {
+        "method_c": {"success": True, "feasible": True, "j_total": 10.0},
+        "method_d": {"success": True, "feasible": True, "j_total": 8.0},
+    }
+    results[failed_side][failed_field] = False
+    pair = eval_mod.compare_c_vs_d_pair(results["method_c"], results["method_d"])
+
+    assert pair["completed_feasible_pair"] is False
+    assert pair["j_total_c"] == 10.0
+    assert pair["j_total_d"] == 8.0
+    assert pair["cost_delta_j_total"] is None
+    assert pair["improvement_j_total_pct"] is None
+    assert pair["comparison_valid"] is False
+    assert pair["comparison_status"].startswith("invalid_incomplete_or_infeasible:")
+
+
+def test_r07_warmup_prefix_mismatch_keeps_physical_pair_and_raw_cost_delta():
+    result_c = {
+        "success": True,
+        "feasible": True,
+        "j_total": 10.0,
+        "warmup_mode": "uniform_baseline",
+        "warmup": {"prefix_sha256": "prefix-c"},
+    }
+    result_d = {
+        "success": True,
+        "feasible": True,
+        "j_total": 8.0,
+        "warmup_mode": "uniform_baseline",
+        "warmup": {"prefix_sha256": "prefix-d"},
+    }
+
+    pair = eval_mod.compare_c_vs_d_pair(result_c, result_d)
+
+    assert pair["completed_feasible_pair"] is True
+    assert pair["j_total_c"] == 10.0
+    assert pair["j_total_d"] == 8.0
+    assert pair["cost_delta_j_total"] == 2.0
+    assert pair["improvement_j_total_pct"] is None
+    assert pair["comparison_status"] == "invalid_warmup_prefix_mismatch"
+
+
+@pytest.mark.parametrize("missing_side", ["method_c", "method_d"])
+def test_r07_missing_cost_is_marked_incomplete_not_zero(missing_side):
+    result_c = {"success": True, "feasible": True, "j_total": 10.0}
+    result_d = {"success": True, "feasible": True, "j_total": 8.0}
+    del {"method_c": result_c, "method_d": result_d}[missing_side]["j_total"]
+
+    pair = eval_mod.compare_c_vs_d_pair(result_c, result_d)
+
+    assert pair["completed_feasible_pair"] is True
+    assert pair["cost_delta_j_total"] is None
+    assert pair["improvement_j_total_pct"] is None
+    assert pair["comparison_valid"] is False
+    assert pair["comparison_status"] == "incomplete_cost_data_missing"
+    assert pair["j_total_c"] == (None if missing_side == "method_c" else 10.0)
+    assert pair["j_total_d"] == (None if missing_side == "method_d" else 8.0)
+
+
+def test_r07_summary_separates_physical_pairs_from_percentage_eligible_pairs():
+    cases = [
+        (
+            {"success": True, "feasible": True, "j_total": 0.0},
+            {"success": True, "feasible": True, "j_total": 1.0},
+        ),
+        (
+            {"success": True, "feasible": True, "j_total": 10.0},
+            {"success": True, "feasible": True, "j_total": 8.0},
+        ),
+        (
+            {"success": True, "feasible": True},
+            {"success": True, "feasible": True, "j_total": 1.0},
+        ),
+        (
+            {"success": False, "feasible": False, "j_total": 4.0},
+            {"success": True, "feasible": True, "j_total": 2.0},
+        ),
+    ]
+    summary = eval_mod.summarize_benchmark_credibility(
+        [{"method_c": result_c, "method_d": result_d} for result_c, result_d in cases]
+    )
+
+    assert summary["completed_feasible_pair_count"] == 3
+    assert summary["percentage_eligible_pair_count"] == 1
+    assert summary["completed_feasible_without_percentage_count"] == 2
+    assert summary["incomplete_or_infeasible_pair_count"] == 1
+    # 旧字段保持原有“存在可计算百分比的配对数”语义，避免静默破坏下游调用方。
+    assert summary["valid_comparison_count"] == 1
+    assert summary["invalid_comparison_count"] == 3
 
 
 def test_r07_credibility_summary_separates_hit_subset_and_forbids_nan_json(tmp_path):

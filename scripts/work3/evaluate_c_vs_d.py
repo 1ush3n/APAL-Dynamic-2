@@ -60,6 +60,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+PERCENTAGE_DENOMINATOR_THRESHOLD = 1e-6
 
 
 @dataclass
@@ -770,18 +771,48 @@ def compare_c_vs_d_pair(
     res_c: dict[str, Any],
     res_d: dict[str, Any],
 ) -> dict[str, Any]:
-    """仅当 C 与 D 均完工 (success=True) 且独立可行 (feasible=True) 时才计算性能改善百分比。"""
+    """保留物理有效配对的费用差；分母过小时不定义改善百分比。"""
     c_ok = bool(res_c.get("success")) and bool(res_c.get("feasible"))
     d_ok = bool(res_d.get("success")) and bool(res_d.get("feasible"))
+
+    def read_cost(result: dict[str, Any]) -> tuple[float | None, str | None]:
+        if "j_total" not in result or result["j_total"] is None:
+            return None, "missing"
+        try:
+            cost = float(result["j_total"])
+        except (TypeError, ValueError, OverflowError):
+            return None, "invalid"
+        if not math.isfinite(cost):
+            return None, "non_finite"
+        return cost, None
+
+    cost_c, cost_error_c = read_cost(res_c)
+    cost_d, cost_error_d = read_cost(res_d)
+    cost_errors = (cost_error_c, cost_error_d)
+    if "missing" in cost_errors:
+        cost_data_status = "missing"
+    elif "non_finite" in cost_errors:
+        cost_data_status = "non_finite"
+    elif "invalid" in cost_errors:
+        cost_data_status = "invalid"
+    else:
+        cost_data_status = None
+
+    c_hits = int(res_c.get("actual_disturbance_hits", 0))
+    d_hits = int(res_d.get("actual_disturbance_hits", 0))
+    both_hit = c_hits > 0 and d_hits > 0
+    completed_feasible_pair = c_ok and d_ok
+    cost_delta = (
+        cost_c - cost_d
+        if completed_feasible_pair and cost_data_status is None
+        else None
+    )
+
+    warmup_error: str | None = None
     if "warmup_mode" in res_c or "warmup_mode" in res_d:
         if res_c.get("warmup_mode") != res_d.get("warmup_mode"):
-            return {
-                "improvement_j_total_pct": None,
-                "comparison_valid": False,
-                "both_hit_disturbance": False,
-                "comparison_status": "invalid_warmup_mode_mismatch",
-            }
-        if res_c.get("warmup_mode") == "uniform_baseline":
+            warmup_error = "invalid_warmup_mode_mismatch"
+        if warmup_error is None and res_c.get("warmup_mode") == "uniform_baseline":
             c_warmup = res_c.get("warmup")
             d_warmup = res_d.get("warmup")
             if (
@@ -790,52 +821,44 @@ def compare_c_vs_d_pair(
                 or not c_warmup.get("prefix_sha256")
                 or c_warmup.get("prefix_sha256") != d_warmup.get("prefix_sha256")
             ):
-                return {
-                    "improvement_j_total_pct": None,
-                    "comparison_valid": False,
-                    "both_hit_disturbance": False,
-                    "comparison_status": "invalid_warmup_prefix_mismatch",
-                }
-    c_hits = int(res_c.get("actual_disturbance_hits", 0))
-    d_hits = int(res_d.get("actual_disturbance_hits", 0))
-    c_hit = c_hits > 0
-    d_hit = d_hits > 0
-    both_hit = c_hit and d_hit
+                warmup_error = "invalid_warmup_prefix_mismatch"
 
-    if not (c_ok and d_ok):
+    improvement_pct: float | None = None
+    percentage_eligible = False
+    if not completed_feasible_pair:
         c_reason = str(res_c.get("termination_reason", "unknown"))
         d_reason = str(res_d.get("termination_reason", "unknown"))
-        return {
-            "improvement_j_total_pct": None,
-            "comparison_valid": False,
-            "both_hit_disturbance": False,
-            "comparison_status": (
-                f"invalid_incomplete_or_infeasible: c_success={c_ok}({c_reason}), "
-                f"d_success={d_ok}({d_reason})"
-            ),
-        }
-
-    cost_c = float(res_c.get("j_total", 0.0))
-    cost_d = float(res_d.get("j_total", 0.0))
-    if not (math.isfinite(cost_c) and math.isfinite(cost_d)):
-        return {
-            "improvement_j_total_pct": None,
-            "comparison_valid": False,
-            "both_hit_disturbance": False,
-            "comparison_status": "invalid_non_finite_cost",
-        }
-
-    improv_pct = ((cost_c - cost_d) / cost_c) * 100.0 if cost_c > 1e-6 else 0.0
-    if both_hit:
-        comparison_status = "valid_both_completed_and_hit"
-    elif c_hit or d_hit:
-        comparison_status = "valid_both_completed_one_sided_hit"
+        comparison_status = (
+            f"invalid_incomplete_or_infeasible: c_success={c_ok}({c_reason}), "
+            f"d_success={d_ok}({d_reason})"
+        )
+    elif cost_data_status is not None:
+        comparison_status = f"incomplete_cost_data_{cost_data_status}"
+    elif warmup_error is not None:
+        comparison_status = warmup_error
+    elif cost_c is not None and cost_c <= PERCENTAGE_DENOMINATOR_THRESHOLD:
+        comparison_status = "completed_feasible_percentage_denominator_insufficient"
     else:
-        comparison_status = "valid_both_completed_zero_hit"
+        assert cost_c is not None and cost_d is not None
+        improvement_pct = ((cost_c - cost_d) / cost_c) * 100.0
+        percentage_eligible = True
+        if both_hit:
+            comparison_status = "valid_both_completed_and_hit"
+        elif c_hits > 0 or d_hits > 0:
+            comparison_status = "valid_both_completed_one_sided_hit"
+        else:
+            comparison_status = "valid_both_completed_zero_hit"
 
     return {
-        "improvement_j_total_pct": float(improv_pct),
-        "comparison_valid": True,
+        "j_total_c": cost_c,
+        "j_total_d": cost_d,
+        "cost_delta_j_total": cost_delta,
+        "completed_feasible_pair": completed_feasible_pair,
+        "cost_data_complete": cost_data_status is None,
+        "percentage_eligible": percentage_eligible,
+        "improvement_j_total_pct": improvement_pct,
+        # 兼容旧调用方：comparison_valid沿用“存在可计算百分比”的语义。
+        "comparison_valid": percentage_eligible,
         "both_hit_disturbance": both_hit,
         "comparison_status": comparison_status,
     }
@@ -844,7 +867,7 @@ def compare_c_vs_d_pair(
 def summarize_benchmark_credibility(
     results: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
-    """无条件汇总 C/D 失败率，并将有效成对完工集合与双方实际命中扰动子集分列报告。"""
+    """分别汇总物理有效配对和可计算百分比的配对；旧计数字段保持兼容。"""
     total = len(results)
     c_success = 0
     d_success = 0
@@ -854,6 +877,7 @@ def summarize_benchmark_credibility(
     valid_and_hit_improvements: list[float] = []
     valid_one_sided_hit_improvements: list[float] = []
     valid_zero_hit_improvements: list[float] = []
+    completed_feasible_pair_count = 0
 
     for item in results:
         res_c = item.get("method_c", {})
@@ -870,7 +894,10 @@ def summarize_benchmark_credibility(
         d_reasons[d_r] = d_reasons.get(d_r, 0) + 1
 
         pair_eval = compare_c_vs_d_pair(res_c, res_d)
-        if pair_eval["comparison_valid"] and pair_eval["improvement_j_total_pct"] is not None:
+        if pair_eval["completed_feasible_pair"]:
+            completed_feasible_pair_count += 1
+        if pair_eval["percentage_eligible"]:
+            assert pair_eval["improvement_j_total_pct"] is not None
             imp = float(pair_eval["improvement_j_total_pct"])
             valid_improvements.append(imp)
             if pair_eval["both_hit_disturbance"]:
@@ -894,6 +921,13 @@ def summarize_benchmark_credibility(
         "method_d_failure_count": d_fail,
         "method_d_failure_rate": (d_fail / total) if total > 0 else 0.0,
         "method_d_termination_reasons": d_reasons,
+        "completed_feasible_pair_count": completed_feasible_pair_count,
+        "percentage_eligible_pair_count": len(valid_improvements),
+        "completed_feasible_without_percentage_count": (
+            completed_feasible_pair_count - len(valid_improvements)
+        ),
+        "incomplete_or_infeasible_pair_count": total - completed_feasible_pair_count,
+        # 兼容旧调用方：两个旧字段实际统计的是可计算百分比的配对数。
         "valid_comparison_count": len(valid_improvements),
         "invalid_comparison_count": total - len(valid_improvements),
         "mean_improvement_valid_only_pct": (
@@ -1027,8 +1061,10 @@ def run_benchmark_evaluation(
 
         pair_eval = compare_c_vs_d_pair(res_c, res_d)
         improv_pct = pair_eval["improvement_j_total_pct"]
-        cost_c = float(res_c["j_total"])
-        cost_d = float(res_d["j_total"])
+        cost_c = pair_eval["j_total_c"]
+        cost_d = pair_eval["j_total_d"]
+        cost_c_display = f"{cost_c:<12.4f}" if cost_c is not None else f"{'MISSING':<12}"
+        cost_d_display = f"{cost_d:<12.4f}" if cost_d is not None else f"{'MISSING':<12}"
 
         item = _sanitize_for_json(
             {
@@ -1038,6 +1074,11 @@ def run_benchmark_evaluation(
                 "station": sc.get("station_id"),
                 "method_c": res_c,
                 "method_d": res_d,
+                "j_total_c": cost_c,
+                "j_total_d": cost_d,
+                "cost_delta_j_total": pair_eval["cost_delta_j_total"],
+                "completed_feasible_pair": pair_eval["completed_feasible_pair"],
+                "percentage_eligible": pair_eval["percentage_eligible"],
                 "improvement_j_total_pct": improv_pct,
                 "comparison_valid": pair_eval["comparison_valid"],
                 "both_hit_disturbance": pair_eval["both_hit_disturbance"],
@@ -1050,7 +1091,7 @@ def run_benchmark_evaluation(
 
         delta_str = f"{improv_pct:>+8.2f}%" if improv_pct is not None else "INVALID"
         logger.info(
-            f"{sc_id:<16} | {'J_total':<10} | {cost_c:<12.4f} | {cost_d:<12.4f} | {delta_str:<10}"
+            f"{sc_id:<16} | {'J_total':<10} | {cost_c_display} | {cost_d_display} | {delta_str:<10}"
         )
         logger.info(
             f"{'':<16} | {'J_takt':<10} | {res_c['j_takt']:<12.4f} | {res_d['j_takt']:<12.4f} |"
