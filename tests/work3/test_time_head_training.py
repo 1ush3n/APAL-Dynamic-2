@@ -271,6 +271,15 @@ def test_time_predictor_trains_only_on_exact_official_split_manifests(
         test_ids=["TEST_A"],
     )
     monkeypatch.setattr(
+        train_time_predictor,
+        "OFFICIAL_SPLIT_PATHS",
+        {
+            "train": paths["train_split"],
+            "validation": paths["validation_split"],
+            "test": paths["test_split"],
+        },
+    )
+    monkeypatch.setattr(
         sys,
         "argv",
         [
@@ -279,12 +288,6 @@ def test_time_predictor_trains_only_on_exact_official_split_manifests(
             str(paths["train_trajectories"]),
             "--validation-trajectories",
             str(paths["validation_trajectories"]),
-            "--train-split",
-            str(paths["train_split"]),
-            "--validation-split",
-            str(paths["validation_split"]),
-            "--test-split",
-            str(paths["test_split"]),
             "--checkpoint",
             str(tmp_path / "time_head.pt"),
         ],
@@ -331,6 +334,51 @@ def test_time_predictor_rejects_trajectory_from_another_official_split(
         train_artifact_ids=["TRAIN_A", "TEST_A"],
     )
     monkeypatch.setattr(
+        train_time_predictor,
+        "OFFICIAL_SPLIT_PATHS",
+        {
+            "train": paths["train_split"],
+            "validation": paths["validation_split"],
+            "test": paths["test_split"],
+        },
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_time_predictor.py",
+            "--train-trajectories",
+            str(paths["train_trajectories"]),
+            "--validation-trajectories",
+            str(paths["validation_trajectories"]),
+            "--checkpoint",
+            str(tmp_path / "time_head.pt"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="不属于train场景清单"):
+        train_time_predictor.main()
+
+
+def test_time_predictor_cannot_replace_frozen_manifests_to_train_on_test_event(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """正式M4入口不得通过替换清单把官方test事件改列为train。"""
+    import sys
+
+    from scripts.work3 import train_time_predictor
+
+    official_test = json.loads(
+        (Path("data/work3/experiment_splits/test.json")).read_text(encoding="utf-8")
+    )[0]["scenario_id"]
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=[official_test],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["REPLACEMENT_TEST"],
+    )
+    monkeypatch.setattr(
         sys,
         "argv",
         [
@@ -349,9 +397,46 @@ def test_time_predictor_rejects_trajectory_from_another_official_split(
             str(tmp_path / "time_head.pt"),
         ],
     )
+    monkeypatch.setattr(
+        train_time_predictor,
+        "train_time_head",
+        lambda **_kwargs: (
+            None,
+            {
+                "mae_raw_hours": 1.0,
+                "mae_corrected_hours": 0.5,
+                "mae_improvement_pct": 50.0,
+                "total_val_samples": 50,
+            },
+        ),
+    )
 
-    with pytest.raises(ValueError, match="不属于train场景清单"):
+    with pytest.raises(SystemExit) as error:
         train_time_predictor.main()
+
+    assert error.value.code == 2
+
+
+def test_m4_acceptance_fails_when_only_some_official_artifacts_exist(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """M4只允许全无产物时skip，部分交付必须作为验收失败报告。"""
+    original_is_file = Path.is_file
+
+    def partial_artifact_state(path: Path) -> bool:
+        if path.name == "time_head_m4_official.pt":
+            return True
+        if path.name in {
+            "m4_train_trajectories.pt",
+            "m4_validation_trajectories.pt",
+        }:
+            return False
+        return original_is_file(path)
+
+    monkeypatch.setattr(Path, "is_file", partial_artifact_state)
+
+    with pytest.raises(pytest.fail.Exception, match="M4正式产物不完整"):
+        test_milestone_m4_checkpoint_acceptance()
 
 
 def test_collector_defaults_to_one_nominal_trajectory(
@@ -442,8 +527,17 @@ def test_milestone_m4_checkpoint_acceptance() -> None:
     train_path = Path("data/work3/m4_train_trajectories.pt")
     validation_path = Path("data/work3/m4_validation_trajectories.pt")
 
-    if not ckpt_path.is_file() or not train_path.is_file() or not validation_path.is_file():
+    artifact_paths = (ckpt_path, train_path, validation_path)
+    existing_paths = tuple(path.is_file() for path in artifact_paths)
+    if not any(existing_paths):
         pytest.skip("当前官方事件划分的M4轨迹或时间头检查点尚未生成")
+    if not all(existing_paths):
+        missing = [
+            str(path)
+            for path, exists in zip(artifact_paths, existing_paths)
+            if not exists
+        ]
+        pytest.fail(f"M4正式产物不完整，缺失：{missing}")
 
     _, val_trajectories, provenance = load_official_trajectory_splits(
         train_trajectories_path=train_path,

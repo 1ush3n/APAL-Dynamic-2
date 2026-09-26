@@ -31,6 +31,11 @@ from models.work3.train_time_head import (
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+OFFICIAL_SPLIT_PATHS = {
+    "train": _ROOT / "data" / "work3" / "experiment_splits" / "train.json",
+    "validation": _ROOT / "data" / "work3" / "experiment_splits" / "validation.json",
+    "test": _ROOT / "data" / "work3" / "experiment_splits" / "test.json",
+}
 
 
 def _scenario_ids_from_manifest(path: Path, split_name: str) -> list[str]:
@@ -142,21 +147,6 @@ def main() -> None:
     parser.add_argument("--train-trajectories", type=Path, required=True)
     parser.add_argument("--validation-trajectories", type=Path, required=True)
     parser.add_argument(
-        "--train-split",
-        type=Path,
-        default=_ROOT / "data" / "work3" / "experiment_splits" / "train.json",
-    )
-    parser.add_argument(
-        "--validation-split",
-        type=Path,
-        default=_ROOT / "data" / "work3" / "experiment_splits" / "validation.json",
-    )
-    parser.add_argument(
-        "--test-split",
-        type=Path,
-        default=_ROOT / "data" / "work3" / "experiment_splits" / "test.json",
-    )
-    parser.add_argument(
         "--checkpoint",
         type=Path,
         default=_ROOT / "models" / "work3" / "checkpoints" / "time_head_m4_official.pt",
@@ -169,9 +159,9 @@ def main() -> None:
     train_trajs, val_trajs, data_provenance = load_official_trajectory_splits(
         train_trajectories_path=args.train_trajectories,
         validation_trajectories_path=args.validation_trajectories,
-        train_split_path=args.train_split,
-        validation_split_path=args.validation_split,
-        test_split_path=args.test_split,
+        train_split_path=OFFICIAL_SPLIT_PATHS["train"],
+        validation_split_path=OFFICIAL_SPLIT_PATHS["validation"],
+        test_split_path=OFFICIAL_SPLIT_PATHS["test"],
     )
     logger.info(
         "加载预先划分轨迹：训练场景=%s、验证场景=%s；测试场景仅登记不参与拟合/选模",
