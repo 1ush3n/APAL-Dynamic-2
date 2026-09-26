@@ -181,19 +181,17 @@ class APALLightningModule(pl.LightningModule):
         if not isinstance(agent_state, dict):
             return
         saved_batch_size = int(agent_state.get("batch_size", self.agent.batch_size))
-        is_v2 = (
-            str(getattr(self.rollout_service.config, "team_selection_mode", ""))
-            == "autoregressive_pressure_v2"
+        configured_batch_size = int(
+            getattr(self.rollout_service.config, "batch_size", self.agent.batch_size)
         )
         self.resume_checkpoint_batch_size = saved_batch_size
         self.resume_batch_override_applied = bool(
-            is_v2 and saved_batch_size != int(self.agent.batch_size)
+            saved_batch_size != configured_batch_size
         )
         self.agent.current_step = int(
             agent_state.get("current_step", self.agent.current_step)
         )
-        if not is_v2:
-            self.agent.batch_size = saved_batch_size
+        self.agent.batch_size = configured_batch_size
         scaler_state = agent_state.get("scaler")
         if isinstance(scaler_state, dict) and hasattr(self.agent, "scaler"):
             self.agent.scaler.load_state_dict(scaler_state)

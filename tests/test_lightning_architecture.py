@@ -231,7 +231,7 @@ def test_lightning_checkpoint_contains_apal_metadata() -> None:
     )
 
 
-def test_lightning_v2_resume_keeps_current_effective_batch_override() -> None:
+def test_lightning_v2_resume_uses_configured_batch_size() -> None:
     from configs import Config
     from runtime.checkpoints import build_checkpoint_metadata
 
@@ -243,6 +243,7 @@ def test_lightning_v2_resume_keeps_current_effective_batch_override() -> None:
     cfg.worker_pointer_v2_logical_batch_cap = 256
     cfg.worker_pointer_v2_rollout_group_upper_bound = 4
     cfg.accumulation_steps = 16
+    cfg.batch_size = 192
     agent = _Agent()
     agent.current_step = 0
     agent.batch_size = 256
@@ -266,7 +267,7 @@ def test_lightning_v2_resume_keeps_current_effective_batch_override() -> None:
     module.on_load_checkpoint(checkpoint)
 
     assert agent.current_step == 3
-    assert agent.batch_size == 256
+    assert agent.batch_size == 192
     assert module.resume_checkpoint_batch_size == 64
     assert module.resume_batch_override_applied is True
 
