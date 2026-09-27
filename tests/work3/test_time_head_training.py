@@ -542,6 +542,44 @@ def test_official_time_splits_reject_nan_label(
         _load_official_splits(paths)
 
 
+@pytest.mark.parametrize("bad_time", [float("nan"), float("inf")])
+def test_official_time_splits_reject_nonfinite_transfer_history(
+    tmp_path: Path,
+    bad_time: float,
+) -> None:
+    """正式轨迹的真实转站历史也必须逐值有限。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["transfer_history"][0] = bad_time
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*transfer_history\[0\]"):
+        _load_official_splits(paths)
+
+
+def test_official_time_splits_reject_bad_label_in_later_step(
+    tmp_path: Path,
+) -> None:
+    """正式加载入口必须检查轨迹中的每一步，而不只检查首步。"""
+    paths = _write_official_split_inputs(
+        tmp_path,
+        train_ids=["TRAIN_A"],
+        validation_ids=["VALIDATION_A"],
+        test_ids=["TEST_A"],
+    )
+    trajectories = torch.load(paths["train_trajectories"], weights_only=False)
+    trajectories[0]["steps"][-1]["label_y"] += 0.1
+    torch.save(trajectories, paths["train_trajectories"])
+
+    with pytest.raises(ValueError, match=r"train.*TRAIN_A.*step_idx=49.*label_y"):
+        _load_official_splits(paths)
+
+
 def test_official_time_splits_accept_two_cycles_and_keep_warmup_indices(
     tmp_path: Path,
 ) -> None:
