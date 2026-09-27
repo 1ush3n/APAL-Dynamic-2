@@ -34,6 +34,7 @@ def _save_profile_checkpoint(
     import torch
 
     from models.work3.actor_critic import ActorCriticWork3
+    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
     from models.work3.ppo_trainer import PPOTrainerWork3
     from models.work3.time_head import TimeResidualHead
 
@@ -87,7 +88,7 @@ def _save_profile_checkpoint(
         "potential_predictor_snapshot": (
             {
                 "version": 2,
-                "graph_feature_version": "work3_graph_v2",
+                "graph_feature_version": GRAPH_FEATURE_VERSION,
                 "actor_state": actor.state_dict(),
                 "time_head_state": time_head.state_dict(),
                 "time_head_model_version": "signed_residual_v1",

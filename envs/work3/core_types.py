@@ -271,6 +271,20 @@ class TaskRuntimeState:
         return copied
 
 
+def remaining_processing_time(task: TaskRuntimeState, current_time: float) -> float:
+    """返回任务在当前快照中的剩余加工工时，不计预约开始前的等待。"""
+    if task.status == TaskStatus.COMPLETED:
+        return 0.0
+    duration = float(
+        task.execution_duration
+        if task.execution_duration is not None
+        else task.duration
+    )
+    if task.status == TaskStatus.RUNNING and task.actual_start is not None:
+        return max(0.0, float(task.actual_start) + duration - float(current_time))
+    return max(0.0, duration)
+
+
 @dataclass
 class AircraftRuntimeState:
     """单架飞机的运行时站位与流转追踪。"""

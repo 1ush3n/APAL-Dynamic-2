@@ -3,19 +3,24 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 from itertools import combinations
 from pathlib import Path
 
 import pytest
 import torch
 
-from envs.work3.core_types import TaskStatus, TimeInterval
+from envs.work3.core_types import ActionBranch, TaskStatus, TimeInterval
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import (
     ActorCriticWork3,
     extract_compact_state_features,
 )
-from models.work3.graph_builder import MultiAircraftGraphBuilder
+from models.work3.graph_builder import (
+    GRAPH_FEATURE_VERSION,
+    MultiAircraftGraphBuilder,
+)
+from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from models.work3.time_head import TimeResidualHead
 from models.work3.ppo_trainer import PPOTrainerWork3
 from scripts.work3.evaluate_c_vs_d import build_formal_evaluation_agent
@@ -129,12 +134,20 @@ def test_future_reservation_times_and_replay_snapshot_are_distinguishable(
 def test_unlaunched_aircraft_load_changes_future_not_current_station_feature(
     baseline_path: Path,
 ) -> None:
-    """未进线飞机新增工作量只能改变站位未来负荷，不得污染当前负荷。"""
+    """隔离当前/未来站位工作量，并验证启发式只看本周期任务。"""
     env = _make_env(baseline_path)
+    current_aircraft_id = env.state.get_aircraft_at_station(0)
     unlaunched_aircraft_id = next(
         aircraft_id
         for aircraft_id, aircraft in env.state.aircraft.items()
         if aircraft.current_station == -1
+    )
+    current_task = next(
+        task
+        for task in env.state.tasks.values()
+        if task.aircraft_id == current_aircraft_id
+        and task.current_station == 0
+        and task.status != TaskStatus.COMPLETED
     )
     future_task = next(
         task
@@ -143,7 +156,21 @@ def test_unlaunched_aircraft_load_changes_future_not_current_station_feature(
         and task.current_station == 0
         and task.status != TaskStatus.COMPLETED
     )
-    assert env.state.get_aircraft_at_station(0) == 0
+    for task in env.state.tasks.values():
+        if task.current_station == 0 and task.task_key not in {
+            current_task.task_key,
+            future_task.task_key,
+        }:
+            task.status = TaskStatus.COMPLETED
+    current_task.status = TaskStatus.READY
+    current_task.duration = 2.0
+    current_task.execution_duration = None
+    future_task.status = TaskStatus.UNREADY
+    future_task.duration = 4.0
+    future_task.execution_duration = None
+
+    assert current_aircraft_id is not None
+    assert env.state.get_aircraft_at_station(0) == current_aircraft_id
     assert env.state.aircraft[unlaunched_aircraft_id].current_station == -1
 
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
@@ -152,22 +179,244 @@ def test_unlaunched_aircraft_load_changes_future_not_current_station_feature(
     remaining_load_before = graph_before["station"].x[station_index, 0].item()
     current_load_before = graph_before["station"].x[station_index, 4].item()
     future_load_before = graph_before["station"].x[station_index, 5].item()
-    assert current_load_before > 0.0
-    assert future_load_before > 0.0
-    added_work = env.state.h0 * 0.25
-    future_task.duration += added_work
+    compact_before = extract_compact_state_features(env.state, 100.0)
+    heuristic_before = compute_cycle_heuristic_cmax(env.state)
+    assert current_load_before == pytest.approx(2.0 / env.state.h0)
+    assert future_load_before == pytest.approx(4.0 / env.state.h0)
+    assert remaining_load_before == pytest.approx(6.0 / env.state.h0)
+    assert compact_before[1 + station_index].item() == pytest.approx(
+        2.0 / env.state.h0
+    )
+
+    future_task.duration = 9.0
 
     graph_after = actor.build_graph_snapshot(env)
+    compact_after = extract_compact_state_features(env.state, 100.0)
 
     assert graph_after["station"].x[station_index, 4].item() == pytest.approx(
         current_load_before
     )
     assert graph_after["station"].x[station_index, 5].item() == pytest.approx(
-        future_load_before + 0.25
+        9.0 / env.state.h0
     )
     assert graph_after["station"].x[station_index, 0].item() == pytest.approx(
-        remaining_load_before + 0.25
+        11.0 / env.state.h0
     )
+    assert compact_after[1 + station_index].item() == pytest.approx(
+        compact_before[1 + station_index].item()
+    )
+    assert compute_cycle_heuristic_cmax(env.state) == pytest.approx(heuristic_before)
+    assert torch.isfinite(compact_after).all()
+
+
+def test_empty_station_has_no_current_period_work_or_delay_features(
+    baseline_path: Path,
+) -> None:
+    env = _make_env(baseline_path)
+    empty_station = next(
+        station
+        for station in range(env.state.num_stations)
+        if env.state.get_aircraft_at_station(station) is None
+    )
+
+    features = extract_compact_state_features(env.state, 100.0)
+    graph = ActorCriticWork3(
+        state_dim=32, task_feat_dim=8, hidden_dim=16
+    ).build_graph_snapshot(env)
+
+    assert features[1 + empty_station].item() == 0.0
+    assert features[6 + empty_station].item() == 0.0
+    assert features[11 + empty_station].item() == 0.0
+    assert features[16 + empty_station].item() == 0.0
+    assert graph["station"].x[empty_station, 4].item() == 0.0
+
+
+def test_running_task_features_use_remaining_execution_time(
+    baseline_path: Path,
+) -> None:
+    env = _make_env(baseline_path)
+    aircraft_id = env.state.get_aircraft_at_station(0)
+    running_task = next(
+        task
+        for task in env.state.tasks.values()
+        if task.aircraft_id == aircraft_id
+        and task.current_station == 0
+        and task.status != TaskStatus.COMPLETED
+    )
+    for task in env.state.tasks.values():
+        if (
+            task.aircraft_id == aircraft_id
+            and task.current_station == 0
+            and task.task_key != running_task.task_key
+        ):
+            task.status = TaskStatus.COMPLETED
+    running_task.status = TaskStatus.RUNNING
+    running_task.duration = 5.0
+    running_task.execution_duration = 5.0
+    running_task.actual_start = env.state.current_time - 2.0
+
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
+    features = extract_compact_state_features(env.state, 100.0)
+    graph = actor.build_graph_snapshot(env)
+
+    assert features[1].item() == pytest.approx(3.0 / env.state.h0)
+    assert graph["station"].x[0, 4].item() == pytest.approx(
+        3.0 / env.state.h0
+    )
+
+    running_task.status = TaskStatus.RESERVED
+    running_task.actual_start = None
+    running_task.duration = 2.0
+    running_task.execution_duration = 3.0
+    running_task.scheduled_start = env.state.current_time + 10.0
+    reserved_features = extract_compact_state_features(env.state, 100.0)
+    reserved_graph = actor.build_graph_snapshot(env)
+    assert reserved_features[1].item() == pytest.approx(3.0 / env.state.h0)
+    assert reserved_graph["station"].x[0, 4].item() == pytest.approx(
+        3.0 / env.state.h0
+    )
+
+    running_task.status = TaskStatus.RUNNING
+    running_task.execution_duration = 5.0
+    running_task.actual_start = env.state.current_time - 2.0
+    env.state.current_time = running_task.actual_start + running_task.execution_duration + 1.0
+    finished_features = extract_compact_state_features(env.state, 100.0)
+    finished_graph = actor.build_graph_snapshot(env)
+    assert finished_features[1].item() == 0.0
+    assert finished_graph["station"].x[0, 4].item() == 0.0
+
+
+def test_seven_aircraft_small_full_line_trace_keeps_loads_feasible(
+    baseline_path: Path,
+    tmp_path: Path,
+) -> None:
+    """七架同模板飞机填线、经历扰动并排空，特征与独立账本保持有效。"""
+    from scripts.work3.evaluate_c_vs_d import _check_completed_trajectory_feasibility
+    from scripts.work3.train_ppo_work3 import count_actual_scenario_hits
+    from utils.work3.objective_evaluator import evaluate_trajectory_objective
+
+    source = MultiAircraftBaseline.load_from_json(str(baseline_path))
+    station_task_ids = (
+        (1, 15), (1, 6), (1, 16),
+        (2, 18), (2, 8), (2, 9), (2, 26),
+        (3, 12), (3, 13), (3, 29),
+        (4, 20), (4, 21), (4, 10),
+        (5, 24), (5, 23), (5, 30), (5, 34),
+    )
+    selected_ids = {task_id for _, task_id in station_task_ids}
+    tasks = {}
+    for aircraft_id in range(7):
+        for station_id, task_id in station_task_ids:
+            template = source.get_task(0, task_id)
+            assert set(template.predecessors) <= selected_ids
+            nominal_entry = (aircraft_id + station_id - 1) * source.h0
+            key = f"{aircraft_id}_{task_id}"
+            tasks[key] = replace(
+                template,
+                aircraft_id=aircraft_id,
+                task_key=key,
+                cycle_idx=aircraft_id + station_id,
+                baseline_start=nominal_entry + template.in_station_offset,
+                baseline_end=(
+                    nominal_entry + template.in_station_offset + template.duration
+                ),
+                nominal_station_entry=nominal_entry,
+                nominal_station_exit=nominal_entry + source.h0,
+            )
+
+    baseline = MultiAircraftBaseline(
+        num_aircraft=7,
+        num_stations=5,
+        h0=source.h0,
+        tasks=tasks,
+        station_workers=source.station_workers,
+    )
+    small_path = tmp_path / "seven_aircraft_five_station.json"
+    baseline.save_to_json(small_path)
+    env = AirLineEnvWork3(baseline_json_path=small_path)
+    env.reset()
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
+    builder = actor._get_graph_builder(env)
+    assert env.can_postpone(env.state.tasks["0_6"])
+    assert not env.can_postpone(env.state.tasks["0_34"])
+
+    initial_features = extract_compact_state_features(env.state, 100.0)
+    initial_graph = builder.build_graph(env)
+    assert torch.isfinite(initial_features).all()
+    assert torch.isfinite(initial_graph["station"].x).all()
+    assert initial_features[1].item() == pytest.approx(
+        initial_graph["station"].x[0, 4].item()
+    )
+    assert initial_graph["station"].x[0, 5].item() > 0.0
+
+    def run_fixed_action() -> tuple[bool, dict[str, object]]:
+        ready_tasks = env.get_ready_tasks()
+        if ready_tasks:
+            task = ready_tasks[0]
+            original = baseline.get_task(task.aircraft_id, task.task_id)
+            _, _, terminated, truncated, info = env.step(
+                {
+                    "task_key": task.task_key,
+                    "branch": ActionBranch.STATION_EXECUTE,
+                    "team": original.team,
+                    "align": 0,
+                }
+            )
+        else:
+            _, _, terminated, truncated, info = env.step(
+                {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+            )
+        assert not truncated
+        return terminated, info
+
+    decisions = 0
+    while len(env.state.transfer_history) < 6:
+        terminated, _ = run_fixed_action()
+        decisions += 1
+        assert not terminated
+        assert decisions < 1000
+
+    assert [
+        sum(aircraft.current_station == station for aircraft in env.state.aircraft.values())
+        for station in range(5)
+    ] == [1] * 5
+    target = env.state.tasks["4_12"]
+    assert env.state.aircraft[4].current_station == 2
+    assert target.status == TaskStatus.READY
+    assert target.actual_start is None
+    tau = env.state.current_time
+    scenario = {
+        "scenario_id": "P0_SEVEN_AIRCRAFT_FIXED_HIT",
+        "tau": tau,
+        "recovery_time": tau + 0.15 * env.state.h0,
+        "affected_task_keys": [target.task_key],
+    }
+    env.load_scenario(scenario)
+    assert count_actual_scenario_hits(env, scenario) == 1
+    disturbed_features = extract_compact_state_features(env.state, 100.0)
+    disturbed_graph = builder.build_graph(env)
+    assert torch.isfinite(disturbed_features).all()
+    assert torch.isfinite(disturbed_graph["station"].x).all()
+
+    last_info: dict[str, object] = {}
+    while not env._check_terminated():
+        terminated, last_info = run_fixed_action()
+        decisions += 1
+        assert decisions < 4000
+        if terminated:
+            break
+
+    assert last_info.get("success") is True
+    assert len(env.state.tasks) == 7 * len(station_task_ids)
+    assert all(task.status == TaskStatus.COMPLETED for task in env.state.tasks.values())
+    assert len(env.state.transfer_history) == 7 + 5 - 1
+    assert target.actual_start is not None
+    assert target.actual_start >= scenario["recovery_time"] - env.tolerance
+    assert count_actual_scenario_hits(env, scenario) == 1
+    feasible, violations = _check_completed_trajectory_feasibility(env)
+    assert feasible, f"独立轨迹检查失败：{violations}"
+    ledger = evaluate_trajectory_objective(env, weights=env.weights)
+    assert sum(env.step_rewards) == pytest.approx(-ledger.j_total, abs=1e-8)
 
 
 def test_previous_published_team_is_separate_from_p0_and_changes_worker_input(
@@ -267,6 +516,22 @@ def test_unrevealed_future_disturbance_does_not_change_graph_or_time_inputs(
     assert torch.equal(state_a, state_b)
     assert torch.equal(urgency_a, urgency_b)
     assert torch.equal(prediction_a, prediction_b)
+    candidates_a = env_a.get_action_candidates()
+    candidates_b = env_b.get_action_candidates()
+    assert [task.task_key for task in candidates_a] == [
+        task.task_key for task in candidates_b
+    ]
+    assert [env_a.get_action_branch_mask(task) for task in candidates_a] == [
+        env_b.get_action_branch_mask(task) for task in candidates_b
+    ]
+    action_a, log_prob_a, _, _ = actor.select_action(
+        env_a, state_a, urgency_a, deterministic=True
+    )
+    action_b, log_prob_b, _, _ = actor.select_action(
+        env_b, state_b, urgency_b, deterministic=True
+    )
+    assert action_a == action_b
+    assert float(log_prob_a) == pytest.approx(float(log_prob_b), abs=1e-7)
 
 
 def test_graph_action_helpers_match_environment_for_physical_masks(
@@ -331,7 +596,7 @@ def test_checkpoints_declare_graph_feature_schema_and_reject_old_schema(
     trainer.save_checkpoint(str(checkpoint_path))
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
-    assert checkpoint["graph_feature_version"] == "work3_graph_v2"
+    assert checkpoint["graph_feature_version"] == GRAPH_FEATURE_VERSION
     assert checkpoint["graph_feature_dims"] == {
         "task": 26,
         "worker": 21,
@@ -340,13 +605,18 @@ def test_checkpoints_declare_graph_feature_schema_and_reject_old_schema(
     }
     assert "task_features" in checkpoint["graph_feature_schema"]
     assert "worker_features" in checkpoint["graph_feature_schema"]
+    assert checkpoint["graph_feature_schema"]["station_workload_semantics"] == (
+        "total_remaining_processing_work_norm",
+        "current_aircraft_remaining_processing_work_norm",
+        "known_future_remaining_processing_work_norm",
+    )
 
     old_path = tmp_path / "legacy_graph.pt"
     old_checkpoint = {
         "actor_critic_state": actor.state_dict(),
         "time_head_state": head.state_dict(),
         "time_head_model_version": "signed_residual_v1",
-        "graph_feature_version": "work3_graph_v1",
+        "graph_feature_version": "work3_graph_v2",
         "graph_feature_dims": {"task": 18, "worker": 17, "station": 15, "skill": 11},
     }
     torch.save(old_checkpoint, old_path)

@@ -505,6 +505,8 @@ def test_decision_snapshot_clones_tensor_and_graph_payloads_to_cpu() -> None:
     from torch_geometric.data import HeteroData
 
     module = _decision_snapshot_module()
+    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
+
     context = module.TeamCompletionContext(
         task_key="0_0",
         station_id=0,
@@ -538,7 +540,7 @@ def test_decision_snapshot_clones_tensor_and_graph_payloads_to_cpu() -> None:
         estimated_cmax=10.0,
         h0=10.0,
         last_transfer_time=0.0,
-        graph_version="work3_graph_v2",
+        graph_version=GRAPH_FEATURE_VERSION,
     )
 
     state_features[0] = 99.0

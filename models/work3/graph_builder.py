@@ -30,7 +30,11 @@ import numpy as np
 import torch
 from torch_geometric.data import HeteroData
 
-from envs.work3.core_types import MultiAircraftState, TaskRuntimeState, TaskStatus
+from envs.work3.core_types import (
+    MultiAircraftState,
+    TaskRuntimeState,
+    TaskStatus,
+)
 from envs.work3.environment import AirLineEnvWork3
 from utils.resource_graph import (
     SkillHubTopology,
@@ -52,7 +56,7 @@ TASK_STATUS_TO_SLOT: dict[TaskStatus, int | None] = {
 }
 
 
-GRAPH_FEATURE_VERSION = "work3_graph_v2"
+GRAPH_FEATURE_VERSION = "work3_graph_v3"
 GRAPH_FEATURE_DIMS: dict[str, int] = {
     "task": 26,
     "worker": 21,
@@ -112,6 +116,11 @@ GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
         "has_next_reserved_interval",
         "next_reserved_start_remaining_norm",
         "next_reserved_end_remaining_norm",
+    ),
+    "station_workload_semantics": (
+        "total_remaining_processing_work_norm",
+        "current_aircraft_remaining_processing_work_norm",
+        "known_future_remaining_processing_work_norm",
     ),
 }
 
@@ -373,13 +382,29 @@ class MultiAircraftGraphBuilder:
                 assigned_ts_src.append(idx)
                 assigned_ts_dst.append(st)
                 if t_rt.status != TaskStatus.COMPLETED:
-                    station_remain_workload[st] += t_rt.duration
+                    execution_duration = float(
+                        t_rt.execution_duration
+                        if t_rt.execution_duration is not None
+                        else t_rt.duration
+                    )
+                    remaining_work = max(0.0, execution_duration)
+                    if (
+                        t_rt.status == TaskStatus.RUNNING
+                        and t_rt.actual_start is not None
+                    ):
+                        remaining_work = max(
+                            0.0,
+                            float(t_rt.actual_start)
+                            + execution_duration
+                            - current_time,
+                        )
+                    station_remain_workload[st] += remaining_work
                     if ac_state is not None and ac_state.current_station == st:
-                        station_current_workload[st] += t_rt.duration
+                        station_current_workload[st] += remaining_work
+                        if t_rt.status == TaskStatus.RUNNING:
+                            station_running_count[st] += 1
                     else:
-                        station_future_workload[st] += t_rt.duration
-                    if t_rt.status == TaskStatus.RUNNING:
-                        station_running_count[st] += 1
+                        station_future_workload[st] += remaining_work
 
             if t_rt.status in (TaskStatus.RUNNING, TaskStatus.RESERVED):
                 for w_id in t_rt.assigned_team:

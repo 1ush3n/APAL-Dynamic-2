@@ -36,7 +36,13 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 from torch_geometric.data import HeteroData
 
-from envs.work3.core_types import ActionBranch, MultiAircraftState, TaskRuntimeState, TaskStatus
+from envs.work3.core_types import (
+    ActionBranch,
+    MultiAircraftState,
+    TaskRuntimeState,
+    TaskStatus,
+    remaining_processing_time,
+)
 from envs.work3.decision_snapshot import (
     DecisionSnapshot,
     TeamCompletionContext,
@@ -235,10 +241,10 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
 
     维度组成:
       [0]: 当前周期已运行时间比例 (t - P_{q-1}) / H_0
-      [1:6]: 5 站剩余未完工工序标准工时比例
-      [6:11]: 5 站当前正在执行任务数比例 (<= 3)
-      [11:16]: 5 站延误到料任务数比例
-      [16:21]: 5 站最大物料延误紧迫度 (log1p)
+      [1:6]: 各站实际停靠飞机本周期未完工工序的剩余工时比例
+      [6:11]: 各站实际停靠飞机当前运行工序数比例 (<= 3)
+      [11:16]: 各站实际停靠飞机开工可用性延迟任务数比例
+      [16:21]: 各站实际停靠飞机最大开工可用性等待紧迫度 (log1p)
       [21:26]: 5 站在场飞机编号归一化
       [26]: 启发式估计剩余时间比例 (P_q^h - t) / H_0
       [27]: 名义剩余时间比例 (P_{q-1} + H_0 - t) / H_0
@@ -259,11 +265,19 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
 
     for s in range(state.num_stations):
         ac_id = state.get_aircraft_at_station(s)
-        st_tasks = [
-            t for t in state.tasks.values()
-            if t.current_station == s and t.status != TaskStatus.COMPLETED
-        ]
-        w_remain = sum(t.duration for t in st_tasks)
+        st_tasks = (
+            [
+                t for t in state.tasks.values()
+                if t.aircraft_id == ac_id
+                and t.current_station == s
+                and t.status != TaskStatus.COMPLETED
+            ]
+            if ac_id is not None
+            else []
+        )
+        w_remain = sum(
+            remaining_processing_time(task, current_time) for task in st_tasks
+        )
         feat[1 + s] = float(w_remain) / h0
 
         running_count = sum(1 for t in st_tasks if t.status == TaskStatus.RUNNING)
