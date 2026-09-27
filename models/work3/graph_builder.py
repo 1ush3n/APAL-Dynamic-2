@@ -303,8 +303,9 @@ class MultiAircraftGraphBuilder:
                         changed_baseline_team_src.append(idx)
                         changed_baseline_team_dst.append(self.worker_id_to_idx[w_id])
 
-            last_published = t_rt.last_published_assignment or t_rt.baseline_assignment
-            pub_team = last_published.get("team") if isinstance(last_published, dict) else None
+            # 历史发布边不表示该团队当前已预约或占用目标站资源。
+            last_published = t_rt.publication_reference
+            pub_team = last_published["team"]
             if pub_team:
                 for w_id in pub_team:
                     if w_id in self.worker_id_to_idx:
@@ -375,12 +376,8 @@ class MultiAircraftGraphBuilder:
                 task_x_np[idx, 22] = 0.0
 
             # [23..25] 上一次正式发布计划的站位与周期内位置参照
-            pub_pos = last_published.get("position") if isinstance(last_published, dict) else None
-            pub_station = (
-                last_published.get("station", t_rt.base_station)
-                if isinstance(last_published, dict)
-                else t_rt.base_station
-            )
+            pub_pos = last_published["position"]
+            pub_station = last_published["station"]
             if pub_pos is not None and math.isfinite(float(pub_pos)):
                 task_x_np[idx, 23] = 1.0
                 task_x_np[idx, 25] = float(pub_pos) / h0

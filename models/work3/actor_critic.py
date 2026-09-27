@@ -181,20 +181,19 @@ def extract_candidate_task_features(
         ac_station = ac.current_station if ac is not None else task.current_station
         rel_station_offset = float(ac_station - task.base_station)
 
-        last_pub = task.last_published_assignment or task.baseline_assignment
+        last_pub = task.publication_reference
         pub_pos = (
             float(last_pub["position"])
-            if isinstance(last_pub, dict)
-            and last_pub.get("position") is not None
+            if last_pub.get("position") is not None
             and math.isfinite(float(last_pub["position"]))
             else float(task.in_station_offset)
         )
         pub_station = (
             float(last_pub.get("station", task.base_station))
-            if isinstance(last_pub, dict) and last_pub.get("station") is not None
+            if last_pub.get("station") is not None
             else float(task.base_station)
         )
-        pub_team = last_pub.get("team") if isinstance(last_pub, dict) else None
+        pub_team = last_pub.get("team")
         team_diff_ratio = 0.0
         if pub_team and task.demand > 0:
             overlap = len(set(pub_team) & set(task.base_team))

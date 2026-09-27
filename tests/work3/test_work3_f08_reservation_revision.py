@@ -14,7 +14,9 @@ from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from envs.work3.event_queue import EventType
 from models.work3.actor_critic import ActorCriticWork3
+from models.work3.graph_builder import MultiAircraftGraphBuilder
 from utils.work3.objective_evaluator import evaluate_trajectory_objective
+from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")
@@ -607,10 +609,33 @@ def test_postpone_preserves_last_published_team_and_position_as_pending_referenc
     assert task.execution_duration is None
     assert task.postpone_count == original_postpone_count + 1
     assert task.generation == original_generation + 1
+    effective = task.effective_assignment
+    publication = task.publication_reference
+    assert effective["station"] == task.current_station
+    assert effective["team"] == ()
+    assert effective["scheduled_start"] is None
+    assert publication["team"] == tuple(previous_assignment["team"])
+    assert publication["position"] == pytest.approx(previous_assignment["position"])
+    with pytest.raises(TypeError):
+        effective["team"] = (999,)
     assert task.last_published_assignment["team"] == previous_assignment["team"]
     assert task.last_published_assignment["position"] == pytest.approx(
         previous_assignment["position"]
     )
+    builder = MultiAircraftGraphBuilder(
+        MultiAircraftBaseline.load_from_json(str(BASELINE_PATH))
+    )
+    graph = builder.build_graph(env)
+    task_node = builder.task_key_to_idx[task.task_key]
+    published_edges = graph["task", "last_published_team", "worker"].edge_index
+    published_workers = set(
+        published_edges[1, published_edges[0] == task_node].tolist()
+    )
+    assert published_workers == {
+        builder.worker_id_to_idx[worker_id] for worker_id in previous_assignment["team"]
+    }
+    active_edges = graph["task", "done_by", "worker"].edge_index
+    assert not bool((active_edges[0] == task_node).any())
     assert all(
         interval.task_key != task.task_key
         for worker in env.state.workers.values()
@@ -873,8 +898,11 @@ def test_postponement_keeps_team_anchor_until_target_station_publication() -> No
     assert env.state.aircraft[task.aircraft_id].current_station == task.current_station
     assert task.status == TaskStatus.READY
 
-    team_b = _legal_teams(env, task)[0]
+    team_b = next(
+        team for team in _legal_teams(env, task) if set(team) != set(team_a)
+    )
     replacement = 1.0 - len(set(team_a) & set(team_b)) / task.demand
+    revision_cost_before_publication = env.cost_revision
     env.step(
         {
             "task_key": task.task_key,
@@ -889,6 +917,12 @@ def test_postponement_keeps_team_anchor_until_target_station_publication() -> No
     assert revision["before"]["position"] == pytest.approx(20.0)
     assert revision["after"]["team"] == list(team_b)
     assert revision["team_change"] == pytest.approx(replacement)
+    assert len(task.revision_history) == history_size + 2
+    assert env.cost_revision - revision_cost_before_publication == pytest.approx(
+        revision["revision_cost"]
+    )
+    assert task.effective_assignment["team"] == team_b
+    assert task.publication_reference["team"] == team_b
     breakdown = evaluate_trajectory_objective(env, weights=env.weights)
     assert breakdown.j_revision == pytest.approx(env.cost_revision)
     assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)

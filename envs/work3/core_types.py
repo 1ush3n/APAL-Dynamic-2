@@ -10,8 +10,10 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import IntEnum
+from types import MappingProxyType
 from typing import Any, NamedTuple, Sequence
 
 import numpy as np
@@ -133,8 +135,8 @@ class TaskRuntimeState:
     predecessors: tuple[int, ...]  # 本机内部紧前工序 ID 列表
     standard_duration: float | None = None  # 原始实例中的标准加工工时
 
-    assigned_team: list[int] = field(default_factory=list)
-    scheduled_start: float | None = None
+    assigned_team: list[int] = field(default_factory=list)  # 当前有效预约/执行团队；后移后为空
+    scheduled_start: float | None = None  # 当前有效预约/执行开工时刻；后移后为 None
     actual_start: float | None = None
     actual_start_station: int | None = None
     actual_end: float | None = None
@@ -149,9 +151,34 @@ class TaskRuntimeState:
     cycle_start_time: float | None = None  # 实际开工所在周期的转站时刻 P_{q-1}
     start_cost_confirmed: bool = False     # 是否已确认并结算开工偏差与团队替换费用
     baseline_assignment: dict[str, Any] = field(default_factory=dict)
-    last_published_assignment: dict[str, Any] = field(default_factory=dict)
+    last_published_assignment: dict[str, Any] = field(default_factory=dict)  # 历史比较锚点，不代表当前资源预约
     revision_history: list[dict[str, Any]] = field(default_factory=list)
     _state_ref: Any = field(default=None, repr=False, compare=False)
+
+    @property
+    def effective_assignment(self) -> Mapping[str, Any]:
+        """只读当前安排投影；后移任务的团队、开工和执行工时均未确定。"""
+        return MappingProxyType(
+            {
+                "status": self.status,
+                "station": int(self.current_station),
+                "team": tuple(self.assigned_team),
+                "scheduled_start": self.scheduled_start,
+                "execution_duration": self.execution_duration,
+            }
+        )
+
+    @property
+    def publication_reference(self) -> Mapping[str, Any]:
+        """只读上一正式发布比较参照；其中团队不意味着当前站已占用该团队。"""
+        assignment = self.last_published_assignment or self.baseline_assignment
+        return MappingProxyType(
+            {
+                "station": assignment.get("station"),
+                "team": tuple(assignment.get("team") or ()),
+                "position": assignment.get("position"),
+            }
+        )
 
     def __post_init__(self) -> None:
         """初始化基准安排与当前正式安排快照。"""

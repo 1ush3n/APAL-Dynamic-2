@@ -543,6 +543,7 @@ class AirLineEnvWork3:
         additional_cost: float = 0.0,
     ) -> float:
         """提交一次正式修订并计入相邻安排的增量账本。"""
+        # 费用比较锚点是上一次正式发布，不读取当前预约字段。
         before = dict(task.last_published_assignment or task.baseline_assignment)
         time_change, team_change, station_changed = self._revision_cost_components(
             before, after, task
@@ -837,6 +838,7 @@ class AirLineEnvWork3:
             if was_reserved:
                 self._release_reserved_resources(task)
             n_old = task.postpone_count
+            # 保留上一次发布的团队/位置作比较参照；后移不会在目标站预约该团队。
             previous_assignment = copy.deepcopy(
                 task.last_published_assignment or task.baseline_assignment
             )
