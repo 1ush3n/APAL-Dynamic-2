@@ -55,6 +55,7 @@ from training.work3_runtime_config import (
     resolved_config_fingerprint,
     resolve_work3_precision,
     seed_work3_runtime,
+    validate_time_head_initialization,
 )
 from utils.work3.trajectory_feasibility import (
     TaskConstraintRecord,
@@ -648,7 +649,8 @@ def run_training(
     baseline_path: str | Path = "data/work3/real_283_k10_baseline.json",
     scenarios_path: str | Path = "data/work3/scenarios_9class.json",
     scenario_split_path: str | Path = "data/work3/experiment_splits/train.json",
-    time_head_ckpt: str | Path = "models/work3/checkpoints/time_head_best.pt",
+    time_head_ckpt: str | Path | None = None,
+    time_head_initialization: str = "random_no_pretraining",
     output_ckpt: str | Path = "models/work3/checkpoints/method_d_model.pt",
     report_path: str | Path | None = None,
     paired_report_path: str | Path | None = None,
@@ -669,6 +671,7 @@ def run_training(
         raise ValueError("run_mode必须是'smoke'或'pilot'；正式训练预算尚未定义")
     if warmup_mode not in {"none", "uniform_baseline"}:
         raise ValueError("warmup_mode必须为none或uniform_baseline")
+    validate_time_head_initialization(time_head_initialization, time_head_ckpt)
     if run_mode == "smoke" and warmup_mode != "none":
         raise ValueError("smoke只能使用warmup_mode=none")
     if (
@@ -784,23 +787,9 @@ def run_training(
         if profile.use_time_auxiliary
         else None
     )
-    time_head_initialization = "not_applicable"
-    if profile.use_time_auxiliary and time_head is not None and Path(time_head_ckpt).is_file():
-        ckpt_data = torch.load(time_head_ckpt, map_location="cpu")
-        if (
-            ckpt_data.get("model_version") == "signed_residual_v1"
-            and int(ckpt_data.get("in_dim", -1)) == actor_critic.hidden_dim
-        ):
-            state_dict = ckpt_data.get("model_state_dict", ckpt_data)
-            time_head.load_state_dict(state_dict)
-            time_head_initialization = "signed_pretrained_checkpoint"
-            logger.info(f"已成功载入有符号离线时间修正头: {time_head_ckpt}")
-        else:
-            time_head_initialization = "random_no_compatible_checkpoint"
-            logger.warning(f"检查点 {time_head_ckpt} 不是当前共享图有符号版本，本次不加载")
-    elif profile.use_time_auxiliary:
-        time_head_initialization = "random_checkpoint_missing"
-        logger.warning(f"未找到预训练时间修正头 {time_head_ckpt}，使用随机初始化头")
+    time_head_initialization_source = (
+        time_head_initialization if profile.use_time_auxiliary else "not_applicable"
+    )
 
     shaper = None
     if profile.use_learned_time_shaping and time_head is not None:
@@ -843,7 +832,7 @@ def run_training(
         "baseline_sha256": _file_fingerprint(baseline_path),
         "time_head_checkpoint_sha256": (
             _file_fingerprint(time_head_ckpt)
-            if Path(time_head_ckpt).is_file()
+            if time_head_ckpt is not None and Path(time_head_ckpt).is_file()
             else None
         ),
         "event_plan_sha256": _json_fingerprint(event_plan),
@@ -861,7 +850,7 @@ def run_training(
             "use_corrected_time_input": profile.use_corrected_time_input,
             "use_learned_time_shaping": profile.use_learned_time_shaping,
         },
-        "time_head_initialization": time_head_initialization,
+        "time_head_initialization": time_head_initialization_source,
         "seed": int(seed),
         "seed_role": "training_initialization_and_episode_schedule",
         "max_rollout_iterations": num_iterations,
@@ -890,7 +879,9 @@ def run_training(
         "baseline_path": str(Path(baseline_path)),
         "scenarios_path": str(Path(scenarios_path)),
         "scenario_split_path": str(Path(scenario_split_path)),
-        "time_head_checkpoint_path": str(Path(time_head_ckpt)),
+        "time_head_checkpoint_path": (
+            None if time_head_ckpt is None else str(Path(time_head_ckpt))
+        ),
         "output_checkpoint_path": str(output_ckpt),
         "report_path": str(report_path),
         "paired_report_path": None if paired_report_path is None else str(paired_report_path),
@@ -1897,6 +1888,7 @@ def run_training(
         "checkpoint_evaluation_eligible": checkpoint_evaluation_eligible,
         "method_variant": profile.name,
         "method_profile": config["method_profile"],
+        "time_head_initialization": time_head_initialization_source,
         "seed": int(seed),
         "seed_role": "training_initialization_and_episode_schedule",
         "source_sha": source_sha,
@@ -2169,6 +2161,12 @@ def main() -> None:
     parser.add_argument("--scenarios", type=Path, default=None)
     parser.add_argument("--scenario-split", type=Path, default=None)
     parser.add_argument("--time-head-checkpoint", type=Path, default=None)
+    parser.add_argument(
+        "--time-head-initialization",
+        choices=("random_no_pretraining", "paired_checkpoint"),
+        default=None,
+        help="时间头来源；paired_checkpoint当前会明确拒绝，直到配对协议实现",
+    )
     parser.add_argument("--device", type=str, default=None, help="设备 (cpu/cuda)")
     parser.add_argument("--main-num-threads", type=int, default=None)
     parser.add_argument("--env-num-threads", type=int, default=None)
@@ -2198,6 +2196,7 @@ def main() -> None:
         "paths.baseline": None if args.baseline is None else str(args.baseline),
         "runtime.scenario_pool_path": None if args.scenarios is None else str(args.scenarios),
         "runtime.scenario_split_path": None if args.scenario_split is None else str(args.scenario_split),
+        "runtime.time_head_initialization": args.time_head_initialization,
         "paths.time_head_checkpoint": (
             None if args.time_head_checkpoint is None else str(args.time_head_checkpoint)
         ),
@@ -2257,7 +2256,12 @@ def main() -> None:
         baseline_path=Path(runtime_config.paths.baseline),
         scenarios_path=Path(runtime_config.runtime.scenario_pool_path),
         scenario_split_path=Path(runtime_config.runtime.scenario_split_path),
-        time_head_ckpt=Path(runtime_config.paths.time_head_checkpoint),
+        time_head_ckpt=(
+            None
+            if runtime_config.paths.time_head_checkpoint is None
+            else Path(runtime_config.paths.time_head_checkpoint)
+        ),
+        time_head_initialization=str(runtime_config.runtime.time_head_initialization),
         device=str(runtime_config.runtime.device),
         amp_dtype=str(runtime_config.runtime.amp_dtype),
         warmup_mode=str(runtime_config.runtime.warmup_mode),

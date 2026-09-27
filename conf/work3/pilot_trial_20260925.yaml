@@ -13,6 +13,7 @@ runtime:
   device: cuda:0
   amp_dtype: bf16
   warmup_mode: none
+  time_head_initialization: random_no_pretraining
   main_num_threads: 1
   env_num_threads: 1
   dataloader_num_workers: 0
@@ -20,8 +21,8 @@ runtime:
   scenario_split_path: data/work3/experiment_splits/train.json
 paths:
   baseline: data/work3/real_283_k10_baseline.json
-  # D从在线训练标签学习；不读取来源/划分不明的历史时间头。
-  time_head_checkpoint: experiments/work3/pilot_20260925/no_pretrained_time_head.pt
+  # 随机初始化由 runtime.time_head_initialization 显式声明。
+  time_head_checkpoint: null
   checkpoint_dir: experiments/work3/pilot_20260925/checkpoints
   report_dir: experiments/work3/pilot_20260925/reports
 ppo:

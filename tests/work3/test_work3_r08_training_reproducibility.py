@@ -95,6 +95,34 @@ def test_c_and_d_same_seed_report_identical_initial_actor_fingerprint(
     assert reports["C"]["initial_parameter_fingerprint"] != reports["D"]["initial_parameter_fingerprint"]
 
 
+def test_g3_random_time_head_initialization_is_reproducible_and_reported(
+    tmp_path: Path,
+) -> None:
+    reports = [
+        run_training(
+            run_mode="smoke",
+            steps_per_iter=1,
+            max_decisions=1,
+            ppo_epochs=1,
+            batch_size=1,
+            seed=137,
+            method_variant="D",
+            time_head_initialization="random_no_pretraining",
+            time_head_ckpt=None,
+            output_ckpt=tmp_path / f"d_{index}.pt",
+            report_path=tmp_path / f"d_{index}.json",
+        )
+        for index in range(2)
+    ]
+
+    assert all(item["time_head_initialization"] == "random_no_pretraining" for item in reports)
+    assert all(item["training_config"]["time_head_checkpoint_path"] is None for item in reports)
+    assert reports[0]["initial_parameter_fingerprint"] == reports[1]["initial_parameter_fingerprint"]
+    assert all(item["time_label_count"] == 0 for item in reports)
+    assert all(item["time_supervision_optimizer_updates"] == 0 for item in reports)
+    assert all(item["research_result_eligible"] is False for item in reports)
+
+
 def test_pilot_decision_cap_marks_incomplete_batch_truncated(tmp_path: Path) -> None:
     """决策预算耗尽时未完成批次必须失败/截断，不得登记为生产成功。"""
     result = run_training(

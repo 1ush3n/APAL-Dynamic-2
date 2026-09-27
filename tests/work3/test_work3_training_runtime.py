@@ -141,6 +141,8 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
     assert captured["settle_timeout_seconds"] == 2.0
     assert captured["amp_dtype"] == "bf16"
     assert captured["warmup_mode"] == "none"
+    assert captured["time_head_initialization"] == "random_no_pretraining"
+    assert captured["time_head_ckpt"] is None
     assert captured["resolved_config_yaml"] == resolved_yaml
     assert captured["resolved_config_sha256"] == fingerprint
 
@@ -1716,7 +1718,6 @@ def test_training_preserves_rollout_boundary_potential_and_refreshes_episodes(
         baseline_path=Path("data/work3/real_283_k10_baseline.json"),
         scenarios_path=Path("unused-scenarios.json"),
         scenario_split_path=Path("data/work3/experiment_splits/train.json"),
-        time_head_ckpt=tmp_path / "missing_time_head.pt",
         output_ckpt=tmp_path / "pilot.pt",
         report_path=tmp_path / "pilot.json",
         device="cpu",
@@ -1904,6 +1905,37 @@ def _make_lightning_training_fixture() -> tuple[object, object, object]:
     buffer.finish_trajectories(last_values_by_segment={})
     update = lightning_runtime.Work3TrainingUpdate(buffer=buffer, environment_steps=3)
     return actor, time_head, update
+
+
+def test_g3_real_label_auxiliary_loss_reaches_shared_graph_encoder() -> None:
+    from models.work3.ppo_trainer import PPOTrainerWork3
+
+    actor, time_head, update = _make_lightning_training_fixture()
+    transition = update.buffer.transitions[0]
+    graph_snapshot = transition.sample_record["graph_snapshot"]
+    objective = PPOTrainerWork3(
+        actor_critic=actor,
+        time_head=time_head,
+        device="cpu",
+        create_optimizer=False,
+    )
+    loss = objective.compute_time_auxiliary_loss(
+        {
+            "state_feats": transition.state_feat.unsqueeze(0),
+            "graph_snapshots": [graph_snapshot],
+            "target_residuals": torch.tensor([-0.2]),
+            "worker_ids": [0],
+            "episode_ids": [2],
+            "cycle_ids": [1],
+            "decision_ids": [0],
+        }
+    )
+    loss.backward()
+
+    graph_gradient = next(actor.graph_encoder.parameters()).grad
+    head_gradient = next(time_head.parameters()).grad
+    assert graph_gradient is not None and torch.isfinite(graph_gradient).all()
+    assert head_gradient is not None and torch.isfinite(head_gradient).all()
 
 
 def test_lightning_trainer_fit_runs_ppo_update_and_separates_step_counts() -> None:

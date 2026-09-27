@@ -12,6 +12,7 @@ runtime:
   device: cpu
   amp_dtype: fp32
   warmup_mode: none
+  time_head_initialization: random_no_pretraining
   main_num_threads: 1
   env_num_threads: 1
   dataloader_num_workers: 0
@@ -19,7 +20,7 @@ runtime:
   scenario_split_path: data/work3/experiment_splits/train.json
 paths:
   baseline: data/work3/real_283_k10_baseline.json
-  time_head_checkpoint: models/work3/checkpoints/time_head_best.pt
+  time_head_checkpoint: null
   checkpoint_dir: models/work3/checkpoints
   report_dir: outputs/work3
 ppo:

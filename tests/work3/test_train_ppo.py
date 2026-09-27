@@ -103,7 +103,6 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
         seed=43,
         method_variant="D",
         num_envs=1,
-        time_head_ckpt=str(tmp_path / "missing_time_head.pt"),
         output_ckpt=str(tmp_path / "time_prediction_calls.pt"),
         device="cpu",
     )
@@ -346,7 +345,6 @@ def test_training_entry_uses_two_spawn_workers_with_aggregate_budget(
         seed=17,
         method_variant="D",
         num_envs=2,
-        time_head_ckpt=str(tmp_path / "missing_time_head.pt"),
         output_ckpt=str(tmp_path / "two_workers.pt"),
     )
 

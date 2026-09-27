@@ -26,13 +26,13 @@ _REQUIRED_CONFIG_KEYS = (
     "runtime.device",
     "runtime.amp_dtype",
     "runtime.warmup_mode",
+    "runtime.time_head_initialization",
     "runtime.main_num_threads",
     "runtime.env_num_threads",
     "runtime.dataloader_num_workers",
     "runtime.scenario_pool_path",
     "runtime.scenario_split_path",
     "paths.baseline",
-    "paths.time_head_checkpoint",
     "paths.checkpoint_dir",
     "paths.report_dir",
     "ppo.steps_per_iter",
@@ -76,6 +76,29 @@ def _finite_number(config: DictConfig, key: str, *, minimum: float) -> float:
     return numeric_value
 
 
+def validate_time_head_initialization(
+    initialization: str,
+    checkpoint_path: str | Path | None,
+) -> None:
+    """校验时间头来源；当前拒绝所有成对检查点加载请求，不回退随机权重。"""
+    if initialization == "random_no_pretraining":
+        if checkpoint_path is not None and str(checkpoint_path).strip():
+            raise ValueError("随机初始化模式下检查点路径必须为空")
+        return
+    if initialization != "paired_checkpoint":
+        raise ValueError(
+            "runtime.time_head_initialization仅支持random_no_pretraining或paired_checkpoint"
+        )
+    if checkpoint_path is None or not str(checkpoint_path).strip():
+        raise FileNotFoundError("显式成对检查点加载缺少检查点路径")
+    path = Path(checkpoint_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"成对检查点不存在：{path}")
+    raise ValueError(
+        "成对检查点协议尚未实现；拒绝加载以避免版本、维度或配对关系不兼容后静默回退"
+    )
+
+
 def validate_work3_runtime_config(config: DictConfig) -> None:
     """检查工作三运行所需配置及跨平台运行边界。"""
     if not isinstance(config, DictConfig):
@@ -101,6 +124,10 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
         raise ValueError("smoke不得设置runtime.successful_batch_target")
     if config.runtime.method_profile not in {"C", "D", "E", "F", "G"}:
         raise ValueError("runtime.method_profile仅支持C、D、E、F或G")
+    validate_time_head_initialization(
+        str(config.runtime.time_head_initialization),
+        OmegaConf.select(config, "paths.time_head_checkpoint"),
+    )
     if type(config.runtime.seed) is not int:
         raise ValueError("runtime.seed必须是整数")
     if type(config.runtime.deterministic) is not bool:
@@ -127,7 +154,7 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
         value = _required(config, key)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"配置 {key}必须是pathlib可解析的路径字符串")
-    for key in ("paths.baseline", "paths.time_head_checkpoint", "paths.checkpoint_dir", "paths.report_dir"):
+    for key in ("paths.baseline", "paths.checkpoint_dir", "paths.report_dir"):
         value = _required(config, key)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"配置 {key}必须是pathlib可解析的路径字符串")

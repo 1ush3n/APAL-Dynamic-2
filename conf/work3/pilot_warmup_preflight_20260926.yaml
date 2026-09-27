@@ -14,6 +14,7 @@ runtime:
   device: cuda:0
   amp_dtype: bf16
   warmup_mode: uniform_baseline
+  time_head_initialization: random_no_pretraining
   main_num_threads: 1
   env_num_threads: 1
   dataloader_num_workers: 0
@@ -21,7 +22,7 @@ runtime:
   scenario_split_path: data/work3/experiment_splits/train.json
 paths:
   baseline: data/work3/real_283_k10_baseline.json
-  time_head_checkpoint: experiments/work3/k14_warmup_preflight/no_pretrained_time_head.pt
+  time_head_checkpoint: null
   checkpoint_dir: experiments/work3/k14_warmup_preflight/checkpoints
   report_dir: experiments/work3/k14_warmup_preflight/reports
 ppo:

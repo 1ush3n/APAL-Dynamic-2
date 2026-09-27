@@ -40,6 +40,8 @@ def test_k14_preflight_uses_uniform_warmup_and_preserves_frozen_event_inputs() -
     assert config.runtime.num_envs == original.runtime.num_envs == 2
     assert config.runtime.start_method == "spawn"
     assert config.runtime.warmup_mode == "uniform_baseline"
+    assert config.runtime.time_head_initialization == "random_no_pretraining"
+    assert config.paths.time_head_checkpoint is None
     assert config.runtime.total_env_steps == 1526
     assert config.runtime.total_env_steps == (
         2 * config.protocol.warmup_steps_per_worker_observed
@@ -108,8 +110,8 @@ def test_frozen_trial_config_records_protected_runtime_and_training_only_inputs(
     assert config.protocol.hardware.device_name == "NVIDIA GeForce RTX 4060 Laptop GPU"
     assert config.protocol.hardware.cuda_bf16_supported is True
 
-    pretrained_path = ROOT_DIR / Path(config.paths.time_head_checkpoint)
-    assert not pretrained_path.exists()
+    assert config.runtime.time_head_initialization == "random_no_pretraining"
+    assert config.paths.time_head_checkpoint is None
     assert hashlib.sha256(
         (ROOT_DIR / Path(config.paths.baseline)).read_bytes()
     ).hexdigest() == config.protocol.baseline_sha256
