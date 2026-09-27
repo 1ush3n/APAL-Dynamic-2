@@ -8,9 +8,9 @@
    - skill: 5 个工种技能中转节点 (0 ~ 4，经典 Skill Hub 模式)。
 2. 特征排布：
    - 与已有代码 (environment.py / utils.resource_graph) 100% 对齐；
-   - task_x: [工时, 状态独热(1:5), 5技能独热(5:10), 基准站内偏移, 架次归一化, 物理相对站位偏移(s_k - m_i^0), 改派次数, 物理工序, 周期索引, 需求人数, 到料等待时间]，共 18 维；
+   - task_x: 包含工时、状态/技能、相对当前脉动的投产顺序偏移、物理站位偏移和到目标站的剩余转站数；
    - worker_x: [效率, 5技能资质(1:6), 等待时间, 空闲标记, 站位锁定(8:13), 疲劳度等]，共 17 维；
-   - station_x: [剩余负荷, 在场飞机, 可用槽位, 槽位等待时间, 宏观特征]，共 15 维；
+   - station_x: [剩余负荷, 在场飞机指示量, 可用槽位, 槽位等待时间, 宏观特征]，共 15 维；
    - skill_x: 5 个技能节点的动态资源统计特征，共 11 维。
 3. 边拓扑体系：
    - DAG 偏序边: ("task", "precedes", "task")；
@@ -56,7 +56,7 @@ TASK_STATUS_TO_SLOT: dict[TaskStatus, int | None] = {
 }
 
 
-GRAPH_FEATURE_VERSION = "work3_graph_v3"
+GRAPH_FEATURE_VERSION = "work3_graph_v4"
 GRAPH_FEATURE_DIMS: dict[str, int] = {
     "task": 26,
     "worker": 21,
@@ -78,11 +78,11 @@ GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
         "skill_3",
         "skill_4",
         "baseline_in_station_offset_norm",
-        "aircraft_progress_norm",
+        "launch_pulse_offset_norm",
         "relative_station_offset",
         "postpone_count",
         "is_physical_task",
-        "baseline_cycle_norm",
+        "transfers_remaining_to_target_station_norm",
         "demand",
         "material_wait_log1p",
         "is_reserved",
@@ -122,6 +122,7 @@ GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
         "current_aircraft_remaining_processing_work_norm",
         "known_future_remaining_processing_work_norm",
     ),
+    "station_occupancy_semantics": "binary_presence_indicator_0_or_1",
 }
 
 
@@ -157,6 +158,11 @@ class MultiAircraftGraphBuilder:
         )
         self.task_key_to_idx: dict[str, int] = {k: i for i, k in enumerate(self.task_keys)}
         self.num_tasks = len(self.task_keys)
+        # 环境按 aircraft_id 升序投产；网络只接收相对脉动偏移，不接收编号本身。
+        aircraft_ids = sorted({task.aircraft_id for task in baseline.tasks.values()})
+        self.aircraft_launch_rank = {
+            aircraft_id: rank for rank, aircraft_id in enumerate(aircraft_ids)
+        }
 
         # 收集全线所有工人（来源于初始调度内生绑定）
         all_workers_set: set[int] = set()
@@ -195,12 +201,8 @@ class MultiAircraftGraphBuilder:
                 self.base_task_x[i, 5 + t.skill] = 1.0
             # [10] 基准站内偏移
             self.base_task_x[i, 10] = float(t.in_station_offset) / self.h0
-            # [11] 飞机架次归一化 (k / 10)
-            self.base_task_x[i, 11] = float(t.aircraft_id) / 10.0
             # [14] 是否物理工序
             self.base_task_x[i, 14] = 1.0 if t.duration > 1e-5 else 0.0
-            # [15] 归属基准周期编号归一化
-            self.base_task_x[i, 15] = float(t.cycle_idx) / 14.0
             # [16] 需求人数
             self.base_task_x[i, 16] = float(t.demand)
 
@@ -288,6 +290,7 @@ class MultiAircraftGraphBuilder:
         station_running_count = [0] * 5
 
         h0 = self.h0
+        station_scale = float(max(1, state.num_stations))
         for idx, key in enumerate(self.task_keys):
             t_rt: TaskRuntimeState | None = state.tasks.get(key)
             if t_rt is None:
@@ -316,6 +319,20 @@ class MultiAircraftGraphBuilder:
 
             # [12] 物理相对站位偏移：(飞机当前所在站位 s_k - 工序基准基础站位 m_i^0)
             ac_state = state.aircraft.get(t_rt.aircraft_id)
+            launch_rank = self.aircraft_launch_rank.get(t_rt.aircraft_id)
+            if launch_rank is None:
+                raise ValueError(f"基准计划缺少飞机{t_rt.aircraft_id}的投产顺序")
+            launch_pulse_offset = launch_rank + 1 - state.current_cycle
+            task_x_np[idx, 11] = float(launch_pulse_offset) / station_scale
+            target_station = int(t_rt.current_station)
+            if ac_state is None or ac_state.current_station < 0:
+                transfers_remaining = max(0, launch_pulse_offset + target_station)
+            else:
+                transfers_remaining = max(
+                    0,
+                    target_station - int(ac_state.current_station),
+                )
+            task_x_np[idx, 15] = float(transfers_remaining) / station_scale
             if ac_state is not None:
                 curr_station = ac_state.current_station
                 base_station = t_rt.base_station  # 0-based
@@ -477,7 +494,7 @@ class MultiAircraftGraphBuilder:
         for s in range(self.num_stations):
             ac_id = state.get_aircraft_at_station(s)
             station_x_np[s, 0] = float(station_remain_workload[s]) / h0
-            station_x_np[s, 1] = float(ac_id) / 10.0 if ac_id is not None else -1.0
+            station_x_np[s, 1] = 1.0 if ac_id is not None else 0.0
             station_x_np[s, 2] = float(max(0, 3 - station_running_count[s])) / 3.0
             station_x_np[s, 3] = cycle_elapsed / h0
             # [4] 当前在场飞机负荷；[5] 后续飞机已知负荷，避免混成一个站位总负荷。

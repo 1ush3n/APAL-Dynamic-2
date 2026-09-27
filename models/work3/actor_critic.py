@@ -245,7 +245,7 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
       [6:11]: 各站实际停靠飞机当前运行工序数比例 (<= 3)
       [11:16]: 各站实际停靠飞机开工可用性延迟任务数比例
       [16:21]: 各站实际停靠飞机最大开工可用性等待紧迫度 (log1p)
-      [21:26]: 5 站在场飞机编号归一化
+      [21:26]: 5 站是否有飞机在场 (0/1)
       [26]: 启发式估计剩余时间比例 (P_q^h - t) / H_0
       [27]: 名义剩余时间比例 (P_{q-1} + H_0 - t) / H_0
       [28]: 产线当前脉动周期比例
@@ -290,7 +290,7 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
             max_delay = max(t.material_ready_time - current_time for t in delayed_tasks)
             feat[16 + s] = math.log1p(float(max_delay) / h0)
 
-        feat[21 + s] = float(ac_id) / float(state.num_aircraft) if ac_id is not None else -1.0
+        feat[21 + s] = 1.0 if ac_id is not None else 0.0
 
     feat[26] = max(0.0, estimated_cmax - current_time) / h0
     feat[27] = (p_last + h0 - current_time) / h0
