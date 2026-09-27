@@ -1147,6 +1147,10 @@ def run_benchmark_evaluation(
             "reported_cost_includes_warmup_prefix": (
                 warmup_mode == "uniform_baseline"
             ),
+            "percentage_denominator_threshold": PERCENTAGE_DENOMINATOR_THRESHOLD,
+            "percentage_denominator_threshold_semantics": (
+                "绝对阈值，应用于归一化加权综合费用J_total(C)"
+            ),
         },
         "evaluation_inputs": {
             "baseline_sha256": _sha256_file(baseline_path),

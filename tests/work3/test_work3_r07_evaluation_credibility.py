@@ -162,6 +162,10 @@ def test_r07_incomplete_or_infeasible_trajectory_cannot_produce_improvement_pct(
     assert results[2]["j_total_d"] == 1.5
     assert results[2]["cost_delta_j_total"] is None
     persisted = json.loads(out_file.read_text(encoding="utf-8"))
+    assert persisted["evaluation_protocol"]["percentage_denominator_threshold"] == 1e-6
+    assert persisted["evaluation_protocol"]["percentage_denominator_threshold_semantics"] == (
+        "绝对阈值，应用于归一化加权综合费用J_total(C)"
+    )
     assert persisted["scenario_results"][0]["method_c"]["raw_cost_components"]["diagnostic"] is None
     json.dumps(persisted, allow_nan=False)
     assert persisted["credibility_summary"]["valid_comparison_count"] == 1
