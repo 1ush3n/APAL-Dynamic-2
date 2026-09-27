@@ -877,12 +877,13 @@ class AirLineEnvWork3:
             # 动作可能产生同刻完工或转站事件；向策略返回状态前结算到稳定状态。
             self.process_due_events()
 
-        # 没有任何合法调度动作时自动推进；存在 RESERVED 修订候选时交给显式推进动作决定。
+        # 完全相同的预约重交不计修订费，但确定性结束本轮并推进一个事件，即使仍有READY任务。
         if not explicit_advance and no_change_revision:
             info["advanced"] = self._advance_to_next_event()
             if not info["advanced"] and not self._check_terminated():
                 info["success"] = False
                 info["termination_reason"] = "deadlock"
+        # 普通调度动作后若没有合法候选，在同一step内推进至下一决策状态，不另造动作。
         elif not explicit_advance and len(self.get_action_candidates()) == 0:
             self._advance_events_until_next_decision()
             if not self.get_action_candidates() and not self._check_terminated():
