@@ -247,7 +247,7 @@ def test_formal_evaluation_reports_an_event_that_has_not_triggered(
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     result = evaluate_single_trajectory(
         env,
-        "Baseline-C",
+        "Heuristic-Debug",
         None,
         scenario={
             "scenario_id": "NOT_YET_TRIGGERED",

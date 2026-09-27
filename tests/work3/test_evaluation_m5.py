@@ -1,7 +1,7 @@
-"""Task 7.4 / 里程碑 M5 验收单元测试：基线 C 与方法 D 对比评测验证。
+"""M5评测回归：正式图策略方法C/D及独立启发式调试路径。
 
 验证点：
-1. evaluate_single_trajectory 能在 Baseline-C 与 Method-D 上分别驱动产线顺利跑通至完工；
+1. evaluate_single_trajectory 区分 Heuristic-Debug 与正式 Method-D；
 2. 全线全部 2,830 道工序 100% 完工，全部 10 架次飞机顺利出线；
 3. 多目标结算结构完整 (J_takt, D_time, D_team, J_postpone, J_total)；
 4. 评测报告输出 JSON 文件格式规范无缺失。
@@ -42,16 +42,16 @@ def scenarios_path() -> str:
     return str(path)
 
 
-def test_evaluate_single_trajectory_baseline_c(baseline_path: str, scenarios_path: str) -> None:
-    """测试基线 C 在扰动场景下完成全部装配并统计多目标。"""
+def test_evaluate_single_trajectory_heuristic_debug(baseline_path: str, scenarios_path: str) -> None:
+    """测试启发式调试路径在扰动场景下完成装配并统计多目标。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
-    agent = HeuristicAgentWork3(name="Baseline-C")
+    agent = HeuristicAgentWork3()
 
     with open(scenarios_path, "r", encoding="utf-8") as f:
         scenarios = json.load(f)
     sc = scenarios[0]
 
-    res = evaluate_single_trajectory(env, "Baseline-C", agent, scenario=sc)
+    res = evaluate_single_trajectory(env, "Heuristic-Debug", agent, scenario=sc)
 
     assert res["completed_tasks"] == 2830
     assert res["j_total"] >= 0.0
@@ -64,6 +64,22 @@ def test_evaluate_single_trajectory_baseline_c(baseline_path: str, scenarios_pat
         "deadlock",
     }
     assert res["success"] is True
+
+
+def test_legacy_baseline_c_label_is_reported_as_heuristic_debug(
+    baseline_path: str,
+) -> None:
+    """旧调用标签可兼容，但报告不得把启发式伪装成正式方法C。"""
+    env = AirLineEnvWork3(baseline_json_path=baseline_path)
+    result = evaluate_single_trajectory(
+        env,
+        "Baseline-C",
+        HeuristicAgentWork3(),
+        max_decisions=0,
+    )
+
+    assert result["agent"] == "Heuristic-Debug"
+    assert HeuristicAgentWork3().name == "Heuristic-Debug"
 
 
 def test_evaluate_single_trajectory_method_d_debug(baseline_path: str, scenarios_path: str) -> None:
@@ -158,12 +174,12 @@ def test_evaluation_rejects_incomplete_uniform_warmup(
 ) -> None:
     """暖机未达到共同前缀时不得进入主评测。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
-    agent = HeuristicAgentWork3(name="Baseline-C")
+    agent = HeuristicAgentWork3()
 
     with pytest.raises(ValueError, match="暖机未完成"):
         evaluate_single_trajectory(
             env,
-            "Baseline-C",
+            "Heuristic-Debug",
             agent,
             max_decisions=0,
             warmup_mode="uniform_baseline",
@@ -176,13 +192,13 @@ def test_evaluation_rejects_fixed_event_before_uniform_warmup(
 ) -> None:
     """过早固定tau必须失败，不得为迁就暖机而重定时。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
-    agent = HeuristicAgentWork3(name="Baseline-C")
+    agent = HeuristicAgentWork3()
     scenario = {"scenario_id": "FIXED_EARLY", "tau": 0.0}
 
     with pytest.raises(ValueError, match="早于.*暖机完成"):
         evaluate_single_trajectory(
             env,
-            "Baseline-C",
+            "Heuristic-Debug",
             agent,
             scenario=scenario,
             max_decisions=0,

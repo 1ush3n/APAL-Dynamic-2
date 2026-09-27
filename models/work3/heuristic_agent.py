@@ -1,4 +1,4 @@
-"""工作三 基线 C 启发式调度智能体 (Task 5.3)。
+"""工作三固定启发式调度智能体，仅用于调试或离线M4采样。
 
 核心调度机制：
 1. 优先在当前站位按工艺工序流推进就绪工序 (Branch A: STATION_EXECUTE)；
@@ -20,9 +20,9 @@ from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 
 
 class HeuristicAgentWork3:
-    """工作三基线 C 启发式调度智能体。"""
+    """工作三启发式参照策略；不是正式图策略方法C。"""
 
-    def __init__(self, name: str = "Baseline-C") -> None:
+    def __init__(self, name: str = "Heuristic-Debug") -> None:
         self.name = name
 
     def select_action(self, env: AirLineEnvWork3) -> dict[str, Any] | None:

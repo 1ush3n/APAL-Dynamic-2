@@ -1,4 +1,4 @@
-"""工作三 基线 C 与方法 D 对比评测脚本 (Task 7.4 / 里程碑 M5 验收)。
+"""工作三正式图策略方法 C 与方法 D 的对比评测脚本。
 
 核心评测目标与技术规范：
 1. 在固定独立测试事件清单下：
@@ -591,6 +591,14 @@ def evaluate_single_trajectory(
         raise ValueError("max_decisions必须为非负整数")
     if warmup_mode not in {"none", "uniform_baseline"}:
         raise ValueError("warmup_mode必须为none或uniform_baseline")
+    if agent_type == "Baseline-C":
+        logger.warning(
+            "Baseline-C是遗留启发式别名；本次按Heuristic-Debug报告，"
+            "不代表正式图策略方法C"
+        )
+        agent_type = "Heuristic-Debug"
+    if agent_type not in {"Heuristic-Debug", "Method-C", "Method-D"}:
+        raise ValueError(f"未知智能体类型: {agent_type}")
     env.reset()
     baseline_material_ready_by_key = {
         task_key: float(task.material_ready_time)
@@ -629,7 +637,7 @@ def evaluate_single_trajectory(
                     break
                 continue
 
-            if agent_type in {"Baseline-C", "Heuristic-Debug"}:
+            if agent_type == "Heuristic-Debug":
                 action = agent.select_action(env)
             elif agent_type in {"Method-C", "Method-D"}:
                 if isinstance(agent, FormalEvaluationAgent):
@@ -1031,7 +1039,7 @@ def run_benchmark_evaluation(
     for sc in scenarios:
         sc_id = sc["scenario_id"]
 
-        # 评测基线 C
+        # 评测正式图策略方法 C
         t0 = time.time()
         res_c = evaluate_single_trajectory(
             env,

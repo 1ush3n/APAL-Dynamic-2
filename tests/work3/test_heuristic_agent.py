@@ -1,9 +1,9 @@
-"""Task 5.3 基线 C 策略运行器专项单元测试。
+"""固定启发式参照策略运行器专项单元测试，不代表正式图策略方法C。
 
 验证点：
-1. 无扰动基准计划自主跑通：基线 C 顺利完成 14 周期全线装配，2,830 道工序 100% 完工，后移次数为 0；
-2. 超期后移保节拍规则触发验证：当工序物料 R > P_{q-1} + H_0 时，基线 C 果断选择分支 B (POSTPONE)；
-3. 代表性解耦场景闭环验证：在 9 类代表性场景下，基线 C 自主推进生产，输出完整的 step_records 供轨迹收集使用。
+1. 无扰动基准计划自主跑通：启发式参照策略完成14周期全线装配；
+2. 超期后移规则触发：当工序恢复时间超过当前周期边界时，启发式参照策略选择POSTPONE；
+3. 代表性场景下输出完整step_records供离线M4轨迹采集。
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ def scenarios_data() -> list[dict]:
         return json.load(f)
 
 
-def test_baseline_c_nominal_trajectory_run(baseline_path: str) -> None:
-    """测试基线 C 在无扰动工况下自主完成 14 周期生产，0 后移。"""
+def test_heuristic_agent_nominal_trajectory_run(baseline_path: str) -> None:
+    """测试启发式参照策略在无扰动工况下完成生产且不后移。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     agent = HeuristicAgentWork3()
 
@@ -52,8 +52,8 @@ def test_baseline_c_nominal_trajectory_run(baseline_path: str) -> None:
     assert all("estimated_cmax" in r and "actual_transfer_time" in r for r in records)
 
 
-def test_baseline_c_postpone_rule_trigger(baseline_path: str) -> None:
-    """测试超期后移保节拍规则：当 R > P_{q-1} + H_0 时，基线 C 果断触发分支 B。"""
+def test_heuristic_agent_postpone_rule_trigger(baseline_path: str) -> None:
+    """测试恢复时间越过当前周期边界时启发式参照策略触发后移。"""
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     env.reset()
     agent = HeuristicAgentWork3()
@@ -75,10 +75,10 @@ def test_baseline_c_postpone_rule_trigger(baseline_path: str) -> None:
     assert action["branch"] == ActionBranch.POSTPONE
 
 
-def test_baseline_c_decoupled_scenario_runs(
+def test_heuristic_agent_decoupled_scenario_runs(
     baseline_path: str, scenarios_data: list[dict]
 ) -> None:
-    """测试基线 C 在代表性解耦场景下自主完成流水线生产并生成轨迹记录。"""
+    """测试启发式参照策略在代表性场景下完成生产并生成轨迹记录。"""
     scenario = next((s for s in scenarios_data if s["scenario_id"] == "MID_HIGH_S1"), None)
     assert scenario is not None
 

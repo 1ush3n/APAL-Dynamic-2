@@ -204,8 +204,8 @@ def test_evaluation_decision_limit_is_not_success(baseline_path: Path) -> None:
     env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
     result = evaluate_single_trajectory(
         env,
-        "Baseline-C",
-        HeuristicAgentWork3(name="Baseline-C"),
+        "Heuristic-Debug",
+        HeuristicAgentWork3(),
         max_decisions=0,
     )
 
@@ -279,7 +279,7 @@ def test_evaluation_completion_on_exact_decision_limit_requires_feasibility(
 
     result = evaluate_single_trajectory(
         env,
-        "Baseline-C",
+        "Heuristic-Debug",
         CompleteInOneActionAgent(),
         max_decisions=1,
     )
@@ -396,7 +396,7 @@ def test_l08_evaluation_propagates_software_exception_without_success_report(
     with pytest.raises(RuntimeError, match="simulated policy failure"):
         evaluate_single_trajectory(
             env,
-            "Baseline-C",
+            "Heuristic-Debug",
             FailingAgent(),
             max_decisions=1,
         )
@@ -411,7 +411,7 @@ def test_trajectory_entrypoints_report_advance_deadlock_as_failure(
     if entrypoint == "evaluation":
         result = evaluate_single_trajectory(
             env,
-            "Baseline-C",
+            "Heuristic-Debug",
             _AlwaysAdvanceAgent(),
             max_decisions=1,
         )
@@ -444,8 +444,8 @@ def test_l09_completed_tasks_do_not_terminate_before_aircraft_exit(
 
     result = evaluate_single_trajectory(
         env,
-        "Baseline-C",
-        HeuristicAgentWork3(name="Baseline-C"),
+        "Heuristic-Debug",
+        HeuristicAgentWork3(),
         max_decisions=1,
     )
 

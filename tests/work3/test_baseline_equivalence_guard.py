@@ -1,8 +1,8 @@
-"""数值一致性守护门禁 (Step 0)：锁定会话 77f9b7f4 官方评测产物数值标尺。
+"""旧M5数值守护回归；其中baseline_c字段仅是历史启发式参照结果。
 
 核心验证规范：
 1. 读取基准结果文件 data/work3/eval_c_vs_d_m5.json；
-2. 实例化 AirLineEnvWork3 与 HeuristicAgentWork3，在 9 类正交场景上运行流水线；
+2. 实例化 AirLineEnvWork3 与 HeuristicAgentWork3，在9类旧场景上运行启发式参照；
 3. 断言比对每次运行的 Makespan、J_total、completed_tasks、transfers 与基准 JSON 绝对一致（误差 < 1e-7）；
 4. 测试前 2 个场景的方法 D 决策输出，验证数值完全吻合；
 5. 提供单条流水线高精度测速接口，为后续重构提供基线标尺 T0。
@@ -76,7 +76,7 @@ def airline_env():
 
 @pytest.fixture(scope="module")
 def heuristic_agent():
-    return HeuristicAgentWork3(name="Baseline-C")
+    return HeuristicAgentWork3()
 
 
 @pytest.fixture(scope="module")
@@ -93,19 +93,19 @@ def method_d_agent():
 
 
 @pytest.mark.parametrize("sc_id", CANONICAL_SCENARIOS)
-def test_baseline_c_completion_and_ledger_consistency(sc_id: str, baseline_eval_map, scenarios_map, airline_env, heuristic_agent):
-    """验证基线 C 完整出线且费用账本一致，不锁死旧排程器的逐位时间标尺。"""
+def test_heuristic_reference_completion_and_ledger_consistency(sc_id: str, baseline_eval_map, scenarios_map, airline_env, heuristic_agent):
+    """验证历史启发式参照完整出线；旧golden值不代表正式方法C结果。"""
     sc = scenarios_map[sc_id]
-    golden = baseline_eval_map[sc_id]["baseline_c"]
+    legacy_golden = baseline_eval_map[sc_id]["baseline_c"]
 
     t0 = time.perf_counter()
-    res = evaluate_single_trajectory(airline_env, "Baseline-C", heuristic_agent, scenario=sc, device="cpu")
+    res = evaluate_single_trajectory(airline_env, "Heuristic-Debug", heuristic_agent, scenario=sc, device="cpu")
     elapsed = time.perf_counter() - t0
 
     # 1. 业务硬约束
     assert res["completed_tasks"] == 2830, f"完工工序数不匹配: {res['completed_tasks']} vs 2830"
     assert res["transfers"] == 14, f"脉动转站次数不匹配: {res['transfers']} vs 14"
-    assert res["postponed_count"] == golden["postponed_count"]
+    assert res["postponed_count"] == legacy_golden["postponed_count"]
 
     # 2. F01修复允许合法回填改变局部开工时刻，因此不再锁死旧产物的逐位时间成本。
     assert math.isfinite(res["makespan"]) and res["makespan"] >= 0.0
@@ -122,7 +122,7 @@ def test_baseline_c_completion_and_ledger_consistency(sc_id: str, baseline_eval_
         abs_tol=1e-12,
     )
 
-    print(f"\n[PASS] Baseline-C {sc_id:<14} | Makespan={res['makespan']:.4f}h | J_tot={res['j_total']:.6f} | Elapsed={elapsed:.2f}s")
+    print(f"\n[PASS] Heuristic-Debug {sc_id:<14} | Makespan={res['makespan']:.4f}h | J_tot={res['j_total']:.6f} | Elapsed={elapsed:.2f}s")
 
 
 @pytest.mark.parametrize("sc_id", ["EARLY_LOW_S0", "EARLY_MID_S0"])
