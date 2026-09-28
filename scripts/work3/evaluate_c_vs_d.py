@@ -42,6 +42,10 @@ from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from models.work3.time_head import TimeResidualHead
 from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
+from scripts.work3.baseline_repair_agent import (
+    BaselinePlanRepairAgent,
+    BaselineRepairInfeasibleError,
+)
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
@@ -653,8 +657,18 @@ def evaluate_single_trajectory(
             "不代表正式图策略方法C"
         )
         agent_type = "Heuristic-Debug"
-    if agent_type not in {"Heuristic-Debug", "Method-B", "Method-C", "Method-D"}:
+    if agent_type not in {
+        "Baseline-Repair-A",
+        "Heuristic-Debug",
+        "Method-B",
+        "Method-C",
+        "Method-D",
+    }:
         raise ValueError(f"未知智能体类型: {agent_type}")
+    if agent_type == "Baseline-Repair-A" and not isinstance(
+        agent, BaselinePlanRepairAgent
+    ):
+        raise TypeError("A组必须使用BaselinePlanRepairAgent，不是图策略或启发式调试器")
     env.reset()
     baseline_material_ready_by_key = {
         task_key: float(task.material_ready_time)
@@ -676,6 +690,7 @@ def evaluate_single_trajectory(
     truncated = False
     advance_cause_counts = {cause: 0 for cause in ADVANCE_CAUSES}
     advance_cause_events: list[dict[str, Any]] = []
+    failure_reason: str | None = None
 
     def record_advance_cause(info: dict[str, Any]) -> None:
         cause = str(info.get("advance_cause", "none"))
@@ -691,6 +706,31 @@ def evaluate_single_trajectory(
     with torch.inference_mode():
         while decisions < max_decisions:
             candidates = env.get_action_candidates()
+            if agent_type == "Baseline-Repair-A":
+                if env._check_terminated():
+                    termination_reason = "completed"
+                    break
+                try:
+                    action = agent.select_action(env)
+                except BaselineRepairInfeasibleError as error:
+                    termination_reason = "baseline_repair_infeasible"
+                    failure_reason = str(error)
+                    break
+                if action is None:
+                    termination_reason = "baseline_repair_infeasible"
+                    failure_reason = "A组在批次未完成时未返回可执行动作"
+                    break
+                _obs, _reward, terminated, truncated, info = env.step(action)
+                record_advance_cause(info)
+                decisions += 1
+                if terminated:
+                    termination_reason = str(info.get("termination_reason", "deadlock"))
+                    break
+                if truncated:
+                    termination_reason = "rollout_truncated"
+                    break
+                continue
+
             if not candidates:
                 if env._check_terminated():
                     termination_reason = "completed"
@@ -897,6 +937,9 @@ def evaluate_single_trajectory(
         "success": success,
         "feasible": feasible,
         "termination_reason": termination_reason,
+        "failure_reason": failure_reason or (
+            "deadlock_no_future_event" if termination_reason == "deadlock" else None
+        ),
         "constraint_violations": constraint_violations,
         "constraint_violation_count": sum(constraint_violations.values()),
         "actual_disturbance_hits": effect_report["actual_hit_count"],
