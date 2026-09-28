@@ -22,6 +22,7 @@ import numpy as np
 
 from core.constraints import ConstraintEngine, calculate_team_synergy_factor
 from envs.work3.core_types import (
+    ADVANCE_CAUSES,
     ActionBranch,
     AircraftRuntimeState,
     MultiAircraftState,
@@ -696,11 +697,20 @@ class AirLineEnvWork3:
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
 
         self.process_due_events()
-        info: dict[str, Any] = {"action_branch": branch.name, "task_key": task_key}
+        info: dict[str, Any] = {
+            "action_branch": branch.name,
+            "task_key": task_key,
+            "advance_cause": "none",
+        }
 
         explicit_advance = branch == ActionBranch.ADVANCE_TO_NEXT_EVENT
         no_change_revision = False
         if explicit_advance:
+            info["advance_cause"] = (
+                "explicit"
+                if self.get_action_candidates()
+                else "forced_no_candidate"
+            )
             info["advanced"] = self._advance_to_next_event()
             if not info["advanced"] and not self._check_terminated():
                 info["success"] = False
@@ -879,18 +889,22 @@ class AirLineEnvWork3:
 
         # 完全相同的预约重交不计修订费，但确定性结束本轮并推进一个事件，即使仍有READY任务。
         if not explicit_advance and no_change_revision:
+            info["advance_cause"] = "identical_resubmission"
             info["advanced"] = self._advance_to_next_event()
             if not info["advanced"] and not self._check_terminated():
                 info["success"] = False
                 info["termination_reason"] = "deadlock"
         # 普通调度动作后若没有合法候选，在同一step内推进至下一决策状态，不另造动作。
         elif not explicit_advance and len(self.get_action_candidates()) == 0:
+            info["advance_cause"] = "auto_after_action"
             self._advance_events_until_next_decision()
             if not self.get_action_candidates() and not self._check_terminated():
                 info["success"] = False
                 info["termination_reason"] = "deadlock"
 
         self.step_count += 1
+        if info["advance_cause"] not in ADVANCE_CAUSES:
+            raise RuntimeError(f"未知事件推进原因: {info['advance_cause']}")
         natural_termination = self._check_terminated()
         terminated = natural_termination or info.get("termination_reason") == "deadlock"
         if natural_termination:

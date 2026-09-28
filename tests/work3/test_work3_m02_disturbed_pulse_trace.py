@@ -209,7 +209,8 @@ def test_no_future_event_is_a_deadlock_not_a_successful_advance(
     env.reset()
     env.event_queue.reset(start_time=env.state.current_time)
     for task in env.state.tasks.values():
-        task.status = TaskStatus.UNREADY
+        task.status = TaskStatus.RUNNING
+    assert env.get_action_candidates() == []
 
     _, _, terminated, truncated, info = env.step(
         {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
@@ -218,6 +219,7 @@ def test_no_future_event_is_a_deadlock_not_a_successful_advance(
     assert terminated is True
     assert truncated is False
     assert info["advanced"] is False
+    assert info["advance_cause"] == "forced_no_candidate"
     assert info["success"] is False
     assert info["termination_reason"] == "deadlock"
 

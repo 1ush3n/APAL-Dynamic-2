@@ -16,6 +16,7 @@ import pytest
 import torch
 
 from envs.work3.environment import AirLineEnvWork3
+from envs.work3.core_types import ActionBranch
 from models.work3.actor_critic import ActorCriticWork3
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from scripts.work3.evaluate_c_vs_d import (
@@ -80,6 +81,31 @@ def test_legacy_baseline_c_label_is_reported_as_heuristic_debug(
 
     assert result["agent"] == "Heuristic-Debug"
     assert HeuristicAgentWork3().name == "Heuristic-Debug"
+
+
+def test_evaluation_result_persists_advance_cause_trace(
+    baseline_path: str,
+    tmp_path: Path,
+) -> None:
+    class AdvanceOnce:
+        def select_action(self, env: AirLineEnvWork3) -> dict[str, ActionBranch]:
+            del env
+            return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+
+    result = evaluate_single_trajectory(
+        AirLineEnvWork3(baseline_json_path=baseline_path),
+        "Heuristic-Debug",
+        AdvanceOnce(),
+        max_decisions=1,
+    )
+    output_path = tmp_path / "evaluation.json"
+    output_path.write_text(json.dumps(result), encoding="utf-8")
+    persisted = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert persisted["advance_cause_counts"]["explicit"] == 1
+    assert persisted["advance_cause_events"] == [
+        {"step_count": 1, "advance_cause": "explicit"}
+    ]
 
 
 def test_evaluate_single_trajectory_method_d_debug(baseline_path: str, scenarios_path: str) -> None:

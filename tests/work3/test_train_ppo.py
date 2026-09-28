@@ -220,9 +220,22 @@ def test_training_records_forced_advance_from_spawn_worker(
     assert result["scenario_log"][0]["material_ready_advanced_count"] == 0
     assert result["scenario_log"][0]["start_availability_advanced_task_keys"] == []
     assert result["scenario_log"][0]["start_availability_advanced_count"] == 0
+    assert result["scenario_log"][0]["advance_cause_counts"] == {
+        "explicit": 1,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 0,
+        "none": 0,
+    }
+    assert result["scenario_log"][0]["advance_cause_events"] == [
+        {"step_count": 1, "advance_cause": "explicit"}
+    ]
     persisted = json.loads(Path(result["report_path"]).read_text(encoding="utf-8"))
     assert persisted["scenario_log"][0]["disturbance_type"] == "task_start_availability_delay"
     assert persisted["scenario_log"][0]["start_availability_advanced_count"] == 0
+    assert persisted["scenario_log"][0]["advance_cause_events"] == [
+        {"step_count": 1, "advance_cause": "explicit"}
+    ]
     assert persisted["disturbance_semantics"]["legacy_names"][
         "TaskRuntimeState.material_ready_time"
     ].startswith("保留的旧字段名")

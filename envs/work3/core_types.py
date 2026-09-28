@@ -47,6 +47,15 @@ class ActionBranch(IntEnum):
     ADVANCE_TO_NEXT_EVENT = 2  # 结束当前修订轮次并推进到下一个离散事件
 
 
+ADVANCE_CAUSES = (
+    "explicit",
+    "identical_resubmission",
+    "forced_no_candidate",
+    "auto_after_action",
+    "none",
+)
+
+
 class TimeInterval(NamedTuple):
     """工人日历占用区间。"""
 

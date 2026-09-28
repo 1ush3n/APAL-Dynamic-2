@@ -34,7 +34,7 @@ if str(ROOT_DIR) not in sys.path:
 
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus
+from envs.work3.core_types import ADVANCE_CAUSES, ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
@@ -673,6 +673,19 @@ def evaluate_single_trajectory(
     termination_reason = "decision_limit"
     terminated = False
     truncated = False
+    advance_cause_counts = {cause: 0 for cause in ADVANCE_CAUSES}
+    advance_cause_events: list[dict[str, Any]] = []
+
+    def record_advance_cause(info: dict[str, Any]) -> None:
+        cause = str(info.get("advance_cause", "none"))
+        if cause not in advance_cause_counts:
+            raise RuntimeError(f"未知事件推进原因: {cause}")
+        advance_cause_counts[cause] += 1
+        if cause != "none":
+            advance_cause_events.append(
+                {"step_count": int(env.step_count), "advance_cause": cause}
+            )
+
     prediction_records: list[tuple[int, float, float, float]] = []
     with torch.inference_mode():
         while decisions < max_decisions:
@@ -684,6 +697,7 @@ def evaluate_single_trajectory(
                 _obs, _reward, terminated, truncated, info = env.step(
                     {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
                 )
+                record_advance_cause(info)
                 if terminated:
                     termination_reason = str(info.get("termination_reason", "deadlock"))
                     break
@@ -711,6 +725,7 @@ def evaluate_single_trajectory(
                 _obs, _reward, terminated, truncated, info = env.step(
                     {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
                 )
+                record_advance_cause(info)
                 if terminated:
                     termination_reason = str(info.get("termination_reason", "deadlock"))
                     break
@@ -720,6 +735,7 @@ def evaluate_single_trajectory(
                 continue
 
             obs, reward, terminated, truncated, info = env.step(action)
+            record_advance_cause(info)
             decisions += 1
             if terminated:
                 termination_reason = str(
@@ -834,6 +850,9 @@ def evaluate_single_trajectory(
         "warmup_steps": warmup_steps,
         "policy_steps": policy_steps,
         "total_steps": int(env.step_count),
+        "advance_cause_scope": "evaluation_policy_steps",
+        "advance_cause_counts": advance_cause_counts,
+        "advance_cause_events": advance_cause_events,
         "cost_schema_version": "work3_trajectory_cost_v2",
         "metrics_unweighted": objective_report["metrics_unweighted"],
         "metric_coverage": objective_report["metric_coverage"],

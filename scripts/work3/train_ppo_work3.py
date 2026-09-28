@@ -37,6 +37,7 @@ import torch
 import lightning.pytorch as pl
 
 from envs.work3.environment import AirLineEnvWork3
+from envs.work3.core_types import ADVANCE_CAUSES
 from envs.work3.decision_snapshot import DecisionSnapshot
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3
@@ -1026,6 +1027,9 @@ def run_training(
                 "material_ready_advanced_count": 0,
                 "unhit_reasons": {},
                 "actual_transfer_times": [],
+                "advance_cause_scope": "policy_step_results",
+                "advance_cause_counts": {cause: 0 for cause in ADVANCE_CAUSES},
+                "advance_cause_events": [],
                 "completed": False,
                 "success": None,
                 "truncated": False,
@@ -1436,6 +1440,17 @@ def run_training(
                 state.snapshot = snapshot
                 state.scenario_status = dict(result.scenario_status)
                 update_scenario_effect_log(state)
+                advance_cause = str(result.info.get("advance_cause", "none"))
+                if advance_cause not in state.scenario_log["advance_cause_counts"]:
+                    raise RuntimeError(f"未知事件推进原因: {advance_cause}")
+                state.scenario_log["advance_cause_counts"][advance_cause] += 1
+                if advance_cause != "none":
+                    state.scenario_log["advance_cause_events"].append(
+                        {
+                            "step_count": int(result.step_count),
+                            "advance_cause": advance_cause,
+                        }
+                    )
                 raw_reward = float(result.raw_reward)
                 terminated = bool(result.terminated)
                 truncated = bool(result.truncated)

@@ -11,10 +11,13 @@ import pytest
 import torch
 
 from envs.work3.core_types import ActionBranch, TaskStatus
+from envs.work3.decision_snapshot import build_decision_snapshot
 from envs.work3.environment import AirLineEnvWork3
 from envs.work3.event_queue import EventType
-from models.work3.actor_critic import ActorCriticWork3
+from models.work3.action_fusion import compute_time_urgency_vector
+from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
 from models.work3.graph_builder import MultiAircraftGraphBuilder
+from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from utils.work3.objective_evaluator import evaluate_trajectory_objective
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
@@ -68,6 +71,27 @@ def _reserve_at_future_time(env: AirLineEnvWork3, task, team: tuple[int, ...]) -
     )
     assert task.status == TaskStatus.RESERVED
     assert task.scheduled_start == pytest.approx(20.0)
+
+
+def _decision_snapshot(env: AirLineEnvWork3, actor: ActorCriticWork3):
+    estimated_cmax = compute_cycle_heuristic_cmax(env.state)
+    state_features = extract_compact_state_features(env.state, estimated_cmax)
+    time_features = compute_time_urgency_vector(
+        estimated_r=max(0.0, estimated_cmax - env.state.current_time),
+        current_time=env.state.current_time,
+        last_transfer_time=env.state.last_transfer_time,
+        h0=env.state.h0,
+    )
+    return build_decision_snapshot(
+        env,
+        actor._get_graph_builder(env),
+        state_features,
+        time_features,
+        worker_id=0,
+        episode_id=1,
+        episode_index=env.step_count,
+        estimated_cmax=estimated_cmax,
+    )
 
 
 def _revision_attempt_snapshot(env: AirLineEnvWork3) -> tuple[Any, ...]:
@@ -448,7 +472,7 @@ def test_identical_resubmission_cannot_block_time_progress() -> None:
     )
     rewards_before = len(env.step_rewards)
 
-    _, reward, terminated, truncated, _ = env.step(
+    _, reward, terminated, truncated, info = env.step(
         {
             "task_key": task.task_key,
             "branch": ActionBranch.STATION_EXECUTE,
@@ -458,6 +482,7 @@ def test_identical_resubmission_cannot_block_time_progress() -> None:
     )
 
     assert env.state.current_time == pytest.approx(20.0)
+    assert info["advance_cause"] == "identical_resubmission"
     assert task.status == TaskStatus.RUNNING
     assert not terminated
     assert not truncated
@@ -524,11 +549,161 @@ def test_advance_progresses_when_only_future_reservation_is_modifiable() -> None
     )
 
     assert info["advanced"] is True
+    assert info["advance_cause"] == "explicit"
     assert env.state.current_time == pytest.approx(20.0)
     assert task.status == TaskStatus.RUNNING
     assert task.actual_start == pytest.approx(20.0)
     assert not terminated
     assert not truncated
+
+
+def test_ordinary_action_auto_advance_and_nonadvancing_action_causes() -> None:
+    env = _new_env()
+    task = env.get_ready_tasks()[0]
+    team = _legal_teams(env, task)[0]
+    task.in_station_offset = 0.0
+    task.fixed_station = task.current_station
+    for other_task in env.state.tasks.values():
+        if other_task.task_key != task.task_key:
+            other_task.status = TaskStatus.COMPLETED
+            other_task.actual_end = env.state.current_time
+
+    none_env = _new_env()
+    none_task = none_env.get_ready_tasks()[0]
+    none_team = _legal_teams(none_env, none_task)[0]
+    none_task.in_station_offset = 20.0
+    _, _, _, _, none_info = none_env.step(
+        {
+            "task_key": none_task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": none_team,
+            "align": 1,
+        }
+    )
+    assert none_info["advance_cause"] == "none"
+
+    _, _, terminated, truncated, auto_info = env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team,
+            "align": 1,
+        }
+    )
+
+    assert auto_info["advance_cause"] == "auto_after_action"
+    assert env.state.current_time == pytest.approx(float(task.execution_duration))
+    assert terminated is True
+    assert truncated is False
+
+
+def test_explicit_advance_and_identical_resubmission_match_from_same_snapshot() -> None:
+    env = _new_env()
+    task = env.get_ready_tasks()[0]
+    team = _legal_teams(env, task)[0]
+    task.fixed_station = task.current_station
+    task.base_team = team
+    task.in_station_offset = 20.0
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team),
+        "position": 20.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+    for other_task in env.state.tasks.values():
+        if other_task.task_key != task.task_key:
+            other_task.status = TaskStatus.COMPLETED
+            other_task.actual_end = env.state.current_time
+    _reserve_at_future_time(env, task, team)
+
+    actor = ActorCriticWork3()
+    snapshot = deepcopy(_decision_snapshot(env, actor))
+    assert snapshot.candidate_task_keys == (task.task_key,)
+    assert snapshot.advance_available is True
+    assert snapshot.branch_masks == ((True, False),)
+
+    with torch.no_grad():
+        actor.branch_head[-1].bias.copy_(torch.tensor([100.0, -100.0]))
+        actor.align_head[-1].bias.copy_(torch.tensor([-100.0, 100.0]))
+        worker_bias = torch.full((actor.max_station_workers,), -1000.0)
+        worker_ids = [worker.worker_id for worker in snapshot.team_contexts[0].workers]
+        for rank, worker_id in enumerate(task.assigned_team):
+            worker_bias[worker_ids.index(worker_id)] = 1000.0 - rank
+        actor.worker_score_fc[-1].bias.copy_(worker_bias)
+
+    resubmit_action, resubmit_log_prob, _, resubmit_record = actor.select_snapshot(
+        snapshot,
+        deterministic=True,
+    )
+    assert resubmit_action["task_key"] == task.task_key
+    assert resubmit_action["branch"] == ActionBranch.STATION_EXECUTE
+    assert set(resubmit_action["team"]) == set(task.assigned_team)
+    assert resubmit_action["align"] == 1
+    _, resubmit_replay_log_prob, _ = actor.evaluate_action_log_probs(
+        snapshot.state_features.unsqueeze(0),
+        snapshot.time_features.unsqueeze(0),
+        [resubmit_record],
+    )
+    assert float(resubmit_replay_log_prob[0].detach().item()) == pytest.approx(
+        resubmit_log_prob, abs=1e-6
+    )
+
+    explicit_actor = deepcopy(actor)
+    with torch.no_grad():
+        explicit_actor.branch_head[-1].bias.copy_(torch.tensor([-100.0, 100.0]))
+    explicit_action, explicit_log_prob, _, explicit_record = explicit_actor.select_snapshot(
+        snapshot,
+        deterministic=True,
+    )
+    assert explicit_action == {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    _, explicit_replay_log_prob, _ = explicit_actor.evaluate_action_log_probs(
+        snapshot.state_features.unsqueeze(0),
+        snapshot.time_features.unsqueeze(0),
+        [explicit_record],
+    )
+    assert float(explicit_replay_log_prob[0].detach().item()) == pytest.approx(
+        explicit_log_prob, abs=1e-6
+    )
+
+    explicit_env = deepcopy(env)
+    resubmission_env = deepcopy(env)
+    event_signature = lambda current_env: sorted(
+        (
+            event.timestamp,
+            event.event_type,
+            event.task_key,
+            event.generation,
+        )
+        for event in current_env.event_queue._heap
+        if current_env.event_queue._is_event_valid(event)
+    )
+    assert event_signature(explicit_env) == event_signature(resubmission_env)
+
+    _, explicit_reward, explicit_terminated, explicit_truncated, explicit_info = (
+        explicit_env.step(explicit_action)
+    )
+    _, resubmit_reward, resubmit_terminated, resubmit_truncated, resubmit_info = (
+        resubmission_env.step(resubmit_action)
+    )
+
+    assert explicit_info["advance_cause"] == "explicit"
+    assert resubmit_info["advance_cause"] == "identical_resubmission"
+    assert explicit_env.state.current_time == pytest.approx(
+        resubmission_env.state.current_time
+    )
+    assert explicit_env.state.current_time == pytest.approx(20.0)
+    assert explicit_env.state.tasks[task.task_key].status == TaskStatus.RUNNING
+    assert resubmission_env.state.tasks[task.task_key].status == TaskStatus.RUNNING
+    assert explicit_env.get_action_candidates() == resubmission_env.get_action_candidates()
+    explicit_next_event = explicit_env.event_queue.peek()
+    resubmit_next_event = resubmission_env.event_queue.peek()
+    assert explicit_next_event is not None and resubmit_next_event is not None
+    assert explicit_next_event.event_type == resubmit_next_event.event_type == EventType.TASK_FINISH
+    assert explicit_next_event.timestamp == pytest.approx(resubmit_next_event.timestamp)
+    assert explicit_reward == pytest.approx(resubmit_reward)
+    assert explicit_info["step_cost"] == pytest.approx(resubmit_info["step_cost"])
+    assert explicit_terminated == resubmit_terminated is False
+    assert explicit_truncated == resubmit_truncated is False
 
 
 def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> None:
