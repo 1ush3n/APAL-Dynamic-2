@@ -9,7 +9,15 @@ import pytest
 
 from envs.work3.core_types import ActionBranch, TaskStatus
 from envs.work3.environment import AirLineEnvWork3
+from scripts.work3.evaluate_c_vs_d import (
+    _check_completed_trajectory_feasibility,
+    evaluate_single_trajectory,
+)
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from utils.work3.objective_evaluator import (
+    ObjectiveWeights,
+    evaluate_trajectory_objective,
+)
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")
@@ -382,3 +390,69 @@ def test_one_aircraft_disturbance_and_postpone_delays_other_aircraft_pulse(
         task.actual_start is not None and task.actual_end is not None
         for task in (other_first, other_second, other_third, target)
     )
+
+
+def test_small_complete_trace_matches_weighted_cost_and_independent_ledger(
+    tmp_path: Path,
+) -> None:
+    """两架飞机的五站完整小轨迹逐项闭合环境与独立费用账本。"""
+    if not BASELINE_PATH.is_file():
+        pytest.skip(f"{BASELINE_PATH}不存在")
+
+    baseline_path = tmp_path / "two_aircraft_complete_baseline.json"
+    _two_aircraft_baseline(baseline_path)
+    baseline = MultiAircraftBaseline.load_from_json(baseline_path)
+    weights = ObjectiveWeights(
+        w_h=1.3,
+        w_t=0.2,
+        w_w=0.05,
+        w_p=1.0,
+        lambda_1=0.1,
+        lambda_2=0.2,
+        normalize_by_n=True,
+    )
+    env = AirLineEnvWork3(baseline_json_path=baseline_path, weights=weights)
+
+    class FixedBaselinePolicy:
+        def select_action(
+            self,
+            current_env: AirLineEnvWork3,
+        ) -> dict[str, object] | None:
+            ready = current_env.get_ready_tasks()
+            if not ready:
+                return None
+            task = ready[0]
+            return {
+                "task_key": task.task_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": baseline.get_task(task.aircraft_id, task.task_id).team,
+                "align": 1,
+            }
+
+    result = evaluate_single_trajectory(
+        env,
+        agent_type="Heuristic-Debug",
+        agent=FixedBaselinePolicy(),
+        max_decisions=100,
+    )
+
+    assert result["success"] is True
+    assert result["termination_reason"] == "completed"
+    assert result["ledger_reconciliation"]["consistent"] is True
+    assert result["ledger_reconciliation"]["reward_sum_matches"] is True
+    assert all(task.status == TaskStatus.COMPLETED for task in env.state.tasks.values())
+    assert len(env.state.tasks) == 10
+    assert len(env.state.transfer_history) == 6
+    feasible, violations = _check_completed_trajectory_feasibility(env)
+    assert feasible, f"小轨迹独立可行性失败：{violations}"
+
+    ledger = evaluate_trajectory_objective(env, weights=weights)
+    assert sum(result["cost_components_weighted"].values()) == pytest.approx(
+        ledger.j_total
+    )
+    assert result["j_total"] == pytest.approx(ledger.j_total)
+    assert ledger.j_total == pytest.approx(env.cumulative_cost)
+    assert sum(env.step_rewards) == pytest.approx(-ledger.j_total)
+    station_report = result["final_station_deviation"]
+    assert station_report["valid_for_final_comparison"] is True
+    assert station_report["final_deviation_ratio"] == pytest.approx(0.0)

@@ -4,13 +4,12 @@
 1. 在固定独立测试事件清单下：
    - 运行正式方法 C 图策略 (ActorCriticWork3, 启发式时间输入)；
    - 运行正式方法 D 图策略 (ActorCriticWork3, deterministic=True, 学习修正时间输入)；
-2. 收集生产全流程多目标核心指标：
-   - J_takt: 脉动节拍超期惩罚；
-   - D_time: 基准工序排程时间偏差；
-   - D_team: 基准团队人员改派偏差；
-   - J_postpone: 跨站后移改派惩罚；
-   - J_total: 全线综合惩罚费用 (J_total = w_h J_takt + w_tau D_time + w_m D_team + w_p J_postpone)；
-   - Makespan: 全线 10 架次飞机总完工时长；
+2. 分开收集未加权指标和已加权费用：
+   - J_H: 节拍超期；D_T: 周期内开工偏差；D_W: 最终团队替换比例；
+   - G: 累计正式改站惩罚；R_T/R_W: 相邻正式版本时间/团队修订指标；
+   - J_total = w_h J_H + w_t D_T + w_w D_W + w_p G + w_RT R_T + w_RW R_W；
+   - 最终执行站位偏差单独报告，不增加当前奖励权重；
+   - Makespan: 全批次飞机总完工时长；
 3. 以同一 C 检查点报告无扰动基线；仅对双方成功且独立可行的轨迹计算真实费用改善率。
 4. 对具有真实转站标签的周期报告原始启发式及修正预测 MAE（小时与 H0 归一化）。
 """
@@ -27,7 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import sys
 import time
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
@@ -46,6 +45,10 @@ from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from utils.work3.objective_evaluator import (
+    build_objective_report,
+    evaluate_trajectory_objective,
+)
 from utils.work3.trajectory_feasibility import (
     check_environment_trajectory_feasibility,
 )
@@ -447,6 +450,46 @@ def _check_completed_trajectory_feasibility(
     return check_environment_trajectory_feasibility(env)
 
 
+def summarize_final_station_deviation(
+    tasks: Mapping[str, Any],
+    *,
+    total_tasks: int,
+    success: bool,
+    termination_reason: str,
+) -> dict[str, Any]:
+    """只按真实开工站位统计最终站偏差；截断轨迹不给完整批次比例。"""
+    started = [task for task in tasks.values() if task.actual_start is not None]
+    station_known = [
+        task for task in started if task.actual_start_station is not None
+    ]
+    changed_count = sum(
+        int(int(task.actual_start_station) != int(task.base_station))
+        for task in station_known
+    )
+    valid_final = bool(
+        success
+        and termination_reason == "completed"
+        and len(started) == total_tasks
+        and len(station_known) == total_tasks
+        and total_tasks > 0
+    )
+    return {
+        "valid_for_final_comparison": valid_final,
+        "status": "complete_feasible" if valid_final else "partial_or_invalid",
+        "termination_reason": termination_reason,
+        "changed_started_task_count": changed_count,
+        "started_task_count": len(started),
+        "station_observed_task_count": len(station_known),
+        "total_task_count": int(total_tasks),
+        "final_deviation_ratio": (
+            changed_count / total_tasks if valid_final else None
+        ),
+        "observed_started_ratio": (
+            changed_count / len(station_known) if station_known else None
+        ),
+    }
+
+
 def _count_actual_disturbance_hits(
     env: AirLineEnvWork3,
     scenario: dict[str, Any] | None,
@@ -684,7 +727,6 @@ def evaluate_single_trajectory(
     # 统计生产指标
     completed = sum(1 for t in env.state.tasks.values() if t.status == TaskStatus.COMPLETED)
     postponed_total = sum(t.postpone_count for t in env.state.tasks.values())
-    total_cost = env.cumulative_cost
     feasible, constraint_violations = _check_completed_trajectory_feasibility(env)
     success = bool(
         feasible
@@ -714,6 +756,60 @@ def evaluate_single_trajectory(
 
     warmup_steps = 0 if warmup_result is None else warmup_result.step_count
     policy_steps = max(0, int(env.step_count) - warmup_steps)
+    objective_breakdown = evaluate_trajectory_objective(env, weights=env.weights)
+    objective_report = build_objective_report(
+        objective_breakdown,
+        env.weights,
+        h0=float(env.state.h0),
+    )
+    environment_cost_components = {
+        "j_takt": float(env.cost_takt),
+        "d_time": float(env.cost_time),
+        "d_team": float(env.cost_team),
+        "j_postpone": float(env.cost_postpone),
+        "j_revision": float(env.cost_revision),
+    }
+    weighted_components_match = all(
+        math.isclose(
+            environment_cost_components[name],
+            float(objective_report["cost_components_weighted"][name]),
+            rel_tol=1e-9,
+            abs_tol=1e-8,
+        )
+        for name in environment_cost_components
+    )
+    total_cost = float(env.cumulative_cost)
+    independent_j_total = float(objective_report["j_total"])
+    actual_reward_sum = float(sum(env.step_rewards))
+    reward_sum_matches = math.isclose(
+        actual_reward_sum,
+        -independent_j_total,
+        rel_tol=1e-9,
+        abs_tol=1e-8,
+    )
+    ledger_consistent = weighted_components_match and math.isclose(
+        total_cost,
+        independent_j_total,
+        rel_tol=1e-9,
+        abs_tol=1e-8,
+    ) and reward_sum_matches
+    if success and not ledger_consistent:
+        raise RuntimeError(
+            "已完成可行轨迹的环境费用与独立目标账本不一致: "
+            f"environment={total_cost}, independent={independent_j_total}"
+        )
+    final_station_deviation = summarize_final_station_deviation(
+        env.state.tasks,
+        total_tasks=env.total_tasks,
+        success=success,
+        termination_reason=termination_reason,
+    )
+    postponed_task_count = sum(
+        task.postpone_count > 0 for task in env.state.tasks.values()
+    )
+    multiply_postponed_task_count = sum(
+        task.postpone_count > 1 for task in env.state.tasks.values()
+    )
     return {
         "agent": agent_type,
         "scenario_id": scenario["scenario_id"] if scenario else "NOMINAL",
@@ -722,18 +818,43 @@ def evaluate_single_trajectory(
         "warmup_steps": warmup_steps,
         "policy_steps": policy_steps,
         "total_steps": int(env.step_count),
+        "cost_schema_version": "work3_trajectory_cost_v2",
+        "metrics_unweighted": objective_report["metrics_unweighted"],
+        "metric_coverage": objective_report["metric_coverage"],
+        "cost_components_weighted": objective_report["cost_components_weighted"],
+        "objective_weights": objective_report["objective_weights"],
+        "objective_normalization": objective_report["normalization"],
+        "revision_weighted_components": objective_report[
+            "revision_weighted_components"
+        ],
+        "objective_j_total": independent_j_total,
+        "ledger_reconciliation": {
+            "environment_cumulative_cost": total_cost,
+            "independent_j_total": independent_j_total,
+            "difference": total_cost - independent_j_total,
+            "components_match": weighted_components_match,
+            "actual_reward_sum": actual_reward_sum,
+            "expected_actual_reward_sum": -independent_j_total,
+            "reward_sum_matches": reward_sum_matches,
+            "consistent": ledger_consistent,
+        },
+        "final_station_deviation": final_station_deviation,
         "j_takt": env.cost_takt,
         "d_time": env.cost_time,
         "d_team": env.cost_team,
         "j_postpone": env.cost_postpone,
         "j_revision": env.cost_revision,
-        "j_total": total_cost,
-        "raw_cost_components": {
-            "j_takt": env.cost_takt,
-            "d_time": env.cost_time,
-            "d_team": env.cost_team,
-            "j_postpone": env.cost_postpone,
-            "j_revision": env.cost_revision,
+        "j_total": independent_j_total,
+        "environment_cumulative_cost": total_cost,
+        # 兼容旧JSON消费者；旧字段虽名为raw，实际均是已加权费用。
+        "raw_cost_components": environment_cost_components,
+        "legacy_field_semantics": {
+            "j_takt,d_time,d_team,j_postpone,j_revision,j_total": (
+                "旧字段均为已加权费用；请迁移到cost_components_weighted。"
+            ),
+            "raw_cost_components": (
+                "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+            ),
         },
         "makespan": float(env.state.current_time),
         "completed_tasks": completed,
@@ -749,6 +870,9 @@ def evaluate_single_trajectory(
             env.state.transfer_history,
         ),
         "postponed_count": postponed_total,
+        "postponed_task_count": postponed_task_count,
+        "multiply_postponed_task_count": multiply_postponed_task_count,
+        "takt_violation_hours": objective_breakdown.takt_violation_hours,
         "decisions": decisions,
         "transfers": len(env.state.transfer_history),
     }

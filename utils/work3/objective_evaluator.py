@@ -1,18 +1,23 @@
-"""工作三真实综合目标独立计算器与终局账本评估器 (Task 3.1 / 里程碑 M2)。
+"""工作三真实综合目标独立计算器与终局账本评估器。
 
-严格落实顶层设计规范与《工作三_工程落地与逐步验证任务看板.md》：
-1. 节拍超期：J_takt = sum_{q=1}^Q [H_q - H_0]_+ / H_0；
-2. 周期内开工位置偏差：D_time = sum_{k,i} |(S_{ki} - P_{q-1}) - b_i^0| / H_0 （支持 / N 归一化）；
-3. 团队替换率：D_team = (1/N) * sum_{k,i} (1 - |W_{ki} cap W_i^0| / m_i)；
-4. 改派惩罚：J_postpone = sum_{k,i} g(n_{ki}) = sum_{k,i} (lambda_1 n + lambda_2 [n - 1]_+)；
-5. 综合总成本：J_total = w_h * J_takt + w_t * D_time + w_w * D_team + w_p * J_postpone。
+按默认 ``normalize_by_n=True``：
 
-本模块完全独立于单步强化学习奖励计算，作为权威终局账本，用于验证奖励差分闭环代数恒等性。
+* ``J_H = sum(max(H_q - H_0, 0) / H_0)``，每次同步转站结算一次；
+* ``D_T = sum(abs(b_i - b_i^0) / H_0) / N``；
+* ``D_W = sum(1 - |W_i ∩ W_i^0| / m_i) / N``；
+* ``G = sum_i(lambda_1*n_i + lambda_2*max(n_i - 1, 0))``，不除以 N；
+* ``R_T``、``R_W``分别为相邻正式版本时间位置差和团队替换率之和，按配置选择是否除以 N；
+* ``J_total = w_h*J_H + w_t*D_T + w_w*D_W + w_p*G
+  + w_RT*R_T + w_RW*R_W``。
+
+未配置 ``w_RT``、``w_RW`` 时分别沿用 ``w_t``、``w_w``。最终站位偏差只作报告指标，
+不在当前奖励中添加独立站位权重。本模块独立于单步奖励实现，用于核对奖励差分账本。
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import math
 from typing import Any
 
 from envs.work3.core_types import MultiAircraftState, TaskRuntimeState, TaskStatus
@@ -29,7 +34,7 @@ class ObjectiveWeights:
         w_p: 改派后移综合惩罚乘数 (默认 1.0).
         lambda_1: 首次改派基准惩罚 (默认 0.10).
         lambda_2: 二次及以上累计改派累进加罚 (默认 0.20).
-        normalize_by_n: 是否将 D_time 和 D_team 除以固定全线工序总数 N=2830 (默认 True).
+        normalize_by_n: 是否将 D_T、D_W、R_T、R_W 除以批次开始时固定的工序数 N (默认 True).
     """
 
     w_h: float = 1.0
@@ -46,11 +51,16 @@ class ObjectiveWeights:
 
 @dataclass(frozen=True)
 class ObjectiveBreakdown:
-    """终局综合目标各分项明细。"""
+    """终局指标和费用明细。
+
+    ``j_takt``、``d_time``、``d_team``、``j_postpone``、``revision_time``、
+    ``revision_team``均为尚未乘目标权重的指标；``j_revision``是已加权费用。
+    ``j_total``是六项目标的加权和。
+    """
 
     j_takt: float              # 节拍超期综合项 J_takt
-    d_time: float              # 周期内开工位置偏差项 D_time (已应用归一化比例)
-    d_team: float              # 团队替换率项 D_team (已应用归一化比例)
+    d_time: float              # 周期内开工位置偏差项 D_T (已应用配置归一化，未乘权重)
+    d_team: float              # 团队替换率项 D_W (已应用配置归一化，未乘权重)
     j_postpone: float          # 累计后移改派惩罚 J_postpone
     j_total: float             # 加权综合总成本 J_total
 
@@ -60,7 +70,7 @@ class ObjectiveBreakdown:
     total_postpone_count: int    # 全线工序累计后移次数总和
     num_postponed_tasks: int     # 发生过至少一次后移的独立工序数
     num_started_tasks: int       # 实际已确认开工工序数
-    total_tasks: int             # 总工序基准规模 N (默认 2830)
+    total_tasks: int             # 批次开始时固定的工序数 N
     revision_time: float         # 相邻正式安排时间位置变化（已归一化）
     revision_team: float         # 相邻正式安排团队变化（已归一化）
     j_revision: float            # 时间/团队相邻修订加权费用
@@ -75,6 +85,89 @@ def calculate_postpone_penalty(n: int, lambda_1: float = 0.10, lambda_2: float =
     if n <= 0:
         return 0.0
     return float(lambda_1 * n + lambda_2 * max(0, n - 1))
+
+
+def build_objective_report(
+    breakdown: ObjectiveBreakdown,
+    weights: ObjectiveWeights,
+    *,
+    h0: float,
+) -> dict[str, Any]:
+    """将未加权指标、加权费用和归一化元数据分开序列化。"""
+    if not math.isfinite(h0) or h0 <= 0.0:
+        raise ValueError("H0必须是有限正数")
+
+    revision_time_weight = (
+        weights.w_t if weights.w_revision_time is None else weights.w_revision_time
+    )
+    revision_team_weight = (
+        weights.w_w if weights.w_revision_team is None else weights.w_revision_team
+    )
+    metrics_unweighted = {
+        "j_h": float(breakdown.j_takt),
+        "d_t": float(breakdown.d_time),
+        "d_w": float(breakdown.d_team),
+        "g_postpone": float(breakdown.j_postpone),
+        "r_t": float(breakdown.revision_time),
+        "r_w": float(breakdown.revision_team),
+    }
+    cost_components_weighted = {
+        "j_takt": weights.w_h * metrics_unweighted["j_h"],
+        "d_time": weights.w_t * metrics_unweighted["d_t"],
+        "d_team": weights.w_w * metrics_unweighted["d_w"],
+        "j_postpone": weights.w_p * metrics_unweighted["g_postpone"],
+        "j_revision": (
+            revision_time_weight * metrics_unweighted["r_t"]
+            + revision_team_weight * metrics_unweighted["r_w"]
+        ),
+    }
+    component_total = sum(cost_components_weighted.values())
+    if not math.isclose(
+        component_total,
+        breakdown.j_total,
+        rel_tol=1e-10,
+        abs_tol=1e-10,
+    ):
+        raise ValueError(
+            "ObjectiveBreakdown.j_total与加权分项之和不一致: "
+            f"{breakdown.j_total} != {component_total}"
+        )
+
+    return {
+        "metrics_unweighted": metrics_unweighted,
+        "cost_components_weighted": cost_components_weighted,
+        "revision_weighted_components": {
+            "time": revision_time_weight * metrics_unweighted["r_t"],
+            "team": revision_team_weight * metrics_unweighted["r_w"],
+        },
+        "objective_weights": asdict(weights),
+        "metric_coverage": {
+            "status": (
+                "all_tasks_started"
+                if breakdown.num_started_tasks == breakdown.total_tasks
+                else "partial"
+            ),
+            "all_tasks_started": (
+                breakdown.num_started_tasks == breakdown.total_tasks
+            ),
+            "started_task_count": int(breakdown.num_started_tasks),
+            "fixed_task_count": int(breakdown.total_tasks),
+        },
+        "normalization": {
+            "h0_hours": float(h0),
+            "normalize_by_n": bool(weights.normalize_by_n),
+            "fixed_task_count": int(breakdown.total_tasks),
+            "metric_rules": {
+                "j_h": "每次全线同步转站超期小时除以H0后求和",
+                "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+                "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+                "g_postpone": "累计g(n)，不除以N",
+                "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+                "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N",
+            },
+        },
+        "j_total": float(breakdown.j_total),
+    }
 
 
 def evaluate_trajectory_objective(
@@ -191,7 +284,7 @@ def evaluate_trajectory_objective(
     )
     j_revision = revision_time_weight * revision_time + revision_team_weight * revision_team
 
-    # 5. 加权综合总成本 J_total
+    # 5. 加权综合总成本；修订权重缺省分别继承w_t与w_w。
     j_total = (
         weights.w_h * j_takt
         + weights.w_t * d_time
