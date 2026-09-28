@@ -373,6 +373,7 @@ def _worker_main(
                         episode_id=episode_id,
                         episode_index=episode_index,
                         estimated_cmax=estimated_cmax,
+                        allow_postpone=bool(request.get("allow_postpone", True)),
                     )
                 elif command == "step":
                     action = request.get("action")
@@ -874,7 +875,12 @@ class Work3VectorEnv:
             wall_clock_deadline=wall_clock_deadline,
         )
 
-    def snapshot(self, *, worker_id: int = 0) -> DecisionSnapshot:
+    def snapshot(
+        self,
+        *,
+        worker_id: int = 0,
+        allow_postpone: bool = True,
+    ) -> DecisionSnapshot:
         self._validate_worker_id(worker_id)
         snapshot = self._request_many(
             {
@@ -884,6 +890,7 @@ class Work3VectorEnv:
                         "worker_id": worker_id,
                         "episode_id": self._episode_ids[worker_id],
                         "episode_index": self._episode_indices[worker_id],
+                        "allow_postpone": allow_postpone,
                     },
                 )
             }
@@ -892,7 +899,7 @@ class Work3VectorEnv:
             raise TypeError("环境worker返回了非DecisionSnapshot结果")
         return snapshot
 
-    def snapshots(self) -> tuple[DecisionSnapshot, ...]:
+    def snapshots(self, *, allow_postpone: bool = True) -> tuple[DecisionSnapshot, ...]:
         results = self._request_many(
             {
                 worker_id: (
@@ -901,6 +908,7 @@ class Work3VectorEnv:
                         "worker_id": worker_id,
                         "episode_id": self._episode_ids[worker_id],
                         "episode_index": self._episode_indices[worker_id],
+                        "allow_postpone": allow_postpone,
                     },
                 )
                 for worker_id in range(self._num_envs)

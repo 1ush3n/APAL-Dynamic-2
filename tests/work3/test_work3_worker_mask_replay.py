@@ -586,6 +586,58 @@ def test_postpone_replay_uses_saved_branch_mask_after_position_changes() -> None
     assert torch.isfinite(entropy).all()
 
 
+def test_fixed_station_profile_masks_postpone_in_snapshot_sampling_and_replay() -> None:
+    """B快照删除仅能后移的任务，采样与重放沿用相同掩码。"""
+    env = _new_env()
+    candidates = env.get_action_candidates()
+    postpone_task = next(
+        task
+        for task in candidates
+        if env.get_action_branch_mask(task) == (False, True)
+    )
+    stay_task = next(
+        task
+        for task in candidates
+        if env.get_action_branch_mask(task)[0]
+    )
+    env.get_action_candidates = lambda: [stay_task, postpone_task]  # type: ignore[method-assign]
+
+    actor = ActorCriticWork3(hidden_dim=32).eval()
+    state_features, time_features = _inputs()
+    b_snapshot = actor.make_decision_snapshot(
+        env,
+        state_features,
+        time_features,
+        allow_postpone=False,
+    )
+    assert b_snapshot.candidate_task_keys == (stay_task.task_key,)
+    assert b_snapshot.branch_masks == ((True, False),)
+
+    with torch.no_grad():
+        for parameter in actor.branch_head.parameters():
+            parameter.zero_()
+        actor.branch_head[-1].bias[1] = 100.0
+    for _ in range(64):
+        action, sampled_log_prob, _, record = actor.select_snapshot(b_snapshot)
+        assert action is not None
+        assert action["branch"] == ActionBranch.STATION_EXECUTE
+        assert record["candidate_branch_masks"] == ((True, False),)
+    _, replay_log_prob, entropy = actor.evaluate_action_log_probs(
+        state_features.unsqueeze(0),
+        time_features.unsqueeze(0),
+        [record],
+    )
+    _assert_probability_round_trip(sampled_log_prob, replay_log_prob)
+    assert torch.isfinite(entropy).all()
+
+    env.get_action_candidates = lambda: [postpone_task]  # type: ignore[method-assign]
+    c_snapshot = actor.make_decision_snapshot(env, state_features, time_features)
+    assert c_snapshot.candidate_task_keys == (postpone_task.task_key,)
+    assert c_snapshot.branch_masks == ((False, True),)
+    c_action, _, _, _ = actor.select_snapshot(c_snapshot, deterministic=True)
+    assert c_action is not None and c_action["branch"] == ActionBranch.POSTPONE
+
+
 def test_postpone_probability_and_entropy_ignore_dummy_team_and_alignment() -> None:
     """后移重放不得读取占位团队/对齐字段或未激活动作头。"""
     env = _new_env()

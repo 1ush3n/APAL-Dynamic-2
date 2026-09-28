@@ -134,6 +134,7 @@ class FormalEvaluationAgent:
             state_feat=state_feat,
             time_urgency=time_urgency,
             deterministic=True,
+            allow_postpone=self.profile.allow_postpone,
         )
         return action
 
@@ -652,7 +653,7 @@ def evaluate_single_trajectory(
             "不代表正式图策略方法C"
         )
         agent_type = "Heuristic-Debug"
-    if agent_type not in {"Heuristic-Debug", "Method-C", "Method-D"}:
+    if agent_type not in {"Heuristic-Debug", "Method-B", "Method-C", "Method-D"}:
         raise ValueError(f"未知智能体类型: {agent_type}")
     env.reset()
     baseline_material_ready_by_key = {
@@ -708,7 +709,7 @@ def evaluate_single_trajectory(
 
             if agent_type == "Heuristic-Debug":
                 action = agent.select_action(env)
-            elif agent_type in {"Method-C", "Method-D"}:
+            elif agent_type in {"Method-B", "Method-C", "Method-D"}:
                 if isinstance(agent, FormalEvaluationAgent):
                     action = agent.select_action(env)
                 else:

@@ -516,6 +516,7 @@ class ActorCriticWork3(nn.Module):
         episode_id: int = -1,
         episode_index: int | None = None,
         estimated_cmax: float | None = None,
+        allow_postpone: bool = True,
     ) -> DecisionSnapshot:
         """兼容单环境入口：从当前现场生成不含环境引用的CPU决策快照。"""
         return build_decision_snapshot(
@@ -527,6 +528,7 @@ class ActorCriticWork3(nn.Module):
             episode_id=episode_id,
             episode_index=env.step_count if episode_index is None else episode_index,
             estimated_cmax=estimated_cmax,
+            allow_postpone=allow_postpone,
         )
 
     @torch.no_grad()
@@ -536,9 +538,16 @@ class ActorCriticWork3(nn.Module):
         state_feat: torch.Tensor,
         time_urgency: torch.Tensor,
         deterministic: bool = False,
+        *,
+        allow_postpone: bool = True,
     ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
         """兼容旧调用者，先冻结现场快照，再走纯快照策略入口。"""
-        snapshot = self.make_decision_snapshot(env, state_feat, time_urgency)
+        snapshot = self.make_decision_snapshot(
+            env,
+            state_feat,
+            time_urgency,
+            allow_postpone=allow_postpone,
+        )
         return self.select_snapshot(snapshot, deterministic=deterministic)
 
     @torch.no_grad()

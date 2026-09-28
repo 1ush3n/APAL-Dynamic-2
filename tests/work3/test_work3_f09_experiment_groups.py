@@ -137,6 +137,36 @@ def test_formal_c_and_d_share_graph_policy_but_only_d_enables_time_learning() ->
     assert profile_d.use_learned_time_shaping is True
 
 
+def test_formal_b_uses_fixed_station_graph_policy_without_time_learning() -> None:
+    """B与C使用同类图策略，但B关闭后移及全部学习时间机制。"""
+    profile = build_method_profile("B")
+
+    assert profile.name == "B"
+    assert profile.graph_policy is True
+    assert profile.allow_postpone is False
+    assert profile.use_time_auxiliary is False
+    assert profile.use_corrected_time_input is False
+    assert profile.use_learned_time_shaping is False
+
+    config = load_work3_runtime_config(
+        Path("conf/work3/train_pilot.yaml"),
+        overrides=("runtime.method_profile=B",),
+    )
+    assert config.runtime.method_profile == "B"
+
+
+def test_b_checkpoint_is_bound_to_b_profile(tmp_path: Path) -> None:
+    """B正式推理仅接受profile元数据完全匹配的检查点。"""
+    b_checkpoint = _save_profile_checkpoint(tmp_path / "b.pt", "B")
+    agent = build_formal_evaluation_agent("B", b_checkpoint)
+    assert agent.profile.name == "B"
+    assert agent.profile.allow_postpone is False
+
+    c_checkpoint = _save_profile_checkpoint(tmp_path / "c.pt", "C")
+    with pytest.raises(ValueError, match="profile不匹配"):
+        build_formal_evaluation_agent("B", c_checkpoint)
+
+
 @pytest.mark.parametrize(
     ("variant", "auxiliary", "corrected_input", "learned_shaping"),
     [
@@ -174,13 +204,14 @@ def test_yaml_runtime_config_accepts_confirmed_ablation_profiles(variant: str) -
     assert config.runtime.method_profile == variant
 
 
-def test_training_cli_accepts_ablation_profile_override() -> None:
+@pytest.mark.parametrize("variant", ["B", "E"])
+def test_training_cli_accepts_fixed_station_and_ablation_profiles(variant: str) -> None:
     result = subprocess.run(
         [
             sys.executable,
             "scripts/work3/train_ppo_work3.py",
             "--method",
-            "E",
+            variant,
             "--help",
         ],
         capture_output=True,
@@ -189,6 +220,37 @@ def test_training_cli_accepts_ablation_profile_override() -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_fixed_station_profile_runs_through_formal_evaluation_entry() -> None:
+    """正式评测入口接受B profile并执行其禁止后移的图策略。"""
+    from envs.work3.environment import AirLineEnvWork3
+    from models.work3.actor_critic import ActorCriticWork3
+    from scripts.work3.evaluate_c_vs_d import (
+        FormalEvaluationAgent,
+        evaluate_single_trajectory,
+    )
+
+    profile = build_method_profile("B")
+    agent = FormalEvaluationAgent(
+        profile,
+        ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64),
+        None,
+        debug_random=True,
+    )
+    env = AirLineEnvWork3(
+        baseline_json_path="data/work3/real_283_k10_baseline.json"
+    )
+    result = evaluate_single_trajectory(
+        env,
+        "Method-B",
+        agent,
+        max_decisions=1,
+    )
+
+    assert result["agent"] == "Method-B"
+    assert result["success"] is False
+    assert result["termination_reason"] == "decision_limit"
 
 
 @pytest.mark.parametrize("variant", ["E", "G"])

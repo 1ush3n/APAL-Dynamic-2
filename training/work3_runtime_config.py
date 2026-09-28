@@ -122,8 +122,8 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
             raise ValueError("pilot必须配置正整数runtime.successful_batch_target")
     elif successful_batch_target is not None:
         raise ValueError("smoke不得设置runtime.successful_batch_target")
-    if config.runtime.method_profile not in {"C", "D", "E", "F", "G"}:
-        raise ValueError("runtime.method_profile仅支持C、D、E、F或G")
+    if config.runtime.method_profile not in {"B", "C", "D", "E", "F", "G"}:
+        raise ValueError("runtime.method_profile仅支持B、C、D、E、F或G")
     validate_time_head_initialization(
         str(config.runtime.time_head_initialization),
         OmegaConf.select(config, "paths.time_head_checkpoint"),

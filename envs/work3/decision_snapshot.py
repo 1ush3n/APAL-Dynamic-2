@@ -252,12 +252,22 @@ def build_decision_snapshot(
     episode_id: int,
     episode_index: int,
     estimated_cmax: float | None,
+    allow_postpone: bool = True,
 ) -> DecisionSnapshot:
     """由CPU环境进程或兼容入口构造一致的策略决策快照。"""
     from models.work3.actor_critic import extract_candidate_task_features
     from models.work3.graph_builder import GRAPH_FEATURE_VERSION
 
     candidates = env.get_action_candidates()
+    branch_masks = tuple(env.get_action_branch_mask(task) for task in candidates)
+    if not allow_postpone:
+        kept = tuple(
+            (task, mask)
+            for task, mask in zip(candidates, branch_masks, strict=True)
+            if mask[0]
+        )
+        candidates = [task for task, _ in kept]
+        branch_masks = tuple((True, False) for _ in kept)
     candidate_keys = tuple(task.task_key for task in candidates)
     workers_by_station: dict[int, tuple[WorkerSnapshot, ...]] = {}
     contexts: list[TeamCompletionContext] = []
@@ -276,7 +286,6 @@ def build_decision_snapshot(
                 workers=station_workers,
             )
         )
-    branch_masks = tuple(env.get_action_branch_mask(task) for task in candidates)
     return DecisionSnapshot(
         worker_id=int(worker_id),
         episode_id=int(episode_id),

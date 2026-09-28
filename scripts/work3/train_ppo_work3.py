@@ -992,7 +992,7 @@ def run_training(
                 "训练入口与spawn环境累计step不一致："
                 f"training={total_env_steps}, vector={env.total_env_steps}"
             )
-        snapshots = env.snapshots()
+        snapshots = env.snapshots(allow_postpone=profile.allow_postpone)
         worker_states = []
         for worker_id, (scenario, reset_result, snapshot) in enumerate(
             zip(scenarios, reset_results, snapshots, strict=True)
@@ -1424,11 +1424,16 @@ def run_training(
                     )
                     mark_worker_infrastructure_interrupted(worker_id, reason)
                 next_snapshots = {
-                    worker_id: env.snapshot(worker_id=worker_id)
+                    worker_id: env.snapshot(
+                        worker_id=worker_id,
+                        allow_postpone=profile.allow_postpone,
+                    )
                     for worker_id in completed_worker_ids
                 }
             else:
-                next_snapshots = dict(enumerate(env.snapshots()))
+                next_snapshots = dict(
+                    enumerate(env.snapshots(allow_postpone=profile.allow_postpone))
+                )
 
             for worker_id in completed_worker_ids:
                 state = worker_states[worker_id]
@@ -2195,9 +2200,9 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=None, help="学习率")
     parser.add_argument(
         "--method",
-        choices=("C", "D", "E", "F", "G"),
+        choices=("B", "C", "D", "E", "F", "G"),
         default=None,
-        help="C/D主方法或E/F/G消融配置",
+        help="B固定站位、C/D主方法或E/F/G消融配置",
     )
     parser.add_argument("--baseline", type=Path, default=None)
     parser.add_argument("--scenarios", type=Path, default=None)
