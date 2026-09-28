@@ -62,6 +62,13 @@ from utils.work3.trajectory_feasibility import (
     TrajectoryExecutionRecord,
     validate_trajectory,
 )
+from utils.work3.disturbance_generator import (
+    DISTURBANCE_DEFINITION,
+    DISTURBANCE_LABEL,
+    DISTURBANCE_LEGACY_NAMES,
+    DISTURBANCE_METRIC_SEMANTICS,
+    DISTURBANCE_TYPE,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -932,14 +939,23 @@ def run_training(
         hit_keys = list(state.scenario_status.get("actual_hit_task_keys", ()))
         state.scenario_log["actual_hit_task_keys"] = hit_keys
         state.scenario_log["actual_hit_count"] = len(hit_keys)
-        material_ready_advanced_keys = list(
-            state.scenario_status.get("material_ready_advanced_task_keys", ())
+        start_availability_advanced_keys = list(
+            state.scenario_status.get(
+                "start_availability_advanced_task_keys",
+                state.scenario_status.get("material_ready_advanced_task_keys", ()),
+            )
+        )
+        state.scenario_log["start_availability_advanced_task_keys"] = (
+            start_availability_advanced_keys
+        )
+        state.scenario_log["start_availability_advanced_count"] = len(
+            start_availability_advanced_keys
         )
         state.scenario_log["material_ready_advanced_task_keys"] = (
-            material_ready_advanced_keys
+            start_availability_advanced_keys
         )
         state.scenario_log["material_ready_advanced_count"] = len(
-            material_ready_advanced_keys
+            start_availability_advanced_keys
         )
         state.scenario_log["unhit_reasons"] = dict(
             state.scenario_status.get("unhit_reasons", {})
@@ -986,6 +1002,8 @@ def run_training(
                 "episode_index": wave,
                 "episode_id": episode_id,
                 "scenario_id": scenario["scenario_id"],
+                "disturbance_type": str(scenario.get("disturbance_type", DISTURBANCE_TYPE)),
+                "disturbance_label": str(scenario.get("disturbance_label", DISTURBANCE_LABEL)),
                 "timing": scenario["timing"],
                 "intensity": scenario["intensity"],
                 "station_id": scenario["station_id"],
@@ -1002,6 +1020,8 @@ def run_training(
                 "disturbance_triggered": False,
                 "actual_hit_task_keys": [],
                 "actual_hit_count": 0,
+                "start_availability_advanced_task_keys": [],
+                "start_availability_advanced_count": 0,
                 "material_ready_advanced_task_keys": [],
                 "material_ready_advanced_count": 0,
                 "unhit_reasons": {},
@@ -1888,6 +1908,13 @@ def run_training(
         "checkpoint_evaluation_eligible": checkpoint_evaluation_eligible,
         "method_variant": profile.name,
         "method_profile": config["method_profile"],
+        "disturbance_semantics": {
+            "type": DISTURBANCE_TYPE,
+            "label": DISTURBANCE_LABEL,
+            "definition": DISTURBANCE_DEFINITION,
+            "legacy_names": DISTURBANCE_LEGACY_NAMES,
+            "metric_semantics": dict(DISTURBANCE_METRIC_SEMANTICS),
+        },
         "time_head_initialization": time_head_initialization_source,
         "seed": int(seed),
         "seed_role": "training_initialization_and_episode_schedule",

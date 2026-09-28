@@ -3,7 +3,7 @@
 统一支持核心事件推进：
 1. DISTURBANCE: 扰动在 tau 时刻揭示，优先更新状态并撤销非法预约；
 2. TASK_FINISH: 任务完工、释放工人、解锁后继；
-3. MATERIAL_ARRIVE: 物料/可用性到达、就绪解锁；
+3. MATERIAL_ARRIVE: 旧枚举名；工序开工可用下界到达、就绪解锁；
 4. SYNCHRONOUS_TRANSFER: 全线同步转站脉动；
 5. TASK_START: 预约任务到达开工时刻，转为 RUNNING。
 
@@ -27,7 +27,7 @@ class EventType(IntEnum):
     同刻优先级原则（数值越小优先级越高）：
     1. TASK_FINISH: 先完工并释放工人与槽位；
     2. DISTURBANCE: 扰动在任务开工前揭示，以便撤销冲突预约；
-    3. MATERIAL_ARRIVE: 物料到达解锁就绪；
+    3. MATERIAL_ARRIVE: 旧枚举名，开工可用下界到达并解锁就绪；
     4. SYNCHRONOUS_TRANSFER: 本周期全部完工后脉动转站；
     5. TASK_START: 预约工序开工（此时工人已完成前序释放）。
     """

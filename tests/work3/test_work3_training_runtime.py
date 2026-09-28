@@ -1107,11 +1107,15 @@ def test_disturbance_hit_with_later_existing_release_has_zero_added_wait() -> No
 
     assert worker_status["actual_hit_task_keys"] == (target_key,)
     assert worker_status["actual_hit_count"] == 1
+    assert worker_status["start_availability_advanced_task_keys"] == ()
+    assert worker_status["start_availability_advanced_count"] == 0
     assert worker_status["material_ready_advanced_task_keys"] == ()
     assert worker_status["material_ready_advanced_count"] == 0
     assert worker_status["unhit_reasons"] == {}
     assert evaluation_status["actual_hit_task_keys"] == [target_key]
     assert evaluation_status["actual_hit_count"] == 1
+    assert evaluation_status["start_availability_advanced_task_keys"] == []
+    assert evaluation_status["start_availability_advanced_count"] == 0
     assert evaluation_status["material_ready_advanced_task_keys"] == []
     assert evaluation_status["material_ready_advanced_count"] == 0
     assert evaluation_status["unhit_reasons"] == {}

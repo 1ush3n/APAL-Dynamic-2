@@ -29,6 +29,7 @@ from utils.work3.uniform_baseline_warmup import (
     run_uniform_baseline_warmup,
     validate_scenario_after_warmup,
 )
+from utils.work3.disturbance_generator import DISTURBANCE_LABEL, DISTURBANCE_TYPE
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +91,7 @@ def _execution_record(
         "start": float(task.actual_start),
         "end": float(task.actual_end),
         "material_ready_time": float(task.material_ready_time),
+        "start_availability_time": float(task.material_ready_time),
         "station_entry_time": aircraft.entry_times.get(station_id),
         "aircraft_station_at_start": int(actual_start_station),
         "station_exit_time": aircraft.exit_times.get(station_id),
@@ -144,6 +146,9 @@ def _trajectory_audit(
             "cost_revision": float(env.cost_revision),
         },
         "execution_records": execution_records,
+        "execution_record_field_semantics": {
+            "start_availability_time": "工序开工可用性下界；material_ready_time为历史兼容别名。"
+        },
         "task_constraints": task_constraints,
         "worker_skills": {
             int(worker_id): tuple(sorted(int(skill) for skill in skills))
@@ -204,11 +209,19 @@ def _scenario_status(
     }
     return {
         "scenario_id": (scenario or {}).get("scenario_id"),
+        "disturbance_type": (
+            None if scenario is None else str(scenario.get("disturbance_type", DISTURBANCE_TYPE))
+        ),
+        "disturbance_label": (
+            None if scenario is None else str(scenario.get("disturbance_label", DISTURBANCE_LABEL))
+        ),
         "started": scenario is not None,
         "event_triggered": bool(event_triggered),
         "scheduled_target_count": len(target_keys),
         "actual_hit_task_keys": hit_keys,
         "actual_hit_count": len(hit_keys),
+        "start_availability_advanced_task_keys": material_ready_advanced_keys,
+        "start_availability_advanced_count": len(material_ready_advanced_keys),
         "material_ready_advanced_task_keys": material_ready_advanced_keys,
         "material_ready_advanced_count": len(material_ready_advanced_keys),
         "unhit_reasons": unhit_reasons,

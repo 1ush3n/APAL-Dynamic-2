@@ -3,12 +3,12 @@
 核心数学模型与技术规范：
 依据《方法设计确认稿》第 7.1 节与物理完工下界增强设计：
 对当前周期 q (转站起点 P_{q-1} = last_transfer_time)，基于当前时刻 t、各站实际在制作业完工、
-已知延误工序最早完工下界以及剩余总工时，输出无学习的静态基准估计完成时刻 P_q^h(s)。
+已知开工可用性受限工序的最早完工下界以及剩余总工时，输出无学习的静态基准估计完成时刻 P_q^h(s)。
 
 站位完工下界：
   F_s = max(
       max_{u in Running(s)} (u.start + u.duration),
-      max_{i in Delayed(s)} (r_i + d_i),
+      max_{i in AvailabilityDelayed(s)} (r_i + d_i),
       t + W_remain(s) / M_s
   )
 全线同步脉动预计完成时刻：
@@ -62,7 +62,7 @@ def compute_station_estimated_finish(
     ]
     f_running = max(running_finishes) if running_finishes else current_time
 
-    # 2. 已知延误到料工序 (DelayedTasks) 的最早完工时刻下界：r_{ki} + d_{ki}
+    # 2. 已知开工可用下界在未来的工序，其最早完工时刻下界：r_{ki} + d_{ki}
     delayed_finishes = [
         float(t.material_ready_time + t.duration)
         for t in st_tasks

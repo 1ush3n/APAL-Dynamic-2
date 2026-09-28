@@ -4,9 +4,9 @@
 1. 优先在当前站位按工艺工序流推进就绪工序 (Branch A: STATION_EXECUTE)；
 2. 团队选派：优先选派基准指派团队 W_i^0，或从本站绑定的空闲资质工人中优选团队，并执行基准二元对齐 (align=1)；
 3. 超期后移保节拍规则 (用户已确认的物理准则)：
-   若工序遭遇突发严重缺料且恢复时刻 R > P_{q-1} + H_0 (留在本站必将直接导致全线转站超期)，
-   且该工序处于非末站 (站位 0~3)，则果断触发分支 B (POSTPONE) 合法后移至下一站，保住全线准时脉动转站；
-   若为末站 (不可后移) 或物料在当前节拍内就绪，则留在本站排产。
+   若工序遭遇延迟开工事件且恢复时刻 R > P_{q-1} + H_0 (留在本站必将直接导致全线转站超期)，
+   且该工序处于非末站 (站位 0~3)，则选择合法的分支 B (POSTPONE) 后移至下一站；
+   若为末站 (不可后移) 或开工可用下界在当前节拍内，则留在本站排产。
 4. 提供 run_trajectory() 全流程自主运行器，记录每步状态与时间估计。
 """
 
@@ -52,7 +52,7 @@ class HeuristicAgentWork3:
         # ------------------
         # 1. 检查物理后移保节拍准则 (Branch B: POSTPONE)
         # ------------------
-        # 条件：物料延迟导致在当前名义节拍内无法就绪 (R > P_{q-1} + H_0)，且非末站工序 (站位 0~3)
+        # 条件：开工可用下界超过当前名义节拍 (R > P_{q-1} + H_0)，且非末站工序 (站位 0~3)
         is_delayed_beyond_cycle = task.material_ready_time > nominal_cycle_end + 1e-4
         can_postpone = env.validate_postpone(task) is None
 
@@ -66,7 +66,7 @@ class HeuristicAgentWork3:
         # 2. 留在当前站排产 (Branch A: STATION_EXECUTE)
         # ------------------
         if not env.can_reserve(task):
-            # 前驱尚未完成或已知物料尚未到达时，先推进到下一个事件；
+            # 前驱尚未完成或开工可用下界尚未满足时，先推进到下一个事件；
             # 只有上面的超期规则才主动后移，避免无扰动轨迹凭空增加改站。
             return {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
         st_workers = state.station_worker_bindings.get(task.current_station, [])

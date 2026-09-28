@@ -49,6 +49,13 @@ from utils.work3.objective_evaluator import (
     build_objective_report,
     evaluate_trajectory_objective,
 )
+from utils.work3.disturbance_generator import (
+    DISTURBANCE_DEFINITION,
+    DISTURBANCE_LABEL,
+    DISTURBANCE_LEGACY_NAMES,
+    DISTURBANCE_METRIC_SEMANTICS,
+    DISTURBANCE_TYPE,
+)
 from utils.work3.trajectory_feasibility import (
     check_environment_trajectory_feasibility,
 )
@@ -490,21 +497,6 @@ def summarize_final_station_deviation(
     }
 
 
-def _count_actual_disturbance_hits(
-    env: AirLineEnvWork3,
-    scenario: dict[str, Any] | None,
-) -> int:
-    """按环境实际继承的物料恢复时刻统计已命中的受扰工序。"""
-    if scenario is None:
-        return 0
-    return sum(
-        1
-        for task_key in scenario.get("affected_task_keys", [])
-        if task_key in env.state.tasks
-        and env.state.tasks[task_key].material_ready_time > env.tolerance
-    )
-
-
 def summarize_disturbance_effects(
     task_records: dict[str, Any],
     scenario: dict[str, Any] | None,
@@ -515,17 +507,30 @@ def summarize_disturbance_effects(
     event_result: dict[str, Any] | None = None,
     tolerance: float = 1e-5,
 ) -> dict[str, Any]:
-    """分别统计事件命中、可用下界推进、实际开工偏差与跨飞机影响。"""
+    """分别统计延迟开工目标命中、下界变化及相对基准开工偏差。"""
+    disturbance_type = (
+        None if scenario is None else str(scenario.get("disturbance_type", DISTURBANCE_TYPE))
+    )
+    disturbance_label = (
+        None if scenario is None else str(scenario.get("disturbance_label", DISTURBANCE_LABEL))
+    )
     if scenario is None:
         return {
+            "disturbance_type": None,
+            "disturbance_label": None,
+            "disturbance_legacy_names": DISTURBANCE_LEGACY_NAMES,
             "target_count": 0,
             "actual_hit_count": 0,
             "actual_hit_rate": 0.0,
             "actual_hit_task_keys": [],
+            "start_availability_advanced_count": 0,
+            "start_availability_advanced_task_keys": [],
             "material_ready_advanced_count": 0,
             "material_ready_advanced_task_keys": [],
             "unhit_reasons": {},
             "observed_added_wait_hours": 0.0,
+            "observed_start_deviation_from_baseline_hours": 0.0,
+            "metric_semantics": dict(DISTURBANCE_METRIC_SEMANTICS),
             "cross_aircraft_affected_task_count": 0,
             "cross_aircraft_affected_aircraft_ids": [],
             "event_triggered": False,
@@ -602,14 +607,21 @@ def summarize_disturbance_effects(
     cross_aircraft_ids = sorted({int(task_records[key].aircraft_id) for key in cross_aircraft_keys})
     target_count = len(target_keys)
     return {
+        "disturbance_type": disturbance_type,
+        "disturbance_label": disturbance_label,
+        "disturbance_legacy_names": DISTURBANCE_LEGACY_NAMES,
         "target_count": target_count,
         "actual_hit_count": len(actual_hit_keys),
         "actual_hit_rate": len(actual_hit_keys) / target_count if target_count else 0.0,
         "actual_hit_task_keys": actual_hit_keys,
+        "start_availability_advanced_count": len(material_ready_advanced_keys),
+        "start_availability_advanced_task_keys": material_ready_advanced_keys,
         "material_ready_advanced_count": len(material_ready_advanced_keys),
         "material_ready_advanced_task_keys": material_ready_advanced_keys,
         "unhit_reasons": unhit_reasons,
         "observed_added_wait_hours": added_wait,
+        "observed_start_deviation_from_baseline_hours": added_wait,
+        "metric_semantics": dict(DISTURBANCE_METRIC_SEMANTICS),
         "cross_aircraft_affected_task_count": len(cross_aircraft_keys),
         "cross_aircraft_affected_aircraft_ids": cross_aircraft_ids,
         "event_triggered": bool(event_triggered),
@@ -813,6 +825,10 @@ def evaluate_single_trajectory(
     return {
         "agent": agent_type,
         "scenario_id": scenario["scenario_id"] if scenario else "NOMINAL",
+        "disturbance_type": effect_report["disturbance_type"],
+        "disturbance_label": effect_report["disturbance_label"],
+        "disturbance_definition": DISTURBANCE_DEFINITION if scenario else None,
+        "disturbance_legacy_names": DISTURBANCE_LEGACY_NAMES,
         "warmup_mode": warmup_mode,
         "warmup": None if warmup_result is None else asdict(warmup_result),
         "warmup_steps": warmup_steps,

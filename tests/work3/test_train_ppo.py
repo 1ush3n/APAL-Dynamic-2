@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 import os
 from pathlib import Path
@@ -208,11 +209,23 @@ def test_training_records_forced_advance_from_spawn_worker(
     assert result["history"][0]["total_steps"] == 1
     assert result["history"][0]["environment_steps"] == 1
     assert result["scenario_log"][0]["disturbance_triggered"] is True
+    assert result["scenario_log"][0]["disturbance_type"] == "task_start_availability_delay"
+    assert result["scenario_log"][0]["disturbance_label"] == "工序延迟开工（开工可用性延迟）"
+    assert result["disturbance_semantics"]["type"] == "task_start_availability_delay"
+    assert "不模拟共享物料" in result["disturbance_semantics"]["definition"]
     assert result["scenario_log"][0]["unhit_reasons"] == {
         "missing-task": "target_not_in_instance"
     }
     assert result["scenario_log"][0]["material_ready_advanced_task_keys"] == []
     assert result["scenario_log"][0]["material_ready_advanced_count"] == 0
+    assert result["scenario_log"][0]["start_availability_advanced_task_keys"] == []
+    assert result["scenario_log"][0]["start_availability_advanced_count"] == 0
+    persisted = json.loads(Path(result["report_path"]).read_text(encoding="utf-8"))
+    assert persisted["scenario_log"][0]["disturbance_type"] == "task_start_availability_delay"
+    assert persisted["scenario_log"][0]["start_availability_advanced_count"] == 0
+    assert persisted["disturbance_semantics"]["legacy_names"][
+        "TaskRuntimeState.material_ready_time"
+    ].startswith("保留的旧字段名")
     assert result["trajectory_audit"]["step_count"] == 1
     assert result["lightning_fit_calls"] == 1
 

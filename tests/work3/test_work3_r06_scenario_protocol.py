@@ -44,7 +44,7 @@ def _group_key(scenario: dict) -> tuple[int, int, tuple[str, ...]]:
 
 
 def test_r06_scenarios_report_honest_fraction_and_degeneracy(tmp_path):
-    """45 场景回归集必须诚实报告 candidate_count、intended_count、actual_fraction 与小站位离散饱和原因。"""
+    """场景生成只报告预设目标；尚未执行的命中数与实际比例必须保持缺失。"""
     out_file = tmp_path / "scenarios_9class.json"
     scenarios = generate_9class_scenarios(output_json_path=str(out_file))
     assert len(scenarios) == 45
@@ -54,14 +54,43 @@ def test_r06_scenarios_report_honest_fraction_and_degeneracy(tmp_path):
     assert len(diag["rows"]) == 45
 
     for item in diag["rows"]:
+        assert item["disturbance_type"] == "task_start_availability_delay"
+        assert item["disturbance_label"] == "工序延迟开工（开工可用性延迟）"
         assert "candidate_count" in item
         assert "intended_count" in item
-        assert "actual_hit_count" in item
-        assert "actual_fraction" in item
+        assert item["scheduled_target_count"] > 0
+        assert item["actual_hit_count"] is None
+        assert item["actual_fraction"] is None
         assert "delta_h0_ratio" in item
         if item["candidate_count"] > 0:
-            expected_frac = round(item["actual_hit_count"] / item["candidate_count"], 6)
-            assert abs(item["actual_fraction"] - expected_frac) < 1e-6
+            expected_frac = round(
+                item["scheduled_target_count"] / item["candidate_count"], 6
+            )
+            assert abs(item["scheduled_target_fraction"] - expected_frac) < 1e-6
+
+    serialized = json.loads(out_file.read_text(encoding="utf-8"))
+    assert serialized[0]["disturbance_type"] == "task_start_availability_delay"
+    assert serialized[0]["disturbance_label"] == "工序延迟开工（开工可用性延迟）"
+    assert "r_new=max(r_old,R)" in serialized[0]["disturbance_definition"]
+    assert serialized[0]["scheduled_target_count"] == len(
+        serialized[0]["affected_task_keys"]
+    )
+    assert serialized[0]["actual_hit_count"] is None
+    assert serialized[0]["actual_fraction"] is None
+
+
+def test_legacy_scenario_hit_fields_are_not_treated_as_observed_execution() -> None:
+    """旧清单的actual_hit字段实际是目标数，诊断不得把它冒充运行命中。"""
+    legacy = json.loads(
+        Path("data/work3/experiment_splits/test.json").read_text(encoding="utf-8")
+    )[0]
+    assert int(legacy["actual_hit_count"]) == len(legacy["affected_task_keys"])
+
+    row = dg.summarize_scenario_diagnostics([legacy])["rows"][0]
+
+    assert row["scheduled_target_count"] == len(legacy["affected_task_keys"])
+    assert row["actual_hit_count"] is None
+    assert row["actual_fraction"] is None
 
 
 def test_r06_split_scenarios_guarantees_zero_fingerprint_and_group_overlap():
@@ -200,10 +229,20 @@ def test_default_test_manifest_is_reproducible_from_next_cycle_scenarios(
     actual = json.loads(
         Path("data/work3/experiment_splits/test.json").read_text(encoding="utf-8")
     )
+    event_fields = (
+        "scenario_id", "timing", "intensity", "station_id", "aircraft_id",
+        "tau", "delta", "recovery_time", "affected_task_keys",
+    )
     generated_by_id = {item["scenario_id"]: item for item in generated}
     actual_by_id = {item["scenario_id"]: item for item in actual}
 
-    assert actual_by_id == generated_by_id
+    assert set(actual_by_id) == set(generated_by_id)
+    for scenario_id, generated_item in generated_by_id.items():
+        assert {
+            field: actual_by_id[scenario_id][field] for field in event_fields
+        } == {field: generated_item[field] for field in event_fields}
+        assert generated_item["disturbance_type"] == "task_start_availability_delay"
+        assert generated_item["disturbance_label"] == "工序延迟开工（开工可用性延迟）"
 
 
 def test_later_cycle_generation_does_not_overwrite_the_cycle_six_regression_file(

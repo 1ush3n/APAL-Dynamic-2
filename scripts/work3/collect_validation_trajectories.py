@@ -11,7 +11,7 @@
    y_n = (P_q^actual - P_q^h(s_n)) / H_0
 3. 状态特征向量包含 32 维精炼宏观与微观物理特征：
    - 当前周期已运行时间比例；
-   - 五大工位剩余工作量、在制任务数、延误物料数量与最大延迟；
+   - 五大工位剩余工作量、在制任务数、开工可用性受限工序数与最大等待；
    - 各站在场飞机分布；
    - 估计剩余时间与名义剩余时间；
    - 全线生产进度、后移工序数与累计成本。
@@ -47,6 +47,12 @@ from utils.work3.uniform_baseline_warmup import (
     validate_scenario_after_warmup,
 )
 from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
+from utils.work3.disturbance_generator import (
+    DISTURBANCE_LABEL,
+    DISTURBANCE_LEGACY_NAMES,
+    DISTURBANCE_METRIC_SEMANTICS,
+    DISTURBANCE_TYPE,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -113,6 +119,10 @@ def collect_single_trajectory(
         validate_scenario_after_warmup(scenario, warmup_result)
     elif warmup_mode != "none":
         raise ValueError("warmup_mode必须为none或uniform_baseline")
+    baseline_start_availability_by_key = {
+        task_key: float(task.material_ready_time)
+        for task_key, task in env.state.tasks.items()
+    }
     if scenario is not None:
         env.load_scenario(scenario)
 
@@ -203,10 +213,30 @@ def collect_single_trajectory(
         if scenario is None
         else env.disturbance_event_results.get(str(scenario.get("scenario_id", "")))
     )
+    actual_hit_keys = (
+        [] if event_result is None else list(event_result.get("actual_hit_task_keys", []))
+    )
+    start_availability_advanced_keys = [
+        task_key
+        for task_key in actual_hit_keys
+        if env.state.tasks[task_key].material_ready_time
+        > baseline_start_availability_by_key.get(task_key, 0.0) + env.tolerance
+    ]
+    observed_start_deviation_hours = sum(
+        max(0.0, float(env.state.tasks[key].actual_start) - float(env.state.tasks[key].baseline_start))
+        for key in actual_hit_keys
+        if env.state.tasks[key].actual_start is not None
+    )
 
     return {
         "trajectory_id": trajectory_id,
         "scenario_id": scenario["scenario_id"] if scenario else "NOMINAL_BASELINE",
+        "disturbance_type": (
+            None if scenario is None else scenario.get("disturbance_type", DISTURBANCE_TYPE)
+        ),
+        "disturbance_label": (
+            None if scenario is None else scenario.get("disturbance_label", DISTURBANCE_LABEL)
+        ),
         "collector_policy": "HeuristicAgentWork3",
         "collector_role": "offline_m4_sampling_only",
         "success": True,
@@ -215,12 +245,15 @@ def collect_single_trajectory(
         "total_tasks": len(env.state.tasks),
         "feasible": feasible,
         "constraint_violations": constraint_violations,
-        "actual_hit_count": len(
-            [] if event_result is None else event_result.get("actual_hit_task_keys", [])
-        ),
-        "actual_hit_task_keys": (
-            [] if event_result is None else list(event_result.get("actual_hit_task_keys", []))
-        ),
+        "actual_hit_count": len(actual_hit_keys),
+        "actual_hit_task_keys": actual_hit_keys,
+        "observed_start_deviation_from_baseline_hours": observed_start_deviation_hours,
+        "start_availability_advanced_count": len(start_availability_advanced_keys),
+        "start_availability_advanced_task_keys": start_availability_advanced_keys,
+        "material_ready_advanced_count": len(start_availability_advanced_keys),
+        "material_ready_advanced_task_keys": start_availability_advanced_keys,
+        "disturbance_metric_semantics": dict(DISTURBANCE_METRIC_SEMANTICS),
+        "disturbance_legacy_names": DISTURBANCE_LEGACY_NAMES,
         "unhit_reasons": (
             {} if event_result is None else dict(event_result.get("unhit_reasons", {}))
         ),

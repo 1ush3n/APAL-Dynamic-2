@@ -148,11 +148,22 @@ def test_effect_report_distinguishes_hit_wait_and_cross_aircraft_impact() -> Non
     )
 
     assert report["target_count"] == 1
+    assert report["disturbance_type"] == "task_start_availability_delay"
+    assert report["disturbance_label"] == "工序延迟开工（开工可用性延迟）"
+    assert report["disturbance_legacy_names"]["EventType.MATERIAL_ARRIVE"].startswith(
+        "保留的旧枚举名"
+    )
     assert report["actual_hit_count"] == 1
     assert report["actual_hit_rate"] == pytest.approx(1.0)
+    assert report["start_availability_advanced_task_keys"] == ["target"]
+    assert report["start_availability_advanced_count"] == 1
     assert report["material_ready_advanced_task_keys"] == ["target"]
     assert report["material_ready_advanced_count"] == 1
+    assert report["observed_start_deviation_from_baseline_hours"] == pytest.approx(15.0)
     assert report["observed_added_wait_hours"] == pytest.approx(15.0)
+    assert "未作扰动因果归因" in report["metric_semantics"][
+        "observed_start_deviation_from_baseline_hours"
+    ]
     assert report["cross_aircraft_affected_task_count"] == 1
     assert report["cross_aircraft_affected_aircraft_ids"] == [2]
 
@@ -186,7 +197,11 @@ def test_effect_report_separates_unstarted_hit_from_unhit_targets() -> None:
     )
 
     assert report["actual_hit_task_keys"] == ["not-delayed"]
+    assert report["disturbance_type"] == "task_start_availability_delay"
+    assert report["disturbance_label"] == "工序延迟开工（开工可用性延迟）"
     assert report["actual_hit_count"] == 1
+    assert report["start_availability_advanced_task_keys"] == []
+    assert report["start_availability_advanced_count"] == 0
     assert report["material_ready_advanced_task_keys"] == []
     assert report["material_ready_advanced_count"] == 0
     assert report["unhit_reasons"] == {

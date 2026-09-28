@@ -141,7 +141,7 @@ class TaskRuntimeState:
     actual_start_station: int | None = None
     actual_end: float | None = None
 
-    material_ready_time: float = 0.0  # 开工可用性到达时刻 R（受扰后继承）
+    material_ready_time: float = 0.0  # 兼容字段名：工序开工可用下界R（受扰后继承）
     postpone_count: int = 0           # 累计正式改站/后移次数 n_{ki}
     generation: int = 0               # 预约版本代数，用于失效令牌校验
     base_team: tuple[int, ...] = field(default_factory=tuple)  # 基准标准团队 W_i^0

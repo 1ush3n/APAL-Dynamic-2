@@ -20,6 +20,38 @@ from typing import Any, Sequence
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
+DISTURBANCE_TYPE = "task_start_availability_delay"
+DISTURBANCE_LABEL = "工序延迟开工（开工可用性延迟）"
+DISTURBANCE_DEFINITION = (
+    "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的"
+    "下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。"
+    "不模拟共享物料、BOM或供应链传播。"
+)
+DISTURBANCE_LEGACY_NAMES = {
+    "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+    "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+    "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+    "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+    "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+    "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+    "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+    "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。",
+}
+DISTURBANCE_METRIC_SEMANTICS = {
+    "start_availability_advanced_count": (
+        "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。"
+    ),
+    "observed_start_deviation_from_baseline_hours": (
+        "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。"
+    ),
+    "material_ready_advanced_count": (
+        "旧字段兼容别名，等同start_availability_advanced_count。"
+    ),
+    "observed_added_wait_hours": (
+        "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+    ),
+}
+
 TIMING_OFFSETS = {
     "EARLY": 0.225,
     "MID": 0.400,
@@ -57,19 +89,24 @@ class DisturbanceScenario:
     candidate_count: int
     affected_count: int
     affected_task_keys: list[str]
+    scheduled_target_count: int | None = None
+    scheduled_target_fraction: float | None = None
     timing_reference: str = "station_task_span"
     valid: bool = True
     invalid_reason: str | None = None
     intended_rho: float = 0.0
     intended_count: int = 0
-    actual_hit_count: int = 0
-    actual_fraction: float = 0.0
+    actual_hit_count: int | None = None
+    actual_fraction: float | None = None
     delta_h0_ratio: float = 0.0
     seed: int | None = None
     degeneracy_reason: str | None = None
 
     def to_dict(self) -> dict:
         data = asdict(self)
+        data["disturbance_type"] = DISTURBANCE_TYPE
+        data["disturbance_label"] = DISTURBANCE_LABEL
+        data["disturbance_definition"] = DISTURBANCE_DEFINITION
         data["event_fingerprint"] = list(compute_event_fingerprint(data))
         data["target_group_key"] = list(compute_target_group_key(data))
         return data
@@ -133,7 +170,7 @@ def _detect_intensity_degeneracy(candidate_count: int, rho: float) -> str | None
 def summarize_scenario_diagnostics(
     scenarios: Sequence[dict[str, Any] | DisturbanceScenario],
 ) -> dict[str, Any]:
-    """诚实统计每个场景及 (station, intensity) 的候选数、目标命中数、实际命中数、实际比例与退化原因。"""
+    """汇总尚未执行场景的候选数和预设目标；实际命中留待运行轨迹统计。"""
     rows: list[dict[str, Any]] = []
     by_station_intensity: dict[str, dict[str, Any]] = {}
 
@@ -141,7 +178,7 @@ def summarize_scenario_diagnostics(
         d = item.to_dict() if isinstance(item, DisturbanceScenario) else dict(item)
         cand_count = int(d.get("candidate_count", 0))
         affected_keys = [str(k) for k in d.get("affected_task_keys", [])]
-        actual_hit = len(affected_keys)
+        scheduled_target_count = len(affected_keys)
         intensity = str(d.get("intensity", "LOW"))
         rho = float(d.get("intended_rho") or INTENSITY_SPECS.get(intensity, {}).get("rho", 0.0))
         intended_count = (
@@ -149,7 +186,9 @@ def summarize_scenario_diagnostics(
             if d.get("intended_count") is not None and int(d.get("intended_count", 0)) > 0
             else (max(1, math.ceil(rho * cand_count)) if cand_count > 0 else 0)
         )
-        actual_fraction = round(actual_hit / cand_count, 6) if cand_count > 0 else 0.0
+        scheduled_target_fraction = (
+            round(scheduled_target_count / cand_count, 6) if cand_count > 0 else 0.0
+        )
         delta_h0_ratio = float(
             d.get("delta_h0_ratio")
             or INTENSITY_SPECS.get(intensity, {}).get("delta_ratio", 0.0)
@@ -157,6 +196,11 @@ def summarize_scenario_diagnostics(
         degeneracy = d.get("degeneracy_reason") or _detect_intensity_degeneracy(cand_count, rho)
         row = {
             "scenario_id": str(d["scenario_id"]),
+            "disturbance_type": str(d.get("disturbance_type", DISTURBANCE_TYPE)),
+            "disturbance_label": str(d.get("disturbance_label", DISTURBANCE_LABEL)),
+            "disturbance_definition": str(
+                d.get("disturbance_definition", DISTURBANCE_DEFINITION)
+            ),
             "station_id": int(d["station_id"]),
             "aircraft_id": int(d["aircraft_id"]),
             "timing": str(d["timing"]),
@@ -164,8 +208,10 @@ def summarize_scenario_diagnostics(
             "candidate_count": cand_count,
             "intended_rho": rho,
             "intended_count": intended_count,
-            "actual_hit_count": actual_hit,
-            "actual_fraction": actual_fraction,
+            "scheduled_target_count": scheduled_target_count,
+            "scheduled_target_fraction": scheduled_target_fraction,
+            "actual_hit_count": None,
+            "actual_fraction": None,
             "delta_h0_ratio": round(delta_h0_ratio, 4),
             "degeneracy_reason": degeneracy,
             "event_fingerprint": compute_event_fingerprint(d),
@@ -178,8 +224,10 @@ def summarize_scenario_diagnostics(
             "intensity": intensity,
             "candidate_count": cand_count,
             "intended_count": intended_count,
-            "actual_hit_count": actual_hit,
-            "actual_fraction": actual_fraction,
+            "scheduled_target_count": scheduled_target_count,
+            "scheduled_target_fraction": scheduled_target_fraction,
+            "actual_hit_count": None,
+            "actual_fraction": None,
             "delta_h0_ratio": row["delta_h0_ratio"],
             "degeneracy_reason": degeneracy,
         }
@@ -245,8 +293,12 @@ def generate_9class_scenarios(
                 affected_tasks = candidates[:k_affected]
                 affected_keys = [t.task_key for t in affected_tasks]
                 cand_count = len(candidates)
-                actual_hit = len(affected_keys)
-                actual_frac = round(actual_hit / cand_count, 6) if cand_count > 0 else 0.0
+                scheduled_target_count = len(affected_keys)
+                scheduled_target_fraction = (
+                    round(scheduled_target_count / cand_count, 6)
+                    if cand_count > 0
+                    else 0.0
+                )
                 degeneracy = _detect_intensity_degeneracy(cand_count, rho)
 
                 scenario = DisturbanceScenario(
@@ -259,15 +311,17 @@ def generate_9class_scenarios(
                     delta=delta,
                     recovery_time=recovery_time,
                     candidate_count=cand_count,
-                    affected_count=actual_hit,
+                    affected_count=scheduled_target_count,
                     affected_task_keys=affected_keys,
+                    scheduled_target_count=scheduled_target_count,
+                    scheduled_target_fraction=scheduled_target_fraction,
                     timing_reference="station_task_span",
                     valid=invalid_reason is None,
                     invalid_reason=invalid_reason,
                     intended_rho=rho,
                     intended_count=k_affected,
-                    actual_hit_count=actual_hit,
-                    actual_fraction=actual_frac,
+                    actual_hit_count=None,
+                    actual_fraction=None,
                     delta_h0_ratio=round(delta_ratio, 4),
                     seed=None,
                     degeneracy_reason=degeneracy,
@@ -363,8 +417,12 @@ def generate_candidate_scenario_pool(
                     if len(strided_subset) > k_slot:
                         chosen = rng.sample(strided_subset, k_slot)
                     affected_keys = sorted(str(t.task_key) for t in chosen)
-                    actual_hit = len(affected_keys)
-                    actual_frac = round(actual_hit / cand_count, 6) if cand_count > 0 else 0.0
+                    scheduled_target_count = len(affected_keys)
+                    scheduled_target_fraction = (
+                        round(scheduled_target_count / cand_count, 6)
+                        if cand_count > 0
+                        else 0.0
+                    )
                     degeneracy = _detect_intensity_degeneracy(cand_count, rho)
 
                     scenario_obj = DisturbanceScenario(
@@ -377,15 +435,17 @@ def generate_candidate_scenario_pool(
                         delta=delta,
                         recovery_time=recovery_time,
                         candidate_count=cand_count,
-                        affected_count=actual_hit,
+                        affected_count=scheduled_target_count,
                         affected_task_keys=affected_keys,
+                        scheduled_target_count=scheduled_target_count,
+                        scheduled_target_fraction=scheduled_target_fraction,
                         timing_reference="station_task_span",
                         valid=True,
                         invalid_reason=None,
                         intended_rho=rho,
                         intended_count=intended_k,
-                        actual_hit_count=actual_hit,
-                        actual_fraction=actual_frac,
+                        actual_hit_count=None,
+                        actual_fraction=None,
                         delta_h0_ratio=round(delta_ratio, 4),
                         seed=seed_val,
                         degeneracy_reason=degeneracy,
@@ -488,6 +548,10 @@ def write_experiment_splits(
             {
                 "seed": int(seed),
                 "source": "scenarios_9class.json",
+                "disturbance_type": DISTURBANCE_TYPE,
+                "disturbance_label": DISTURBANCE_LABEL,
+                "disturbance_definition": DISTURBANCE_DEFINITION,
+                "legacy_names": DISTURBANCE_LEGACY_NAMES,
                 "split_names": ["train", "validation", "test"],
                 "scenario_counts": {name: len(items) for name, items in splits.items()},
                 "unique_fingerprints": {

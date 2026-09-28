@@ -126,7 +126,7 @@ class AirLineEnvWork3:
         ac0.current_station = 0
         ac0.entry_times[0] = 0.0
 
-        # 解锁 0 号飞机在 0 号站位首批无前驱且物料就绪的工序
+        # 解锁0号飞机在0号站位首批无前驱且开工可用条件满足的工序
         self._refresh_aircraft_station_readiness(aircraft_id=0, station_id=0)
 
         return self._get_observation()
@@ -452,7 +452,7 @@ class AirLineEnvWork3:
         return self._predecessor_release_time(task) is not None
 
     def can_postpone(self, task: TaskRuntimeState) -> bool:
-        """判断任务是否可以独立后移，不要求物料已在当前时刻恢复。"""
+        """判断任务是否可以独立后移，不要求开工可用下界已在当前时刻满足。"""
         if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
             return False
         if task.status == TaskStatus.RESERVED and task.actual_start is not None:
@@ -1144,12 +1144,12 @@ class AirLineEnvWork3:
            - 立刻释放所有指派工人的时间日历预占区间；
            - 调用 task.cancel_reservation() 递增版本代数，使事件队列旧开工事件失效；
            - 将工序退回 UNREADY 状态；
-           - 压入时间戳为 R 的 MATERIAL_ARRIVE 事件；
+           - 压入时间戳为 R 的MATERIAL_ARRIVE兼容事件；
         3. 处于 READY 状态的工序：
            - 由于 R > current_time，失去当前就绪资格，退回 UNREADY；
-           - 压入时间戳为 R 的 MATERIAL_ARRIVE 事件；
+           - 压入时间戳为 R 的MATERIAL_ARRIVE兼容事件；
         4. 处于 UNREADY 或 POSTPONED 状态的工序：
-           - 更新 material_ready_time = max(material_ready_time, R)。
+           - 更新开工可用下界 max(material_ready_time, R)；字段名为历史兼容名。
         """
         recovery_time = float(payload["recovery_time"])
         affected_keys = payload.get("affected_task_keys", [])
@@ -1170,7 +1170,7 @@ class AirLineEnvWork3:
                 continue
 
             hit_task_keys.append(task_key)
-            # 统一建模尚未开工工序的物料开工下界：
+            # 统一建模尚未开工工序的开工可用下界：
             # r_{k*,i}^{new} = max(r_{k*,i}^{old}, R)。
             task.material_ready_time = max(task.material_ready_time, recovery_time)
 
@@ -1185,7 +1185,7 @@ class AirLineEnvWork3:
                     self._station_occupied_tasks[task.current_station].discard(task.task_key)
                     self.event_queue.invalidate_task_events(task.task_key, task.generation)
                     task.status = TaskStatus.UNREADY
-                    # 3. 挂载时间戳为 R 的 MATERIAL_ARRIVE 事件
+                    # 3. 挂载时间戳为 R 的MATERIAL_ARRIVE兼容事件
                     self.event_queue.push(
                         event_type=EventType.MATERIAL_ARRIVE,
                         timestamp=recovery_time,
@@ -1195,7 +1195,7 @@ class AirLineEnvWork3:
                     self._invalidate_dependent_reservations(task)
 
             elif task.status == TaskStatus.READY:
-                # 物料推迟到未来时刻到达，退回 UNREADY
+                # 开工可用时刻推迟至未来，退回 UNREADY
                 task.status = TaskStatus.UNREADY
                 self.event_queue.push(
                     event_type=EventType.MATERIAL_ARRIVE,
