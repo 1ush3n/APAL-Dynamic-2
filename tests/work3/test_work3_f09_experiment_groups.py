@@ -155,6 +155,46 @@ def test_formal_b_uses_fixed_station_graph_policy_without_time_learning() -> Non
     assert config.runtime.method_profile == "B"
 
 
+def test_no_time_auxiliary_report_status_is_not_mislabeled_as_method_c(
+    tmp_path: Path,
+) -> None:
+    """B/C均关闭时间辅助学习，B训练报告不得称作C或伪报时间更新。"""
+    from scripts.work3.train_ppo_work3 import (
+        _time_auxiliary_not_applicable_status,
+    )
+
+    assert _time_auxiliary_not_applicable_status(build_method_profile("B")) == (
+        "not_applicable_no_time_auxiliary"
+    )
+    assert _time_auxiliary_not_applicable_status(build_method_profile("C")) == (
+        "not_applicable_no_time_auxiliary"
+    )
+    assert _time_auxiliary_not_applicable_status(build_method_profile("D")) is None
+
+    report = run_training(
+        run_mode="smoke",
+        max_decisions=1,
+        num_iterations=1,
+        steps_per_iter=1,
+        ppo_epochs=1,
+        batch_size=1,
+        seed=20260928,
+        method_variant="B",
+        output_ckpt=tmp_path / "b_smoke.pt",
+        report_path=str(tmp_path / "b_smoke.json"),
+        device="cpu",
+        num_envs=1,
+    )
+    assert report["time_head_training_status"] == "not_applicable_no_time_auxiliary"
+    assert report["history"][0]["time_supervision_status"] == (
+        "not_applicable_no_time_auxiliary"
+    )
+    assert report["time_label_count"] == 0
+    assert report["time_supervision_optimizer_updates"] == 0
+    assert report["history"][0]["ppo_updates"] > 0
+    assert report["research_result_eligible"] is False
+
+
 def test_b_checkpoint_is_bound_to_b_profile(tmp_path: Path) -> None:
     """B正式推理仅接受profile元数据完全匹配的检查点。"""
     b_checkpoint = _save_profile_checkpoint(tmp_path / "b.pt", "B")

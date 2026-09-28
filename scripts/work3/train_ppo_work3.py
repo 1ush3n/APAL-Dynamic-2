@@ -403,6 +403,14 @@ def _is_checkpoint_evaluation_eligible(
     )
 
 
+def _time_auxiliary_not_applicable_status(
+    profile: Work3MethodProfile,
+) -> str | None:
+    if not profile.use_time_auxiliary:
+        return "not_applicable_no_time_auxiliary"
+    return None
+
+
 def _cpu_state_dict(module: torch.nn.Module) -> dict[str, torch.Tensor]:
     return {
         name: tensor.detach().cpu().clone()
@@ -1779,9 +1787,10 @@ def run_training(
             ),
             "lightning_amp_skipped_steps": int(metrics.get("amp_skipped_steps", 0)),
             "lightning_fit_calls": lightning_fit_calls,
-            "time_supervision_status": (
-                "not_applicable_method_c" if not profile.use_time_auxiliary
-                else "updated" if metrics.get("time_supervision_steps", 0) > 0
+            "time_supervision_status": _time_auxiliary_not_applicable_status(
+                profile
+            ) or (
+                "updated" if metrics.get("time_supervision_steps", 0) > 0
                 else "skipped_no_real_transfer_labels"
             ),
             "sampling_replay_max_abs_error": metrics.get("sampling_replay_max_abs_error"),
@@ -1839,10 +1848,8 @@ def run_training(
     time_supervision_optimizer_updates = sum(
         int(item.get("time_supervision_optimizer_updates", 0)) for item in history
     )
-    time_head_training_status = (
-        "not_applicable_method_c"
-        if not profile.use_time_auxiliary
-        else "trained_online"
+    time_head_training_status = _time_auxiliary_not_applicable_status(profile) or (
+        "trained_online"
         if time_label_count > 0 and time_supervision_optimizer_updates > 0
         else "untrained_no_successful_online_update"
     )
