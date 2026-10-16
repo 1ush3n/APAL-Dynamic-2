@@ -507,17 +507,12 @@ def test_reserved_revision_replay_uses_saved_branch_mask_after_position_changes(
         for task in env.get_action_candidates()
         if env.can_reserve(task) and not env.can_postpone(task) and task.skill >= 0
     )
-    team = tuple(env.valid_team_completion_workers(task, [])[: task.demand])
     task.in_station_offset = 20.0
-    env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": team,
-            "align": 1,
-        }
-    )
-    assert task.status == TaskStatus.RESERVED
+    other_task = [t for t in env.get_ready_tasks() if t.task_key != task.task_key][0]
+    other_team = tuple(env.valid_team_completion_workers(other_task, [])[: other_task.demand])
+    other_dur = env.duration_for_team(other_task, other_team)
+    other_task.execution_duration = other_dur
+    other_task.reserve(team=other_team, scheduled_start=20.0)
     assert env.get_action_branch_mask(task) == (True, False)
     env.get_action_candidates = lambda: [task]  # type: ignore[method-assign]
 

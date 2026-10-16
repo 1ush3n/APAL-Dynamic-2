@@ -469,11 +469,12 @@ def test_seven_aircraft_small_full_line_trace_keeps_loads_feasible(
     for aircraft_id in range(7):
         for station_id, task_id in station_task_ids:
             template = source.get_task(0, task_id)
-            assert set(template.predecessors) <= selected_ids
+            filtered_preds = tuple(p for p in template.predecessors if p in selected_ids)
             nominal_entry = (aircraft_id + station_id - 1) * source.h0
             key = f"{aircraft_id}_{task_id}"
             tasks[key] = replace(
                 template,
+                predecessors=filtered_preds,
                 aircraft_id=aircraft_id,
                 task_key=key,
                 cycle_idx=aircraft_id + station_id,

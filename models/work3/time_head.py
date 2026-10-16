@@ -25,19 +25,21 @@ import torch.nn as nn
 
 
 class TimeResidualHead(nn.Module):
-    """预测可正可负的归一化时间残差。"""
+    """预测可正可负的归一化时间残差与下一周期各站预测向量 (R05)。"""
 
     def __init__(
         self,
         in_dim: int = 32,
         hidden_dim: int = 64,
         use_layer_norm: bool = True,
+        num_stations: int = 5,
     ) -> None:
         super().__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
+        self.num_stations = num_stations
 
-        # 直接回归 δ_ψ(s) ∈ R，不用门控或非负激活截断高估修正量。
+        # 直接回归当前周期残差 δ_ψ(s) ∈ R，不用门控或非负激活截断高估修正量。
         self.reg_fc = nn.Sequential(
             nn.Linear(in_dim, hidden_dim),
             nn.LayerNorm(hidden_dim) if use_layer_norm else nn.Identity(),
@@ -48,16 +50,53 @@ class TimeResidualHead(nn.Module):
             nn.Linear(32, 1),
         )
 
-        nn.init.zeros_(self.reg_fc[-1].bias)
+        # 回归下一周期各站有符号时间残差向量 Δ_next ∈ R^num_stations
+        self.next_cycle_fc = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim) if use_layer_norm else nn.Identity(),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, 32),
+            nn.LayerNorm(32) if use_layer_norm else nn.Identity(),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(32, num_stations),
+        )
 
-    def forward(self, state_feat: torch.Tensor) -> torch.Tensor:
-        """前向传播计算归一化时间残差 δ_ψ(s)。"""
+        nn.init.zeros_(self.reg_fc[-1].bias)
+        nn.init.zeros_(self.next_cycle_fc[-1].bias)
+
+    def forward(
+        self,
+        state_feat: torch.Tensor,
+        return_next_cycle: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+        """前向传播计算归一化时间残差 δ_ψ(s) [及下一周期残差向量]。"""
         assert state_feat.ndim >= 1 and state_feat.size(-1) == self.in_dim
-        return self.reg_fc(state_feat).squeeze(-1)
+        delta_curr = self.reg_fc(state_feat).squeeze(-1)
+        if return_next_cycle:
+            delta_next = self.next_cycle_fc(state_feat)
+            return delta_curr, delta_next
+        return delta_curr
 
     def predict_residual(self, state_feat: torch.Tensor) -> torch.Tensor:
-        """调用前向传播计算残差。"""
+        """调用前向传播计算当前周期残差。"""
         return self.forward(state_feat)
+
+    def predict_next_cycle_residuals(self, state_feat: torch.Tensor) -> torch.Tensor:
+        """调用前向传播计算下一周期各站残差预测向量。"""
+        assert state_feat.ndim >= 1 and state_feat.size(-1) == self.in_dim
+        return self.next_cycle_fc(state_feat)
+
+    def load_state_dict(
+        self,
+        state_dict: dict[str, torch.Tensor],
+        strict: bool = True,
+        assign: bool = False,
+    ):
+        """兼容缺少 next_cycle_fc 的旧权重。"""
+        has_next_cycle = any(k.startswith("next_cycle_fc.") for k in state_dict)
+        if strict and not has_next_cycle:
+            strict = False
+        return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def predict_corrected_time(
         self,

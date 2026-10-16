@@ -95,12 +95,23 @@ class Work3GraphEncoder(nn.Module):
             nn.LayerNorm(hidden_dim),
             nn.LeakyReLU(negative_slope=0.1),
         )
+        self.station_summary_mlp = nn.Sequential(
+            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+        self.line_fusion_mlp = nn.Sequential(
+            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
 
     def forward(
         self,
         graph: HeteroData,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """返回全局上下文、任务节点嵌入和工人节点嵌入。"""
+        return_hierarchical: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+        """返回全局上下文、任务节点嵌入、工人节点嵌入 [以及分层语义字典]。"""
         device = next(self.parameters()).device
         raw_x = {node_type: features.to(device) for node_type, features in graph.x_dict.items()}
         assert set(("task", "worker", "station", "skill")) <= set(raw_x)
@@ -159,7 +170,61 @@ class Work3GraphEncoder(nn.Module):
             [mean_pool("task"), mean_pool("worker"), mean_pool("station"), mean_pool("skill")],
             dim=-1,
         )
-        context = self.context_projection(pooled).squeeze(0)
+        base_context = self.context_projection(pooled).squeeze(0)
+
+        # 分层语义聚合 (R04)
+        task_indices_by_ac = getattr(graph, "_task_indices_by_aircraft", getattr(graph, "task_indices_by_aircraft", None))
+        num_ac = len(task_indices_by_ac) if task_indices_by_ac is not None else 10
+        ac_list = []
+        for k in range(num_ac):
+            if task_indices_by_ac is not None and k < len(task_indices_by_ac) and task_indices_by_ac[k].numel() > 0:
+                idx_dev = task_indices_by_ac[k].to(device)
+                ac_list.append(task_emb[idx_dev].mean(dim=0, keepdim=True))
+            else:
+                ac_list.append(torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device))
+        aircraft_emb = torch.cat(ac_list, dim=0)
+
+        station_emb = encoded["station"]
+        num_st = station_emb.size(0)
+        curr_indices = getattr(graph, "_current_task_indices", getattr(graph, "current_task_indices", None))
+        next_indices = getattr(graph, "_next_task_indices", getattr(graph, "next_task_indices", None))
+        further_indices = getattr(graph, "_further_task_indices", getattr(graph, "further_task_indices", None))
+
+        def _pool_station_tasks(indices_list: list[torch.Tensor] | None) -> torch.Tensor:
+            st_list = []
+            for s in range(num_st):
+                if indices_list is not None and s < len(indices_list) and indices_list[s].numel() > 0:
+                    idx_dev = indices_list[s].to(device)
+                    st_list.append(task_emb[idx_dev].mean(dim=0, keepdim=True))
+                else:
+                    st_list.append(torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device))
+            return torch.cat(st_list, dim=0)
+
+        st_curr = _pool_station_tasks(curr_indices)
+        st_next = _pool_station_tasks(next_indices)
+        st_further = _pool_station_tasks(further_indices)
+        st_summary = self.station_summary_mlp(
+            torch.cat([station_emb, st_curr, st_next, st_further], dim=-1)
+        )
+
+        line_input = torch.cat([
+            st_summary.mean(dim=0, keepdim=True),
+            aircraft_emb.mean(dim=0, keepdim=True),
+            worker_emb.mean(dim=0, keepdim=True),
+            encoded["skill"].mean(dim=0, keepdim=True),
+        ], dim=-1)
+        line_emb = self.line_fusion_mlp(line_input).squeeze(0)
+        context = base_context + line_emb
+
+        if return_hierarchical:
+            hier_dict = {
+                "aircraft": aircraft_emb,
+                "station_current": st_curr,
+                "station_next": st_next,
+                "station_summary": st_summary,
+                "line": line_emb,
+            }
+            return context, encoded["task"], encoded["worker"], hier_dict
         return context, encoded["task"], encoded["worker"]
 
 
@@ -346,12 +411,19 @@ class ActorCriticWork3(nn.Module):
             nn.Linear(hidden_dim, 1),
         )
 
-        # 2. 显式时间特征融合模块 (Task 6.3)
+        # 2. 显式时间特征融合模块 (Task 6.3 / R05)
         self.time_fusion = TimeContextFusion(
             context_dim=hidden_dim,
-            time_dim=2,
+            time_dim=12,
             hidden_dim=hidden_dim,
             stop_time_gradient=True,
+        )
+
+        # 分层候选任务语义融合模块 (R04)
+        self.hierarchical_task_fusion = nn.Sequential(
+            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
         )
 
         # 3. Head 1: 工序评分打分头 (Task Selection Head)
@@ -406,21 +478,24 @@ class ActorCriticWork3(nn.Module):
         state_feat: torch.Tensor,
         time_urgency: torch.Tensor,
         graph_data: HeteroData | None = None,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
-        """编码状态并返回图节点嵌入；无图时走旧接口兼容路径。"""
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None, torch.Tensor | None, dict[str, torch.Tensor] | None]:
+        """编码状态并返回图节点嵌入与分层语义；无图时走旧接口兼容路径。"""
         assert state_feat.ndim == 1 and state_feat.size(0) == self.state_dim
-        assert time_urgency.ndim == 1 and time_urgency.size(0) == 2
+        assert time_urgency.ndim == 1 and time_urgency.size(0) in (2, 7, 12)
         legacy_context = self.encoder(state_feat)
         task_nodes: torch.Tensor | None = None
         worker_nodes: torch.Tensor | None = None
+        hier_dict: dict[str, torch.Tensor] | None = None
         if graph_data is None or not self.graph_policy_enabled:
             context = legacy_context
         else:
-            graph_context, task_nodes, worker_nodes = self.graph_encoder(graph_data)
+            graph_context, task_nodes, worker_nodes, hier_dict = self.graph_encoder(
+                graph_data, return_hierarchical=True
+            )
             context = graph_context + legacy_context
         v = self.critic(context).squeeze(-1)
         e_fused = self.time_fusion(context, time_urgency)
-        return v, e_fused, task_nodes, worker_nodes
+        return v, e_fused, task_nodes, worker_nodes, hier_dict
 
     def encode_shared_representation(
         self,
@@ -449,7 +524,7 @@ class ActorCriticWork3(nn.Module):
             v = self.critic(z).squeeze(-1)
             e_fused = self.time_fusion(z, time_urgency)
             return v, e_fused
-        v, e_fused, _, _ = self._encode_state_components(
+        v, e_fused, _, _, _ = self._encode_state_components(
             state_feat,
             time_urgency,
             graph_data,
@@ -457,11 +532,21 @@ class ActorCriticWork3(nn.Module):
         return v, e_fused
 
     def load_state_dict(self, state_dict: dict[str, torch.Tensor], strict: bool = True, assign: bool = False):
-        """兼容没有图模块参数的旧工作三 Actor 检查点。"""
+        """兼容没有图模块参数或缺少分层参数的旧工作三 Actor 检查点。"""
         has_graph_weights = any(key.startswith("graph_encoder.") for key in state_dict)
-        if strict and not has_graph_weights:
+        has_hier_weights = any(key.startswith("hierarchical_task_fusion.") for key in state_dict)
+        if strict and (not has_graph_weights or not has_hier_weights):
             strict = False
         self.graph_policy_enabled = has_graph_weights
+        if "time_fusion.time_mlp.0.weight" in state_dict:
+            ckpt_time_dim = state_dict["time_fusion.time_mlp.0.weight"].size(1)
+            if ckpt_time_dim != self.time_fusion.time_dim:
+                self.time_fusion = TimeContextFusion(
+                    context_dim=self.hidden_dim,
+                    time_dim=ckpt_time_dim,
+                    hidden_dim=self.hidden_dim,
+                    stop_time_gradient=self.time_fusion.stop_time_gradient,
+                )
         return super().load_state_dict(state_dict, strict=strict, assign=assign)
 
     def _advance_logits(self, context: torch.Tensor) -> torch.Tensor:
@@ -566,7 +651,7 @@ class ActorCriticWork3(nn.Module):
         state_feat = snapshot.state_features.to(device)
         time_urgency = snapshot.time_features.to(device)
         graph_snapshot = snapshot.graph_snapshot
-        v, e_fused, task_nodes, worker_nodes = self._encode_state_components(
+        v, e_fused, task_nodes, worker_nodes, hier_dict = self._encode_state_components(
             state_feat,
             time_urgency,
             graph_snapshot,
@@ -585,6 +670,8 @@ class ActorCriticWork3(nn.Module):
             "candidate_task_keys": snapshot.candidate_task_keys,
             "candidate_branch_masks": snapshot.branch_masks,
             "candidate_task_node_indices": snapshot.candidate_task_node_indices,
+            "candidate_aircraft_ids": getattr(snapshot, "candidate_aircraft_ids", ()),
+            "candidate_station_ids": getattr(snapshot, "candidate_station_ids", ()),
             "worker_node_indices": (),
         }
 
@@ -634,6 +721,16 @@ class ActorCriticWork3(nn.Module):
         if task_nodes is not None:
             node_indices = torch.as_tensor(candidate_task_node_indices, device=device)
             cand_embed = cand_embed + self.task_graph_proj(task_nodes[node_indices])
+        if hier_dict is not None and getattr(snapshot, "candidate_aircraft_ids", None):
+            ac_ids = torch.as_tensor(snapshot.candidate_aircraft_ids, device=device)
+            st_ids = torch.as_tensor(snapshot.candidate_station_ids, device=device)
+            ac_embs = hier_dict["aircraft"][ac_ids]
+            st_curr_embs = hier_dict["station_current"][st_ids]
+            st_next_embs = hier_dict["station_next"][st_ids]
+            line_embs = hier_dict["line"].unsqueeze(0).expand(candidate_count, -1)
+            cand_embed = cand_embed + self.hierarchical_task_fusion(
+                torch.cat([ac_embs, st_curr_embs, st_next_embs, line_embs], dim=-1)
+            )
         e_ctx_expanded = e_fused.unsqueeze(0).expand(candidate_count, -1)
         task_pair = torch.cat([e_ctx_expanded, cand_embed], dim=-1)
         task_logits = self.task_score_fc(task_pair).squeeze(-1)
@@ -794,8 +891,9 @@ class ActorCriticWork3(nn.Module):
         context_list: list[torch.Tensor] = []
         task_nodes_list: list[torch.Tensor | None] = []
         worker_nodes_list: list[torch.Tensor | None] = []
+        hier_dict_list: list[dict[str, torch.Tensor] | None] = []
         for index, record in enumerate(sample_records):
-            value_i, context_i, task_nodes_i, worker_nodes_i = self._encode_state_components(
+            value_i, context_i, task_nodes_i, worker_nodes_i, hier_dict_i = self._encode_state_components(
                 state_feats[index],
                 time_urgencies[index],
                 record.get("graph_snapshot"),
@@ -804,6 +902,7 @@ class ActorCriticWork3(nn.Module):
             context_list.append(context_i)
             task_nodes_list.append(task_nodes_i)
             worker_nodes_list.append(worker_nodes_i)
+            hier_dict_list.append(hier_dict_i)
         values = torch.stack(values_list)
         e_fused = torch.stack(context_list)
 
@@ -843,6 +942,25 @@ class ActorCriticWork3(nn.Module):
                 node_indices = torch.as_tensor(candidate_node_indices, device=device)
                 cand_embed = cand_embed + self.task_graph_proj(
                     replay_task_nodes[node_indices]
+                )
+            replay_hier_dict = hier_dict_list[i]
+            candidate_aircraft_ids = rec.get("candidate_aircraft_ids")
+            candidate_station_ids = rec.get("candidate_station_ids")
+            if (
+                replay_hier_dict is not None
+                and candidate_aircraft_ids is not None
+                and len(candidate_aircraft_ids) == len(cand_feats)
+                and candidate_station_ids is not None
+                and len(candidate_station_ids) == len(cand_feats)
+            ):
+                ac_ids = torch.as_tensor(candidate_aircraft_ids, device=device)
+                st_ids = torch.as_tensor(candidate_station_ids, device=device)
+                ac_embs = replay_hier_dict["aircraft"][ac_ids]
+                st_curr_embs = replay_hier_dict["station_current"][st_ids]
+                st_next_embs = replay_hier_dict["station_next"][st_ids]
+                line_embs = replay_hier_dict["line"].unsqueeze(0).expand(len(cand_feats), -1)
+                cand_embed = cand_embed + self.hierarchical_task_fusion(
+                    torch.cat([ac_embs, st_curr_embs, st_next_embs, line_embs], dim=-1)
                 )
             e_ctx_exp = e_ctx.unsqueeze(0).expand(len(cand_feats), -1)
             task_pair = torch.cat([e_ctx_exp, cand_embed], dim=-1)

@@ -382,6 +382,13 @@ class MultiAircraftState:
     last_transfer_time: float = 0.0      # 上次实际脉动转站时刻 P_{q-1}
     transfer_history: list[float] = field(default_factory=list)
 
+    # 首次实际就绪时刻跟踪与高频动态演化语义摘要 (R05 & R08)
+    station_first_cleared_times: dict[int, dict[int, float]] = field(default_factory=dict)
+    last_action_branch: int = 0          # 上一决策动作分支 (0: NONE, 1: STAY, 2: POSTPONE, 3: ADVANCE)
+    micro_steps_in_timestamp: int = 0    # 同刻微决策轮数计数
+    recent_postponed_count: int = 0      # 当前周期内后移工序数
+    recent_reserved_count: int = 0       # 当前周期内预约工序数
+
     aircraft: dict[int, AircraftRuntimeState] = field(default_factory=dict)
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
     workers: dict[int, WorkerCalendar] = field(default_factory=dict)
@@ -394,6 +401,18 @@ class MultiAircraftState:
     def __post_init__(self) -> None:
         self.normalization_task_count = len(self.tasks)
         self._rebuild_ac_station_tasks()
+
+    def get_next_cycle_station_mask(self) -> list[bool]:
+        """查询下一周期 q+1 各站位是否有飞机在场（空站无效，有飞机有效）。"""
+        mask = [False] * self.num_stations
+        # 站位 0: 下一架待进线飞机 k = current_cycle (0-indexed)
+        if self.current_cycle < self.num_aircraft:
+            mask[0] = True
+        # 站位 1..4: 当前站位 s-1 是否有飞机停靠
+        for s in range(1, self.num_stations):
+            if self.get_aircraft_at_station(s - 1) is not None:
+                mask[s] = True
+        return mask
 
     def _rebuild_ac_station_tasks(self) -> None:
         """根据当前任务状态全量重建 (aircraft_id, current_station) 增量索引。"""
@@ -461,6 +480,11 @@ class MultiAircraftState:
             "current_cycle": self.current_cycle,
             "last_transfer_time": self.last_transfer_time,
             "transfer_history": list(self.transfer_history),
+            "station_first_cleared_times": copy.deepcopy(self.station_first_cleared_times),
+            "last_action_branch": self.last_action_branch,
+            "micro_steps_in_timestamp": self.micro_steps_in_timestamp,
+            "recent_postponed_count": self.recent_postponed_count,
+            "recent_reserved_count": self.recent_reserved_count,
             "aircraft": {k: ac.copy() for k, ac in self.aircraft.items()},
             "tasks": {k: t.copy() for k, t in self.tasks.items()},
             "workers": {w: wc.copy() for w, wc in self.workers.items()},
@@ -472,6 +496,11 @@ class MultiAircraftState:
         self.current_cycle = int(snap["current_cycle"])
         self.last_transfer_time = float(snap["last_transfer_time"])
         self.transfer_history = list(snap["transfer_history"])
+        self.station_first_cleared_times = copy.deepcopy(snap.get("station_first_cleared_times", {}))
+        self.last_action_branch = int(snap.get("last_action_branch", 0))
+        self.micro_steps_in_timestamp = int(snap.get("micro_steps_in_timestamp", 0))
+        self.recent_postponed_count = int(snap.get("recent_postponed_count", 0))
+        self.recent_reserved_count = int(snap.get("recent_reserved_count", 0))
         self.aircraft = {k: ac.copy() for k, ac in snap["aircraft"].items()}
         self.tasks = {k: t.copy() for k, t in snap["tasks"].items()}
         self.workers = {w: wc.copy() for w, wc in snap["workers"].items()}

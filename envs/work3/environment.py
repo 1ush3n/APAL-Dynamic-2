@@ -132,7 +132,29 @@ class AirLineEnvWork3:
         # 解锁0号飞机在0号站位首批无前驱且开工可用条件满足的工序
         self._refresh_aircraft_station_readiness(aircraft_id=0, station_id=0)
 
+        # 初始化首次就绪时刻事实记录与演化语义 (R05 & R08)
+        self.state.station_first_cleared_times = {1: {}}
+        self.state.last_action_branch = 0
+        self.state.micro_steps_in_timestamp = 0
+        self.state.recent_postponed_count = 0
+        self.state.recent_reserved_count = 0
+        self._last_step_time = 0.0
+        self._record_station_first_cleared_if_ready()
+
         return self._get_observation()
+
+    def _record_station_first_cleared_if_ready(self) -> None:
+        """检查并记录当前周期各占位站位的首次就绪时刻 F[m, q] (R05)。"""
+        cycle = self.state.current_cycle
+        cleared_map = self.state.station_first_cleared_times.setdefault(cycle, {})
+        for s in range(self.state.num_stations):
+            if s in cleared_map:
+                continue
+            ac_id = self.state.get_aircraft_at_station(s)
+            if ac_id is not None:
+                if self.state.is_station_cleared_for_transfer(s):
+                    # 空站无效；有飞机无未完工序仍有效且F等于当前时刻（周期初则为脉动时刻）
+                    cleared_map[s] = float(self.state.current_time)
 
     @staticmethod
     def _find_domain_column(
@@ -251,7 +273,10 @@ class AirLineEnvWork3:
         return engine.with_max_allowed_stations(max_allowed)
 
     def _attach_task_domain_metadata(self) -> None:
-        """把原始工艺约束写入当前多架次任务状态，同步完整物理投影前驱并重建后继映射。"""
+        existing_task_ids_by_ac = {
+            k: {t.task_id for t in self.state.tasks.values() if t.aircraft_id == k}
+            for k in range(self.state.num_aircraft)
+        }
         for task in self.state.tasks.values():
             task_id = int(task.task_id)
             if not 0 <= task_id < self.constraint_engine.num_tasks:
@@ -266,7 +291,11 @@ class AirLineEnvWork3:
             fixed_station = int(self.constraint_engine.fixed_stations[task_id])
             task.fixed_station = fixed_station if fixed_station >= 0 else None
             task.max_allowed_station = int(self.constraint_engine.max_allowed_stations[task_id])
-            task.predecessors = tuple(self.constraint_engine.physical_predecessors[task_id])
+            ac_task_ids = existing_task_ids_by_ac.get(task.aircraft_id, set())
+            task.predecessors = tuple(
+                p for p in self.constraint_engine.physical_predecessors[task_id]
+                if p in ac_task_ids
+            )
 
         self._successors_map = {
             k: {t.task_id: [] for t in self.state.tasks.values() if t.aircraft_id == k}
@@ -713,6 +742,14 @@ class AirLineEnvWork3:
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
 
         self.process_due_events()
+        # 记录高频动态演化语义摘要 (R08)
+        self.state.last_action_branch = int(branch.value)
+        if abs(self.state.current_time - getattr(self, "_last_step_time", self.state.current_time)) < self.tolerance:
+            self.state.micro_steps_in_timestamp += 1
+        else:
+            self.state.micro_steps_in_timestamp = 1
+        self._last_step_time = float(self.state.current_time)
+
         info: dict[str, Any] = {
             "action_branch": branch.name,
             "task_key": task_key,
@@ -819,6 +856,7 @@ class AirLineEnvWork3:
             info["revision_changed"] = len(task.revision_history) > revision_history_size
             info["cost_revision_inc"] = revision_cost_inc
             info["scheduled_start"] = t_sched
+            self.state.recent_reserved_count += 1
 
         elif branch == ActionBranch.POSTPONE:
             # 分支 B：合法后移至下一站位
@@ -858,6 +896,10 @@ class AirLineEnvWork3:
             info["postpone_count"] = task.postpone_count
             info["cost_postpone_inc"] = cost_postpone_inc
             info["cost_revision_inc"] = revision_total_inc - cost_postpone_inc
+            self.state.recent_postponed_count += 1
+
+            # 后移可能解除原站位未完任务从而形成首次就绪事实 (R05)
+            self._record_station_first_cleared_if_ready()
 
             # 后移可能使得当前周期站位放行条件满足，检查是否可安排转站
             self._check_and_schedule_transfer()
@@ -1217,7 +1259,8 @@ class AirLineEnvWork3:
         self.cumulative_cost += (cost_time_inc + cost_team_inc)
 
     def _on_task_completed(self, completed_task: TaskRuntimeState) -> None:
-        """工序完工后的事件链：解锁同机直接物理后继。"""
+        """工序完工后的事件链：记录站位就绪时刻并解锁同机直接物理后继。"""
+        self._record_station_first_cleared_if_ready()
         k = completed_task.aircraft_id
         tid = completed_task.task_id
 
@@ -1307,9 +1350,15 @@ class AirLineEnvWork3:
         self.cost_takt += cost_takt_inc
         self.cumulative_cost += cost_takt_inc
 
+        # 确保当前周期所有占位站位记录首次就绪时刻 (R05)
+        current_q = self.state.current_cycle
+        cleared_map = self.state.station_first_cleared_times.setdefault(current_q, {})
+        for s in range(self.state.num_stations):
+            if s not in cleared_map and self.state.get_aircraft_at_station(s) is not None:
+                cleared_map[s] = float(timestamp)
+
         self.state.last_transfer_time = float(timestamp)
         self.state.transfer_history.append(float(timestamp))
-        current_q = self.state.current_cycle
         self.state.current_cycle += 1
 
         # 各在场飞机向前推进一步
@@ -1328,6 +1377,11 @@ class AirLineEnvWork3:
                 ac_next.current_station = 0
                 ac_next.entry_times[0] = float(timestamp)
                 self._refresh_aircraft_station_readiness(next_k, 0)
+
+        # 脉动流转后刷新下一周期的状态演化计数并探测新就绪站位 (R05 & R08)
+        self.state.recent_postponed_count = 0
+        self.state.recent_reserved_count = 0
+        self._record_station_first_cleared_if_ready()
 
     def _check_terminated(self) -> bool:
         """检查生产是否自然终止（Task 2.6：全部飞机离开末站，所有工序完工）。"""

@@ -111,6 +111,17 @@ class TimeContextFusion(nn.Module):
         if self.stop_time_gradient:
             u = u.detach()
 
+        if u.size(-1) < self.time_dim:
+            pad = torch.zeros(
+                *u.shape[:-1],
+                self.time_dim - u.size(-1),
+                dtype=u.dtype,
+                device=u.device,
+            )
+            u = torch.cat([u, pad], dim=-1)
+        elif u.size(-1) > self.time_dim:
+            u = u[..., : self.time_dim]
+
         e_time = self.time_mlp(u)
         e_fused = self.ln(base_context + e_time)
         return e_fused

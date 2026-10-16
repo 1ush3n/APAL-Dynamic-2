@@ -116,3 +116,21 @@ def test_gradient_backpropagation() -> None:
     assert not torch.isnan(head.reg_fc[0].weight.grad).any(), "梯度中含有 NaN"
 
     optimizer.step()
+
+
+def test_next_cycle_vector_prediction() -> None:
+    """测试下一周期站位有符号预测向量的维度、可微性与掩码过滤 (R05)。"""
+    head = TimeResidualHead(in_dim=32, hidden_dim=64, num_stations=5)
+    x = torch.randn(4, 32)
+    delta_curr, delta_next = head(x, return_next_cycle=True)
+    assert delta_curr.shape == (4,)
+    assert delta_next.shape == (4, 5)
+
+    delta_next_direct = head.predict_next_cycle_residuals(x)
+    assert torch.allclose(delta_next, delta_next_direct)
+
+    # 验证反向传播流经 next_cycle_fc
+    loss = delta_next.sum()
+    loss.backward()
+    assert head.next_cycle_fc[0].weight.grad is not None
+

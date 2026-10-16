@@ -91,14 +91,16 @@ class DecisionSnapshot:
     h0: float
     last_transfer_time: float
     graph_version: str
+    candidate_aircraft_ids: tuple[int, ...] = ()
+    candidate_station_ids: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
-        # 输入形状：[32]、[2]、[N, 8]；快照拥有独立CPU副本。
+        # 输入形状：[32]、[2/7/12]、[N, 8]；快照拥有独立CPU副本。
         state_features = self._cpu_tensor_copy(self.state_features)
         time_features = self._cpu_tensor_copy(self.time_features)
         task_features = self._cpu_tensor_copy(self.candidate_task_features)
         assert state_features.ndim == 1 and state_features.shape == (32,)
-        assert time_features.ndim == 1 and time_features.shape == (2,)
+        assert time_features.ndim == 1 and time_features.shape[0] in (2, 7, 12)
         assert task_features.ndim == 2 and task_features.shape[1] == 8
         object.__setattr__(self, "state_features", state_features)
         object.__setattr__(self, "time_features", time_features)
@@ -306,13 +308,14 @@ def build_decision_snapshot(
         ),
         reserved_flags=tuple(task.status == TaskStatus.RESERVED for task in candidates),
         advance_available=any(
-            task.status == TaskStatus.RESERVED and any(mask)
-            for task, mask in zip(candidates, branch_masks, strict=True)
-        ),
+            t.status == TaskStatus.RESERVED for t in env.state.tasks.values()
+        ) and len(candidates) > 0,
         current_time=float(env.state.current_time),
         cycle_id=int(env.state.current_cycle),
         estimated_cmax=estimated_cmax,
         h0=float(env.state.h0),
         last_transfer_time=float(env.state.last_transfer_time),
         graph_version=GRAPH_FEATURE_VERSION,
+        candidate_aircraft_ids=tuple(int(task.aircraft_id) for task in candidates),
+        candidate_station_ids=tuple(int(task.current_station) for task in candidates),
     )

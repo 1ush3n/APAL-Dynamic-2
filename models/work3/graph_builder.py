@@ -286,8 +286,20 @@ class MultiAircraftGraphBuilder:
         published_team_dst: list[int] = []
         station_remain_workload = [0.0] * 5
         station_current_workload = [0.0] * 5
+        station_next_workload = [0.0] * 5
         station_future_workload = [0.0] * 5
         station_running_count = [0] * 5
+
+        # 飞机与站位分层任务索引列表 (R04)
+        current_task_indices: list[list[int]] = [[] for _ in range(5)]
+        next_task_indices: list[list[int]] = [[] for _ in range(5)]
+        further_task_indices: list[list[int]] = [[] for _ in range(5)]
+        task_indices_by_aircraft: dict[int, list[int]] = {k: [] for k in range(state.num_aircraft)}
+
+        curr_ac_id = [state.get_aircraft_at_station(s) for s in range(5)]
+        next_ac_id = [
+            (state.current_cycle if state.current_cycle < state.num_aircraft else None)
+        ] + [state.get_aircraft_at_station(s - 1) for s in range(1, 5)]
 
         h0 = self.h0
         station_scale = float(max(1, state.num_stations))
@@ -395,7 +407,8 @@ class MultiAircraftGraphBuilder:
             if 0 <= st < 5:
                 assigned_ts_src.append(idx)
                 assigned_ts_dst.append(st)
-                if t_rt.status != TaskStatus.COMPLETED:
+                if t_rt.status != TaskStatus.COMPLETED and t_rt.duration > 1e-5:
+                    task_indices_by_aircraft[t_rt.aircraft_id].append(idx)
                     execution_duration = float(
                         t_rt.execution_duration
                         if t_rt.execution_duration is not None
@@ -413,11 +426,21 @@ class MultiAircraftGraphBuilder:
                             - current_time,
                         )
                     station_remain_workload[st] += remaining_work
-                    if ac_state is not None and ac_state.current_station == st:
+
+                    # 分层角色划分：当前在场飞机、下一脉动进入飞机及已后移任务、更后周期飞机 (R04)
+                    if curr_ac_id[st] is not None and t_rt.aircraft_id == curr_ac_id[st]:
+                        current_task_indices[st].append(idx)
                         station_current_workload[st] += remaining_work
                         if t_rt.status == TaskStatus.RUNNING:
                             station_running_count[st] += 1
+                    elif (
+                        (next_ac_id[st] is not None and t_rt.aircraft_id == next_ac_id[st])
+                        or (t_rt.postpone_count > 0 and t_rt.aircraft_id != curr_ac_id[st])
+                    ):
+                        next_task_indices[st].append(idx)
+                        station_next_workload[st] += remaining_work
                     else:
+                        further_task_indices[st].append(idx)
                         station_future_workload[st] += remaining_work
 
             if t_rt.status in (TaskStatus.RUNNING, TaskStatus.RESERVED):
@@ -494,9 +517,10 @@ class MultiAircraftGraphBuilder:
             station_x_np[s, 1] = 1.0 if ac_id is not None else 0.0
             station_x_np[s, 2] = float(max(0, 3 - station_running_count[s])) / 3.0
             station_x_np[s, 3] = cycle_elapsed / h0
-            # [4] 当前在场飞机负荷；[5] 后续飞机已知负荷，避免混成一个站位总负荷。
+            # [4] 当前在场飞机负荷；[5] 下次脉动进入该站的飞机及后移负荷；[6] 更后飞机负荷
             station_x_np[s, 4] = float(station_current_workload[s]) / h0
-            station_x_np[s, 5] = float(station_future_workload[s]) / h0
+            station_x_np[s, 5] = float(station_next_workload[s]) / h0
+            station_x_np[s, 6] = float(station_future_workload[s]) / h0
 
         data["station"].x = torch.from_numpy(station_x_np)
 
@@ -557,6 +581,21 @@ class MultiAircraftGraphBuilder:
             self.config,
             skill_hub_topology=self.skill_hub_topology,
         )
+
+        # 6. 挂载分层读出分区张量索引 (R04)
+        data._current_task_indices = [
+            torch.tensor(current_task_indices[s], dtype=torch.long) for s in range(5)
+        ]
+        data._next_task_indices = [
+            torch.tensor(next_task_indices[s], dtype=torch.long) for s in range(5)
+        ]
+        data._further_task_indices = [
+            torch.tensor(further_task_indices[s], dtype=torch.long) for s in range(5)
+        ]
+        data._task_indices_by_aircraft = [
+            torch.tensor(task_indices_by_aircraft[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
 
         return data
 
