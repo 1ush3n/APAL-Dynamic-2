@@ -121,7 +121,8 @@ def test_same_timestamp_finish_releases_before_reserved_start() -> None:
     assert second.actual_start == finish_time
 
 
-def test_same_timestamp_disturbance_invalidates_start_before_execution() -> None:
+def test_same_timestamp_start_executes_before_disturbance() -> None:
+    """严格同刻开工与扰动：此前已有效提交、满足条件的预约先开工，刚开工任务不受打断。"""
     env = _new_env()
     first, second = env.get_ready_tasks()[:2]
     team = _valid_team(env, first)
@@ -156,10 +157,11 @@ def test_same_timestamp_disturbance_invalidates_start_before_execution() -> None
     env.state.current_time = finish_time
     env.process_due_events()
 
+    # R03: 同刻开工优先于扰动：second 在 finish_time 正式开工，进入 RUNNING
     assert first.status == TaskStatus.COMPLETED
-    assert second.status == TaskStatus.UNREADY
-    assert second.actual_start is None
-    assert not any(interval.task_key == second.task_key for interval in env.state.workers[team[0]].intervals)
+    assert second.status == TaskStatus.RUNNING
+    assert second.actual_start == finish_time
+    assert any(interval.task_key == second.task_key for interval in env.state.workers[team[0]].intervals)
 
 
 def test_stale_start_and_finish_generations_have_no_environment_side_effects() -> None:
@@ -167,18 +169,39 @@ def test_stale_start_and_finish_generations_have_no_environment_side_effects() -
     task = env.get_ready_tasks()[0]
     team = _valid_team(env, task)
 
-    for start_time, generation in ((20.0, 0), (25.0, 1), (30.0, 2)):
-        task.in_station_offset = start_time
-        env.step(
-            {
-                "task_key": task.task_key,
-                "branch": ActionBranch.STATION_EXECUTE,
-                "team": team,
-                "align": 1,
-            }
-        )
-        assert task.generation == generation
-        assert task.scheduled_start == start_time
+    task.in_station_offset = 20.0
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team,
+            "align": 1,
+        }
+    )
+    assert task.generation == 0
+    assert task.scheduled_start == 20.0
+
+    # 第一次受扰被动顺延至 25.0，代数自增为 1
+    env.load_scenario(
+        {
+            "tau": 0.0,
+            "recovery_time": 25.0,
+            "affected_task_keys": [task.task_key],
+        }
+    )
+    assert task.generation == 1
+    assert task.scheduled_start == 25.0
+
+    # 第二次受扰被动顺延至 30.0，代数自增为 2
+    env.load_scenario(
+        {
+            "tau": 0.0,
+            "recovery_time": 30.0,
+            "affected_task_keys": [task.task_key],
+        }
+    )
+    assert task.generation == 2
+    assert task.scheduled_start == 30.0
 
     cost_before_stale_events = env.cumulative_cost
     env.event_queue.push(
@@ -357,7 +380,7 @@ def test_same_timestamp_mixed_events_are_independent_of_heap_insertion_order() -
     for order in orders[1:]:
         assert run_order(order) == expected
     assert expected[1] == TaskStatus.COMPLETED
-    assert expected[3] == TaskStatus.UNREADY
+    assert expected[3] == TaskStatus.RUNNING
 
 
 def test_independent_same_timestamp_disturbances_are_order_invariant() -> None:

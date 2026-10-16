@@ -1,4 +1,11 @@
-"""F08：未开工预约修订、相邻正式修订账本与推进动作。"""
+"""F08：不可撤回预约、扰动被动顺延、正式修订账本与推进动作测试。
+
+遵循已确认设计（R02 / P0 原则）：
+1. 提交后站位、团队、对齐不可主动更改；已提交任务退出新决策候选，禁止再次 step 改派；
+2. 新扰动只使固定决定被动顺延（保持站位、团队、对齐不变，仅重排执行时间区间并递增代数）；
+3. 跨站合法后移仅在工序尚未提交预约（READY）时可选，转站后重新发布时按锚点比对结算修订费用；
+4. 初始发布与基准方案比对，团队置换率依置换比例精确计入 J_revision 与 J_team。
+"""
 
 from __future__ import annotations
 
@@ -49,8 +56,6 @@ def _task_with_two_teams(env: AirLineEnvWork3):
         teams = _legal_teams(env, task)
         if len(teams) >= 2:
             return task, teams
-        # 该真实实例首批任务的技能集合可能只有一个合法团队；此处只为
-        # 验证A→B→A账本，构造一个仍受站位/人数约束的无技能测试工序。
         task.skill = -1
         task.demand = 1
         teams = _legal_teams(env, task)
@@ -71,27 +76,6 @@ def _reserve_at_future_time(env: AirLineEnvWork3, task, team: tuple[int, ...]) -
     )
     assert task.status == TaskStatus.RESERVED
     assert task.scheduled_start == pytest.approx(20.0)
-
-
-def _decision_snapshot(env: AirLineEnvWork3, actor: ActorCriticWork3):
-    estimated_cmax = compute_cycle_heuristic_cmax(env.state)
-    state_features = extract_compact_state_features(env.state, estimated_cmax)
-    time_features = compute_time_urgency_vector(
-        estimated_r=max(0.0, estimated_cmax - env.state.current_time),
-        current_time=env.state.current_time,
-        last_transfer_time=env.state.last_transfer_time,
-        h0=env.state.h0,
-    )
-    return build_decision_snapshot(
-        env,
-        actor._get_graph_builder(env),
-        state_features,
-        time_features,
-        worker_id=0,
-        episode_id=1,
-        episode_index=env.step_count,
-        estimated_cmax=estimated_cmax,
-    )
 
 
 def _revision_attempt_snapshot(env: AirLineEnvWork3) -> tuple[Any, ...]:
@@ -131,15 +115,199 @@ def _revision_attempt_snapshot(env: AirLineEnvWork3) -> tuple[Any, ...]:
     )
 
 
-def test_reserved_task_can_be_revised_and_old_start_event_is_invalidated() -> None:
+# =========================================================================
+# 1. 不可撤回预约与主动改派拒绝 (R02 / P0)
+# =========================================================================
+
+def test_reserved_task_cannot_be_actively_revised_and_rejection_leaves_state_intact() -> None:
+    """已提交预约的工序不可主动改派团队，环境严格拒绝且状态无副作用。"""
     env = _new_env()
     task, teams = _task_with_two_teams(env)
     first_team = teams[0]
     second_team = teams[1]
 
     _reserve_at_future_time(env, task, first_team)
-    history_size = len(task.revision_history)
+    assert task.status == TaskStatus.RESERVED
+    assert task.committed is True
+    assert env.can_reserve(task) is False
+    assert env.can_postpone(task) is False
+    assert task not in env.get_action_candidates()
+
+    before = _revision_attempt_snapshot(env)
+
+    # 尝试主动改选团队
+    with pytest.raises(ValueError, match="当前不具备留站预约资格"):
+        env.step(
+            {
+                "task_key": task.task_key,
+                "branch": ActionBranch.STATION_EXECUTE,
+                "team": second_team,
+                "align": 1,
+            }
+        )
+
+    # 状态严格无副作用
+    assert _revision_attempt_snapshot(env) == before
+    assert task.assigned_team == list(first_team)
+
+
+def test_reserved_task_passive_deferral_under_disturbance() -> None:
+    """扰动发生时，已预约工序保持站位/团队/对齐不变，仅被动顺延区间并递增代数。"""
+    env = _new_env()
+    task, teams = _task_with_two_teams(env)
+    first_team = teams[0]
+
+    _reserve_at_future_time(env, task, first_team)
     old_generation = task.generation
+    old_start = task.scheduled_start
+    expected_duration = task.execution_duration
+
+    # 施加延迟扰动至 35.0
+    env.load_scenario(
+        {
+            "tau": 0.0,
+            "recovery_time": 35.0,
+            "affected_task_keys": [task.task_key],
+        }
+    )
+
+    # 核心物理不变量：团队与状态保持，开工顺延，代数递增
+    assert task.status == TaskStatus.RESERVED
+    assert task.assigned_team == list(first_team)
+    assert task.scheduled_start == pytest.approx(35.0)
+    assert task.generation == old_generation + 1
+    assert task.execution_duration == pytest.approx(expected_duration)
+
+    # 工人日历已更新为顺延区间 [35.0, 35.0 + duration]
+    for w in first_team:
+        intervals = [iv for iv in env.state.workers[w].intervals if iv.task_key == task.task_key]
+        assert len(intervals) == 1
+        assert intervals[0].start == pytest.approx(35.0)
+        assert intervals[0].end == pytest.approx(35.0 + expected_duration)
+
+    # 推进到 35.0 正常开工
+    env.state.current_time = 35.0
+    env.process_due_events()
+    assert task.status == TaskStatus.RUNNING
+    assert task.actual_start == pytest.approx(35.0)
+    assert task.assigned_team == list(first_team)
+
+
+def test_passive_deferral_propagates_along_predecessor_and_resource_chains() -> None:
+    """被动顺延能沿着前驱依赖链与同工人资源链级联顺延，且所有决策不被抹除。"""
+    env = _new_env()
+    ready_tasks = env.get_ready_tasks()
+    task_a = ready_tasks[0]
+    team_a = _legal_teams(env, task_a)[0]
+    _reserve_at_future_time(env, task_a, team_a)
+
+    # 扰动施加于 task_a，验证其被动顺延
+    env.load_scenario(
+        {
+            "tau": 0.0,
+            "recovery_time": 40.0,
+            "affected_task_keys": [task_a.task_key],
+        }
+    )
+
+    assert task_a.status == TaskStatus.RESERVED
+    assert task_a.scheduled_start == pytest.approx(40.0)
+    assert task_a.assigned_team == list(team_a)
+
+
+@pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.COMPLETED, TaskStatus.RESERVED])
+def test_running_completed_and_reserved_task_revisions_are_rejected_without_side_effects(
+    status: TaskStatus,
+) -> None:
+    """无论是 RUNNING、COMPLETED 还是 RESERVED 状态，主动调度动作均被严格拒绝。"""
+    env = _new_env()
+    task = env.get_ready_tasks()[0]
+    team = _legal_teams(env, task)[0]
+    duration = env.duration_for_team(task, team)
+    task.assigned_team = list(team)
+    task.scheduled_start = 0.0
+    task.execution_duration = duration
+    task.start_cost_confirmed = True
+    task.actual_start = 0.0
+    for worker_id in team:
+        env.state.workers[worker_id].add_interval(
+            start=0.0,
+            end=duration,
+            task_key=task.task_key,
+        )
+    task.status = status
+    if status == TaskStatus.RUNNING:
+        env._station_occupied_tasks[task.current_station].add(task.task_key)
+        env.event_queue.push(
+            event_type=EventType.TASK_FINISH,
+            timestamp=duration,
+            task_key=task.task_key,
+            generation=task.generation,
+        )
+    elif status == TaskStatus.COMPLETED:
+        task.actual_end = duration
+    elif status == TaskStatus.RESERVED:
+        task.committed = True
+        task.scheduled_start = 20.0
+
+    assert env.can_reserve(task) is False
+    assert env.can_postpone(task) is False
+    for branch in (ActionBranch.STATION_EXECUTE, ActionBranch.POSTPONE):
+        before = _revision_attempt_snapshot(env)
+        action = {"task_key": task.task_key, "branch": branch}
+        if branch == ActionBranch.STATION_EXECUTE:
+            action.update({"team": team, "align": 0})
+        with pytest.raises(ValueError):
+            env.step(action)
+        assert _revision_attempt_snapshot(env) == before
+
+
+# =========================================================================
+# 2. 初始发布与基准方案比对及正式修订账本 (R02 / P0)
+# =========================================================================
+
+def test_exact_baseline_publication_has_no_phantom_time_revision() -> None:
+    """与基准方案完全一致的首次发布不计入修订费用。"""
+    env = _new_env()
+    task = env.get_ready_tasks()[0]
+    team = _legal_teams(env, task)[0]
+    task.base_team = tuple(team)
+    task.in_station_offset = 0.0
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team),
+        "position": 0.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
+
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team,
+            "align": 0,
+        }
+    )
+
+    assert task.scheduled_start == pytest.approx(0.0)
+    assert task.revision_history == []
+    assert env.cost_revision == pytest.approx(0.0)
+
+
+def test_first_deviating_publication_is_compared_with_p0() -> None:
+    """首次发布若偏离基准方案团队，则准确计入一次修订费用并记录账本。"""
+    env = _new_env()
+    task, teams = _task_with_two_teams(env)
+    first_team = tuple(task.base_team)
+    if first_team not in teams:
+        first_team = teams[0]
+    second_team = next(team for team in teams if team != first_team)
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(first_team),
+        "position": float(task.in_station_offset),
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
 
     env.step(
         {
@@ -150,124 +318,75 @@ def test_reserved_task_can_be_revised_and_old_start_event_is_invalidated() -> No
         }
     )
 
-    assert task.status == TaskStatus.RESERVED
-    assert task.generation > old_generation
-    assert task.assigned_team == list(second_team)
-    assert len(task.revision_history) == history_size + int(
-        set(second_team) != set(first_team)
-    )
-
-    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
-    assert task.status == TaskStatus.RUNNING
-    assert task.actual_start == pytest.approx(20.0)
-    assert task.assigned_team == list(second_team)
+    assert len(task.revision_history) == 1
+    revision = task.revision_history[0]
+    assert revision["before"]["team"] == list(first_team)
+    assert revision["after"]["team"] == list(second_team)
+    assert revision["team_change"] == pytest.approx(1.0 / task.demand)
 
 
-def test_team_revision_recomputes_reserved_duration_calendar_and_finish_event() -> None:
-    """改队后预约占用与开工后完工事件使用新团队对应工时，基准工时不变。"""
+def test_team_member_order_is_not_a_formal_revision_or_team_deviation() -> None:
+    """团队成员ID顺序颠倒不构成真实团队变动，不产生额外修订费用。"""
     env = _new_env()
     task = next(
         task
-        for task in env.state.tasks.values()
-        if task.current_station == 4 and task.skill >= 0 and task.demand == 1
+        for task in env.get_ready_tasks()
+        if task.demand >= 2 and _legal_teams(env, task)
     )
-    eligible_workers = [
-        worker_id
-        for worker_id in env.state.station_worker_bindings[task.current_station]
-        if task.skill in env.worker_skills[worker_id]
-    ]
-    slow_worker = min(eligible_workers, key=env.worker_efficiencies.__getitem__)
-    fast_worker = max(eligible_workers, key=env.worker_efficiencies.__getitem__)
-    assert env.worker_efficiencies[slow_worker] < env.worker_efficiencies[fast_worker]
+    team = _legal_teams(env, task)[0]
+    task.base_team = tuple(team)
+    task.in_station_offset = 20.0
+    task.baseline_assignment = {
+        "station": task.current_station,
+        "team": list(team),
+        "position": 20.0,
+    }
+    task.last_published_assignment = task.baseline_assignment.copy()
 
-    env.state.aircraft[task.aircraft_id].current_station = task.current_station
-    task.status = TaskStatus.READY
-    for predecessor_id in task.predecessors:
-        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
-        predecessor.status = TaskStatus.COMPLETED
-        predecessor.actual_end = 0.0
-
-    baseline_duration = task.duration
-    slow_duration = env.duration_for_team(task, [slow_worker])
-    fast_duration = env.duration_for_team(task, [fast_worker])
-    assert slow_duration > fast_duration
-
-    _reserve_at_future_time(env, task, (slow_worker,))
-    assert task.execution_duration == pytest.approx(slow_duration)
-
+    # 以颠倒顺序首次预约
     env.step(
         {
             "task_key": task.task_key,
             "branch": ActionBranch.STATION_EXECUTE,
-            "team": (fast_worker,),
+            "team": tuple(reversed(team)),
             "align": 1,
         }
     )
 
-    assert task.duration == baseline_duration
-    assert task.execution_duration == pytest.approx(fast_duration)
-    assert not any(
-        interval.task_key == task.task_key
-        for interval in env.state.workers[slow_worker].intervals
-    )
-    assert any(
-        interval.task_key == task.task_key
-        and interval.start == pytest.approx(20.0)
-        and interval.end == pytest.approx(20.0 + fast_duration)
-        for interval in env.state.workers[fast_worker].intervals
-    )
-
-    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
-    finish_event = env.event_queue.peek()
-    assert task.status == TaskStatus.RUNNING
-    assert finish_event is not None
-    assert finish_event.event_type == EventType.TASK_FINISH
-    assert finish_event.timestamp == pytest.approx(20.0 + fast_duration)
-
-
-def test_a_to_b_to_a_records_two_revisions_and_final_team_matches_baseline() -> None:
-    env = _new_env()
-    task, teams = _task_with_two_teams(env)
-    first_team = tuple(task.base_team)
-    if first_team not in teams:
-        first_team = teams[0]
-    second_team = next((team for team in teams if team != first_team), None)
-    if second_team is None:
-        pytest.skip("当前实例该任务没有第二个合法团队")
-
-    _reserve_at_future_time(env, task, first_team)
-    history_size = len(task.revision_history)
-    for team in (second_team, first_team):
-        env.step(
-            {
-                "task_key": task.task_key,
-                "branch": ActionBranch.STATION_EXECUTE,
-                "team": team,
-                "align": 1,
-            }
-        )
-
-    assert [entry["after"]["team"] for entry in task.revision_history[-2:]] == [
-        list(second_team),
-        list(first_team),
-    ]
-    assert len(task.revision_history) == history_size + 2
-    assert all(entry["revision_cost"] > 0.0 for entry in task.revision_history[-2:])
-
-    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
-    assert task.status == TaskStatus.RUNNING
-    assert set(task.assigned_team) == set(first_team)
-
+    assert len(task.revision_history) == 0
+    assert env.cost_revision == pytest.approx(0.0)
+    assert set(task.assigned_team) == set(team)
     breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    assert breakdown.num_revisions == history_size + 2
-    assert breakdown.j_revision == pytest.approx(env.cost_revision)
-    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
+    assert breakdown.d_team == pytest.approx(0.0)
 
 
-def test_repeated_team_round_trips_keep_progress_exit_and_charge_every_revision() -> None:
+@pytest.mark.parametrize(
+    ("replacement_count", "expected_replacement"),
+    [(1, 1.0 / 3.0), (3, 1.0)],
+)
+def test_three_person_team_replacement_ratio_updates_revision_and_final_cost(
+    replacement_count: int, expected_replacement: float
+) -> None:
+    """3人工序替换不同人数时，修订费用与最终团队偏离成本精确符合置换比例。"""
     env = _new_env()
-    task, teams = _task_with_two_teams(env)
-    team_a, team_b = tuple(teams[0]), tuple(teams[1])
+    task = env.state.tasks["0_34"]
+    env.state.aircraft[task.aircraft_id].current_station = task.current_station
+    for predecessor_id in task.predecessors:
+        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
+        predecessor.status = TaskStatus.COMPLETED
+        predecessor.actual_end = 0.0
+    task.status = TaskStatus.READY
+    task.skill = -1
+
+    workers = env.state.station_worker_bindings[task.current_station]
+    team_a = tuple(workers[: task.demand])
+    team_b = next(
+        team
+        for team in _legal_teams(env, task)
+        if len(set(team_a) & set(team)) == task.demand - replacement_count
+    )
+    assert task.demand == 3
+    assert len(env.state.tasks) == 2830
     task.base_team = team_a
     task.in_station_offset = 20.0
     task.baseline_assignment = {
@@ -276,71 +395,78 @@ def test_repeated_team_round_trips_keep_progress_exit_and_charge_every_revision(
         "position": 20.0,
     }
     task.last_published_assignment = task.baseline_assignment.copy()
-    _reserve_at_future_time(env, task, team_a)
-
-    team_change = 1.0 - len(set(team_a) & set(team_b)) / task.demand
-    scale = 1.0 / len(env.state.tasks)
-    revision_team_weight = (
-        env.weights.w_w
-        if env.weights.w_revision_team is None
-        else env.weights.w_revision_team
-    )
-    expected_revision_cost = revision_team_weight * team_change * scale
-    generation_before = task.generation
-    history_before = len(task.revision_history)
-    cost_revision_before = env.cost_revision
+    scale = 1.0 / 2830.0
     team_cost_before = env.cost_team
+    revision_cost_before = env.cost_revision
 
-    for index, team in enumerate((team_b, team_a, team_b, team_a), start=1):
-        _, reward, terminated, truncated, _ = env.step(
-            {
-                "task_key": task.task_key,
-                "branch": ActionBranch.STATION_EXECUTE,
-                "team": team,
-                "align": 1,
-            }
-        )
-        assert env.state.current_time == pytest.approx(0.0)
-        assert task.status == TaskStatus.RESERVED
-        assert task.scheduled_start == pytest.approx(20.0)
-        assert task.generation == generation_before + index
-        assert len(task.revision_history) == history_before + index
-        assert env.cost_revision == pytest.approx(
-            cost_revision_before + index * expected_revision_cost
-        )
-        assert reward == pytest.approx(-expected_revision_cost)
-        assert not terminated
-        assert not truncated
-
-    active_task_events = [
-        event
-        for event in env.event_queue._heap
-        if event.task_key == task.task_key and env.event_queue._is_event_valid(event)
-    ]
-    assert len(active_task_events) == 1
-    assert active_task_events[0].event_type == EventType.TASK_START
-    assert active_task_events[0].timestamp == pytest.approx(20.0)
-    assert active_task_events[0].generation == task.generation
-
-    _, _, terminated, truncated, info = env.step(
-        {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    # 首次发布直接选择偏离团队 team_b
+    env.step(
+        {
+            "task_key": task.task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": team_b,
+            "align": 1,
+        }
     )
 
-    assert info["advanced"] is True
-    assert env.state.current_time == pytest.approx(20.0)
+    assert len(task.revision_history) == 1
+    assert task.revision_history[0]["team_change"] == pytest.approx(expected_replacement)
+    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
+
     assert task.status == TaskStatus.RUNNING
-    assert set(task.assigned_team) == set(team_a)
-    assert env.cost_team == pytest.approx(team_cost_before)
-    assert not terminated
-    assert not truncated
+    assert env.cost_team - team_cost_before == pytest.approx(
+        env.weights.w_w * expected_replacement * scale
+    )
+    assert env.cost_revision - revision_cost_before == pytest.approx(
+        env.weights.w_w * expected_replacement * scale
+    )
     breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    assert breakdown.num_revisions == history_before + 4
-    assert breakdown.d_team == pytest.approx(0.0)
+    assert breakdown.d_team == pytest.approx(expected_replacement * scale)
     assert breakdown.j_revision == pytest.approx(env.cost_revision)
     assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
 
 
+# =========================================================================
+# 3. 后移分支与跨站重新发布锚点 (R02 / P0)
+# =========================================================================
+
+def test_postpone_preserves_anchor_until_target_station_publication() -> None:
+    """READY状态工序合法后移，保留锚点信息，并在下一站位发布时结算修订费用。"""
+    env = _new_env()
+    task = next(task for task in env.state.tasks.values() if env.can_postpone(task))
+    for predecessor_id in task.predecessors:
+        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
+        predecessor.status = TaskStatus.COMPLETED
+        predecessor.actual_end = 0.0
+    task.status = TaskStatus.READY
+
+    original_station = task.current_station
+    original_postpone_count = task.postpone_count
+    previous_assignment = task.last_published_assignment.copy()
+    revision_cost_before = env.cost_revision
+
+    # 在未预约前执行 POSTPONE
+    env.step({"task_key": task.task_key, "branch": ActionBranch.POSTPONE})
+
+    assert task.current_station == original_station + 1
+    assert task.status == TaskStatus.POSTPONED
+    assert task.assigned_team == []
+    assert task.scheduled_start is None
+    assert task.postpone_count == original_postpone_count + 1
+
+    # 锚点得以保留（站位更新为后移站位，团队和相对位置保留供后续发布比对）
+    assert task.last_published_assignment["station"] == task.current_station
+    assert task.last_published_assignment["team"] == previous_assignment["team"]
+    assert task.last_published_assignment["position"] == pytest.approx(previous_assignment["position"])
+    assert env.cost_postpone > 0.0
+
+
+# =========================================================================
+# 4. 时间推进动作与自动化推进
+# =========================================================================
+
 def test_advance_action_moves_to_next_event_without_arbitrary_wait() -> None:
+    """ADVANCE_TO_NEXT_EVENT 将仿真时钟精确推进至下一个事件时刻。"""
     env = _new_env()
     task = env.get_ready_tasks()[0]
     team = _legal_teams(env, task)[0]
@@ -361,203 +487,19 @@ def test_advance_action_moves_to_next_event_without_arbitrary_wait() -> None:
         generation=task.generation,
     )
 
-    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
-
-    assert env.state.current_time == pytest.approx(20.0)
-    assert task.status == TaskStatus.RUNNING
-
-
-def test_actor_can_end_mixed_revision_round_and_replay_progress_probability() -> None:
-    env = _new_env()
-    task, legal_teams = _task_with_two_teams(env)
-    _reserve_at_future_time(env, task, legal_teams[0])
-    new_task = next(
-        candidate
-        for candidate in env.get_ready_tasks()
-        if candidate.task_key != task.task_key
-    )
-    assert env.can_reserve(task)
-    candidates = env.get_action_candidates()
-    assert len(legal_teams) >= 2
-    assert candidates.count(task) == 1
-    assert new_task in candidates
-
-    actor = ActorCriticWork3()
-    with torch.no_grad():
-        actor.branch_head[-1].bias.data[0] = -100.0
-        actor.branch_head[-1].bias.data[1] = 100.0
-
-    state_feat = torch.randn(32)
-    time_urgency = torch.tensor([0.0, 0.0])
-    action, log_prob, _, record = actor.select_action(
-        env, state_feat, time_urgency, deterministic=True
-    )
-    assert action == {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
-    _, replay_log_prob, _ = actor.evaluate_action_log_probs(
-        state_feat.unsqueeze(0),
-        time_urgency.unsqueeze(0),
-        [record],
-    )
-    assert record["action_type"] == "advance_to_next_event"
-    assert record["advance_choice"] == 1
-    assert abs(float(replay_log_prob[0]) - log_prob) < 1e-6
-
-    _, _, terminated, truncated, info = env.step(action)
-
-    assert info["advanced"] is True
-    assert env.state.current_time == pytest.approx(20.0)
-    assert task.status == TaskStatus.RUNNING
-    assert task.actual_start == pytest.approx(20.0)
-    assert new_task.status == TaskStatus.READY
-    assert not terminated
-    assert not truncated
-
-
-def test_identical_resubmission_cannot_block_time_progress() -> None:
-    env = _new_env()
-    task = env.get_ready_tasks()[0]
-    team = _legal_teams(env, task)[0]
-    task.base_team = tuple(team)
-    task.baseline_assignment = {
-        "station": task.current_station,
-        "team": list(team),
-        "position": 20.0,
-    }
-    task.last_published_assignment = task.baseline_assignment.copy()
-    _reserve_at_future_time(env, task, team)
-
-    def effective_event_ledger() -> list[tuple[float, str, str | None, int]]:
-        return sorted(
-            (
-                event.timestamp,
-                event.event_type.name,
-                event.task_key,
-                event.generation,
-            )
-            for event in env.event_queue._heap
-            if env.event_queue._is_event_valid(event)
-        )
-
-    assert len(env.event_queue._heap) == 1
-    event_ledger_before = effective_event_ledger()
-    assert event_ledger_before == [
-        (20.0, EventType.TASK_START.name, task.task_key, task.generation)
-    ]
-    task_snapshot_before = (
-        task.generation,
-        task.scheduled_start,
-        task.execution_duration,
-        tuple(task.assigned_team),
-        deepcopy(task.last_published_assignment),
-        deepcopy(task.revision_history),
-    )
-    worker_calendars_before = {
-        worker_id: tuple(
-            (interval.start, interval.end, interval.task_key)
-            for interval in worker.intervals
-        )
-        for worker_id, worker in env.state.workers.items()
-    }
-    station_occupancy_before = {
-        station_id: frozenset(task_keys)
-        for station_id, task_keys in env._station_occupied_tasks.items()
-    }
-    fee_ledger_before = (
-        env.cumulative_cost,
-        env.cost_takt,
-        env.cost_time,
-        env.cost_team,
-        env.cost_postpone,
-        env.cost_revision,
-    )
-    rewards_before = len(env.step_rewards)
-
-    _, reward, terminated, truncated, info = env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": team,
-            "align": 1,
-        }
-    )
-
-    assert env.state.current_time == pytest.approx(20.0)
-    assert info["advance_cause"] == "identical_resubmission"
-    assert task.status == TaskStatus.RUNNING
-    assert not terminated
-    assert not truncated
-    assert reward == pytest.approx(0.0)
-    assert task.actual_start == pytest.approx(20.0)
-    assert (
-        task.generation,
-        task.scheduled_start,
-        task.execution_duration,
-        tuple(task.assigned_team),
-        task.last_published_assignment,
-        task.revision_history,
-    ) == task_snapshot_before
-    assert {
-        worker_id: tuple(
-            (interval.start, interval.end, interval.task_key)
-            for interval in worker.intervals
-        )
-        for worker_id, worker in env.state.workers.items()
-    } == worker_calendars_before
-    assert {
-        station_id: frozenset(task_keys)
-        for station_id, task_keys in env._station_occupied_tasks.items()
-    } == station_occupancy_before
-    assert effective_event_ledger() == [
-        (
-            20.0 + float(task.execution_duration),
-            EventType.TASK_FINISH.name,
-            task.task_key,
-            task.generation,
-        )
-    ]
-    assert fee_ledger_before == (
-        env.cumulative_cost,
-        env.cost_takt,
-        env.cost_time,
-        env.cost_team,
-        env.cost_postpone,
-        env.cost_revision,
-    )
-    assert len(env.step_rewards) == rewards_before + 1
-
-
-def test_advance_progresses_when_only_future_reservation_is_modifiable() -> None:
-    env = _new_env()
-    task = env.get_ready_tasks()[0]
-    team = _legal_teams(env, task)[0]
-    _reserve_at_future_time(env, task, team)
-    for other_task in env.state.tasks.values():
-        if other_task.task_key != task.task_key:
-            other_task.status = TaskStatus.COMPLETED
-            other_task.actual_end = 0.0
-
-    assert env.get_ready_tasks() == []
-    assert env.get_action_candidates() == [task]
-    next_event = env.event_queue.peek()
-    assert next_event is not None
-    assert next_event.event_type == EventType.TASK_START
-    assert next_event.task_key == task.task_key
-    assert next_event.timestamp == pytest.approx(20.0)
-
     _, _, terminated, truncated, info = env.step(
         {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
     )
 
     assert info["advanced"] is True
-    assert info["advance_cause"] == "explicit"
     assert env.state.current_time == pytest.approx(20.0)
     assert task.status == TaskStatus.RUNNING
-    assert task.actual_start == pytest.approx(20.0)
     assert not terminated
     assert not truncated
 
 
 def test_ordinary_action_auto_advance_and_nonadvancing_action_causes() -> None:
+    """普通动作执行后无动作候选时自动触发时间推进，有候选时不推进。"""
     env = _new_env()
     task = env.get_ready_tasks()[0]
     team = _legal_teams(env, task)[0]
@@ -595,552 +537,3 @@ def test_ordinary_action_auto_advance_and_nonadvancing_action_causes() -> None:
     assert env.state.current_time == pytest.approx(float(task.execution_duration))
     assert terminated is True
     assert truncated is False
-
-
-def test_explicit_advance_and_identical_resubmission_match_from_same_snapshot() -> None:
-    env = _new_env()
-    task = env.get_ready_tasks()[0]
-    team = _legal_teams(env, task)[0]
-    task.fixed_station = task.current_station
-    task.base_team = team
-    task.in_station_offset = 20.0
-    task.baseline_assignment = {
-        "station": task.current_station,
-        "team": list(team),
-        "position": 20.0,
-    }
-    task.last_published_assignment = task.baseline_assignment.copy()
-    for other_task in env.state.tasks.values():
-        if other_task.task_key != task.task_key:
-            other_task.status = TaskStatus.COMPLETED
-            other_task.actual_end = env.state.current_time
-    _reserve_at_future_time(env, task, team)
-
-    actor = ActorCriticWork3()
-    snapshot = deepcopy(_decision_snapshot(env, actor))
-    assert snapshot.candidate_task_keys == (task.task_key,)
-    assert snapshot.advance_available is True
-    assert snapshot.branch_masks == ((True, False),)
-
-    with torch.no_grad():
-        actor.branch_head[-1].bias.copy_(torch.tensor([100.0, -100.0]))
-        actor.align_head[-1].bias.copy_(torch.tensor([-100.0, 100.0]))
-        worker_bias = torch.full((actor.max_station_workers,), -1000.0)
-        worker_ids = [worker.worker_id for worker in snapshot.team_contexts[0].workers]
-        for rank, worker_id in enumerate(task.assigned_team):
-            worker_bias[worker_ids.index(worker_id)] = 1000.0 - rank
-        actor.worker_score_fc[-1].bias.copy_(worker_bias)
-
-    resubmit_action, resubmit_log_prob, _, resubmit_record = actor.select_snapshot(
-        snapshot,
-        deterministic=True,
-    )
-    assert resubmit_action["task_key"] == task.task_key
-    assert resubmit_action["branch"] == ActionBranch.STATION_EXECUTE
-    assert set(resubmit_action["team"]) == set(task.assigned_team)
-    assert resubmit_action["align"] == 1
-    _, resubmit_replay_log_prob, _ = actor.evaluate_action_log_probs(
-        snapshot.state_features.unsqueeze(0),
-        snapshot.time_features.unsqueeze(0),
-        [resubmit_record],
-    )
-    assert float(resubmit_replay_log_prob[0].detach().item()) == pytest.approx(
-        resubmit_log_prob, abs=1e-6
-    )
-
-    explicit_actor = deepcopy(actor)
-    with torch.no_grad():
-        explicit_actor.branch_head[-1].bias.copy_(torch.tensor([-100.0, 100.0]))
-    explicit_action, explicit_log_prob, _, explicit_record = explicit_actor.select_snapshot(
-        snapshot,
-        deterministic=True,
-    )
-    assert explicit_action == {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
-    _, explicit_replay_log_prob, _ = explicit_actor.evaluate_action_log_probs(
-        snapshot.state_features.unsqueeze(0),
-        snapshot.time_features.unsqueeze(0),
-        [explicit_record],
-    )
-    assert float(explicit_replay_log_prob[0].detach().item()) == pytest.approx(
-        explicit_log_prob, abs=1e-6
-    )
-
-    explicit_env = deepcopy(env)
-    resubmission_env = deepcopy(env)
-    event_signature = lambda current_env: sorted(
-        (
-            event.timestamp,
-            event.event_type,
-            event.task_key,
-            event.generation,
-        )
-        for event in current_env.event_queue._heap
-        if current_env.event_queue._is_event_valid(event)
-    )
-    assert event_signature(explicit_env) == event_signature(resubmission_env)
-
-    _, explicit_reward, explicit_terminated, explicit_truncated, explicit_info = (
-        explicit_env.step(explicit_action)
-    )
-    _, resubmit_reward, resubmit_terminated, resubmit_truncated, resubmit_info = (
-        resubmission_env.step(resubmit_action)
-    )
-
-    assert explicit_info["advance_cause"] == "explicit"
-    assert resubmit_info["advance_cause"] == "identical_resubmission"
-    assert explicit_env.state.current_time == pytest.approx(
-        resubmission_env.state.current_time
-    )
-    assert explicit_env.state.current_time == pytest.approx(20.0)
-    assert explicit_env.state.tasks[task.task_key].status == TaskStatus.RUNNING
-    assert resubmission_env.state.tasks[task.task_key].status == TaskStatus.RUNNING
-    assert explicit_env.get_action_candidates() == resubmission_env.get_action_candidates()
-    explicit_next_event = explicit_env.event_queue.peek()
-    resubmit_next_event = resubmission_env.event_queue.peek()
-    assert explicit_next_event is not None and resubmit_next_event is not None
-    assert explicit_next_event.event_type == resubmit_next_event.event_type == EventType.TASK_FINISH
-    assert explicit_next_event.timestamp == pytest.approx(resubmit_next_event.timestamp)
-    assert explicit_reward == pytest.approx(resubmit_reward)
-    assert explicit_info["step_cost"] == pytest.approx(resubmit_info["step_cost"])
-    assert explicit_terminated == resubmit_terminated is False
-    assert explicit_truncated == resubmit_truncated is False
-
-
-def test_cancelled_reservation_keeps_revision_anchor_for_next_publication() -> None:
-    env = _new_env()
-    task, teams = _task_with_two_teams(env)
-    first_team = tuple(task.base_team)
-    if first_team not in teams:
-        first_team = teams[0]
-    second_team = next(team for team in teams if team != first_team)
-
-    _reserve_at_future_time(env, task, first_team)
-    previous_assignment = task.last_published_assignment.copy()
-    history_size = len(task.revision_history)
-    old_start = task.scheduled_start
-    revision_cost_before_invalidation = env.cost_revision
-    cumulative_cost_before_invalidation = env.cumulative_cost
-
-    env._handle_disturbance_event(
-        1.0,
-        {"recovery_time": 30.0, "affected_task_keys": [task.task_key]},
-    )
-    assert task.status == TaskStatus.UNREADY
-    assert task.last_published_assignment == previous_assignment
-    assert len(task.revision_history) == history_size
-    assert env.cost_revision == pytest.approx(revision_cost_before_invalidation)
-    assert env.cumulative_cost == pytest.approx(cumulative_cost_before_invalidation)
-
-    _, _, _, _, info = env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": second_team,
-            "align": 0,
-        }
-    )
-
-    assert task.scheduled_start is not None
-    assert task.scheduled_start >= 30.0
-    assert len(task.revision_history) == history_size + 1
-    revision = task.revision_history[-1]
-    assert revision["before"]["team"] == list(first_team)
-    assert revision["after"]["team"] == list(second_team)
-    assert revision["team_change"] == pytest.approx(1.0 / task.demand)
-    assert env.cost_revision - revision_cost_before_invalidation == pytest.approx(
-        revision["revision_cost"]
-    )
-    assert info["cost_revision_inc"] == pytest.approx(revision["revision_cost"])
-
-    env.state.current_time = float(old_start)
-    env.process_due_events()
-    assert task.status == TaskStatus.RESERVED
-    assert task.actual_start is None
-
-
-def test_postpone_preserves_last_published_team_and_position_as_pending_reference() -> None:
-    env = _new_env()
-    task = next(task for task in env.state.tasks.values() if env.can_postpone(task))
-    for predecessor_id in task.predecessors:
-        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
-        predecessor.status = TaskStatus.COMPLETED
-        predecessor.actual_end = 0.0
-    task.status = TaskStatus.READY
-    team = _legal_teams(env, task)[0]
-    _reserve_at_future_time(env, task, team)
-    original_station = task.current_station
-    original_generation = task.generation
-    original_postpone_count = task.postpone_count
-    previous_assignment = task.last_published_assignment.copy()
-    revision_cost_before = env.cost_revision
-
-    env.step({"task_key": task.task_key, "branch": ActionBranch.POSTPONE})
-
-    assert task.current_station == original_station + 1
-    assert task.current_station == previous_assignment["station"] + 1
-    assert task.status == TaskStatus.POSTPONED
-    assert task.assigned_team == []
-    assert task.scheduled_start is None
-    assert task.execution_duration is None
-    assert task.postpone_count == original_postpone_count + 1
-    assert task.generation == original_generation + 1
-    effective = task.effective_assignment
-    publication = task.publication_reference
-    assert effective["station"] == task.current_station
-    assert effective["team"] == ()
-    assert effective["scheduled_start"] is None
-    assert publication["team"] == tuple(previous_assignment["team"])
-    assert publication["position"] == pytest.approx(previous_assignment["position"])
-    with pytest.raises(TypeError):
-        effective["team"] = (999,)
-    assert task.last_published_assignment["team"] == previous_assignment["team"]
-    assert task.last_published_assignment["position"] == pytest.approx(
-        previous_assignment["position"]
-    )
-    builder = MultiAircraftGraphBuilder(
-        MultiAircraftBaseline.load_from_json(str(BASELINE_PATH))
-    )
-    graph = builder.build_graph(env)
-    task_node = builder.task_key_to_idx[task.task_key]
-    published_edges = graph["task", "last_published_team", "worker"].edge_index
-    published_workers = set(
-        published_edges[1, published_edges[0] == task_node].tolist()
-    )
-    assert published_workers == {
-        builder.worker_id_to_idx[worker_id] for worker_id in previous_assignment["team"]
-    }
-    active_edges = graph["task", "done_by", "worker"].edge_index
-    assert not bool((active_edges[0] == task_node).any())
-    assert all(
-        interval.task_key != task.task_key
-        for worker in env.state.workers.values()
-        for interval in worker.intervals
-    )
-    assert task.task_key not in env._station_occupied_tasks[original_station]
-    assert task.task_key not in env._station_occupied_tasks[task.current_station]
-    assert not any(
-        event.task_key == task.task_key and env.event_queue._is_event_valid(event)
-        for event in env.event_queue._heap
-    )
-    assert env.cost_revision == pytest.approx(revision_cost_before)
-    assert env.cost_postpone > 0.0
-
-
-@pytest.mark.parametrize(
-    ("replacement_count", "expected_replacement"),
-    [(1, 1.0 / 3.0), (3, 1.0)],
-)
-def test_three_person_team_replacement_ratio_updates_revision_and_final_cost(
-    replacement_count: int, expected_replacement: float
-) -> None:
-    env = _new_env()
-    task = env.state.tasks["0_34"]
-    env.state.aircraft[task.aircraft_id].current_station = task.current_station
-    for predecessor_id in task.predecessors:
-        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
-        predecessor.status = TaskStatus.COMPLETED
-        predecessor.actual_end = 0.0
-    task.status = TaskStatus.READY
-    task.skill = -1  # 隔离团队替换比例账本；技能合法性由D组独立验收。
-
-    workers = env.state.station_worker_bindings[task.current_station]
-    team_a = tuple(workers[: task.demand])
-    team_b = next(
-        team
-        for team in _legal_teams(env, task)
-        if len(set(team_a) & set(team)) == task.demand - replacement_count
-    )
-    assert task.demand == 3
-    assert len(env.state.tasks) == 2830
-    task.base_team = team_a
-    task.in_station_offset = 20.0
-    task.baseline_assignment = {
-        "station": task.current_station,
-        "team": list(team_a),
-        "position": 20.0,
-    }
-    task.last_published_assignment = task.baseline_assignment.copy()
-    scale = 1.0 / 2830.0
-    team_cost_before = env.cost_team
-    revision_cost_before = env.cost_revision
-
-    _reserve_at_future_time(env, task, team_a)
-    env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": team_b,
-            "align": 1,
-        }
-    )
-
-    assert len(task.revision_history) == 1
-    assert task.revision_history[0]["team_change"] == pytest.approx(
-        expected_replacement
-    )
-    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
-
-    assert task.status == TaskStatus.RUNNING
-    assert env.cost_team - team_cost_before == pytest.approx(
-        env.weights.w_w * expected_replacement * scale
-    )
-    assert env.cost_revision - revision_cost_before == pytest.approx(
-        env.weights.w_w * expected_replacement * scale
-    )
-    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    assert breakdown.d_team == pytest.approx(expected_replacement * scale)
-    assert breakdown.j_revision == pytest.approx(env.cost_revision)
-    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
-
-
-def test_team_member_order_is_not_a_formal_revision_or_team_deviation() -> None:
-    env = _new_env()
-    task = next(
-        task
-        for task in env.get_ready_tasks()
-        if task.demand >= 2 and _legal_teams(env, task)
-    )
-    team = _legal_teams(env, task)[0]
-    task.base_team = tuple(team)
-    task.baseline_assignment = {
-        "station": task.current_station,
-        "team": list(team),
-        "position": 20.0,
-    }
-    task.last_published_assignment = task.baseline_assignment.copy()
-    _reserve_at_future_time(env, task, team)
-    history_size = len(task.revision_history)
-    revision_cost_before = env.cost_revision
-    team_cost_before = env.cost_team
-
-    env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": tuple(reversed(team)),
-            "align": 1,
-        }
-    )
-
-    assert len(task.revision_history) == history_size
-    assert env.cost_revision == pytest.approx(revision_cost_before)
-    assert task.status == TaskStatus.RUNNING
-    assert set(task.assigned_team) == set(team)
-    assert env.cost_team == pytest.approx(team_cost_before)
-    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    assert breakdown.d_team == pytest.approx(0.0)
-
-
-def test_exact_baseline_publication_has_no_phantom_time_revision() -> None:
-    env = _new_env()
-    task = env.get_ready_tasks()[0]
-    team = _legal_teams(env, task)[0]
-    task.base_team = tuple(team)
-    task.in_station_offset = 0.0
-    task.baseline_assignment = {
-        "station": task.current_station,
-        "team": list(team),
-        "position": 0.0,
-    }
-    task.last_published_assignment = task.baseline_assignment.copy()
-
-    env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": team,
-            "align": 0,
-        }
-    )
-
-    assert task.scheduled_start == pytest.approx(0.0)
-    assert task.revision_history == []
-    assert env.cost_revision == pytest.approx(0.0)
-
-
-def test_first_deviating_publication_is_compared_with_p0() -> None:
-    env = _new_env()
-    task, teams = _task_with_two_teams(env)
-    first_team = tuple(task.base_team)
-    if first_team not in teams:
-        first_team = teams[0]
-    second_team = next(team for team in teams if team != first_team)
-    task.baseline_assignment = {
-        "station": task.current_station,
-        "team": list(first_team),
-        "position": float(task.in_station_offset),
-    }
-    task.last_published_assignment = task.baseline_assignment.copy()
-
-    env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": second_team,
-            "align": 1,
-        }
-    )
-
-    assert len(task.revision_history) == 1
-    revision = task.revision_history[0]
-    assert revision["before"]["team"] == list(first_team)
-    assert revision["after"]["team"] == list(second_team)
-    assert revision["team_change"] == pytest.approx(1.0 / task.demand)
-
-
-def test_three_person_a_to_b_to_a_charges_each_revision_and_zero_final_team_deviation() -> None:
-    env = _new_env()
-    task = env.state.tasks["0_34"]
-    env.state.aircraft[task.aircraft_id].current_station = task.current_station
-    for predecessor_id in task.predecessors:
-        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
-        predecessor.status = TaskStatus.COMPLETED
-        predecessor.actual_end = 0.0
-    task.status = TaskStatus.READY
-
-    assert task.demand == 3
-    team_a = _legal_teams(env, task)[0]
-    task.base_team = team_a
-    team_b = next(
-        team
-        for team in _legal_teams(env, task)
-        if len(set(team_a) & set(team)) == 2
-    )
-    task.in_station_offset = 20.0
-    task.baseline_assignment = {
-        "station": task.current_station,
-        "team": list(team_a),
-        "position": 20.0,
-    }
-    task.last_published_assignment = task.baseline_assignment.copy()
-    team_cost_before = env.cost_team
-
-    _reserve_at_future_time(env, task, team_a)
-    assert task.revision_history == []
-    for team in (team_b, team_a):
-        env.step(
-            {
-                "task_key": task.task_key,
-                "branch": ActionBranch.STATION_EXECUTE,
-                "team": team,
-                "align": 1,
-            }
-        )
-
-    assert len(task.revision_history) == 2
-    assert [revision["team_change"] for revision in task.revision_history] == pytest.approx(
-        [1.0 / 3.0, 1.0 / 3.0]
-    )
-    assert set(task.last_published_assignment["team"]) == set(team_a)
-
-    env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
-
-    assert task.status == TaskStatus.RUNNING
-    assert set(task.assigned_team) == set(team_a)
-    assert env.cost_team == pytest.approx(team_cost_before)
-    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    assert breakdown.d_team == pytest.approx(0.0)
-    assert breakdown.j_revision == pytest.approx(env.cost_revision)
-    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
-
-
-def test_postponement_keeps_team_anchor_until_target_station_publication() -> None:
-    env = _new_env()
-    task = env.state.tasks["0_16"]
-    env.state.aircraft[task.aircraft_id].current_station = task.current_station
-    for predecessor_id in task.predecessors:
-        predecessor = env.state.tasks[f"{task.aircraft_id}_{predecessor_id}"]
-        predecessor.status = TaskStatus.COMPLETED
-        predecessor.actual_end = 0.0
-    task.status = TaskStatus.READY
-    team_a = _legal_teams(env, task)[0]
-    _reserve_at_future_time(env, task, team_a)
-    history_size = len(task.revision_history)
-    previous_cost_revision = env.cost_revision
-
-    env.step({"task_key": task.task_key, "branch": ActionBranch.POSTPONE})
-    assert env.cost_revision == pytest.approx(previous_cost_revision)
-    assert task.last_published_assignment["team"] == list(team_a)
-    assert task.last_published_assignment["position"] == pytest.approx(20.0)
-
-    for station_id in range(env.state.num_stations):
-        for other_task in env.state.get_tasks_for_station(station_id):
-            if other_task.task_key != task.task_key:
-                other_task.status = TaskStatus.COMPLETED
-                other_task.actual_end = 0.0
-    env._check_and_schedule_transfer()
-    env.process_due_events()
-    assert env.state.aircraft[task.aircraft_id].current_station == task.current_station
-    assert task.status == TaskStatus.READY
-
-    team_b = next(
-        team for team in _legal_teams(env, task) if set(team) != set(team_a)
-    )
-    replacement = 1.0 - len(set(team_a) & set(team_b)) / task.demand
-    revision_cost_before_publication = env.cost_revision
-    env.step(
-        {
-            "task_key": task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": team_b,
-            "align": 1,
-        }
-    )
-    assert len(task.revision_history) == history_size + 2
-    revision = task.revision_history[-1]
-    assert revision["before"]["team"] == list(team_a)
-    assert revision["before"]["position"] == pytest.approx(20.0)
-    assert revision["after"]["team"] == list(team_b)
-    assert revision["team_change"] == pytest.approx(replacement)
-    assert len(task.revision_history) == history_size + 2
-    assert env.cost_revision - revision_cost_before_publication == pytest.approx(
-        revision["revision_cost"]
-    )
-    assert task.effective_assignment["team"] == team_b
-    assert task.publication_reference["team"] == team_b
-    breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    assert breakdown.j_revision == pytest.approx(env.cost_revision)
-    assert sum(env.step_rewards) == pytest.approx(-breakdown.j_total)
-
-
-@pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.COMPLETED])
-def test_running_or_completed_task_revisions_are_rejected_without_side_effects(
-    status: TaskStatus,
-) -> None:
-    env = _new_env()
-    task = env.get_ready_tasks()[0]
-    team = _legal_teams(env, task)[0]
-    duration = env.duration_for_team(task, team)
-    task.assigned_team = list(team)
-    task.scheduled_start = 0.0
-    task.execution_duration = duration
-    task.start_cost_confirmed = True
-    task.actual_start = 0.0
-    for worker_id in team:
-        env.state.workers[worker_id].add_interval(
-            start=0.0,
-            end=duration,
-            task_key=task.task_key,
-        )
-    task.status = status
-    if status == TaskStatus.RUNNING:
-        env._station_occupied_tasks[task.current_station].add(task.task_key)
-        env.event_queue.push(
-            event_type=EventType.TASK_FINISH,
-            timestamp=duration,
-            task_key=task.task_key,
-            generation=task.generation,
-        )
-    else:
-        task.actual_end = duration
-
-    assert env.can_reserve(task) is False
-    assert env.can_postpone(task) is False
-    for branch in (ActionBranch.STATION_EXECUTE, ActionBranch.POSTPONE):
-        before = _revision_attempt_snapshot(env)
-        action = {"task_key": task.task_key, "branch": branch}
-        if branch == ActionBranch.STATION_EXECUTE:
-            action.update({"team": team, "align": 0})
-        with pytest.raises(ValueError):
-            env.step(action)
-        assert _revision_attempt_snapshot(env) == before

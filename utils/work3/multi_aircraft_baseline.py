@@ -19,12 +19,20 @@ from __future__ import annotations
 import ast
 import json
 import logging
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from core.constraints import ConstraintEngine
+from data_loader import load_data
 
 logger = logging.getLogger(__name__)
 
@@ -275,27 +283,26 @@ def load_single_aircraft_template(
     if not sched_path.is_file():
         raise FileNotFoundError(f"基准排程文件不存在: {sched_path}")
 
-    # 1. 加载原始工艺数据以提取 AO号、工种技能、需求人数、前驱关系
-    df_raw = pd.read_csv(raw_path)
-    # 建立内部索引 (0-based) 与行号的对应
-    num_tasks = len(df_raw)
+    # 1. 加载原始工艺数据以提取完整层级 DAG 物理投影前驱、AO号、工种技能、需求人数
+    data = load_data(raw_path)
+    df_raw = data["task_df"]
+    num_tasks = data["num_tasks"]
+    edges = data["precedence_edges"].numpy()
 
-    # 解析前驱映射 (内部 0-based 索引)
-    ao_to_tid = {str(df_raw.iloc[i]["AO号"]).strip(): i for i in range(num_tasks)}
-    predecessors_map: dict[int, list[int]] = {i: [] for i in range(num_tasks)}
+    durations = df_raw["duration"].values
+    fixed_stations = np.full(num_tasks, -1, dtype=np.int64)
+    if "fixed_station" in df_raw.columns:
+        for i, v in enumerate(df_raw["fixed_station"].values):
+            if not pd.isna(v) and str(v).strip() != "":
+                fixed_stations[i] = int(float(v)) - 1
 
-    col_preds = [c for c in df_raw.columns if "紧前工序" in str(c) or "predecessor" in str(c).lower()]
-    pred_col_name = col_preds[0] if col_preds else None
-
-    if pred_col_name is not None:
-        for tid in range(num_tasks):
-            val = df_raw.iloc[tid][pred_col_name]
-            if pd.isna(val):
-                continue
-            for token in str(val).replace("，", ",").replace(";", ",").split(","):
-                clean_tok = token.strip()
-                if clean_tok and clean_tok in ao_to_tid:
-                    predecessors_map[tid].append(ao_to_tid[clean_tok])
+    engine = ConstraintEngine.build(
+        num_tasks=num_tasks,
+        num_stations=5,
+        edges=edges,
+        durations=durations,
+        fixed_stations=fixed_stations,
+    )
 
     # 2. 加载基准排程 CSV
     df_sched = pd.read_csv(sched_path)
@@ -321,10 +328,10 @@ def load_single_aircraft_template(
         team = _parse_team(row["Team"])
 
         # 提取工艺属性
-        ao_code = str(df_raw.iloc[tid].get("AO号", f"TASK_{tid}"))
-        demand = int(df_raw.iloc[tid].get("需求人数", len(team)))
-        skill = int(df_raw.iloc[tid].get("工种", -1))
-        preds = tuple(sorted(predecessors_map[tid]))
+        ao_code = str(df_raw.iloc[tid].get("task_id", df_raw.iloc[tid].get("AO号", f"TASK_{tid}")))
+        demand = int(df_raw.iloc[tid].get("demand_workers", df_raw.iloc[tid].get("需求人数", len(team))))
+        skill = int(df_raw.iloc[tid].get("skill_type", df_raw.iloc[tid].get("工种", -1)))
+        preds = tuple(sorted(engine.physical_predecessors[tid]))
 
         is_physical = duration > 1e-5
 

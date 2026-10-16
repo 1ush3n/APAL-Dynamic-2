@@ -162,6 +162,8 @@ class TaskRuntimeState:
     baseline_assignment: dict[str, Any] = field(default_factory=dict)
     last_published_assignment: dict[str, Any] = field(default_factory=dict)  # 历史比较锚点，不代表当前资源预约
     revision_history: list[dict[str, Any]] = field(default_factory=list)
+    alignment: int = 0                # 留站对齐模式：0=ASAP (尽快开工), 1=周期内标准偏置对齐
+    committed: bool = False           # 是否已提交不可撤回决策（一旦预约或后移确定即不可主动改派）
     _state_ref: Any = field(default=None, repr=False, compare=False)
 
     @property
@@ -204,11 +206,20 @@ class TaskRuntimeState:
         """检查任务是否满足物理开工硬条件（到料到达且时刻到达）。"""
         return current_time >= self.material_ready_time - tolerance
 
-    def reserve(self, team: Sequence[int], scheduled_start: float) -> None:
-        """建立未来开工预约。"""
+    def reserve(self, team: Sequence[int], scheduled_start: float, alignment: int = 0) -> None:
+        """建立不可撤回的未来开工预约决定。"""
         self.assigned_team = [int(w) for w in team]
         self.scheduled_start = float(scheduled_start)
+        self.alignment = int(alignment)
         self.status = TaskStatus.RESERVED
+        self.committed = True
+
+    def defer_reservation(self, new_scheduled_start: float, new_duration: float | None = None) -> None:
+        """被动顺延预约开工时间，保持已提交的团队与对齐决策不变。"""
+        self.scheduled_start = float(new_scheduled_start)
+        if new_duration is not None:
+            self.execution_duration = float(new_duration)
+        self.generation += 1
 
     def cancel_reservation(self) -> None:
         """取消当前预约，退回就绪状态，并递增版本代数使事件队列旧开工事件失效。"""
@@ -216,6 +227,7 @@ class TaskRuntimeState:
         self.scheduled_start = None
         self.execution_duration = None
         self.status = TaskStatus.READY
+        self.committed = False
         self.generation += 1
 
     def start_work(

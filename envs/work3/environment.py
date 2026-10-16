@@ -19,8 +19,10 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
+import pandas as pd
 
 from core.constraints import ConstraintEngine, calculate_team_synergy_factor
+from data_loader import load_data
 from envs.work3.core_types import (
     ADVANCE_CAUSES,
     ActionBranch,
@@ -194,64 +196,24 @@ class AirLineEnvWork3:
         if missing_bound_workers:
             raise ValueError(f"基准站位绑定的工人未出现在工人池: {missing_bound_workers}")
 
-        with self.raw_data_path.open("r", encoding="utf-8-sig", newline="") as handle:
-            raw_reader = csv.DictReader(handle)
-            raw_rows = list(raw_reader)
-            fieldnames = raw_reader.fieldnames or []
-        if not raw_rows:
-            raise ValueError(f"原始工艺数据为空: {self.raw_data_path}")
+        data = load_data(self.raw_data_path)
+        df_raw = data["task_df"]
+        num_raw_tasks = data["num_tasks"]
+        edge_array = data["precedence_edges"].numpy()
 
-        task_id_column = self._find_domain_column(
-            fieldnames, ("序号", "task_id", "TaskID"), "工序编号"
-        )
-        ao_column = self._find_domain_column(fieldnames, ("AO号", "ao_code", "AO"), "AO号")
-        predecessor_column = self._find_domain_column(
-            fieldnames, ("紧前工序AO号", "predecessors", "predecessor"), "紧前工序"
-        )
-        duration_column = self._find_domain_column(
-            fieldnames, ("加工时间/h", "duration", "Duration"), "加工时间"
-        )
-        skill_column = self._find_domain_column(fieldnames, ("工种", "skill", "skill_type"), "工种")
-        demand_column = self._find_domain_column(
-            fieldnames, ("需求人数", "demand", "demand_workers"), "需求人数"
-        )
-        fixed_station_column = self._find_domain_column(
-            fieldnames,
-            ("限定站位", "fixed_station", "Fixed_Station", "station_constraint"),
-            "固定站位",
-        )
-
-        rows_by_task_id: dict[int, dict[str, str]] = {}
-        ao_to_task_id: dict[str, int] = {}
-        for row in raw_rows:
-            task_id = int(float(row[task_id_column])) - 1
-            if task_id in rows_by_task_id:
-                raise ValueError(f"原始工艺数据存在重复工序编号: {task_id}")
-            rows_by_task_id[task_id] = row
-            ao_to_task_id[str(row[ao_column]).strip()] = task_id
-
-        num_raw_tasks = max(rows_by_task_id) + 1
-        if set(rows_by_task_id) != set(range(num_raw_tasks)):
-            raise ValueError("原始工艺工序编号不是连续的0-based集合")
-
-        durations = np.zeros(num_raw_tasks, dtype=float)
+        durations = df_raw["duration"].values.astype(float)
         fixed_stations = np.full(num_raw_tasks, -1, dtype=np.int64)
+        if "fixed_station" in df_raw.columns:
+            for i, v in enumerate(df_raw["fixed_station"].values):
+                if not pd.isna(v) and str(v).strip() != "":
+                    fixed_stations[i] = int(float(v)) - 1
+
         required_skills: dict[int, int] = {}
         demands: dict[int, int] = {}
-        edges: list[tuple[int, int]] = []
-        for task_id, row in rows_by_task_id.items():
-            durations[task_id] = float(row[duration_column] or 0.0)
-            fixed_stations[task_id] = self._parse_optional_station(
-                row[fixed_station_column], task_id=task_id
-            )
-            required_skills[task_id] = int(float(row[skill_column]))
-            demands[task_id] = int(float(row[demand_column]))
-            raw_predecessors = str(row[predecessor_column] or "").strip()
-            for token in re.split(r"[,，;；\s]+", raw_predecessors):
-                if token and token in ao_to_task_id:
-                    edges.append((ao_to_task_id[token], task_id))
+        for i in range(num_raw_tasks):
+            required_skills[i] = int(df_raw.iloc[i]["skill_type"])
+            demands[i] = int(df_raw.iloc[i]["demand_workers"])
 
-        edge_array = np.asarray(edges, dtype=np.int64).T if edges else np.empty((2, 0), dtype=np.int64)
         engine = ConstraintEngine.build(
             num_tasks=num_raw_tasks,
             num_stations=self.state.num_stations,
@@ -289,7 +251,7 @@ class AirLineEnvWork3:
         return engine.with_max_allowed_stations(max_allowed)
 
     def _attach_task_domain_metadata(self) -> None:
-        """把原始工艺约束写入当前多架次任务状态。"""
+        """把原始工艺约束写入当前多架次任务状态，同步完整物理投影前驱并重建后继映射。"""
         for task in self.state.tasks.values():
             task_id = int(task.task_id)
             if not 0 <= task_id < self.constraint_engine.num_tasks:
@@ -304,6 +266,16 @@ class AirLineEnvWork3:
             fixed_station = int(self.constraint_engine.fixed_stations[task_id])
             task.fixed_station = fixed_station if fixed_station >= 0 else None
             task.max_allowed_station = int(self.constraint_engine.max_allowed_stations[task_id])
+            task.predecessors = tuple(self.constraint_engine.physical_predecessors[task_id])
+
+        self._successors_map = {
+            k: {t.task_id: [] for t in self.state.tasks.values() if t.aircraft_id == k}
+            for k in range(self.state.num_aircraft)
+        }
+        for task in self.state.tasks.values():
+            for pred_id in task.predecessors:
+                if pred_id in self._successors_map[task.aircraft_id]:
+                    self._successors_map[task.aircraft_id][pred_id].append(task.task_id)
 
     def valid_team_completion_workers(
         self,
@@ -394,56 +366,102 @@ class AirLineEnvWork3:
             return None
         return release_time
 
-    def _invalidate_dependent_reservations(self, task: TaskRuntimeState) -> None:
-        """沿工艺后继检查预约下界，仅撤销失去有效前驱时序的后继预约。"""
-        successors = self._successors_map[task.aircraft_id][task.task_id]
-        if not successors:
+    def _passive_defer_reserved_task(
+        self,
+        task: TaskRuntimeState,
+        cause: str = "disturbance",
+    ) -> None:
+        """为已预约工序被动顺延可行执行时间区间，严格保持已提交的站位、团队与对齐决策不变。"""
+        if task.status != TaskStatus.RESERVED or not task.assigned_team:
             return
-        pending = list(successors)
-        visited: set[int] = set()
-        while pending:
-            successor_id = pending.pop()
-            if successor_id in visited:
-                continue
-            visited.add(successor_id)
-            pending.extend(self._successors_map[task.aircraft_id][successor_id])
 
-            dependent = self.state.tasks[f"{task.aircraft_id}_{successor_id}"]
-            if dependent.status != TaskStatus.RESERVED or dependent.actual_start is not None:
-                continue
+        # 1. 释放该任务当前在工人日历中占用的区间
+        for w in task.assigned_team:
+            self.state.workers[w].remove_interval(task.task_key)
 
-            release_time = self._predecessor_release_time(dependent)
-            earliest_start = (
-                None
-                if release_time is None
-                else max(
-                    release_time,
-                    dependent.material_ready_time,
-                    self.state.current_time,
-                )
+        # 2. 计算满足当前时刻、物料恢复时刻及已揭示前驱的最早搜索起点
+        predecessor_release = self._predecessor_release_time(task)
+        search_start = max(
+            self.state.current_time,
+            float(task.material_ready_time),
+            0.0 if predecessor_release is None else float(predecessor_release),
+        )
+        if getattr(task, "alignment", 0) == 1:
+            align_target = self.state.last_transfer_time + task.in_station_offset
+            search_start = max(search_start, float(align_target))
+
+        # 3. 计算在 search_start 开工时相同团队的实际执行工时
+        execution_duration = self.duration_for_team(
+            task,
+            task.assigned_team,
+            start_time=search_start,
+        )
+
+        # 4. 在同一站位和同一团队的时间日历中寻找最早可行无冲突槽位
+        new_start = self._find_team_earliest_slot(
+            station_id=task.current_station,
+            team=task.assigned_team,
+            search_start=search_start,
+            duration=execution_duration,
+        )
+
+        # 5. 更新任务的可行预约时刻与工时，递增代数使旧事件失效
+        task.scheduled_start = float(new_start)
+        task.execution_duration = float(execution_duration)
+        task.generation += 1
+
+        # 6. 在工人日历中登记新区间
+        for w in task.assigned_team:
+            self.state.workers[w].add_interval(
+                start=new_start,
+                end=new_start + execution_duration,
+                task_key=task.task_key,
             )
-            if (
-                earliest_start is not None
-                and dependent.scheduled_start is not None
-                and dependent.execution_duration is not None
-                and dependent.scheduled_start >= earliest_start - self.tolerance
-            ):
-                continue
 
-            self._release_reserved_resources(dependent)
-            dependent.cancel_reservation()
-            self.event_queue.invalidate_task_events(
-                dependent.task_key,
-                dependent.generation,
-            )
-            dependent.status = TaskStatus.UNREADY
-            self._check_and_update_task_readiness(dependent)
+        # 7. 更新事件队列：旧开工事件失效，挂载新时刻的 TASK_START 事件
+        self.event_queue.invalidate_task_events(task.task_key, task.generation)
+        self.event_queue.push(
+            event_type=EventType.TASK_START,
+            timestamp=new_start,
+            task_key=task.task_key,
+            generation=task.generation,
+        )
+
+        # 8. 顺延资源链冲突任务：检查同团队工人在 new_start 之后是否有其他被冲突预约
+        new_end = new_start + execution_duration
+        for w in task.assigned_team:
+            for iv in list(self.state.workers[w].intervals):
+                other_key = iv.task_key
+                if other_key == task.task_key:
+                    continue
+                other_task = self.state.tasks.get(other_key)
+                if other_task is not None and other_task.status == TaskStatus.RESERVED:
+                    if other_task.scheduled_start is not None and other_task.scheduled_start < new_end - self.tolerance:
+                        self._passive_defer_reserved_task(other_task, cause="resource_conflict")
+
+        # 9. 顺延前驱链后继任务：沿工艺后继检查已预约的后继工序
+        self._propagate_passive_deferral(task)
+
+    def _propagate_passive_deferral(self, task: TaskRuntimeState) -> None:
+        """沿工艺后继传播被动顺延，保持后继工序已决定的团队与站位不变。"""
+        if task.scheduled_start is None or task.execution_duration is None:
+            return
+        task_end = task.scheduled_start + task.execution_duration
+        successors = self._successors_map.get(task.aircraft_id, {}).get(task.task_id, [])
+        for succ_id in successors:
+            succ_key = f"{task.aircraft_id}_{succ_id}"
+            succ_task = self.state.tasks.get(succ_key)
+            if succ_task is not None and succ_task.status == TaskStatus.RESERVED:
+                if succ_task.scheduled_start is not None and succ_task.scheduled_start < task_end - self.tolerance:
+                    self._passive_defer_reserved_task(succ_task, cause="predecessor_delay")
+
+    def _invalidate_dependent_reservations(self, task: TaskRuntimeState) -> None:
+        """保持不可撤回原则，后继预约不撤销团队，仅被动顺延。"""
+        self._propagate_passive_deferral(task)
 
     def can_reserve(self, task: TaskRuntimeState) -> bool:
         """判断任务是否可以登记留站预约，不代表当前时刻可以实际开工。"""
-        if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
-            return False
-        if task.status == TaskStatus.RESERVED and task.actual_start is not None:
+        if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED, TaskStatus.RESERVED):
             return False
         aircraft = self.state.aircraft[task.aircraft_id]
         if aircraft.current_station != task.current_station:
@@ -454,9 +472,7 @@ class AirLineEnvWork3:
 
     def can_postpone(self, task: TaskRuntimeState) -> bool:
         """判断任务是否可以独立后移，不要求开工可用下界已在当前时刻满足。"""
-        if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED):
-            return False
-        if task.status == TaskStatus.RESERVED and task.actual_start is not None:
+        if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED, TaskStatus.RESERVED):
             return False
         return self.validate_postpone(task) is None
 
@@ -733,108 +749,76 @@ class AirLineEnvWork3:
                 raise ValueError(f"工序 {task_key} 当前不具备留站预约资格")
             team = tuple(int(w) for w in action.get("team", ()))
             align = int(action.get("align", 0))
-            was_reserved = task.status == TaskStatus.RESERVED
-            old_team = tuple(task.assigned_team)
-            old_start = task.scheduled_start
-            old_duration = task.execution_duration
 
-            if was_reserved:
-                self._release_reserved_resources(task)
+            self._validate_team_for_task(task, team)
 
-            try:
-                self._validate_team_for_task(task, team)
+            predecessor_release = self._predecessor_release_time(task)
+            if predecessor_release is None:
+                raise ValueError(f"工序 {task_key} 的前驱尚未完成或没有有效预约")
+            search_start = max(self.state.current_time, task.material_ready_time, predecessor_release)
+            if align == 1:
+                align_target = self.state.last_transfer_time + task.in_station_offset
+                search_start = max(search_start, align_target)
 
-                predecessor_release = self._predecessor_release_time(task)
-                if predecessor_release is None:
-                    raise ValueError(f"工序 {task_key} 的前驱尚未完成或没有有效预约")
-                search_start = max(self.state.current_time, task.material_ready_time, predecessor_release)
-                if align == 1:
-                    align_target = self.state.last_transfer_time + task.in_station_offset
-                    search_start = max(search_start, align_target)
-
-                execution_duration = self.duration_for_team(
-                    task,
-                    team,
-                    start_time=search_start,
-                )
-
-                t_sched = self._find_team_earliest_slot(
-                    station_id=task.current_station,
-                    team=team,
-                    search_start=search_start,
-                    duration=execution_duration,
-                )
-            except Exception:
-                if was_reserved:
-                    self._restore_reserved_resources(task)
-                raise
-
-            unchanged = was_reserved and (
-                set(old_team) == set(team)
-                and old_start is not None
-                and abs(float(old_start) - t_sched) <= self.tolerance
-                and old_duration is not None
-                and abs(float(old_duration) - execution_duration) <= self.tolerance
+            execution_duration = self.duration_for_team(
+                task,
+                team,
+                start_time=search_start,
             )
-            if unchanged:
-                self._restore_reserved_resources(task)
-                no_change_revision = True
-                info["revision_changed"] = False
-                info["cost_revision_inc"] = 0.0
-                info["scheduled_status"] = "RESERVED"
-                info["scheduled_start"] = old_start
+
+            t_sched = self._find_team_earliest_slot(
+                station_id=task.current_station,
+                team=team,
+                search_start=search_start,
+                duration=execution_duration,
+            )
+
+            # 首次提交不可撤回决策（固定站位、团队、对齐）
+            task.reserve(team=team, scheduled_start=t_sched, alignment=align)
+            task.execution_duration = execution_duration
+            after_assignment = self._assignment_snapshot(
+                task,
+                station=task.current_station,
+                team=team,
+                scheduled_start=t_sched,
+            )
+            revision_history_size = len(task.revision_history)
+            revision_cost_inc = self._record_formal_revision(
+                task,
+                after_assignment,
+                reason="station_reservation",
+            )
+
+            for w in team:
+                self.state.workers[w].add_interval(
+                    start=t_sched,
+                    end=t_sched + execution_duration,
+                    task_key=task.task_key,
+                )
+
+            if abs(t_sched - self.state.current_time) <= self.tolerance:
+                self._on_task_started(task, t_sched)
+                self.event_queue.push(
+                    event_type=EventType.TASK_FINISH,
+                    timestamp=t_sched + execution_duration,
+                    task_key=task.task_key,
+                    generation=task.generation,
+                )
+                info["scheduled_status"] = "RUNNING"
             else:
-                if was_reserved:
-                    task.generation += 1
-                    self.event_queue.invalidate_task_events(task.task_key, task.generation)
-
-                task.execution_duration = execution_duration
-                task.assigned_team = list(team)
-                task.scheduled_start = t_sched
-                after_assignment = self._assignment_snapshot(
-                    task,
-                    station=task.current_station,
-                    team=team,
-                    scheduled_start=t_sched,
+                task.status = TaskStatus.RESERVED
+                self.event_queue.push(
+                    event_type=EventType.TASK_START,
+                    timestamp=t_sched,
+                    task_key=task.task_key,
+                    generation=task.generation,
                 )
-                revision_history_size = len(task.revision_history)
-                revision_cost_inc = self._record_formal_revision(
-                    task,
-                    after_assignment,
-                    reason="reservation_revision",
-                )
+                info["scheduled_status"] = "RESERVED"
 
-                for w in team:
-                    self.state.workers[w].add_interval(
-                        start=t_sched,
-                        end=t_sched + execution_duration,
-                        task_key=task.task_key,
-                    )
-
-                if abs(t_sched - self.state.current_time) <= self.tolerance:
-                    self._on_task_started(task, t_sched)
-                    self.event_queue.push(
-                        event_type=EventType.TASK_FINISH,
-                        timestamp=t_sched + execution_duration,
-                        task_key=task.task_key,
-                        generation=task.generation,
-                    )
-                    info["scheduled_status"] = "RUNNING"
-                else:
-                    task.status = TaskStatus.RESERVED
-                    self.event_queue.push(
-                        event_type=EventType.TASK_START,
-                        timestamp=t_sched,
-                        task_key=task.task_key,
-                        generation=task.generation,
-                    )
-                    info["scheduled_status"] = "RESERVED"
-                self._station_occupied_tasks[task.current_station].add(task.task_key)
-                if was_reserved:
-                    self._invalidate_dependent_reservations(task)
-                info["revision_changed"] = len(task.revision_history) > revision_history_size
-                info["cost_revision_inc"] = revision_cost_inc
-                info["scheduled_start"] = t_sched
+            self._station_occupied_tasks[task.current_station].add(task.task_key)
+            info["revision_changed"] = len(task.revision_history) > revision_history_size
+            info["cost_revision_inc"] = revision_cost_inc
+            info["scheduled_start"] = t_sched
 
         elif branch == ActionBranch.POSTPONE:
             # 分支 B：合法后移至下一站位
@@ -844,9 +828,6 @@ class AirLineEnvWork3:
                     postpone_error = f"工序 {task_key} 当前状态不允许后移"
                 raise ValueError(postpone_error)
 
-            was_reserved = task.status == TaskStatus.RESERVED
-            if was_reserved:
-                self._release_reserved_resources(task)
             n_old = task.postpone_count
             # 保留上一次发布的团队/位置作比较参照；后移不会在目标站预约该团队。
             previous_assignment = copy.deepcopy(
@@ -854,8 +835,6 @@ class AirLineEnvWork3:
             )
             task.postpone_to_next_station()
             self.event_queue.invalidate_task_events(task.task_key, task.generation)
-            if was_reserved:
-                self._invalidate_dependent_reservations(task)
             n_new = task.postpone_count
             penalty_delta = calculate_postpone_penalty(
                 n_new, self.weights.lambda_1, self.weights.lambda_2
@@ -1113,14 +1092,8 @@ class AirLineEnvWork3:
             valid_start = False
 
         if not valid_start:
-            for worker_id in task.assigned_team:
-                self.state.workers[worker_id].remove_interval(task.task_key)
-            self._station_occupied_tasks[task.current_station].discard(task.task_key)
-            task.cancel_reservation()
-            task.status = TaskStatus.UNREADY
-            self.event_queue.invalidate_task_events(task.task_key, task.generation)
-            self._check_and_update_task_readiness(task)
-            self._invalidate_dependent_reservations(task)
+            # 物理开工条件未满足，保持决定不可撤回，被动顺延至可行时刻
+            self._passive_defer_reserved_task(task, cause="preconditions_unmet")
             return
 
         self._on_task_started(task, event.timestamp)
@@ -1150,15 +1123,14 @@ class AirLineEnvWork3:
             self.state.current_time = max(self.state.current_time, next_event.timestamp)
 
     def _handle_disturbance_event(self, timestamp: float, payload: dict[str, Any]) -> None:
-        """处理突发工序开工可用性延迟扰动 (Task 4.2 / 易错点 1 攻坚)。
+        """处理突发工序开工可用性延迟扰动 (Task 4.2 / 不可撤回与被动顺延原则)。
 
         物理规则：
         1. 已开工 (RUNNING) 与已完工 (COMPLETED) 工序硬冻结，绝不强制中断；
         2. 已预约 (RESERVED) 且原排定开工时刻 t_sched < R 的工序：
-           - 立刻释放所有指派工人的时间日历预占区间；
-           - 调用 task.cancel_reservation() 递增版本代数，使事件队列旧开工事件失效；
-           - 将工序退回 UNREADY 状态；
-           - 压入时间戳为 R 的MATERIAL_ARRIVE兼容事件；
+           - 严格保持已提交的站位、团队与对齐决策不变；
+           - 被动顺延执行区间至最早可行无冲突时刻；
+           - 递增代数标记使旧开工事件失效，压入新时刻开工事件；
         3. 处于 READY 状态的工序：
            - 由于 R > current_time，失去当前就绪资格，退回 UNREADY；
            - 压入时间戳为 R 的MATERIAL_ARRIVE兼容事件；
@@ -1189,24 +1161,9 @@ class AirLineEnvWork3:
             task.material_ready_time = max(task.material_ready_time, recovery_time)
 
             if task.status == TaskStatus.RESERVED:
-                # 易错点 1 攻坚：若原排定开工时刻早于物理恢复时刻 R，必须立刻废除旧预约！
+                # 扰动只使固定决定被动顺延，不能清空决定或重新选队
                 if task.scheduled_start is not None and task.scheduled_start < recovery_time - self.tolerance:
-                    # 1. 立即释放指派工人的时间日历预占区间
-                    for w in task.assigned_team:
-                        self.state.workers[w].remove_interval(task.task_key)
-                    # 2. 取消预约（递增代数标记使事件队列旧开工事件失效）
-                    task.cancel_reservation()
-                    self._station_occupied_tasks[task.current_station].discard(task.task_key)
-                    self.event_queue.invalidate_task_events(task.task_key, task.generation)
-                    task.status = TaskStatus.UNREADY
-                    # 3. 挂载时间戳为 R 的MATERIAL_ARRIVE兼容事件
-                    self.event_queue.push(
-                        event_type=EventType.MATERIAL_ARRIVE,
-                        timestamp=recovery_time,
-                        task_key=task.task_key,
-                        generation=task.generation,
-                    )
-                    self._invalidate_dependent_reservations(task)
+                    self._passive_defer_reserved_task(task, cause="disturbance")
 
             elif task.status == TaskStatus.READY:
                 # 开工可用时刻推迟至未来，退回 UNREADY
