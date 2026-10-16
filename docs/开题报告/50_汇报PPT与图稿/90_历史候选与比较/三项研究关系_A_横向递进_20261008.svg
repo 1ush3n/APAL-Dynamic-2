@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<title>三项研究工作的递进关系</title>
+<desc>无扰动同构图联合调度，扩展到异构图下的工序延迟开工响应，再研究语义增强的多架次实际协同。箭头表示研究需求扩展。</desc>
+<defs><marker id="arr" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,4 L0,8 Z" fill="#000"/></marker></defs>
+<rect width="1600" height="900" fill="#fff"/>
+<text x="72" y="100" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="52" font-weight="600" fill="#000" text-anchor="start">三项研究工作的递进关系</text>
+<line x1="72" y1="126" x2="1528" y2="126" stroke="#000" stroke-width="2" />
+<text x="72" y="212" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">工作一</text>
+<text x="72" y="278" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">无扰动</text>
+<text x="72" y="333" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">静态联合调度</text>
+<line x1="72" y1="365" x2="432" y2="365" stroke="#000" stroke-width="1.8" />
+<text x="72" y="435" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">同构图</text>
+<text x="72" y="500" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">统一表示工艺与资源</text>
+<text x="72" y="548" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">联合选择工序、站位与团队</text>
+<text x="625" y="212" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">工作二</text>
+<text x="625" y="278" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">工序延迟开工</text>
+<text x="625" y="333" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">动态调度</text>
+<line x1="625" y1="365" x2="985" y2="365" stroke="#000" stroke-width="1.8" />
+<text x="625" y="435" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">异构图</text>
+<text x="625" y="500" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">区分实体与关系</text>
+<text x="625" y="548" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">兼顾完工时间与计划稳定性</text>
+<text x="1168" y="212" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">工作三</text>
+<text x="1168" y="278" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">多架次</text>
+<text x="1168" y="333" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="40" font-weight="600" fill="#000" text-anchor="start">协同动态调度</text>
+<line x1="1168" y1="365" x2="1528" y2="365" stroke="#000" stroke-width="1.8" />
+<text x="1168" y="435" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="36" font-weight="600" fill="#000" text-anchor="start">语义增强图网络</text>
+<text x="1168" y="500" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">跟踪多架飞机实际进度</text>
+<text x="1168" y="548" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">考虑共同脉动与下一周期</text>
+<line x1="467" y1="280" x2="576" y2="280" stroke="#000" stroke-width="2.6" marker-end="url(#arr)"/>
+<line x1="1020" y1="280" x2="1119" y2="280" stroke="#000" stroke-width="2.6" marker-end="url(#arr)"/>
+<text x="72" y="650" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="28" font-weight="600" fill="#000" text-anchor="start">一到二</text>
+<text x="72" y="697" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">进一步区分关系，并响应开工延迟</text>
+<text x="865" y="650" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="28" font-weight="600" fill="#000" text-anchor="start">二到三</text>
+<text x="865" y="697" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="start">考虑多架飞机的状态与共同脉动</text>
+<line x1="72" y1="803" x2="1528" y2="803" stroke="#000" stroke-width="1.8" />
+<text x="800" y="854" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="400" fill="#000" text-anchor="middle">共同基础：工艺与人员约束，工序、站位与团队的联合决策</text>
+</svg>

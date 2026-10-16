@@ -1,0 +1,44 @@
+{
+  "checked_at_utc": "2026-10-16T15:12:30Z",
+  "target_account": "1357592462lu@gmail.com",
+  "drive_root_folder_id": "1j8PhqRZ5dfMIpi4fhKcgGa9bmulgBKXu",
+  "source_of_truth": "OpenAI Library /开题报告",
+  "baseline": "2026-10-14 full/incremental baseline",
+  "reconciliation_method": "Check all OpenAI Library changes and all Google Drive modifications after the last baseline, then force source-authoritative updates for changed items.",
+  "library_changes_since_baseline": [
+    {
+      "path": "/开题报告/50_汇报PPT与图稿/03_脚本与展示记录/PPT修改方案记录_20261014.md",
+      "source_file_id": "file_000000008f2081f4a5bef662d04e5776",
+      "version_id": "6",
+      "size_bytes": 44428,
+      "action": "updated_in_place_on_drive",
+      "drive_file_id": "1AfmNPsU4WhXWMucEFvO2EWzY9UwHmOyb"
+    },
+    {
+      "path": "/开题报告/50_汇报PPT与图稿/03_脚本与展示记录/开题汇报讲稿_分阶段审阅稿_20261014.md",
+      "source_file_id": "file_00000000a63881f898701293a4265a53",
+      "version_id": "23",
+      "size_bytes": 152652,
+      "action": "updated_in_place_on_drive",
+      "drive_file_id": "1Qg9mNJwk7tcbjUksT_mQq5bWg5M4Iqbv"
+    },
+    {
+      "path": "/开题报告/40_实施与验证记录/02_历次实施与验收记录/工作三_代码与确认设计差异审查_20261016.md",
+      "source_file_id": "file_00000000452881f8a7b7aa42d107976f",
+      "size_bytes": 19895,
+      "action": "uploaded_to_drive",
+      "drive_file_id": "1-1HXNMvsPjbRPeQNpIXgGRlnEQ0Au8g3"
+    }
+  ],
+  "drive_only_items_detected": [
+    {
+      "name": "开题报告_最终汇报PPT_V02_20261014_讲稿版.pptx",
+      "drive_file_id": "1St2Npsbdu-vzMqOkCacU_TjuYoXs1Bff",
+      "original_parent": "50_汇报PPT与图稿/03_脚本与展示记录",
+      "action": "moved_out_of_active_mirror",
+      "quarantine_folder_id": "1YZ1TwAbUPVNIp_CPqAvy7YFlEJ0tnnEh"
+    }
+  ],
+  "active_mirror_status": "in_sync_with_openai_library",
+  "deletion_policy": "Drive-only files are moved to _同步管理/Drive_only_待核_20261016 instead of being permanently deleted."
+}

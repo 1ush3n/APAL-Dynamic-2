@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080">
+<title>三项研究内容及其递进关系</title>
+<desc>问题、研究内容和目标对应。同构图无扰动联合调度，扩展至异构图联合调度与稳定性重调度，再扩展至语义增强的多架次协同动态调度。内部图形为研究内容示意，不表示已取得实验结果。</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3.5 L0,7 Z" fill="black"/></marker></defs>
+<rect width="1600" height="1080" fill="white"/>
+<text x="58" y="66" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="42" font-weight="600" fill="black" text-anchor="start">三项研究内容及其递进关系</text>
+<line x1="58" y1="91" x2="1542" y2="91" stroke="black" stroke-width="2"  />
+<rect x="58" y="130" width="1484" height="274" rx="0" fill="white" stroke="black" stroke-width="2.2" stroke-dasharray="8 6"/>
+<text x="800" y="170" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="31" font-weight="600" fill="black" text-anchor="middle">研究一：同构图支持的无扰动联合静态调度</text>
+<line x1="58" y1="190" x2="1542" y2="190" stroke="black" stroke-width="1.4"  />
+<text x="92" y="243" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="27" font-weight="400" fill="black" text-anchor="start">研究问题</text>
+<text x="92" y="285" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="27" font-weight="400" fill="black" text-anchor="start">工序、站位与团队</text>
+<text x="92" y="327" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="27" font-weight="400" fill="black" text-anchor="start">如何联合安排？</text>
+<line x1="388" y1="206" x2="388" y2="384" stroke="black" stroke-width="1.4"  />
+<line x1="451.4" y1="245.39" x2="570.2" y2="234.4" stroke="black" stroke-width="1.6"  />
+<line x1="570.2" y1="234.4" x2="656.6" y2="265.8" stroke="black" stroke-width="1.6"  />
+<line x1="451.4" y1="245.39" x2="532.4" y2="309.76" stroke="black" stroke-width="1.6"  />
+<line x1="532.4" y1="309.76" x2="632.3" y2="336.45" stroke="black" stroke-width="1.6"  />
+<line x1="532.4" y1="309.76" x2="440.6" y2="336.45" stroke="black" stroke-width="1.6"  />
+<line x1="632.3" y1="336.45" x2="656.6" y2="265.8" stroke="black" stroke-width="1.6"  />
+<line x1="440.6" y1="336.45" x2="451.4" y2="245.39" stroke="black" stroke-width="1.6"  />
+<line x1="570.2" y1="234.4" x2="532.4" y2="309.76" stroke="black" stroke-width="1.6"  />
+<circle cx="451.4" cy="245.39" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="451.4" y="253.39" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工序</text>
+<circle cx="570.2" cy="234.4" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="570.2" y="242.4" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工序</text>
+<circle cx="656.6" cy="265.8" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="656.6" y="273.8" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">站位</text>
+<circle cx="532.4" cy="309.76" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="532.4" y="317.76" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">技能</text>
+<circle cx="632.3" cy="336.45" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="632.3" y="344.45" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工人</text>
+<circle cx="440.6" cy="336.45" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="440.6" y="344.45" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工人</text>
+<text x="557" y="381" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="22" font-weight="400" fill="black" text-anchor="middle">共享图传播</text>
+<line x1="735" y1="289" x2="780" y2="289" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+<rect x="797" y="247" width="111.66666666666667" height="76" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="852.8333333333334" y="292.92" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="24" font-weight="400" fill="black" text-anchor="middle">选工序</text>
+<line x1="911.6666666666666" y1="285" x2="928.6666666666667" y2="285" stroke="black" stroke-width="1.8" marker-end="url(#arrow)" />
+<rect x="933.6666666666667" y="247" width="111.66666666666667" height="76" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="989.5000000000001" y="292.92" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="24" font-weight="400" fill="black" text-anchor="middle">选站位</text>
+<line x1="1048.3333333333335" y1="285" x2="1065.3333333333335" y2="285" stroke="black" stroke-width="1.8" marker-end="url(#arrow)" />
+<rect x="1070.3333333333335" y="247" width="111.66666666666667" height="76" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="1126.1666666666667" y="292.92" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="24" font-weight="400" fill="black" text-anchor="middle">选团队</text>
+<text x="989" y="359" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="24" font-weight="400" fill="black" text-anchor="middle">同一状态下的条件联合选择</text>
+<line x1="1211" y1="206" x2="1211" y2="384" stroke="black" stroke-width="1.4"  />
+<text x="1250" y="244" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="26" font-weight="400" fill="black" text-anchor="start">研究目标</text>
+<text x="1250" y="286" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="26" font-weight="400" fill="black" text-anchor="start">形成可行排程</text>
+<text x="1250" y="328" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="26" font-weight="400" fill="black" text-anchor="start">评价质量与计算成本</text>
+<line x1="409" y1="412" x2="409" y2="483" stroke="black" stroke-width="3" marker-end="url(#arrow)" />
+<text x="446" y="452" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="25" font-weight="400" fill="black" text-anchor="start">一到二：关系区分与扰动响应</text>
+<text x="876" y="452" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="25" font-weight="400" fill="black" text-anchor="start">二到三：多架次实际状态与共同脉动</text>
+<rect x="58" y="494" width="700" height="440" rx="0" fill="white" stroke="black" stroke-width="2.2" stroke-dasharray="8 6"/>
+<rect x="842" y="494" width="700" height="440" rx="0" fill="white" stroke="black" stroke-width="2.2" stroke-dasharray="8 6"/>
+<text x="408" y="536" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="600" fill="black" text-anchor="middle">研究二：异构图联合调度与重调度</text>
+<line x1="58" y1="555" x2="758" y2="555" stroke="black" stroke-width="1.4"  />
+<text x="408" y="593" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="26" font-weight="400" fill="black" text-anchor="middle">区分不同关系，并修复延迟开工后的计划</text>
+<line x1="132.36" y1="680.93" x2="243.68" y2="669.8" stroke="black" stroke-width="1.6"  />
+<line x1="243.68" y1="669.8" x2="324.64" y2="701.6" stroke="black" stroke-width="1.6"  />
+<line x1="132.36" y1="680.93" x2="208.26" y2="746.12" stroke="black" stroke-width="1.6"  stroke-dasharray="7 5"/>
+<line x1="208.26" y1="746.12" x2="301.87" y2="773.15" stroke="black" stroke-width="1.6"  stroke-dasharray="7 5"/>
+<line x1="208.26" y1="746.12" x2="122.24000000000001" y2="773.15" stroke="black" stroke-width="1.6"  stroke-dasharray="7 5"/>
+<line x1="301.87" y1="773.15" x2="324.64" y2="701.6" stroke="black" stroke-width="1.6"  />
+<line x1="122.24000000000001" y1="773.15" x2="132.36" y2="680.93" stroke="black" stroke-width="1.6"  />
+<line x1="243.68" y1="669.8" x2="208.26" y2="746.12" stroke="black" stroke-width="1.6"  stroke-dasharray="7 5"/>
+<circle cx="132.36" cy="680.93" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="132.36" y="688.93" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工序</text>
+<circle cx="243.68" cy="669.8" r="32" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="243.68" y="677.8" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工序</text>
+<rect x="287.64" y="677.6" width="74" height="48" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="324.64" y="709.6" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">站位</text>
+<path d="M208.26,709.12 L251.26,746.12 L208.26,783.12 L165.26,746.12 Z" fill="white" stroke="black" stroke-width="1.8"/>
+<text x="208.26" y="754.12" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">技能</text>
+<rect x="266.87" y="749.15" width="70" height="48" rx="12" fill="white" stroke="black" stroke-width="1.8" />
+<text x="301.87" y="781.15" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工人</text>
+<rect x="87.24000000000001" y="749.15" width="70" height="48" rx="12" fill="white" stroke="black" stroke-width="1.8" />
+<text x="122.24000000000001" y="781.15" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">工人</text>
+<text x="232" y="840" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">实体与关系分别表示</text>
+<line x1="384" y1="731" x2="417" y2="731" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+<rect x="431" y="632" width="292" height="61" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="577" y="654.565" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">冻结安排保留</text>
+<text x="577" y="685.615" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">可调任务修复</text>
+<line x1="577" y1="697" x2="577" y2="722" stroke="black" stroke-width="1.8" marker-end="url(#arrow)" />
+<rect x="431" y="734" width="292" height="62" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="577" y="772.92" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="24" font-weight="400" fill="black" text-anchor="middle">联合安排与计划调整</text>
+<line x1="83" y1="859" x2="733" y2="859" stroke="black" stroke-width="1.4"  />
+<text x="408" y="908" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="27" font-weight="400" fill="black" text-anchor="middle">关注完工效率与计划稳定性</text>
+<text x="1192" y="536" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="29" font-weight="600" fill="black" text-anchor="middle">研究三：语义增强的多架次协同调度</text>
+<line x1="842" y1="555" x2="1542" y2="555" stroke="black" stroke-width="1.4"  />
+<text x="1192" y="593" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="26" font-weight="400" fill="black" text-anchor="middle">理解多架飞机的实际进度及其共同时间影响</text>
+<text x="915.375" y="644" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="22" font-weight="400" fill="black" text-anchor="middle">站位<tspan font-family="Nimbus Roman, Times New Roman, serif">1</tspan></text>
+<rect x="879" y="660" width="72.75" height="49" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="915.375" y="691.43" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="21" font-weight="400" fill="black" text-anchor="middle">飞机<tspan font-family="Nimbus Roman, Times New Roman, serif">A</tspan></text>
+<text x="999.125" y="644" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="22" font-weight="400" fill="black" text-anchor="middle">站位<tspan font-family="Nimbus Roman, Times New Roman, serif">2</tspan></text>
+<rect x="962.75" y="660" width="72.75" height="49" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="999.125" y="691.43" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="21" font-weight="400" fill="black" text-anchor="middle">飞机<tspan font-family="Nimbus Roman, Times New Roman, serif">B</tspan></text>
+<text x="1082.875" y="644" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="22" font-weight="400" fill="black" text-anchor="middle">…</text>
+<rect x="1046.5" y="660" width="72.75" height="49" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="1082.875" y="691.43" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="21" font-weight="400" fill="black" text-anchor="middle">…</text>
+<text x="1166.625" y="644" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="22" font-weight="400" fill="black" text-anchor="middle">站位<tspan font-family="Nimbus Roman, Times New Roman, serif">5</tspan></text>
+<rect x="1130.25" y="660" width="72.75" height="49" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="1166.625" y="691.43" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="21" font-weight="400" fill="black" text-anchor="middle">飞机<tspan font-family="Nimbus Roman, Times New Roman, serif">E</tspan></text>
+<line x1="915.375" y1="737" x2="1166.625" y2="737" stroke="black" stroke-width="2"  />
+<line x1="915.375" y1="709" x2="915.375" y2="737" stroke="black" stroke-width="1.5"  />
+<line x1="999.125" y1="709" x2="999.125" y2="737" stroke="black" stroke-width="1.5"  />
+<line x1="1082.875" y1="709" x2="1082.875" y2="737" stroke="black" stroke-width="1.5"  />
+<line x1="1166.625" y1="709" x2="1166.625" y2="737" stroke="black" stroke-width="1.5"  />
+<line x1="1041" y1="737" x2="1041" y2="761" stroke="black" stroke-width="1.8" marker-end="url(#arrow)" />
+<rect x="879" y="766" width="324" height="49" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="1041" y="798.09" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">各站就绪后共同脉动</text>
+<line x1="1219" y1="731" x2="1252" y2="731" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+<rect x="1268" y="633" width="239" height="60" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="1387.5" y="655.065" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">分层状态融合</text>
+<text x="1387.5" y="686.115" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">随生产事件更新</text>
+<line x1="1387.5" y1="697" x2="1387.5" y2="722" stroke="black" stroke-width="1.8" marker-end="url(#arrow)" />
+<rect x="1268" y="734" width="239" height="62" rx="0" fill="white" stroke="black" stroke-width="1.8" />
+<text x="1387.5" y="757.065" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">进度与时间后果</text>
+<text x="1387.5" y="788.115" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="23" font-weight="400" fill="black" text-anchor="middle">支持协同安排</text>
+<line x1="867" y1="859" x2="1517" y2="859" stroke="black" stroke-width="1.4"  />
+<text x="1192" y="908" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="27" font-weight="400" fill="black" text-anchor="middle">关注当前、下一周期及整批执行</text>
+<line x1="771" y1="731" x2="829" y2="731" stroke="black" stroke-width="4" marker-end="url(#arrow)" />
+<rect x="58" y="980" width="1484" height="60" rx="0" fill="white" stroke="black" stroke-width="1.5" />
+<text x="800" y="1019" font-family="Droid Sans Fallback, SimSun, sans-serif" font-size="27" font-weight="400" fill="black" text-anchor="middle">共同基础：工艺与人员约束，工序—站位—团队联合决策，可行性检查</text>
+</svg>

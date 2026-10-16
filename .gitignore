@@ -49,11 +49,10 @@ wandb/
 /scratch/
 /pytest_tmp/
 /.pytest_tmp*/
-/docs/*
-!/docs/
-!/docs/使用说明.md
-!/docs/命令使用手册.md
-!/docs/APAL_HGP_PPO_Journal_Manuscript/
+/docs/*.zip
+/docs/*.7z
+/docs/*.tar.gz
+/outputs/
 
 # ============================================================
 # IDE & 编辑器
