@@ -120,6 +120,17 @@ class Work3GraphEncoder(nn.Module):
             edge_type: edge_index.to(device)
             for edge_type, edge_index in graph.edge_index_dict.items()
         }
+        for edge_type, edge_index in edge_index_dict.items():
+            src_type, _, dst_type = edge_type
+            if edge_index.numel() > 0:
+                max_src = int(edge_index[0].max().item())
+                max_dst = int(edge_index[1].max().item())
+                num_src = x_dict[src_type].size(0)
+                num_dst = x_dict[dst_type].size(0)
+                if max_src >= num_src or max_dst >= num_dst or edge_index.min().item() < 0:
+                    raise IndexError(
+                        f"OOB edge {edge_type}: src max={max_src}>={num_src}, dst max={max_dst}>={num_dst}, min={edge_index.min().item()}"
+                    )
         encoded = self.message_passing(x_dict, edge_index_dict)
 
         task_emb = encoded["task"]

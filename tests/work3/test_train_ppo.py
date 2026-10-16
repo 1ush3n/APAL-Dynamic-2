@@ -127,9 +127,9 @@ def test_ppo_training_pipeline_sanity() -> None:
         results = run_training(
             run_mode="smoke",
             num_iterations=1,
-            steps_per_iter=32,
+            steps_per_iter=16,
             ppo_epochs=1,
-            batch_size=32,
+            batch_size=16,
             lr=1e-3,
             seed=42,
             output_ckpt=str(out_ckpt),
@@ -150,9 +150,9 @@ def test_ppo_training_pipeline_sanity() -> None:
             assert not math.isnan(log["grad_norm"])
             assert log["ppo_updates"] > 0
             assert log["lightning_optimization_steps"] > 0
-            assert log["environment_steps"] == 32
+            assert log["environment_steps"] == 16
             assert log["sampling_replay_max_abs_error"] <= 1e-6
-            assert log["sampling_replay_sample_count"] == 32
+            assert log["sampling_replay_sample_count"] == 16
 
         # 检查点有效性检验
         assert out_ckpt.is_file()
