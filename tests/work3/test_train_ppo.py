@@ -57,8 +57,8 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
     )
 
     if environment_truncated:
-        def record_snapshots(environment: Work3VectorEnv) -> tuple[Any, ...]:
-            snapshots = original_snapshots(environment)
+        def record_snapshots(environment: Work3VectorEnv, *args: Any, **kwargs: Any) -> tuple[Any, ...]:
+            snapshots = original_snapshots(environment, *args, **kwargs)
             snapshot_state_features.append(tuple(
                 snapshot.state_features.detach().cpu().clone()
                 for snapshot in snapshots
@@ -101,7 +101,7 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
         steps_per_iter=1,
         ppo_epochs=1,
         batch_size=1,
-        seed=43,
+        seed=1,
         method_variant="D",
         num_envs=1,
         output_ckpt=str(tmp_path / "time_prediction_calls.pt"),

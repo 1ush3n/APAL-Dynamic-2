@@ -1321,10 +1321,20 @@ def run_training(
                 graph_snapshot = snapshot.graph_snapshot
                 action_snapshot = snapshot
                 if profile.use_corrected_time_input and time_head is not None:
+                    eval_actor = actor_critic
+                    eval_head = time_head
+                    if shaper is not None and state.predictor_version is not None:
+                        frozen_head, frozen_actor = shaper.get_predictor_snapshot(
+                            worker_id=state.worker_id,
+                            episode_id=state.episode_id,
+                        )
+                        eval_head = frozen_head
+                        if frozen_actor is not None:
+                            eval_actor = frozen_actor
                     with _autocast_context(torch_device, autocast_dtype):
                         graph_snapshot, time_urgency, _ = compute_online_snapshot_time_inputs(
-                            actor_critic=actor_critic,
-                            time_head=time_head,
+                            actor_critic=eval_actor,
+                            time_head=eval_head,
                             snapshot=snapshot,
                         )
                     action_snapshot = replace(snapshot, time_features=time_urgency)
@@ -1505,11 +1515,15 @@ def run_training(
                         state.episode_id,
                         worker_id=worker_id,
                     ).get(transfer_cycle_id, 0)
+                    station_cleared_times = result.info.get("station_first_cleared_times", {}).get(transfer_cycle_id, {})
+                    next_cycle_station_mask = result.info.get("next_cycle_station_mask")
                     label_available = pending_time_labels.attach_transfer(
                         episode_id=state.episode_id,
                         worker_id=worker_id,
                         cycle_id=transfer_cycle_id,
                         actual_transfer_time=actual_transfer_time,
+                        station_cleared_times=station_cleared_times,
+                        next_cycle_station_mask=next_cycle_station_mask,
                     )
                     if profile.use_time_auxiliary:
                         cycle_time_labels.append({
@@ -1554,10 +1568,20 @@ def run_training(
 
                 if truncated:
                     if profile.use_corrected_time_input and time_head is not None:
+                        eval_actor = actor_critic
+                        eval_head = time_head
+                        if shaper is not None and state.predictor_version is not None:
+                            frozen_head, frozen_actor = shaper.get_predictor_snapshot(
+                                worker_id=worker_id,
+                                episode_id=state.episode_id,
+                            )
+                            eval_head = frozen_head
+                            if frozen_actor is not None:
+                                eval_actor = frozen_actor
                         with _autocast_context(torch_device, autocast_dtype):
                             next_graph, next_time_urgency, _ = compute_online_snapshot_time_inputs(
-                                actor_critic=actor_critic,
-                                time_head=time_head,
+                                actor_critic=eval_actor,
+                                time_head=eval_head,
                                 snapshot=snapshot,
                             )
                     else:
@@ -1685,10 +1709,20 @@ def run_training(
                 if snapshot.estimated_cmax is None:
                     raise RuntimeError("rollout结束时环境worker快照缺少时间预测")
                 if profile.use_corrected_time_input and time_head is not None:
+                    eval_actor = actor_critic
+                    eval_head = time_head
+                    if shaper is not None and state.predictor_version is not None:
+                        frozen_head, frozen_actor = shaper.get_predictor_snapshot(
+                            worker_id=key[0],
+                            episode_id=key[1],
+                        )
+                        eval_head = frozen_head
+                        if frozen_actor is not None:
+                            eval_actor = frozen_actor
                     with _autocast_context(torch_device, autocast_dtype):
                         graph_snapshot, last_time_urgency, _ = compute_online_snapshot_time_inputs(
-                            actor_critic=actor_critic,
-                            time_head=time_head,
+                            actor_critic=eval_actor,
+                            time_head=eval_head,
                             snapshot=snapshot,
                         )
                 else:

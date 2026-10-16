@@ -121,7 +121,30 @@ class PPOTrainerWork3:
                 beta=0.01,
                 reduction="none",
             )
-        return per_sample_loss.mean()
+        current_loss = per_sample_loss.mean()
+
+        if "target_next_residuals" in batch and hasattr(self.time_head, "predict_next_cycle_residuals"):
+            next_targets = batch["target_next_residuals"].to(self.device)
+            next_masks = batch.get("next_cycle_masks")
+            if next_masks is not None:
+                next_masks = next_masks.to(self.device)
+            next_preds = self.time_head.predict_next_cycle_residuals(shared_features)
+            with torch.amp.autocast(device_type=self.device.type, enabled=False):
+                if next_masks is not None and bool(next_masks.any().item()):
+                    next_loss = F.smooth_l1_loss(
+                        next_preds[next_masks].float(),
+                        next_targets[next_masks].float(),
+                        beta=0.01,
+                    )
+                    return current_loss + next_loss
+                elif next_masks is None:
+                    next_loss = F.smooth_l1_loss(
+                        next_preds.float(),
+                        next_targets.float(),
+                        beta=0.01,
+                    )
+                    return current_loss + next_loss
+        return current_loss
 
     def compute_ppo_minibatch_loss(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:
         """纯计算一个PPO minibatch的损失，不反传、不创建或更新优化器。"""

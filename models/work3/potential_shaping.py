@@ -106,6 +106,22 @@ class PotentialRewardShaper:
         self._prune_snapshots()
         return True
 
+    def get_predictor_snapshot(
+        self,
+        worker_id: int = 0,
+        episode_id: int | None = None,
+    ) -> tuple[TimeResidualHead, Any | None]:
+        """返回对应episode绑定的只读冻结时间预测头与Actor副本 (R06)。"""
+        if episode_id is None:
+            snapshot = self._snapshots[self.snapshot_version]
+        else:
+            episode_key = (int(worker_id), int(episode_id))
+            version = self._episode_versions.get(episode_key)
+            if version is None:
+                raise ValueError(f"episode尚未绑定势函数预测器版本：{episode_key}")
+            snapshot = self._snapshots[version]
+        return snapshot.head, snapshot.actor
+
     def _prune_snapshots(self) -> None:
         for version, snapshot in tuple(self._snapshots.items()):
             if version != self.snapshot_version and snapshot.references == 0:

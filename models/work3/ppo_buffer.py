@@ -76,8 +76,10 @@ class PendingTimeLabelCache:
 
     def __init__(self) -> None:
         self._pending: dict[tuple[int, int, int], list[PendingTimeLabel]] = {}
+        self._pending_next_cycle: dict[tuple[int, int, int], list[dict[str, Any]]] = {}
         self._ready: list[dict[str, Any]] = []
         self._last_decision_ids: dict[tuple[int, int], int] = {}
+        self._last_transfer_times: dict[tuple[int, int, int], float] = {}
 
     @property
     def pending_count(self) -> int:
@@ -150,15 +152,50 @@ class PendingTimeLabelCache:
         cycle_id: int,
         actual_transfer_time: float,
         worker_id: int = 0,
+        station_cleared_times: dict[int, float] | None = None,
+        next_cycle_station_mask: Sequence[bool] | None = None,
     ) -> bool:
-        """用真实转站时刻补齐一个周期的归一化残差。"""
-        key = (int(worker_id), int(episode_id), int(cycle_id))
+        """用真实转站时刻补齐一个周期的归一化残差，并结算上一周期的下一周期预测向量 (R07)。"""
+        worker = int(worker_id)
+        episode = int(episode_id)
+        cycle = int(cycle_id)
+        key = (worker, episode, cycle)
+        self._last_transfer_times[key] = float(actual_transfer_time)
+
+        # 1. 如果上一周期 (cycle - 1) 在等待本周期的就绪事实，在此结算其下一周期向量
+        prev_key = (worker, episode, cycle - 1)
+        prev_samples = self._pending_next_cycle.pop(prev_key, None)
+        if prev_samples:
+            for item in prev_samples:
+                p_prev = item["actual_transfer_time"]
+                h0 = item["h0"]
+                target_next = torch.zeros(5, dtype=torch.float)
+                mask_next = torch.zeros(5, dtype=torch.bool)
+                for m in range(5):
+                    has_ac = next_cycle_station_mask[m] if next_cycle_station_mask is not None else True
+                    if has_ac:
+                        f_m = (
+                            station_cleared_times[m]
+                            if station_cleared_times is not None and m in station_cleared_times
+                            else float(actual_transfer_time)
+                        )
+                        target_next[m] = (float(f_m) - float(p_prev) - float(h0)) / float(h0)
+                        mask_next[m] = True
+                item["target_next_residuals"] = target_next
+                item["next_cycle_masks"] = mask_next
+                self._ready.append(item)
+
+        # 2. 结算本周期的当前残差
         samples = self._pending.pop(key, None)
         if not samples:
             return False
+
+        cycle_items: list[dict[str, Any]] = []
         for sample in samples:
             label_y = (float(actual_transfer_time) - sample.estimated_cmax) / sample.h0
-            self._ready.append({
+            default_next = torch.zeros(5, dtype=torch.float)
+            default_mask = torch.zeros(5, dtype=torch.bool)
+            item = {
                 "worker_id": sample.worker_id,
                 "episode_id": sample.episode_id,
                 "cycle_id": sample.cycle_id,
@@ -172,11 +209,21 @@ class PendingTimeLabelCache:
                 "time_urgency": sample.time_urgency,
                 "actual_transfer_time": float(actual_transfer_time),
                 "target_residual": float(label_y),
-            })
+                "target_next_residuals": default_next,
+                "next_cycle_masks": default_mask,
+            }
+            cycle_items.append(item)
+
+        self._pending_next_cycle[key] = cycle_items
         return True
 
     def drain_ready(self) -> dict[str, Any] | None:
-        """取出已补齐标签的批次；没有真实转站标签时返回None。"""
+        """取出已补齐标签的批次；将未被后续周期结算的尾部样本冲刷输出。"""
+        # 冲刷 _pending_next_cycle 中尚未被下一周期转站处理的剩余样本（如最后一周期或单周期测试）
+        for key in list(self._pending_next_cycle.keys()):
+            items = self._pending_next_cycle.pop(key)
+            self._ready.extend(items)
+
         if not self._ready:
             return None
         ready = self._ready
@@ -194,18 +241,27 @@ class PendingTimeLabelCache:
             "predictor_versions": [item["predictor_version"] for item in ready],
             "actual_transfer_times": torch.tensor([item["actual_transfer_time"] for item in ready]),
             "target_residuals": torch.tensor([item["target_residual"] for item in ready]),
+            "target_next_residuals": torch.stack([item["target_next_residuals"] for item in ready]),
+            "next_cycle_masks": torch.stack([item["next_cycle_masks"] for item in ready]),
         }
         if all(item["time_urgency"] is not None for item in ready):
             result["time_urgencies"] = torch.stack([item["time_urgency"] for item in ready])
         return result
 
     def discard_episode(self, episode_id: int, worker_id: int | None = None) -> None:
-        """丢弃失败episode未揭示的标签；可限定worker以隔离并行轨迹。"""
+        """丢弃失败episode未揭示的标签；已通过attach_transfer揭示当前标签的样本转入ready。"""
         episode = int(episode_id)
         self._pending = {
             key: samples for key, samples in self._pending.items()
             if not (key[1] == episode and (worker_id is None or key[0] == int(worker_id)))
         }
+        retained_next = {}
+        for key, items in self._pending_next_cycle.items():
+            if key[1] == episode and (worker_id is None or key[0] == int(worker_id)):
+                self._ready.extend(items)
+            else:
+                retained_next[key] = items
+        self._pending_next_cycle = retained_next
         self._last_decision_ids = {
             key: decision_id
             for key, decision_id in self._last_decision_ids.items()

@@ -952,6 +952,10 @@ class AirLineEnvWork3:
             "cost_postpone": self.cost_postpone,
             "cost_revision": self.cost_revision,
         }
+        info["station_first_cleared_times"] = {
+            c: dict(m) for c, m in self.state.station_first_cleared_times.items()
+        }
+        info["next_cycle_station_mask"] = tuple(self.state.get_next_cycle_station_mask())
 
         return obs, reward, terminated, truncated, info
 
