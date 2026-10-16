@@ -123,7 +123,7 @@ def test_transfer_waits_for_latest_real_station_finish(
 
 
 def test_active_or_cancelled_reservation_never_counts_as_cycle_completion() -> None:
-    """未开工预约阻止放行；扰动取消预约后任务仍未完成，继续阻止放行。"""
+    """未开工预约阻止放行；扰动顺延预约后任务仍未完成，继续阻止放行。"""
     env = _new_env()
     env.state.current_time = 3.0
     env.event_queue.reset(start_time=3.0)
@@ -167,9 +167,11 @@ def test_active_or_cancelled_reservation_never_counts_as_cycle_completion() -> N
         {"tau": 3.0, "recovery_time": 20.0, "affected_task_keys": [task.task_key]}
     )
 
-    assert task.status == TaskStatus.UNREADY
+    assert task.status == TaskStatus.RESERVED
     assert task.actual_end is None
-    assert not any(
+    assert task.assigned_team == list(team)
+    assert task.scheduled_start >= 20.0 - env.tolerance
+    assert any(
         interval.task_key == task.task_key
         for worker in env.state.workers.values()
         for interval in worker.intervals
