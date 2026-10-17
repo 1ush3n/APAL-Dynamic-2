@@ -80,23 +80,26 @@ def test_reserved_task_invalidation_on_disturbance(baseline_path: str) -> None:
             env._handle_disturbance_event(event.timestamp, event.payload)
             break
 
-    # ======================== 易错点 1 核心断言 ========================
-    # 断言 1: 工序已退回 UNREADY，且版本代数递增
-    assert task.status == TaskStatus.UNREADY
+    # ======================== 确认设计断言 (R02/C05 被动顺延) ========================
+    # 断言 1: 工序保持 RESERVED 状态，团队不被撤回，开工时间被动顺延至物料恢复之后
+    assert task.status == TaskStatus.RESERVED
     assert task.generation > gen_before
-    assert task.scheduled_start is None
-    assert task.assigned_team == []
+    assert task.scheduled_start is not None and task.scheduled_start >= r_recovery
+    assert tuple(task.assigned_team) == team
 
-    # 断言 2: 工人日历预占已被完全释放
+    # 断言 2: 工人在原时刻 t_sched 的预占已被移走，新时刻已被预占
+    new_sched = task.scheduled_start
     for w in team:
         assert env.state.workers[w].is_available(t_sched, t_sched + task.duration), (
-            f"工人 {w} 的预占区间未被释放！"
+            f"工人 {w} 的旧预占区间未被释放！"
+        )
+        assert not env.state.workers[w].is_available(new_sched, new_sched + task.duration), (
+            f"工人 {w} 的新顺延区间未被预占！"
         )
 
-    # 断言 3 & 4: 推进仿真时钟，验证在 t_sched 时刻不违规开工，且在 R 时刻恢复为 READY
-    while task.status != TaskStatus.READY:
-        if env.event_queue.is_empty():
-            break
+    # 断言 3 & 4: 推进仿真时钟，验证在 t_sched 时刻不违规开工，且在实际开工时刻 >= r_recovery
+    started = False
+    while not env.event_queue.is_empty():
         event = env.event_queue.pop()
         if event is None:
             break
@@ -104,16 +107,16 @@ def test_reserved_task_invalidation_on_disturbance(baseline_path: str) -> None:
 
         # 校验：原预约时刻 t_sched 绝不触发旧 TASK_START
         if event.event_type == EventType.TASK_START and event.task_key == task.task_key:
-            pytest.fail(f"旧 TASK_START 事件未失效！工序在 {env.state.current_time:.2f}h 违规开工！")
+            if event.timestamp < r_recovery - 1e-5:
+                pytest.fail(f"旧 TASK_START 事件未失效！工序在 {env.state.current_time:.2f}h 违规开工！")
+            else:
+                env._handle_task_start_event(event)
+                started = True
+                break
 
-        # 派发到料事件
-        if event.event_type == EventType.MATERIAL_ARRIVE:
-            t = env.state.tasks[event.task_key]
-            env._check_and_update_task_readiness(t)
-
-    assert task.status == TaskStatus.READY
-    assert env.state.current_time >= r_recovery - 1e-5, f"任务在物料到达时刻 {r_recovery} 之前过早恢复！"
-    assert task.material_ready_time >= r_recovery
+    assert started, "任务在顺延时刻未能成功开工！"
+    assert env.state.current_time >= r_recovery - 1e-5, f"任务在物料到达时刻 {r_recovery} 之前过早开工！"
+    assert task.actual_start is not None and task.actual_start >= r_recovery
 
 
 def test_running_task_not_interrupted_by_disturbance(baseline_path: str) -> None:

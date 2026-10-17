@@ -302,6 +302,7 @@ def load_single_aircraft_template(
         edges=edges,
         durations=durations,
         fixed_stations=fixed_stations,
+        node_types=df_raw["类型"].tolist() if "类型" in df_raw.columns else (df_raw["node_type"].tolist() if "node_type" in df_raw.columns else None),
     )
 
     # 2. 加载基准排程 CSV
@@ -333,7 +334,11 @@ def load_single_aircraft_template(
         skill = int(df_raw.iloc[tid].get("skill_type", df_raw.iloc[tid].get("工种", -1)))
         preds = tuple(sorted(engine.physical_predecessors[tid]))
 
-        is_physical = duration > 1e-5
+        raw_node_type = df_raw.iloc[tid].get("类型", df_raw.iloc[tid].get("node_type", None))
+        if raw_node_type is not None:
+            is_physical = (int(raw_node_type) == 2)
+        else:
+            is_physical = (duration > 1e-5 or skill >= 0)
 
         # 仅对物理加工工序记录站位工人绑定
         if is_physical and station_id in station_workers_map:

@@ -70,7 +70,7 @@ def validate_explicit_five_skill_frame(
         raise ValueError(f"{label} 物理工序工种必须为 0–4，实际={values}")
     if not bool(skill_type[virtual].eq(-1).all()):
         raise ValueError(f"{label} 虚拟节点工种必须为 -1")
-    if not bool(duration[physical].gt(0).all()) or not bool(duration[virtual].eq(0).all()):
+    if not bool(duration[physical].ge(0).all()) or not bool(duration[virtual].eq(0).all()):
         raise ValueError(f"{label} 的物理/虚拟节点工时不符合正式 schema")
     if not bool(demand[physical].ge(1).all()) or not bool(demand[virtual].eq(0).all()):
         raise ValueError(f"{label} 的物理/虚拟节点需求人数不符合正式 schema")

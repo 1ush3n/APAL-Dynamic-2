@@ -61,6 +61,8 @@ class ConstraintEngine:
         durations: Sequence[float],
         fixed_stations: Sequence[int],
         max_allowed_stations: Sequence[int] | None = None,
+        node_types: Sequence[int] | None = None,
+        physical_mask: Sequence[bool] | None = None,
         tolerance: float = 1e-5,
     ) -> "ConstraintEngine":
         """由完整层级 DAG 构造压缩后的物理工序约束图。"""
@@ -74,7 +76,12 @@ class ConstraintEngine:
         fixed_array = np.asarray(fixed_stations, dtype=np.int64).reshape(-1).copy()
         if duration_array.shape[0] != num_tasks or fixed_array.shape[0] != num_tasks:
             raise ValueError("duration/fixed_station 数量必须与 num_tasks 一致")
-        physical_mask = duration_array > float(tolerance)
+        if physical_mask is not None:
+            physical_mask = np.asarray(physical_mask, dtype=bool).reshape(-1)
+        elif node_types is not None:
+            physical_mask = np.asarray(node_types, dtype=np.int64).reshape(-1) == 2
+        else:
+            physical_mask = duration_array > float(tolerance)
 
         predecessors: list[list[int]] = [[] for _ in range(num_tasks)]
         successors: list[list[int]] = [[] for _ in range(num_tasks)]

@@ -408,12 +408,14 @@ class AirLineEnvWork3:
         for w in task.assigned_team:
             self.state.workers[w].remove_interval(task.task_key)
 
-        # 2. 计算满足当前时刻、物料恢复时刻及已揭示前驱的最早搜索起点
+        # 2. 计算满足当前时刻、物料恢复时刻、已揭示前驱及旧预约时刻的最早搜索起点（仅顺延不提前）
         predecessor_release = self._predecessor_release_time(task)
+        old_scheduled_start = float(task.scheduled_start) if task.scheduled_start is not None else 0.0
         search_start = max(
             self.state.current_time,
             float(task.material_ready_time),
             0.0 if predecessor_release is None else float(predecessor_release),
+            old_scheduled_start,
         )
         if getattr(task, "alignment", 0) == 1:
             align_target = self.state.last_transfer_time + task.in_station_offset
@@ -456,17 +458,23 @@ class AirLineEnvWork3:
             generation=task.generation,
         )
 
-        # 8. 顺延资源链冲突任务：检查同团队工人在 new_start 之后是否有其他被冲突预约
+        # 8. 顺延资源链冲突任务：检查同团队工人中与新区间发生实际半开区间重叠的其他预约
         new_end = new_start + execution_duration
+        conflicted_keys = set()
         for w in task.assigned_team:
             for iv in list(self.state.workers[w].intervals):
                 other_key = iv.task_key
-                if other_key == task.task_key:
+                if other_key == task.task_key or other_key in conflicted_keys:
                     continue
-                other_task = self.state.tasks.get(other_key)
-                if other_task is not None and other_task.status == TaskStatus.RESERVED:
-                    if other_task.scheduled_start is not None and other_task.scheduled_start < new_end - self.tolerance:
-                        self._passive_defer_reserved_task(other_task, cause="resource_conflict")
+                if max(new_start, iv.start) < min(new_end, iv.end) - self.tolerance:
+                    other_task = self.state.tasks.get(other_key)
+                    if other_task is not None and other_task.status == TaskStatus.RESERVED:
+                        conflicted_keys.add(other_key)
+
+        for other_key in sorted(conflicted_keys):
+            other_task = self.state.tasks.get(other_key)
+            if other_task is not None:
+                self._passive_defer_reserved_task(other_task, cause="resource_conflict")
 
         # 9. 顺延前驱链后继任务：沿工艺后继检查已预约的后继工序
         self._propagate_passive_deferral(task)
@@ -742,13 +750,6 @@ class AirLineEnvWork3:
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
 
         self.process_due_events()
-        # 记录高频动态演化语义摘要 (R08)
-        self.state.last_action_branch = int(branch.value)
-        if abs(self.state.current_time - getattr(self, "_last_step_time", self.state.current_time)) < self.tolerance:
-            self.state.micro_steps_in_timestamp += 1
-        else:
-            self.state.micro_steps_in_timestamp = 1
-        self._last_step_time = float(self.state.current_time)
 
         info: dict[str, Any] = {
             "action_branch": branch.name,
@@ -921,7 +922,13 @@ class AirLineEnvWork3:
             self._advance_events_until_next_decision()
             if not self.get_action_candidates() and not self._check_terminated():
                 info["success"] = False
-                info["termination_reason"] = "deadlock"
+        # 记录高频动态演化语义摘要 (R08) - 仅在动作生效后更新
+        self.state.last_action_branch = int(branch.value)
+        if abs(self.state.current_time - getattr(self, "_last_step_time", self.state.current_time)) < self.tolerance:
+            self.state.micro_steps_in_timestamp += 1
+        else:
+            self.state.micro_steps_in_timestamp = 1
+        self._last_step_time = float(self.state.current_time)
 
         self.step_count += 1
         if info["advance_cause"] not in ADVANCE_CAUSES:

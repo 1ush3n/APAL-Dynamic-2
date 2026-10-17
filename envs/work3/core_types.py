@@ -164,6 +164,8 @@ class TaskRuntimeState:
     revision_history: list[dict[str, Any]] = field(default_factory=list)
     alignment: int = 0                # 留站对齐模式：0=ASAP (尽快开工), 1=周期内标准偏置对齐
     committed: bool = False           # 是否已提交不可撤回决策（一旦预约或后移确定即不可主动改派）
+    is_physical: bool = True          # 是否为实际物理加工工序
+    node_type: int = 2                # 节点类型：1=虚拟摘要/子装配节点, 2=物理加工Task
     _state_ref: Any = field(default=None, repr=False, compare=False)
 
     @property
@@ -314,6 +316,10 @@ class TaskRuntimeState:
             baseline_assignment=copy.deepcopy(self.baseline_assignment),
             last_published_assignment=copy.deepcopy(self.last_published_assignment),
             revision_history=copy.deepcopy(self.revision_history),
+            alignment=self.alignment,
+            committed=self.committed,
+            is_physical=getattr(self, "is_physical", True),
+            node_type=getattr(self, "node_type", 2),
         )
         copied._state_ref = getattr(self, "_state_ref", None)
         return copied
@@ -485,6 +491,7 @@ class MultiAircraftState:
             "micro_steps_in_timestamp": self.micro_steps_in_timestamp,
             "recent_postponed_count": self.recent_postponed_count,
             "recent_reserved_count": self.recent_reserved_count,
+            "recent_change_summary": copy.deepcopy(getattr(self, "recent_change_summary", {})),
             "aircraft": {k: ac.copy() for k, ac in self.aircraft.items()},
             "tasks": {k: t.copy() for k, t in self.tasks.items()},
             "workers": {w: wc.copy() for w, wc in self.workers.items()},
@@ -501,9 +508,12 @@ class MultiAircraftState:
         self.micro_steps_in_timestamp = int(snap.get("micro_steps_in_timestamp", 0))
         self.recent_postponed_count = int(snap.get("recent_postponed_count", 0))
         self.recent_reserved_count = int(snap.get("recent_reserved_count", 0))
+        self.recent_change_summary = copy.deepcopy(snap.get("recent_change_summary", {}))
         self.aircraft = {k: ac.copy() for k, ac in snap["aircraft"].items()}
         self.tasks = {k: t.copy() for k, t in snap["tasks"].items()}
         self.workers = {w: wc.copy() for w, wc in snap["workers"].items()}
+        for t in self.tasks.values():
+            t._state_ref = self
         self._rebuild_ac_station_tasks()
 
 
