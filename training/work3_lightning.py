@@ -329,6 +329,22 @@ class Work3LightningModule(LightningModule):
                         minibatch["target_next_residuals"] = auxiliary["target_next_residuals"][chosen]
                     if "next_cycle_masks" in auxiliary:
                         minibatch["next_cycle_masks"] = auxiliary["next_cycle_masks"][chosen]
+
+                    has_curr = False
+                    if "current_target_masks" in minibatch:
+                        has_curr = bool(minibatch["current_target_masks"].any().item())
+                    elif "target_residuals" in minibatch:
+                        has_curr = bool(torch.isfinite(minibatch["target_residuals"]).any().item())
+
+                    has_nxt = False
+                    if "next_cycle_masks" in minibatch:
+                        has_nxt = bool(minibatch["next_cycle_masks"].any().item())
+                    elif "target_next_residuals" in minibatch:
+                        has_nxt = bool(torch.isfinite(minibatch["target_next_residuals"]).any().item())
+
+                    if not (has_curr or has_nxt):
+                        continue
+
                     time_loss = self.objective.compute_time_auxiliary_loss(minibatch)
                     grad_norm = self._manual_update(
                         self.objective.time_loss_coef * time_loss,

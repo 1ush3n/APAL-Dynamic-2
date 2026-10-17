@@ -387,6 +387,22 @@ class PPOTrainerWork3:
                             auxiliary_minibatch["next_cycle_masks"] = time_auxiliary_batch[
                                 "next_cycle_masks"
                             ][batch_indices]
+
+                        has_curr = False
+                        if "current_target_masks" in auxiliary_minibatch:
+                            has_curr = bool(auxiliary_minibatch["current_target_masks"].any().item())
+                        elif "target_residuals" in auxiliary_minibatch:
+                            has_curr = bool(torch.isfinite(auxiliary_minibatch["target_residuals"]).any().item())
+
+                        has_nxt = False
+                        if "next_cycle_masks" in auxiliary_minibatch:
+                            has_nxt = bool(auxiliary_minibatch["next_cycle_masks"].any().item())
+                        elif "target_next_residuals" in auxiliary_minibatch:
+                            has_nxt = bool(torch.isfinite(auxiliary_minibatch["target_next_residuals"]).any().item())
+
+                        if not (has_curr or has_nxt):
+                            continue
+
                         self.optimizer.zero_grad()
                         time_loss = self.compute_time_auxiliary_loss(auxiliary_minibatch)
                         auxiliary_loss = self.time_loss_coef * time_loss

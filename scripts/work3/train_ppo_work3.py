@@ -1314,7 +1314,7 @@ def run_training(
                 ):
                     stop_reason = "successful_batch_target_reached"
                     break
-                if shaper is not None and any(state.success for state in worker_states):
+                if shaper is not None:
                     shaper.update_snapshot(time_head, actor_critic)
                 episode_wave_index += 1
                 start_episode_wave()
@@ -1630,20 +1630,16 @@ def run_training(
                         truncated_value.squeeze().item()
                     )
 
-                if profile.use_learned_time_shaping:
-                    shaped_reward = (
-                        shaper.shape_reward(
-                            actual_reward=raw_reward,
-                            phi_current=context["phi_current"],
-                            phi_next=phi_next,
-                        )
-                        if shaper is not None
-                        else raw_reward + beta_shaping * (
-                            gamma * float(phi_next) - float(context["phi_current"])
-                        )
+                if profile.use_learned_time_shaping and shaper is not None:
+                    shaped_reward = shaper.shape_reward(
+                        actual_reward=raw_reward,
+                        phi_current=context["phi_current"],
+                        phi_next=phi_next,
                     )
                 else:
-                    shaped_reward = raw_reward
+                    shaped_reward = raw_reward + beta_shaping * (
+                        gamma * float(phi_next) - float(context["phi_current"])
+                    )
                 if done:
                     record_unlabelled_cycles(worker_id, state.episode_id)
                     pending_time_labels.discard_episode(
