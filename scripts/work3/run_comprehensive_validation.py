@@ -363,12 +363,14 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     compact_grad = actor_critic.encoder[0].weight.grad
     line_fusion_grad = actor_critic.graph_encoder.line_fusion_mlp[0].weight.grad
     station_summary_grad = actor_critic.graph_encoder.station_summary_mlp[0].weight.grad
+    aircraft_role_grad = actor_critic.graph_encoder.aircraft_role_mlp[0].weight.grad
     current_head_grad = time_head.reg_fc[0].weight.grad
     next_head_grad = time_head.next_cycle_fc[0].weight.grad
 
     assert compact_grad is not None and torch.isfinite(compact_grad).all()
     assert line_fusion_grad is not None and torch.isfinite(line_fusion_grad).all()
     assert station_summary_grad is not None and torch.isfinite(station_summary_grad).all()
+    assert aircraft_role_grad is not None and torch.isfinite(aircraft_role_grad).all()
     assert current_head_grad is not None and torch.isfinite(current_head_grad).all()
     assert next_head_grad is not None and torch.isfinite(next_head_grad).all()
 
@@ -376,6 +378,7 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     print(f"    紧凑状态编码器梯度模长: {compact_grad.norm().item():.6f} (有限且正常)")
     print(f"    整线融合MLP梯度模长: {line_fusion_grad.norm().item():.6f} (有限且正常)")
     print(f"    站位汇总MLP梯度模长: {station_summary_grad.norm().item():.6f} (有限且正常)")
+    print(f"    飞机角色MLP梯度模长: {aircraft_role_grad.norm().item():.6f} (有限且正常)")
     print(f"    当前残差预测头梯度模长: {current_head_grad.norm().item():.6f} (有限且正常)")
     print(f"    下一周期预测头梯度模长: {next_head_grad.norm().item():.6f} (有限且正常)")
 
