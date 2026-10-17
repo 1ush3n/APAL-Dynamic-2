@@ -226,6 +226,10 @@ def test_evaluation_completion_on_exact_decision_limit_requires_feasibility(
         status=TaskStatus.READY,
         material_ready_time=0.0,
         postpone_count=0,
+        actual_start=1.0,
+        in_station_offset=1.0,
+        actual_start_station=0,
+        base_station=0,
     )
 
     class OneStepCompletionEnv:
@@ -236,6 +240,7 @@ def test_evaluation_completion_on_exact_decision_limit_requires_feasibility(
             self.reset()
 
         def reset(self) -> None:
+            from envs.work3.environment import ObjectiveWeights
             task.status = TaskStatus.READY
             self.finished = False
             self.step_count = 0
@@ -245,12 +250,16 @@ def test_evaluation_completion_on_exact_decision_limit_requires_feasibility(
             self.cost_team = 0.0
             self.cost_postpone = 0.0
             self.cost_revision = 0.0
+            self.step_rewards = []
+            self.weights = ObjectiveWeights()
+            self.total_tasks = 1
             self.disturbance_event_triggered = False
             self.disturbance_event_results = {}
             self.state = SimpleNamespace(
                 tasks={"one": task},
                 transfer_history=[],
                 current_time=1.0,
+                h0=100.0,
             )
 
         def get_action_candidates(self) -> list[SimpleNamespace]:

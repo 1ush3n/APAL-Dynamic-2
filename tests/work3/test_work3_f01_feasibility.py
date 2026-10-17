@@ -429,31 +429,41 @@ def test_failed_reservation_search_restores_old_reservation_transaction(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A10：搜索异常时旧预约、资源、事件代数和费用账本完整不变。"""
-    task = env.get_ready_tasks()[0]
-    team = tuple(env.valid_team_completion_workers(task, [])[: task.demand])
-    duration = env.duration_for_team(task, team)
-    task.execution_duration = duration
-    task.reserve(team=team, scheduled_start=20.0)
-    for worker_id in team:
+    reserved_task = env.get_ready_tasks()[0]
+    team_res = tuple(env.valid_team_completion_workers(reserved_task, [])[: reserved_task.demand])
+    duration = env.duration_for_team(reserved_task, team_res)
+    reserved_task.execution_duration = duration
+    reserved_task.reserve(team=team_res, scheduled_start=20.0)
+    for worker_id in team_res:
         env.state.workers[worker_id].add_interval(
-            20.0, 20.0 + duration, task.task_key
+            20.0, 20.0 + duration, reserved_task.task_key
         )
-    env._station_occupied_tasks[task.current_station].add(task.task_key)
+    env._station_occupied_tasks[reserved_task.current_station].add(reserved_task.task_key)
     env.event_queue.push(
         EventType.TASK_START,
         timestamp=20.0,
-        task_key=task.task_key,
-        generation=task.generation,
+        task_key=reserved_task.task_key,
+        generation=reserved_task.generation,
     )
 
+    candidate_task = env.get_ready_tasks()[0]
+    team = tuple(env.valid_team_completion_workers(candidate_task, [])[: candidate_task.demand])
+
     task_before = (
-        task.status,
-        tuple(task.assigned_team),
-        task.scheduled_start,
-        task.execution_duration,
-        task.generation,
-        copy.deepcopy(task.revision_history),
-        copy.deepcopy(task.last_published_assignment),
+        reserved_task.status,
+        tuple(reserved_task.assigned_team),
+        reserved_task.scheduled_start,
+        reserved_task.execution_duration,
+        reserved_task.generation,
+        copy.deepcopy(reserved_task.revision_history),
+        copy.deepcopy(reserved_task.last_published_assignment),
+    )
+    candidate_before = (
+        candidate_task.status,
+        tuple(candidate_task.assigned_team),
+        candidate_task.scheduled_start,
+        candidate_task.execution_duration,
+        candidate_task.generation,
     )
     calendars_before = {
         worker_id: tuple(calendar.intervals)
@@ -485,7 +495,7 @@ def test_failed_reservation_search_restores_old_reservation_transaction(
     with pytest.raises(NoFeasibleSlotError, match="injected search failure"):
         env.step(
             {
-                "task_key": task.task_key,
+                "task_key": candidate_task.task_key,
                 "branch": ActionBranch.STATION_EXECUTE,
                 "team": team,
                 "align": 0,
@@ -493,13 +503,20 @@ def test_failed_reservation_search_restores_old_reservation_transaction(
         )
 
     assert task_before == (
-        task.status,
-        tuple(task.assigned_team),
-        task.scheduled_start,
-        task.execution_duration,
-        task.generation,
-        copy.deepcopy(task.revision_history),
-        copy.deepcopy(task.last_published_assignment),
+        reserved_task.status,
+        tuple(reserved_task.assigned_team),
+        reserved_task.scheduled_start,
+        reserved_task.execution_duration,
+        reserved_task.generation,
+        copy.deepcopy(reserved_task.revision_history),
+        copy.deepcopy(reserved_task.last_published_assignment),
+    )
+    assert candidate_before == (
+        candidate_task.status,
+        tuple(candidate_task.assigned_team),
+        candidate_task.scheduled_start,
+        candidate_task.execution_duration,
+        candidate_task.generation,
     )
     assert calendars_before == {
         worker_id: tuple(calendar.intervals)

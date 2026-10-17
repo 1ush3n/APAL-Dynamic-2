@@ -142,6 +142,7 @@ class TaskRuntimeState:
     skill: int
     ao_code: str
     predecessors: tuple[int, ...]  # 本机内部紧前工序 ID 列表
+    predecessor_keys: tuple[str, ...] = field(default_factory=tuple)  # 预格式化前驱键 (O3)
     standard_duration: float | None = None  # 原始实例中的标准加工工时
 
     assigned_team: list[int] = field(default_factory=list)  # 当前有效预约/执行团队；后移后为空
@@ -195,6 +196,8 @@ class TaskRuntimeState:
 
     def __post_init__(self) -> None:
         """初始化基准安排与当前正式安排快照。"""
+        if not self.predecessor_keys and self.predecessors:
+            self.predecessor_keys = tuple(f"{self.aircraft_id}_{p}" for p in self.predecessors)
         if not self.baseline_assignment:
             self.baseline_assignment = {
                 "station": int(self.base_station),
@@ -299,6 +302,7 @@ class TaskRuntimeState:
             skill=self.skill,
             ao_code=self.ao_code,
             predecessors=self.predecessors,
+            predecessor_keys=self.predecessor_keys,
             assigned_team=list(self.assigned_team),
             scheduled_start=self.scheduled_start,
             actual_start=self.actual_start,

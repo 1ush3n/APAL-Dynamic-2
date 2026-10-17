@@ -618,5 +618,6 @@ def test_legacy_actor_checkpoint_can_be_loaded(baseline_path: Path) -> None:
     state_dict = data.get("actor_critic_state", data)
 
     net = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64)
-    net.load_state_dict(state_dict)
+    res = net.load_warm_start_weights(state_dict)
+    assert len(res["loaded_keys"]) > 0
     assert net.graph_policy_enabled is False

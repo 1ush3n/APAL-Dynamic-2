@@ -316,6 +316,7 @@ class AirLineEnvWork3:
                 p for p in self.constraint_engine.physical_predecessors[task_id]
                 if p in ac_task_ids
             )
+            task.predecessor_keys = tuple(f"{task.aircraft_id}_{p}" for p in task.predecessors)
 
         self._successors_map = {
             k: {t.task_id: [] for t in self.state.tasks.values() if t.aircraft_id == k}
@@ -393,8 +394,9 @@ class AirLineEnvWork3:
     def _predecessor_release_time(self, task: TaskRuntimeState) -> float | None:
         """返回前驱已完成、预约或运行时可证明的最早释放时刻。"""
         release_time = self.state.current_time
-        for predecessor_id in task.predecessors:
-            predecessor = self.state.tasks.get(f"{task.aircraft_id}_{predecessor_id}")
+        pred_keys = getattr(task, "predecessor_keys", None) or tuple(f"{task.aircraft_id}_{p}" for p in task.predecessors)
+        for pred_key in pred_keys:
+            predecessor = self.state.tasks.get(pred_key)
             if predecessor is None:
                 return None
             if predecessor.status == TaskStatus.COMPLETED and predecessor.actual_end is not None:
@@ -537,14 +539,21 @@ class AirLineEnvWork3:
         """返回任务的``(stay_mask, postpone_mask)``。"""
         return self.can_reserve(task), self.can_postpone(task)
 
-    def get_action_candidates(self) -> list[TaskRuntimeState]:
-        """返回至少有一个合法动作分支的任务。"""
-        candidates: list[TaskRuntimeState] = []
+    def get_action_candidates_with_masks(self) -> list[tuple[TaskRuntimeState, tuple[bool, bool]]]:
+        """返回候选任务及其分支掩码列表 [(task, (can_res, can_post)), ...]，避免重复评估 (O2)。"""
+        candidates_with_masks: list[tuple[TaskRuntimeState, tuple[bool, bool]]] = []
         for station_id in range(self.state.num_stations):
             for task in self.state.get_tasks_for_station(station_id):
-                if any(self.get_action_branch_mask(task)):
-                    candidates.append(task)
-        return candidates
+                if task.status in (TaskStatus.RUNNING, TaskStatus.COMPLETED, TaskStatus.RESERVED):
+                    continue
+                mask = (self.can_reserve(task), self.can_postpone(task))
+                if mask[0] or mask[1]:
+                    candidates_with_masks.append((task, mask))
+        return candidates_with_masks
+
+    def get_action_candidates(self) -> list[TaskRuntimeState]:
+        """返回至少有一个合法动作分支的任务。"""
+        return [task for task, _ in self.get_action_candidates_with_masks()]
 
     def duration_for_team(
         self,
@@ -1171,9 +1180,10 @@ class AirLineEnvWork3:
             return
 
         aircraft = self.state.aircraft[task.aircraft_id]
+        pred_keys = getattr(task, "predecessor_keys", None) or tuple(f"{task.aircraft_id}_{p}" for p in task.predecessors)
         predecessors_completed = all(
-            self.state.tasks[f"{task.aircraft_id}_{pred_id}"].status == TaskStatus.COMPLETED
-            for pred_id in task.predecessors
+            self.state.tasks[pred_key].status == TaskStatus.COMPLETED
+            for pred_key in pred_keys
         )
         valid_start = (
             aircraft.current_station == task.current_station
@@ -1337,8 +1347,8 @@ class AirLineEnvWork3:
         if ac.current_station != task.current_station:
             return
 
-        for pred_id in task.predecessors:
-            pred_key = f"{task.aircraft_id}_{pred_id}"
+        pred_keys = getattr(task, "predecessor_keys", None) or tuple(f"{task.aircraft_id}_{p}" for p in task.predecessors)
+        for pred_key in pred_keys:
             pred_task = self.state.tasks.get(pred_key)
             if pred_task is not None and pred_task.status != TaskStatus.COMPLETED:
                 return
@@ -1364,6 +1374,7 @@ class AirLineEnvWork3:
         """检查全线放行条件，按实际完成时刻安排同步转站。"""
         if self._check_terminated():
             return
+        self._record_station_first_cleared_if_ready()
         if not self.state.is_all_stations_cleared_for_transfer():
             return
 
@@ -1399,6 +1410,7 @@ class AirLineEnvWork3:
 
     def _execute_synchronous_transfer(self, timestamp: float) -> None:
         """执行全线同步脉动流转（Task 2.5）：各机站位+1，唤醒后移任务。"""
+        self._record_station_first_cleared_if_ready()
         current_q = self.state.current_cycle
         cleared_map = self.state.station_first_cleared_times.setdefault(current_q, {})
 
@@ -1470,10 +1482,10 @@ class AirLineEnvWork3:
         self._record_station_first_cleared_if_ready()
 
     def _check_terminated(self) -> bool:
-        """检查生产是否自然终止（Task 2.6：全部飞机离开末站，所有工序完工）。"""
-        all_completed = all(t.status == TaskStatus.COMPLETED for t in self.state.tasks.values())
-        all_exited = all(ac.is_completed for ac in self.state.aircraft.values())
-        return all_completed and all_exited
+        """检查生产是否自然终止（Task 2.6：全部飞机离开末站，所有工序完工）(O1)。"""
+        if not all(ac.is_completed for ac in self.state.aircraft.values()):
+            return False
+        return all(t.status == TaskStatus.COMPLETED for t in self.state.tasks.values())
 
     def _get_observation(self) -> dict[str, Any]:
         """构造当前现场观测字典。"""

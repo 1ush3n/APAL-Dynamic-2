@@ -223,9 +223,9 @@ def evaluate_trajectory_objective(
         num_started += 1
         # 实际开工时刻 S_{ki}
         s_ki = task.actual_start
-        # 确定开工所在周期的转站基准点 P_{q-1}
-        if task.cycle_start_time is not None:
-            p_cycle_start = task.cycle_start_time
+        cycle_start_time = getattr(task, "cycle_start_time", None)
+        if cycle_start_time is not None:
+            p_cycle_start = cycle_start_time
         else:
             # 回退保护：从 transfer_history 中查找最后一个 <= S_{ki} 的转站时刻
             p_cycle_start = 0.0
@@ -236,15 +236,16 @@ def evaluate_trajectory_objective(
                     break
 
         b_ki = s_ki - p_cycle_start
-        b_i0 = task.in_station_offset
+        b_i0 = getattr(task, "in_station_offset", 0.0)
         d_time_sum += abs(b_ki - b_i0) / h0
 
         # 团队替换率 d(W, W^0) = 1 - |W cap W^0| / m_i
-        w_actual = set(task.assigned_team)
-        w_base = set(task.base_team)
-        if task.demand > 0:
+        w_actual = set(getattr(task, "assigned_team", ()))
+        w_base = set(getattr(task, "base_team", ()))
+        demand = getattr(task, "demand", 0)
+        if demand > 0:
             overlap = len(w_actual & w_base)
-            d_team_sum += 1.0 - (overlap / task.demand)
+            d_team_sum += 1.0 - (overlap / demand)
 
     d_time = d_time_sum * scale
     d_team = d_team_sum * scale
@@ -269,7 +270,7 @@ def evaluate_trajectory_objective(
     revision_team_sum = 0.0
     num_revisions = 0
     for task in state.tasks.values():
-        for revision in task.revision_history:
+        for revision in getattr(task, "revision_history", ()):
             revision_time_sum += float(revision.get("time_change", 0.0))
             revision_team_sum += float(revision.get("team_change", 0.0))
             num_revisions += 1

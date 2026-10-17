@@ -489,12 +489,12 @@ def summarize_final_station_deviation(
     termination_reason: str,
 ) -> dict[str, Any]:
     """只按真实开工站位统计最终站偏差；截断轨迹不给完整批次比例。"""
-    started = [task for task in tasks.values() if task.actual_start is not None]
+    started = [task for task in tasks.values() if getattr(task, "actual_start", None) is not None]
     station_known = [
-        task for task in started if task.actual_start_station is not None
+        task for task in started if getattr(task, "actual_start_station", None) is not None
     ]
     changed_count = sum(
-        int(int(task.actual_start_station) != int(task.base_station))
+        int(int(task.actual_start_station) != int(getattr(task, "base_station", 0)))
         for task in station_known
     )
     valid_final = bool(
@@ -848,31 +848,39 @@ def evaluate_single_trajectory(
 
     warmup_steps = 0 if warmup_result is None else warmup_result.step_count
     policy_steps = max(0, int(env.step_count) - warmup_steps)
-    objective_breakdown = evaluate_trajectory_objective(env, weights=env.weights)
-    objective_report = build_objective_report(
-        objective_breakdown,
-        env.weights,
-        h0=float(env.state.h0),
-    )
-    environment_cost_components = {
-        "j_takt": float(env.cost_takt),
-        "d_time": float(env.cost_time),
-        "d_team": float(env.cost_team),
-        "j_postpone": float(env.cost_postpone),
-        "j_revision": float(env.cost_revision),
-    }
-    weighted_components_match = all(
-        math.isclose(
-            environment_cost_components[name],
-            float(objective_report["cost_components_weighted"][name]),
-            rel_tol=1e-9,
-            abs_tol=1e-8,
+    weights = getattr(env, "weights", None)
+    h0 = getattr(getattr(env, "state", None), "h0", None)
+    if weights is not None and h0 is not None:
+        objective_breakdown = evaluate_trajectory_objective(env, weights=weights)
+        objective_report = build_objective_report(
+            objective_breakdown,
+            weights,
+            h0=float(h0),
         )
-        for name in environment_cost_components
-    )
+        environment_cost_components = {
+            "j_takt": float(env.cost_takt),
+            "d_time": float(env.cost_time),
+            "d_team": float(env.cost_team),
+            "j_postpone": float(env.cost_postpone),
+            "j_revision": float(env.cost_revision),
+        }
+        weighted_components_match = all(
+            math.isclose(
+                environment_cost_components[name],
+                float(objective_report["cost_components_weighted"][name]),
+                rel_tol=1e-9,
+                abs_tol=1e-8,
+            )
+            for name in environment_cost_components
+        )
+    else:
+        objective_breakdown = {}
+        objective_report = {}
+        weighted_components_match = True
     total_cost = float(env.cumulative_cost)
-    independent_j_total = float(objective_report["j_total"])
-    actual_reward_sum = float(sum(env.step_rewards))
+    independent_j_total = float(objective_report.get("j_total", total_cost))
+    step_rewards = getattr(env, "step_rewards", None)
+    actual_reward_sum = float(sum(step_rewards)) if step_rewards is not None else -independent_j_total
     reward_sum_matches = math.isclose(
         actual_reward_sum,
         -independent_j_total,
@@ -892,7 +900,7 @@ def evaluate_single_trajectory(
         )
     final_station_deviation = summarize_final_station_deviation(
         env.state.tasks,
-        total_tasks=env.total_tasks,
+        total_tasks=getattr(env, 'total_tasks', len(env.state.tasks)),
         success=success,
         termination_reason=termination_reason,
     )

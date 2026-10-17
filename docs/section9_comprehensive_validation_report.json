@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-10-17 15:56:32",
-  "total_elapsed_seconds": 304.0881589000055,
+  "timestamp": "2026-10-17 18:21:32",
+  "total_elapsed_seconds": 217.39167630000156,
   "section_9_1": {
     "status": "PASS",
     "completed_tasks": 70,
     "total_tasks": 70,
     "transfers": 11,
-    "elapsed_seconds": 0.2070481000118889,
+    "elapsed_seconds": 0.16987569999764673,
     "cost_breakdown": {
       "j_takt": 0.0,
       "d_time": 0.0001300534368508665,
@@ -31,7 +31,7 @@
       "feasible": true,
       "makespan": 3055.4313412919582,
       "j_total": 1.310728848589564e-12,
-      "elapsed_seconds": 57.73001420000219
+      "elapsed_seconds": 32.070393000001786
     },
     "disturbed": {
       "scenario_id": "REAL_283_DEDICATED_HIT",
@@ -44,26 +44,33 @@
       "actual_hit_task_keys": [
         "5_16"
       ],
-      "elapsed_seconds": 56.773174799993285
+      "elapsed_seconds": 32.68248360000143
     }
   },
   "section_9_3": {
     "status": "PASS",
     "method_c": {
       "decisions": 32,
-      "elapsed_seconds": 66.73486270000285,
+      "elapsed_seconds": 52.91444880000199,
       "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_c_smoke.pt"
     },
     "method_d": {
       "decisions": 32,
-      "elapsed_seconds": 118.61651659999916,
-      "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_d_smoke.pt"
+      "elapsed_seconds": 96.24793240000145,
+      "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_d_smoke.pt",
+      "cycle_time_labels_count": 2,
+      "available_labels_count": 1,
+      "actual_transfers": {
+        "episode_id": 0,
+        "transfer_time": 21.18755730190025
+      }
     },
     "dual_target_gradient_check": {
       "loss": 0.3448910415172577,
       "compact_grad_norm": 1.1338258981704712,
       "line_fusion_grad_norm": 5.403876304626465,
       "station_summary_grad_norm": 0.021375246345996857,
+      "aircraft_role_grad_norm": 0.023024069145321846,
       "current_head_grad_norm": 5.670454025268555,
       "next_head_grad_norm": 3.3798036575317383
     }

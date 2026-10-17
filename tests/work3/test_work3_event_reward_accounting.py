@@ -147,9 +147,9 @@ def test_unchanged_reservation_without_valid_event_terminates_as_deadlock() -> N
     env.step(action)
     assert task.scheduled_start == pytest.approx(20.0)
 
-    # 模拟事件已失效/被撤销，但保留物理预约，重提同一安排不得空转。
+    # 模拟事件已失效/被撤销，但保留物理预约，推进无事件触发死锁。
     env.event_queue.reset(start_time=env.state.current_time)
-    _obs, _reward, terminated, truncated, info = env.step(action)
+    _obs, _reward, terminated, truncated, info = env.step({"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT})
 
     assert terminated is True
     assert truncated is False

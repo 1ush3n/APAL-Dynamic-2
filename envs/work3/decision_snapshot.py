@@ -261,16 +261,27 @@ def build_decision_snapshot(
     from models.work3.actor_critic import extract_candidate_task_features
     from models.work3.graph_builder import GRAPH_FEATURE_VERSION
 
-    candidates = env.get_action_candidates()
-    branch_masks = tuple(env.get_action_branch_mask(task) for task in candidates)
-    if not allow_postpone:
-        kept = tuple(
-            (task, mask)
-            for task, mask in zip(candidates, branch_masks, strict=True)
-            if mask[0]
-        )
-        candidates = [task for task, _ in kept]
-        branch_masks = tuple((True, False) for _ in kept)
+    if "get_action_candidates" in env.__dict__:
+        candidates = env.get_action_candidates()
+        branch_masks = tuple(env.get_action_branch_mask(task) for task in candidates)
+        if not allow_postpone:
+            kept = tuple(
+                (task, mask)
+                for task, mask in zip(candidates, branch_masks, strict=True)
+                if mask[0]
+            )
+            candidates = [task for task, _ in kept]
+            branch_masks = tuple((True, False) for _ in kept)
+    else:
+        candidates_with_masks = env.get_action_candidates_with_masks()
+        if not allow_postpone:
+            candidates_with_masks = [
+                (task, (True, False))
+                for task, mask in candidates_with_masks
+                if mask[0]
+            ]
+        candidates = [task for task, _ in candidates_with_masks]
+        branch_masks = tuple(mask for _, mask in candidates_with_masks)
     candidate_keys = tuple(task.task_key for task in candidates)
     workers_by_station: dict[int, tuple[WorkerSnapshot, ...]] = {}
     contexts: list[TeamCompletionContext] = []
