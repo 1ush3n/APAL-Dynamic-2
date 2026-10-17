@@ -35,7 +35,7 @@ from models.work3.graph_builder import (
 from models.work3.ppo_buffer import RolloutBufferWork3
 
 logger = logging.getLogger(__name__)
-PPO_CHECKPOINT_VERSION = "work3_actor_time_v2"
+PPO_CHECKPOINT_VERSION = "work3_actor_time_v3"
 
 
 class PPOTrainerWork3:

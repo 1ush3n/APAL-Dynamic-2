@@ -571,10 +571,11 @@ class MultiAircraftState:
     last_transfer_time: float = 0.0      # 上次实际脉动转站时刻 P_{q-1}
     transfer_history: list[float] = field(default_factory=list)
 
-    # 首次实际就绪时刻跟踪与高频动态演化语义摘要 (R05 & R08)
+    # 首次实际就绪时刻跟踪与高频动态演化语义摘要 (R05 & R08 & R7)
     station_first_cleared_times: dict[int, dict[int, float]] = field(default_factory=dict)
     cycle_execution_records: dict[int, CycleExecutionRecord] = field(default_factory=dict)
-    last_action_branch: int = 0          # 上一决策动作分支 (0: NONE, 1: STAY, 2: POSTPONE, 3: ADVANCE)
+    has_last_action: bool = False        # 是否已发生至少一次调度决策
+    last_action_branch: int = int(ActionBranch.STATION_EXECUTE)  # 上一决策动作分支 (ActionBranch枚举)
     last_action_task_id: int = -1
     last_action_aircraft_id: int = -1
     last_action_station_id: int = -1
@@ -583,7 +584,9 @@ class MultiAircraftState:
     recent_reserved_count: int = 0       # 当前周期内预约工序数
     recent_events_count: int = 0         # 自上一决策以来发生的离散事件数
     recent_material_delays: int = 0      # 自上一决策以来发生的物料延迟事件数
-    recent_worker_disturbances: int = 0  # 自上一决策以来发生的人员扰动事件数
+    recent_material_delays_hit: int = 0  # 自上一决策以来实际命中非冻结工序的扰动数 (R7)
+    recent_material_delay_increment: float = 0.0 # 自上一决策以来扰动造成的就绪下界推迟增量 (R7)
+    recent_worker_disturbances: int = 0  # 保留字段：当前域不支持人员扰动 (R7)
 
     aircraft: dict[int, AircraftRuntimeState] = field(default_factory=dict)
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
@@ -678,6 +681,7 @@ class MultiAircraftState:
             "transfer_history": list(self.transfer_history),
             "station_first_cleared_times": copy.deepcopy(self.station_first_cleared_times),
             "cycle_execution_records": copy.deepcopy(self.cycle_execution_records),
+            "has_last_action": self.has_last_action,
             "last_action_branch": self.last_action_branch,
             "last_action_task_id": self.last_action_task_id,
             "last_action_aircraft_id": self.last_action_aircraft_id,
@@ -687,6 +691,8 @@ class MultiAircraftState:
             "recent_reserved_count": self.recent_reserved_count,
             "recent_events_count": self.recent_events_count,
             "recent_material_delays": self.recent_material_delays,
+            "recent_material_delays_hit": self.recent_material_delays_hit,
+            "recent_material_delay_increment": self.recent_material_delay_increment,
             "recent_worker_disturbances": self.recent_worker_disturbances,
             "recent_change_summary": copy.deepcopy(getattr(self, "recent_change_summary", {})),
             "aircraft": {k: ac.copy() for k, ac in self.aircraft.items()},
@@ -702,6 +708,7 @@ class MultiAircraftState:
         self.transfer_history = list(snap["transfer_history"])
         self.station_first_cleared_times = copy.deepcopy(snap.get("station_first_cleared_times", {}))
         self.cycle_execution_records = copy.deepcopy(snap.get("cycle_execution_records", {}))
+        self.has_last_action = bool(snap.get("has_last_action", False))
         self.last_action_branch = int(snap.get("last_action_branch", 0))
         self.last_action_task_id = int(snap.get("last_action_task_id", -1))
         self.last_action_aircraft_id = int(snap.get("last_action_aircraft_id", -1))
@@ -711,6 +718,8 @@ class MultiAircraftState:
         self.recent_reserved_count = int(snap.get("recent_reserved_count", 0))
         self.recent_events_count = int(snap.get("recent_events_count", 0))
         self.recent_material_delays = int(snap.get("recent_material_delays", 0))
+        self.recent_material_delays_hit = int(snap.get("recent_material_delays_hit", 0))
+        self.recent_material_delay_increment = float(snap.get("recent_material_delay_increment", 0.0))
         self.recent_worker_disturbances = int(snap.get("recent_worker_disturbances", 0))
         self.recent_change_summary = copy.deepcopy(snap.get("recent_change_summary", {}))
         self.aircraft = {k: ac.copy() for k, ac in snap["aircraft"].items()}

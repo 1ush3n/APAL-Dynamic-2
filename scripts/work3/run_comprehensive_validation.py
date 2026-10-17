@@ -319,9 +319,12 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     print(f"    Method D 完成: decisions={res_d['total_decisions']}, 耗时={elapsed_d:.2f}s, ckpt={d_ckpt}")
     assert Path(res_d["checkpoint_path"]).is_file()
     assert res_d["total_decisions"] >= 21
-    assert res_d.get("cycle_time_labels") or res_d.get("history"), "Method D 产生有效历史与时间监督记录"
+    cycle_time_labels = res_d.get("cycle_time_labels", [])
+    assert cycle_time_labels and len(cycle_time_labels) > 0, "Method D 必须产生真实周期时间监督记录 (cycle_time_labels)！"
+    available_labels = [l for l in cycle_time_labels if l.get("label_available")]
+    assert len(available_labels) > 0, "Method D 必须产生至少一条实际可用的时间监督标签！"
 
-    # 3. 详细检查 Method D 双目标梯度与分层图编码器各模块梯度流向 (V04)
+    # 3. 详细检查 Method D 双目标梯度与分层图编码器各模块梯度流向 (V04/R3)
     print("--> 3/3: 校验真实双目标损失与共享编码器各模块梯度流向...")
     actor_critic = ActorCriticWork3(
         state_dim=32,
@@ -359,7 +362,7 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     loss = trainer.compute_time_auxiliary_loss(aux_batch)
     loss.backward()
 
-    # 断言紧凑状态编码器、分层融合MLP、站位汇总MLP、当前残差头和下一周期预测头均有有限非零梯度
+    # 断言紧凑状态编码器、分层融合MLP、站位汇总MLP、飞机角色MLP、当前残差头和下一周期预测头均有有限且受控非零梯度
     compact_grad = actor_critic.encoder[0].weight.grad
     line_fusion_grad = actor_critic.graph_encoder.line_fusion_mlp[0].weight.grad
     station_summary_grad = actor_critic.graph_encoder.station_summary_mlp[0].weight.grad
@@ -367,12 +370,12 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     current_head_grad = time_head.reg_fc[0].weight.grad
     next_head_grad = time_head.next_cycle_fc[0].weight.grad
 
-    assert compact_grad is not None and torch.isfinite(compact_grad).all()
-    assert line_fusion_grad is not None and torch.isfinite(line_fusion_grad).all()
-    assert station_summary_grad is not None and torch.isfinite(station_summary_grad).all()
-    assert aircraft_role_grad is not None and torch.isfinite(aircraft_role_grad).all()
-    assert current_head_grad is not None and torch.isfinite(current_head_grad).all()
-    assert next_head_grad is not None and torch.isfinite(next_head_grad).all()
+    assert compact_grad is not None and torch.isfinite(compact_grad).all() and compact_grad.norm().item() > 1e-7
+    assert line_fusion_grad is not None and torch.isfinite(line_fusion_grad).all() and line_fusion_grad.norm().item() > 1e-7
+    assert station_summary_grad is not None and torch.isfinite(station_summary_grad).all() and station_summary_grad.norm().item() > 1e-7
+    assert aircraft_role_grad is not None and torch.isfinite(aircraft_role_grad).all() and aircraft_role_grad.norm().item() > 1e-7
+    assert current_head_grad is not None and torch.isfinite(current_head_grad).all() and current_head_grad.norm().item() > 1e-7
+    assert next_head_grad is not None and torch.isfinite(next_head_grad).all() and next_head_grad.norm().item() > 1e-7
 
     print(f"    双目标损失={loss.item():.6f}")
     print(f"    紧凑状态编码器梯度模长: {compact_grad.norm().item():.6f} (有限且正常)")
@@ -393,12 +396,16 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
             "decisions": res_d["total_decisions"],
             "elapsed_seconds": elapsed_d,
             "checkpoint": str(d_ckpt),
+            "cycle_time_labels_count": len(cycle_time_labels),
+            "available_labels_count": len(available_labels),
+            "actual_transfers": res_d.get("first_actual_transfer"),
         },
         "dual_target_gradient_check": {
             "loss": float(loss.item()),
             "compact_grad_norm": float(compact_grad.norm().item()),
             "line_fusion_grad_norm": float(line_fusion_grad.norm().item()),
             "station_summary_grad_norm": float(station_summary_grad.norm().item()),
+            "aircraft_role_grad_norm": float(aircraft_role_grad.norm().item()),
             "current_head_grad_norm": float(current_head_grad.norm().item()),
             "next_head_grad_norm": float(next_head_grad.norm().item()),
         },

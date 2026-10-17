@@ -1175,11 +1175,12 @@ def run_training(
                 "label_available": False,
             })
 
-    def mark_budget_truncated(
+    def request_budget_truncation(
         reason: str,
         *,
         episode_reason: str | None = None,
     ) -> None:
+        """标记预算截止请求与终止原因；延迟至段尾bootstrap完成后统一清理缓存与快照 (R6/U30)。"""
         nonlocal stop_reason
         stop_reason = reason
         truncation_reason = episode_reason or reason
@@ -1196,17 +1197,6 @@ def run_training(
             state.done = True
             state.success = False
             state.termination_reason = truncation_reason
-            record_unlabelled_cycles(state.worker_id, state.episode_id)
-            pending_time_labels.discard_episode(
-                state.episode_id,
-                worker_id=state.worker_id,
-            )
-            if shaper is not None and state.predictor_version is not None:
-                shaper.end_episode(
-                    worker_id=state.worker_id,
-                    episode_id=state.episode_id,
-                )
-                state.predictor_version = None
             for transition in reversed(buffer.transitions):
                 if (
                     transition.worker_id == state.worker_id
@@ -1217,6 +1207,31 @@ def run_training(
                         transition.done = True
                         transition.truncated = True
                     break
+
+    def finalize_stopped_episodes(reason: str = "budget_truncated") -> None:
+        """在段尾bootstrap计算完毕后，统一释放预测快照并丢弃缓存，保证Critic价值计算无损 (R6)。"""
+        for state in worker_states:
+            if state.done:
+                record_unlabelled_cycles(state.worker_id, state.episode_id)
+                pending_time_labels.discard_episode(
+                    state.episode_id,
+                    worker_id=state.worker_id,
+                    reason=reason,
+                )
+                if shaper is not None and state.predictor_version is not None:
+                    shaper.end_episode(
+                        worker_id=state.worker_id,
+                        episode_id=state.episode_id,
+                    )
+                    state.predictor_version = None
+
+    def mark_budget_truncated(
+        reason: str,
+        *,
+        episode_reason: str | None = None,
+    ) -> None:
+        request_budget_truncation(reason, episode_reason=episode_reason)
+        finalize_stopped_episodes(reason)
 
     def mark_worker_infrastructure_interrupted(
         worker_id: int,
@@ -1464,7 +1479,7 @@ def run_training(
                 )
             if not step_batch.dispatched_worker_ids and not interrupted_worker_ids:
                 reason = current_budget_reason() or "no_worker_dispatched"
-                mark_budget_truncated(reason)
+                request_budget_truncation(reason)
                 break
             if interrupted_worker_ids:
                 for worker_id in sorted(interrupted_worker_ids):
@@ -1681,8 +1696,8 @@ def run_training(
                     segment_id=iter_idx,
                     predictor_version=pred_ver,
                     predictor_source="frozen_snapshot" if (shaper is not None and pred_ver is not None) else "heuristic",
-                    time_input_source="predicted_time" if profile.use_corrected_time_input else "none",
-                    phi_source="learned" if (profile.use_learned_time_shaping and shaper is not None) else "heuristic",
+                    time_input_source="predicted_time" if profile.use_corrected_time_input else ("heuristic_time" if snapshot.time_features is not None else "none"),
+                    phi_source="learned_phi" if (profile.use_learned_time_shaping and shaper is not None) else "heuristic_phi",
                 ))
                 step_raw_rewards.append(raw_reward)
                 step_shaped_rewards.append(shaped_reward)
@@ -1691,7 +1706,7 @@ def run_training(
 
             if interrupted_worker_ids:
                 stop_reason = "worker_infrastructure_interrupted"
-                mark_budget_truncated(
+                request_budget_truncation(
                     stop_reason,
                     episode_reason="cohort_truncated_after_worker_interruption",
                 )
@@ -1710,7 +1725,7 @@ def run_training(
                 ):
                     stop_reason = "successful_batch_target_reached"
                 else:
-                    mark_budget_truncated("wall_time_limit")
+                    request_budget_truncation("wall_time_limit")
                 break
 
             if _should_stop_after_success_target(
@@ -1777,11 +1792,13 @@ def run_training(
                 last_values_by_segment=rollout_bootstraps,
             )
 
-        # 固化结算与清理顺序：在完成段尾bootstrap特征生成后，再执行预算截断与快照释放 (U30)
+        # 固化结算与清理顺序：在完成段尾bootstrap特征生成后，再执行预算截断与快照释放 (U30/R6)
         if stop_reason is None:
             budget_reason = current_budget_reason()
             if budget_reason is not None:
-                mark_budget_truncated(budget_reason)
+                request_budget_truncation(budget_reason)
+
+        finalize_stopped_episodes(stop_reason or "budget_truncated")
 
         for state in worker_states:
             if not state.done:
@@ -1887,14 +1904,18 @@ def run_training(
             "method_variant": profile.name,
             "scenario_ids": sorted({item["scenario_id"] for item in scenario_log}),
             "scenario_log_count": len(scenario_log),
+            "cache_stats": pending_time_labels.stats(),
+            "cache_discard_reasons": dict(pending_time_labels.discard_reasons),
         }
         history.append(iter_log)
         logger.info(
-            "采样/重放一致性 max_abs_error=%s, 样本数=%s; 时间监督状态=%s, 标签数=%s",
+            "采样/重放一致性 max_abs_error=%s, 样本数=%s; 时间监督状态=%s, 标签数=%s; 缓存等待=(cur:%s, nxt:%s)",
             iter_log["sampling_replay_max_abs_error"],
             iter_log["sampling_replay_sample_count"],
             iter_log["time_supervision_status"],
             iter_log["time_label_count"],
+            iter_log["cache_stats"]["waiting_current_samples"],
+            iter_log["cache_stats"]["waiting_next_samples"],
         )
 
         logger.info(
@@ -2133,6 +2154,8 @@ def run_training(
         "checkpoint_version": PPO_CHECKPOINT_VERSION,
         "checkpoint_role": "model_weights",
         "resume_capability": "non_exact",
+        "cache_stats": pending_time_labels.stats(),
+        "cache_discard_reasons": dict(pending_time_labels.discard_reasons),
         "history": history,
         "scenario_log": scenario_log,
     }

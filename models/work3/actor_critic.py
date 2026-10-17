@@ -585,14 +585,52 @@ class ActorCriticWork3(nn.Module):
         )
         return v, e_fused
 
+    def load_warm_start_weights(
+        self,
+        state_dict: dict[str, torch.Tensor],
+    ) -> dict[str, list[str]]:
+        """显式旧模型热启动入口：按名称与shape过滤参数，返回缺失与意外键 (R4)。"""
+        model_dict = self.state_dict()
+        filtered_dict: dict[str, torch.Tensor] = {}
+        missing_keys: list[str] = []
+        unexpected_keys: list[str] = []
+        loaded_keys: list[str] = []
+
+        for k, v in state_dict.items():
+            if k in model_dict:
+                if model_dict[k].shape == v.shape:
+                    filtered_dict[k] = v
+                    loaded_keys.append(k)
+                else:
+                    unexpected_keys.append(f"{k} (shape mismatch: expected {model_dict[k].shape}, got {v.shape})")
+            else:
+                unexpected_keys.append(k)
+
+        for k in model_dict:
+            if k not in filtered_dict:
+                missing_keys.append(k)
+
+        has_graph_weights = any(key.startswith("graph_encoder.") for key in filtered_dict)
+        self.graph_policy_enabled = has_graph_weights
+        if "time_fusion.time_mlp.0.weight" in filtered_dict:
+            ckpt_time_dim = filtered_dict["time_fusion.time_mlp.0.weight"].size(1)
+            if ckpt_time_dim != self.time_fusion.time_dim:
+                self.time_fusion = TimeContextFusion(
+                    context_dim=self.hidden_dim,
+                    time_dim=ckpt_time_dim,
+                    hidden_dim=self.hidden_dim,
+                    stop_time_gradient=self.time_fusion.stop_time_gradient,
+                )
+        super().load_state_dict(filtered_dict, strict=False)
+        return {
+            "loaded_keys": loaded_keys,
+            "missing_keys": missing_keys,
+            "unexpected_keys": unexpected_keys,
+        }
+
     def load_state_dict(self, state_dict: dict[str, torch.Tensor], strict: bool = True, assign: bool = False):
-        """兼容没有图模块参数或缺少分层参数的旧工作三 Actor 检查点。"""
+        """严格加载模型检查点；如需热启动兼容旧模型，使用 load_warm_start_weights (R4)。"""
         has_graph_weights = any(key.startswith("graph_encoder.") for key in state_dict)
-        has_hier_weights = any(key.startswith("hierarchical_task_fusion.") for key in state_dict)
-        has_role_weights = any(key.startswith("graph_encoder.aircraft_role_mlp.") for key in state_dict)
-        has_recent_weights = any(key.startswith("graph_encoder.recent_events_mlp.") for key in state_dict)
-        if strict and (not has_graph_weights or not has_hier_weights or not has_role_weights or not has_recent_weights):
-            strict = False
         self.graph_policy_enabled = has_graph_weights
         if "time_fusion.time_mlp.0.weight" in state_dict:
             ckpt_time_dim = state_dict["time_fusion.time_mlp.0.weight"].size(1)

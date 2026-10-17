@@ -758,7 +758,7 @@ def test_checkpoints_declare_graph_feature_schema_and_reject_old_schema(
     trainer.save_checkpoint(str(checkpoint_path))
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
-    assert GRAPH_FEATURE_VERSION == "work3_graph_v4"
+    assert GRAPH_FEATURE_VERSION == "work3_graph_v5"
     assert checkpoint["graph_feature_version"] == GRAPH_FEATURE_VERSION
     assert checkpoint["graph_feature_dims"] == {
         "task": 26,

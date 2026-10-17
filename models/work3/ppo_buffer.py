@@ -90,6 +90,7 @@ class PendingTimeLabelCache:
         self._transfer_facts: dict[tuple[int, int, int], tuple[Any, ...]] = {}
         self.abandoned_current_samples: int = 0
         self.abandoned_next_samples: int = 0
+        self.discard_reasons: dict[str, int] = {}
 
     @property
     def waiting_current_samples(self) -> int:
@@ -178,15 +179,68 @@ class PendingTimeLabelCache:
         return counts
 
     def stats(self, episode_id: int | None = None, worker_id: int | None = None) -> dict[str, int]:
-        """返回详细的样本与目标分项统计报告 (U11)。"""
+        """返回详细的样本与目标分项统计报告，支持按 worker/episode 筛选 (R5/U11)。"""
+        ep_filter = int(episode_id) if episode_id is not None else None
+        w_filter = int(worker_id) if worker_id is not None else None
+
+        if ep_filter is None and w_filter is None:
+            return {
+                "waiting_current_samples": self.waiting_current_samples,
+                "waiting_next_samples": self.waiting_next_samples,
+                "available_current_samples": self.available_current_samples,
+                "available_next_samples": self.available_next_samples,
+                "available_next_station_targets": self.available_next_station_targets,
+                "ready_rows": self.ready_rows,
+                "total_pending_count": self.total_pending_count,
+                "abandoned_current_samples": self.abandoned_current_samples,
+                "abandoned_next_samples": self.abandoned_next_samples,
+            }
+
+        waiting_current = 0
+        for (w, ep, _), samples in self._pending.items():
+            if (ep_filter is None or ep == ep_filter) and (w_filter is None or w == w_filter):
+                waiting_current += len(samples)
+
+        waiting_next = 0
+        available_current = 0
+        available_next = 0
+        available_next_targets = 0
+
+        for (w, ep, _), items in self._pending_next_cycle.items():
+            if (ep_filter is None or ep == ep_filter) and (w_filter is None or w == w_filter):
+                for item in items:
+                    if not item.get("has_next_ready", False):
+                        waiting_next += 1
+                    if item.get("has_current_ready", False) and not item.get("current_drained", False):
+                        available_current += 1
+                    if item.get("has_next_ready", False) and not item.get("next_drained", False):
+                        available_next += 1
+                        mask = item.get("next_cycle_masks")
+                        if mask is not None and isinstance(mask, torch.Tensor):
+                            available_next_targets += int(mask.sum().item())
+
+        ready_rows_count = 0
+        for item in self._ready:
+            w = item.get("worker_id")
+            ep = item.get("episode_id")
+            if (ep_filter is None or ep == ep_filter) and (w_filter is None or w == w_filter):
+                ready_rows_count += 1
+                if item.get("current_target_mask", False):
+                    available_current += 1
+                if bool(item.get("has_next_ready", False)):
+                    available_next += 1
+                    mask = item.get("next_cycle_masks")
+                    if mask is not None and isinstance(mask, torch.Tensor):
+                        available_next_targets += int(mask.sum().item())
+
         return {
-            "waiting_current_samples": self.waiting_current_samples,
-            "waiting_next_samples": self.waiting_next_samples,
-            "available_current_samples": self.available_current_samples,
-            "available_next_samples": self.available_next_samples,
-            "available_next_station_targets": self.available_next_station_targets,
-            "ready_rows": self.ready_rows,
-            "total_pending_count": self.total_pending_count,
+            "waiting_current_samples": waiting_current,
+            "waiting_next_samples": waiting_next,
+            "available_current_samples": available_current,
+            "available_next_samples": available_next,
+            "available_next_station_targets": available_next_targets,
+            "ready_rows": ready_rows_count,
+            "total_pending_count": waiting_current + waiting_next,
             "abandoned_current_samples": self.abandoned_current_samples,
             "abandoned_next_samples": self.abandoned_next_samples,
         }
@@ -537,10 +591,12 @@ class PendingTimeLabelCache:
 
         self.abandoned_current_samples += discarded_current
         self.abandoned_next_samples += discarded_next
+        self.discard_reasons[reason] = self.discard_reasons.get(reason, 0) + (discarded_current + discarded_next)
 
         return {
             "discarded_current": discarded_current,
             "discarded_next": discarded_next,
+            "reason": str(reason),
         }
 
 

@@ -610,18 +610,27 @@ def test_u21_u22_aircraft_role_and_end_station_zero_masking():
 
 def test_u23_graph_schema_verification_and_checkpoint_compatibility():
     """U23: 图 schema 严格校验与旧检查点向后兼容。"""
-    assert GRAPH_FEATURE_VERSION == "work3_graph_v4"
+    assert GRAPH_FEATURE_VERSION == "work3_graph_v5"
     assert "dims" in GRAPH_FEATURE_SCHEMA
     assert "task" in GRAPH_FEATURE_SCHEMA["dims"]
+    assert GRAPH_FEATURE_SCHEMA.get("aircraft_role_partition") == ("current", "next", "further")
+    assert GRAPH_FEATURE_SCHEMA.get("recent_events_summary_dim") == 12
 
-    # 测试旧检查点兼容加载：缺少 aircraft_role_mlp / recent_events_mlp 时不报错
+    # 测试严格加载与旧检查点兼容方法 load_warm_start_weights
     model = ActorCriticWork3()
     old_state_dict = copy.deepcopy(model.state_dict())
     keys_to_remove = [k for k in old_state_dict if "aircraft_role_mlp" in k or "recent_events_mlp" in k]
     for k in keys_to_remove:
         del old_state_dict[k]
-    # strict=True 模式下能兼容旧权重
-    model.load_state_dict(old_state_dict, strict=True)
+
+    # strict=True 模式下缺少权重必须严格报错，杜绝静默吞掉缺失层
+    with pytest.raises(RuntimeError):
+        model.load_state_dict(old_state_dict, strict=True)
+
+    # 通过显式方法 load_warm_start_weights 兼容旧权重
+    res = model.load_warm_start_weights(old_state_dict)
+    assert set(res["missing_keys"]) == set(keys_to_remove)
+    assert len(res["unexpected_keys"]) == 0
     assert model.graph_policy_enabled is True
 
 

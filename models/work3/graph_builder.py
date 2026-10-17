@@ -56,7 +56,7 @@ TASK_STATUS_TO_SLOT: dict[TaskStatus, int | None] = {
 }
 
 
-GRAPH_FEATURE_VERSION = "work3_graph_v4"
+GRAPH_FEATURE_VERSION = "work3_graph_v5"
 GRAPH_FEATURE_DIMS: dict[str, int] = {
     "task": 26,
     "worker": 21,
@@ -66,6 +66,23 @@ GRAPH_FEATURE_DIMS: dict[str, int] = {
 GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
     "version": GRAPH_FEATURE_VERSION,
     "dims": dict(GRAPH_FEATURE_DIMS),
+    "aircraft_role_partition": ("current", "next", "further"),
+    "recent_events_summary_dim": 12,
+    "recent_events_layout": (
+        "last_action_branch_norm",
+        "has_last_action",
+        "last_action_station_norm",
+        "last_action_task_norm",
+        "micro_steps_in_timestamp_norm",
+        "recent_postponed_count_norm",
+        "recent_reserved_count_norm",
+        "recent_events_count_norm",
+        "recent_material_delays_count_norm",
+        "recent_material_delays_hit_norm",
+        "cycle_elapsed_norm",
+        "bias_presence_indicator",
+    ),
+    "worker_disturbances_supported": False,
     "task_features": (
         "duration_norm",
         "status_ready",
@@ -628,18 +645,19 @@ class MultiAircraftGraphBuilder:
             for k in range(state.num_aircraft)
         ]
 
+        has_action = getattr(state, "has_last_action", False)
         recent_vec = torch.tensor(
             [
-                float(state.last_action_branch) / 3.0,
-                float(getattr(state, "last_action_task_id", -1) + 1) / float(max(1, self.num_tasks)),
-                float(getattr(state, "last_action_aircraft_id", -1) + 1) / float(max(1, state.num_aircraft)),
+                float(state.last_action_branch) / 2.0 if has_action else 0.0,
+                1.0 if has_action else 0.0,
                 float(getattr(state, "last_action_station_id", -1) + 1) / 5.0,
+                float(getattr(state, "last_action_task_id", -1) + 1) / float(max(1, self.num_tasks)),
                 float(state.micro_steps_in_timestamp) / 10.0,
                 float(state.recent_postponed_count) / 10.0,
                 float(state.recent_reserved_count) / 10.0,
                 float(getattr(state, "recent_events_count", 0)) / 10.0,
                 float(getattr(state, "recent_material_delays", 0)) / 10.0,
-                float(getattr(state, "recent_worker_disturbances", 0)) / 10.0,
+                float(getattr(state, "recent_material_delays_hit", 0)) / 10.0,
                 float(cycle_elapsed) / h0,
                 1.0,
             ],

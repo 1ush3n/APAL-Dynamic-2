@@ -136,9 +136,10 @@ class AirLineEnvWork3:
         # 解锁0号飞机在0号站位首批无前驱且开工可用条件满足的工序
         self._refresh_aircraft_station_readiness(aircraft_id=0, station_id=0)
 
-        # 初始化首次就绪时刻事实记录与演化语义 (R05 & R08)
+        # 初始化首次就绪时刻事实记录与演化语义 (R05 & R08 & R7)
         self.state.station_first_cleared_times = {1: {}}
-        self.state.last_action_branch = 0
+        self.state.has_last_action = False
+        self.state.last_action_branch = int(ActionBranch.STATION_EXECUTE)
         self.state.last_action_task_id = -1
         self.state.last_action_aircraft_id = -1
         self.state.last_action_station_id = -1
@@ -147,6 +148,8 @@ class AirLineEnvWork3:
         self.state.recent_reserved_count = 0
         self.state.recent_events_count = 0
         self.state.recent_material_delays = 0
+        self.state.recent_material_delays_hit = 0
+        self.state.recent_material_delay_increment = 0.0
         self.state.recent_worker_disturbances = 0
         self._last_step_time = 0.0
         self._record_station_first_cleared_if_ready()
@@ -943,7 +946,8 @@ class AirLineEnvWork3:
             if not self.get_action_candidates() and not self._check_terminated():
                 info["success"] = False
                 info["termination_reason"] = "deadlock"
-        # 记录高频动态演化语义摘要 (R08) - 仅在动作生效后更新
+        # 记录高频动态演化语义摘要 (R08 & R7) - 仅在动作生效后更新
+        self.state.has_last_action = True
         self.state.last_action_branch = int(branch.value)
         if not explicit_advance and task_key is not None and task_key in self.state.tasks:
             t_obj = self.state.tasks[task_key]
@@ -1248,7 +1252,9 @@ class AirLineEnvWork3:
             hit_task_keys.append(task_key)
             # 统一建模尚未开工工序的开工可用下界：
             # r_{k*,i}^{new} = max(r_{k*,i}^{old}, R)。
+            old_ready = float(task.material_ready_time)
             task.material_ready_time = max(task.material_ready_time, recovery_time)
+            self.state.recent_material_delay_increment += max(0.0, float(task.material_ready_time) - old_ready)
 
             if task.status == TaskStatus.RESERVED:
                 # 扰动只使固定决定被动顺延，不能清空决定或重新选队
@@ -1267,6 +1273,9 @@ class AirLineEnvWork3:
 
             elif task.status in (TaskStatus.UNREADY, TaskStatus.POSTPONED):
                 pass
+
+        if hit_task_keys:
+            self.state.recent_material_delays_hit += len(hit_task_keys)
 
         self.disturbance_event_results[scenario_id] = {
             "actual_hit_task_keys": tuple(hit_task_keys),
