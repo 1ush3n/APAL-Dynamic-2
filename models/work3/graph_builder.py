@@ -80,7 +80,7 @@ GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
         "recent_material_delays_count_norm",
         "recent_material_delays_hit_norm",
         "cycle_elapsed_norm",
-        "bias_presence_indicator",
+        "recent_material_delay_increment_norm",
     ),
     "worker_disturbances_supported": False,
     "task_features": (
@@ -659,7 +659,7 @@ class MultiAircraftGraphBuilder:
                 float(getattr(state, "recent_material_delays", 0)) / 10.0,
                 float(getattr(state, "recent_material_delays_hit", 0)) / 10.0,
                 float(cycle_elapsed) / h0,
-                1.0,
+                float(getattr(state, "recent_material_delay_increment", 0.0)) / max(1.0, float(h0)),
             ],
             dtype=torch.float32,
         )

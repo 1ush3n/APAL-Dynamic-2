@@ -777,6 +777,8 @@ class AirLineEnvWork3:
         self.state.recent_events_count = 0
         self.state.recent_material_delays = 0
         self.state.recent_worker_disturbances = 0
+        self.state.recent_material_delays_hit = 0
+        self.state.recent_material_delay_increment = 0.0
         task_key_value = action.get("task_key")
         task_key = None if task_key_value is None else str(task_key_value)
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
@@ -962,11 +964,20 @@ class AirLineEnvWork3:
             t_obj = self.state.tasks[task_key]
             self.state.last_action_task_id = int(t_obj.task_id)
             self.state.last_action_aircraft_id = int(t_obj.aircraft_id)
-            self.state.last_action_station_id = int(t_obj.current_station)
+            if branch == ActionBranch.POSTPONE:
+                self.state.last_action_source_station_id = int(t_obj.current_station - 1)
+                self.state.last_action_target_station_id = int(t_obj.current_station)
+                self.state.last_action_station_id = int(t_obj.current_station - 1)
+            else:
+                self.state.last_action_source_station_id = int(t_obj.current_station)
+                self.state.last_action_target_station_id = int(t_obj.current_station)
+                self.state.last_action_station_id = int(t_obj.current_station)
         else:
             self.state.last_action_task_id = -1
             self.state.last_action_aircraft_id = -1
             self.state.last_action_station_id = -1
+            self.state.last_action_source_station_id = -1
+            self.state.last_action_target_station_id = -1
         if abs(self.state.current_time - getattr(self, "_last_step_time", self.state.current_time)) < self.tolerance:
             self.state.micro_steps_in_timestamp += 1
         else:
@@ -1264,7 +1275,9 @@ class AirLineEnvWork3:
             # r_{k*,i}^{new} = max(r_{k*,i}^{old}, R)。
             old_ready = float(task.material_ready_time)
             task.material_ready_time = max(task.material_ready_time, recovery_time)
-            self.state.recent_material_delay_increment += max(0.0, float(task.material_ready_time) - old_ready)
+            inc = max(0.0, float(task.material_ready_time) - old_ready)
+            self.state.recent_material_delay_increment += inc
+            self.state.cumulative_material_delay_increment += inc
 
             if task.status == TaskStatus.RESERVED:
                 # 扰动只使固定决定被动顺延，不能清空决定或重新选队
@@ -1286,6 +1299,7 @@ class AirLineEnvWork3:
 
         if hit_task_keys:
             self.state.recent_material_delays_hit += len(hit_task_keys)
+            self.state.cumulative_material_delays_hit += len(hit_task_keys)
 
         self.disturbance_event_results[scenario_id] = {
             "actual_hit_task_keys": tuple(hit_task_keys),

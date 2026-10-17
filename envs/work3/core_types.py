@@ -196,7 +196,7 @@ class TaskRuntimeState:
 
     def __post_init__(self) -> None:
         """初始化基准安排与当前正式安排快照。"""
-        if not self.predecessor_keys and self.predecessors:
+        if self.predecessors and (not self.predecessor_keys or len(self.predecessor_keys) != len(self.predecessors)):
             self.predecessor_keys = tuple(f"{self.aircraft_id}_{p}" for p in self.predecessors)
         if not self.baseline_assignment:
             self.baseline_assignment = {
@@ -283,6 +283,20 @@ class TaskRuntimeState:
                 state_ref = getattr(self, "_state_ref", None)
                 if state_ref is not None:
                     state_ref.move_task_station(self, old, value)
+        elif name == "predecessors":
+            preds = tuple(value or ())
+            super().__setattr__(name, preds)
+            aid = getattr(self, "aircraft_id", None)
+            if aid is not None:
+                super().__setattr__("predecessor_keys", tuple(f"{aid}_{p}" for p in preds))
+            else:
+                super().__setattr__("predecessor_keys", ())
+        elif name == "predecessor_keys":
+            if not value and getattr(self, "predecessors", None):
+                aid = getattr(self, "aircraft_id", None)
+                if aid is not None:
+                    value = tuple(f"{aid}_{p}" for p in self.predecessors)
+            super().__setattr__(name, tuple(value or ()))
         else:
             super().__setattr__(name, value)
 
@@ -583,6 +597,8 @@ class MultiAircraftState:
     last_action_task_id: int = -1
     last_action_aircraft_id: int = -1
     last_action_station_id: int = -1
+    last_action_source_station_id: int = -1
+    last_action_target_station_id: int = -1
     micro_steps_in_timestamp: int = 0    # 同刻微决策轮数计数
     recent_postponed_count: int = 0      # 当前周期内后移工序数
     recent_reserved_count: int = 0       # 当前周期内预约工序数
@@ -591,6 +607,8 @@ class MultiAircraftState:
     recent_material_delays_hit: int = 0  # 自上一决策以来实际命中非冻结工序的扰动数 (R7)
     recent_material_delay_increment: float = 0.0 # 自上一决策以来扰动造成的就绪下界推迟增量 (R7)
     recent_worker_disturbances: int = 0  # 保留字段：当前域不支持人员扰动 (R7)
+    cumulative_material_delays_hit: int = 0 # 全局累计命中非冻结工序的扰动数
+    cumulative_material_delay_increment: float = 0.0 # 全局累计扰动造成的就绪下界推迟增量
 
     aircraft: dict[int, AircraftRuntimeState] = field(default_factory=dict)
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
@@ -690,6 +708,8 @@ class MultiAircraftState:
             "last_action_task_id": self.last_action_task_id,
             "last_action_aircraft_id": self.last_action_aircraft_id,
             "last_action_station_id": self.last_action_station_id,
+            "last_action_source_station_id": self.last_action_source_station_id,
+            "last_action_target_station_id": self.last_action_target_station_id,
             "micro_steps_in_timestamp": self.micro_steps_in_timestamp,
             "recent_postponed_count": self.recent_postponed_count,
             "recent_reserved_count": self.recent_reserved_count,
@@ -698,6 +718,8 @@ class MultiAircraftState:
             "recent_material_delays_hit": self.recent_material_delays_hit,
             "recent_material_delay_increment": self.recent_material_delay_increment,
             "recent_worker_disturbances": self.recent_worker_disturbances,
+            "cumulative_material_delays_hit": self.cumulative_material_delays_hit,
+            "cumulative_material_delay_increment": self.cumulative_material_delay_increment,
             "recent_change_summary": copy.deepcopy(getattr(self, "recent_change_summary", {})),
             "aircraft": {k: ac.copy() for k, ac in self.aircraft.items()},
             "tasks": {k: t.copy() for k, t in self.tasks.items()},
@@ -717,6 +739,8 @@ class MultiAircraftState:
         self.last_action_task_id = int(snap.get("last_action_task_id", -1))
         self.last_action_aircraft_id = int(snap.get("last_action_aircraft_id", -1))
         self.last_action_station_id = int(snap.get("last_action_station_id", -1))
+        self.last_action_source_station_id = int(snap.get("last_action_source_station_id", -1))
+        self.last_action_target_station_id = int(snap.get("last_action_target_station_id", -1))
         self.micro_steps_in_timestamp = int(snap.get("micro_steps_in_timestamp", 0))
         self.recent_postponed_count = int(snap.get("recent_postponed_count", 0))
         self.recent_reserved_count = int(snap.get("recent_reserved_count", 0))
@@ -725,6 +749,8 @@ class MultiAircraftState:
         self.recent_material_delays_hit = int(snap.get("recent_material_delays_hit", 0))
         self.recent_material_delay_increment = float(snap.get("recent_material_delay_increment", 0.0))
         self.recent_worker_disturbances = int(snap.get("recent_worker_disturbances", 0))
+        self.cumulative_material_delays_hit = int(snap.get("cumulative_material_delays_hit", 0))
+        self.cumulative_material_delay_increment = float(snap.get("cumulative_material_delay_increment", 0.0))
         self.recent_change_summary = copy.deepcopy(snap.get("recent_change_summary", {}))
         self.aircraft = {k: ac.copy() for k, ac in snap["aircraft"].items()}
         self.tasks = {k: t.copy() for k, t in snap["tasks"].items()}

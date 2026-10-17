@@ -632,7 +632,7 @@ class ActorCriticWork3(nn.Module):
         """严格加载模型检查点；如需热启动兼容旧模型，使用 load_warm_start_weights (R4)。"""
         has_graph_weights = any(key.startswith("graph_encoder.") for key in state_dict)
         self.graph_policy_enabled = has_graph_weights
-        if "time_fusion.time_mlp.0.weight" in state_dict:
+        if not strict and "time_fusion.time_mlp.0.weight" in state_dict:
             ckpt_time_dim = state_dict["time_fusion.time_mlp.0.weight"].size(1)
             if ckpt_time_dim != self.time_fusion.time_dim:
                 self.time_fusion = TimeContextFusion(
@@ -966,6 +966,7 @@ class ActorCriticWork3(nn.Module):
         state_feats: torch.Tensor,
         time_urgencies: torch.Tensor,
         sample_records: list[dict[str, Any]],
+        allow_legacy: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """PPO 训练重放接口：严格按照条件分支结构计算重放对数概率、状态值与熵。
 
@@ -977,7 +978,14 @@ class ActorCriticWork3(nn.Module):
         time_urgencies = time_urgencies.to(device)
         batch_size = len(sample_records)
         for record in sample_records:
+            act_type = record.get("action_type")
+            if act_type not in ("forced_advance", "advance_to_next_event", "station_execute", "postpone"):
+                raise ValueError(f"PPO样本缺少合法动作类型 action_type: {act_type!r}")
             graph_version = record.get("graph_version")
+            if not allow_legacy and record.get("graph_snapshot") is not None and not graph_version:
+                raise ValueError(
+                    f"PPO样本包含图快照但缺少 graph_version 字段，要求: {GRAPH_FEATURE_VERSION!r}"
+                )
             if graph_version is not None and graph_version != GRAPH_FEATURE_VERSION:
                 raise ValueError(
                     f"PPO样本图版本{graph_version!r}与Actor要求的"
