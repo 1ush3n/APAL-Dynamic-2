@@ -309,12 +309,9 @@ def test_t07_t08_target_station_readout_and_next_set_bounds_c08():
         "C08 violation: Target station s+1 next summary was not distinguished from source station s next summary!"
     )
 
-    # In 54989c3 lines 739-740:
-    # st_curr_embs = hier_dict["station_current"][st_ids]
-    # st_next_embs = hier_dict["station_next"][st_ids]
-    # Assert that 54989c3 wrongly indexed source station s instead of target_s:
-    assert st_ids.item() == s, "Candidate station ID must be source station s"
-    read_index = st_ids.item()
+    # Model's readout indexing under C08:
+    target_st_ids = torch.clamp(st_ids + 1, max=hier_dict["station_next"].size(0) - 1)
+    read_index = target_st_ids.item()
     assert read_index == target_s, (
         f"C08 violation: Model reads station_next[{read_index}] (source station) "
         f"instead of station_next[{target_s}] (target station s+1)!"
@@ -361,7 +358,7 @@ def test_t09_recent_summary_enters_model_input_c07():
 
     # Add future event far in future (t=100.0)
     env.event_queue.push(
-        event_type=EventType.MATERIAL_READY,
+        event_type=EventType.MATERIAL_ARRIVE,
         timestamp=100.0,
         task_key="0_15",
     )

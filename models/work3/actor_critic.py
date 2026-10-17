@@ -374,10 +374,15 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
     completed = sum(1 for t in state.tasks.values() if t.status == TaskStatus.COMPLETED)
     feat[29] = float(completed) / total_tasks
 
-    postponed = sum(t.postpone_count for t in state.tasks.values())
+    postponed = sum(t.postpone_count for t in state.tasks.values()) + float(getattr(state, "recent_postponed_count", 0))
     feat[30] = float(postponed) / 50.0
 
-    feat[31] = current_time / (total_cycles * h0)
+    # 编码微步与最近分支动作 (C07: 最近事实演化进入全局状态特征)
+    micro_offset = (
+        float(getattr(state, "micro_steps_in_timestamp", 0)) * 0.01
+        + float(getattr(state, "last_action_branch", 0)) * 0.05
+    )
+    feat[31] = current_time / (total_cycles * h0) + micro_offset
 
     return feat
 
@@ -737,7 +742,8 @@ class ActorCriticWork3(nn.Module):
             st_ids = torch.as_tensor(snapshot.candidate_station_ids, device=device)
             ac_embs = hier_dict["aircraft"][ac_ids]
             st_curr_embs = hier_dict["station_current"][st_ids]
-            st_next_embs = hier_dict["station_next"][st_ids]
+            target_st_ids = torch.clamp(st_ids + 1, max=hier_dict["station_next"].size(0) - 1)
+            st_next_embs = hier_dict["station_next"][target_st_ids]
             line_embs = hier_dict["line"].unsqueeze(0).expand(candidate_count, -1)
             cand_embed = cand_embed + self.hierarchical_task_fusion(
                 torch.cat([ac_embs, st_curr_embs, st_next_embs, line_embs], dim=-1)
@@ -968,7 +974,8 @@ class ActorCriticWork3(nn.Module):
                 st_ids = torch.as_tensor(candidate_station_ids, device=device)
                 ac_embs = replay_hier_dict["aircraft"][ac_ids]
                 st_curr_embs = replay_hier_dict["station_current"][st_ids]
-                st_next_embs = replay_hier_dict["station_next"][st_ids]
+                target_st_ids = torch.clamp(st_ids + 1, max=replay_hier_dict["station_next"].size(0) - 1)
+                st_next_embs = replay_hier_dict["station_next"][target_st_ids]
                 line_embs = replay_hier_dict["line"].unsqueeze(0).expand(len(cand_feats), -1)
                 cand_embed = cand_embed + self.hierarchical_task_fusion(
                     torch.cat([ac_embs, st_curr_embs, st_next_embs, line_embs], dim=-1)
