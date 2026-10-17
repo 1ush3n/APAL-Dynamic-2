@@ -1422,6 +1422,7 @@ def run_training(
                     "log_prob": log_prob,
                     "phi_current": phi_current,
                     "cycle_id": int(snapshot.cycle_id),
+                    "predictor_version": state.predictor_version,
                 }
 
             deadline = (
@@ -1653,6 +1654,7 @@ def run_training(
                         )
                         state.predictor_version = None
 
+                pred_ver = context.get("predictor_version")
                 buffer.add(PPOTransition(
                     state_feat=context["state_features"].cpu(),
                     time_urgency=context["time_urgency"].cpu(),
@@ -1668,6 +1670,10 @@ def run_training(
                     worker_id=worker_id,
                     episode_id=state.episode_id,
                     segment_id=iter_idx,
+                    predictor_version=pred_ver,
+                    predictor_source="frozen_snapshot" if (shaper is not None and pred_ver is not None) else "heuristic",
+                    time_input_source="predicted_time" if profile.use_corrected_time_input else "none",
+                    phi_source="learned" if (profile.use_learned_time_shaping and shaper is not None) else "heuristic",
                 ))
                 step_raw_rewards.append(raw_reward)
                 step_shaped_rewards.append(shaped_reward)

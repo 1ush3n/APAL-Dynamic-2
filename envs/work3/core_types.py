@@ -483,9 +483,15 @@ class MultiAircraftState:
     station_first_cleared_times: dict[int, dict[int, float]] = field(default_factory=dict)
     cycle_execution_records: dict[int, CycleExecutionRecord] = field(default_factory=dict)
     last_action_branch: int = 0          # 上一决策动作分支 (0: NONE, 1: STAY, 2: POSTPONE, 3: ADVANCE)
+    last_action_task_id: int = -1
+    last_action_aircraft_id: int = -1
+    last_action_station_id: int = -1
     micro_steps_in_timestamp: int = 0    # 同刻微决策轮数计数
     recent_postponed_count: int = 0      # 当前周期内后移工序数
     recent_reserved_count: int = 0       # 当前周期内预约工序数
+    recent_events_count: int = 0         # 自上一决策以来发生的离散事件数
+    recent_material_delays: int = 0      # 自上一决策以来发生的物料延迟事件数
+    recent_worker_disturbances: int = 0  # 自上一决策以来发生的人员扰动事件数
 
     aircraft: dict[int, AircraftRuntimeState] = field(default_factory=dict)
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
@@ -581,9 +587,15 @@ class MultiAircraftState:
             "station_first_cleared_times": copy.deepcopy(self.station_first_cleared_times),
             "cycle_execution_records": copy.deepcopy(self.cycle_execution_records),
             "last_action_branch": self.last_action_branch,
+            "last_action_task_id": self.last_action_task_id,
+            "last_action_aircraft_id": self.last_action_aircraft_id,
+            "last_action_station_id": self.last_action_station_id,
             "micro_steps_in_timestamp": self.micro_steps_in_timestamp,
             "recent_postponed_count": self.recent_postponed_count,
             "recent_reserved_count": self.recent_reserved_count,
+            "recent_events_count": self.recent_events_count,
+            "recent_material_delays": self.recent_material_delays,
+            "recent_worker_disturbances": self.recent_worker_disturbances,
             "recent_change_summary": copy.deepcopy(getattr(self, "recent_change_summary", {})),
             "aircraft": {k: ac.copy() for k, ac in self.aircraft.items()},
             "tasks": {k: t.copy() for k, t in self.tasks.items()},
@@ -599,9 +611,15 @@ class MultiAircraftState:
         self.station_first_cleared_times = copy.deepcopy(snap.get("station_first_cleared_times", {}))
         self.cycle_execution_records = copy.deepcopy(snap.get("cycle_execution_records", {}))
         self.last_action_branch = int(snap.get("last_action_branch", 0))
+        self.last_action_task_id = int(snap.get("last_action_task_id", -1))
+        self.last_action_aircraft_id = int(snap.get("last_action_aircraft_id", -1))
+        self.last_action_station_id = int(snap.get("last_action_station_id", -1))
         self.micro_steps_in_timestamp = int(snap.get("micro_steps_in_timestamp", 0))
         self.recent_postponed_count = int(snap.get("recent_postponed_count", 0))
         self.recent_reserved_count = int(snap.get("recent_reserved_count", 0))
+        self.recent_events_count = int(snap.get("recent_events_count", 0))
+        self.recent_material_delays = int(snap.get("recent_material_delays", 0))
+        self.recent_worker_disturbances = int(snap.get("recent_worker_disturbances", 0))
         self.recent_change_summary = copy.deepcopy(snap.get("recent_change_summary", {}))
         self.aircraft = {k: ac.copy() for k, ac in snap["aircraft"].items()}
         self.tasks = {k: t.copy() for k, t in snap["tasks"].items()}

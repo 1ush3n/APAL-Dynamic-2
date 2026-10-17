@@ -100,6 +100,16 @@ class Work3GraphEncoder(nn.Module):
             nn.LayerNorm(hidden_dim),
             nn.LeakyReLU(negative_slope=0.1),
         )
+        self.aircraft_role_mlp = nn.Sequential(
+            nn.Linear(hidden_dim * 3, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+        self.recent_events_mlp = nn.Sequential(
+            nn.Linear(12, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
         self.line_fusion_mlp = nn.Sequential(
             nn.Linear(hidden_dim * 4, hidden_dim),
             nn.LayerNorm(hidden_dim),
@@ -183,17 +193,37 @@ class Work3GraphEncoder(nn.Module):
         )
         base_context = self.context_projection(pooled).squeeze(0)
 
-        # 分层语义聚合 (R04)
+        # 分层语义聚合 (R04, Problem 06 / U21)
+        ac_curr_indices = getattr(graph, "_ac_current_task_indices", getattr(graph, "ac_current_task_indices", None))
+        ac_next_indices = getattr(graph, "_ac_next_task_indices", getattr(graph, "ac_next_task_indices", None))
+        ac_further_indices = getattr(graph, "_ac_further_task_indices", getattr(graph, "ac_further_task_indices", None))
         task_indices_by_ac = getattr(graph, "_task_indices_by_aircraft", getattr(graph, "task_indices_by_aircraft", None))
         num_ac = len(task_indices_by_ac) if task_indices_by_ac is not None else 10
-        ac_list = []
-        for k in range(num_ac):
-            if task_indices_by_ac is not None and k < len(task_indices_by_ac) and task_indices_by_ac[k].numel() > 0:
-                idx_dev = task_indices_by_ac[k].to(device)
-                ac_list.append(task_emb[idx_dev].mean(dim=0, keepdim=True))
-            else:
-                ac_list.append(torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device))
-        aircraft_emb = torch.cat(ac_list, dim=0)
+
+        if ac_curr_indices is not None and ac_next_indices is not None and ac_further_indices is not None:
+            ac_role_list = []
+            for k in range(num_ac):
+                c_idx = ac_curr_indices[k].to(device) if k < len(ac_curr_indices) and ac_curr_indices[k].numel() > 0 else None
+                n_idx = ac_next_indices[k].to(device) if k < len(ac_next_indices) and ac_next_indices[k].numel() > 0 else None
+                f_idx = ac_further_indices[k].to(device) if k < len(ac_further_indices) and ac_further_indices[k].numel() > 0 else None
+
+                c_emb = task_emb[c_idx].mean(dim=0, keepdim=True) if c_idx is not None else torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device)
+                n_emb = task_emb[n_idx].mean(dim=0, keepdim=True) if n_idx is not None else torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device)
+                f_emb = task_emb[f_idx].mean(dim=0, keepdim=True) if f_idx is not None else torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device)
+
+                ac_role_list.append(torch.cat([c_emb, n_emb, f_emb], dim=-1))
+            aircraft_roles = torch.cat(ac_role_list, dim=0)
+            aircraft_emb = self.aircraft_role_mlp(aircraft_roles)
+        else:
+            ac_list = []
+            for k in range(num_ac):
+                if task_indices_by_ac is not None and k < len(task_indices_by_ac) and task_indices_by_ac[k].numel() > 0:
+                    idx_dev = task_indices_by_ac[k].to(device)
+                    ac_list.append(task_emb[idx_dev].mean(dim=0, keepdim=True))
+                else:
+                    ac_list.append(torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device))
+            aircraft_base = torch.cat(ac_list, dim=0)
+            aircraft_emb = self.aircraft_role_mlp(torch.cat([aircraft_base, aircraft_base, aircraft_base], dim=-1))
 
         station_emb = encoded["station"]
         num_st = station_emb.size(0)
@@ -226,6 +256,14 @@ class Work3GraphEncoder(nn.Module):
         ], dim=-1)
         line_emb = self.line_fusion_mlp(line_input).squeeze(0)
         context = base_context + line_emb
+
+        # 动态演化与最近事实摘要融合 (Problem 05 / U19, U20)
+        recent_summary = getattr(graph, "_recent_events_summary", getattr(graph, "recent_events_summary", None))
+        if recent_summary is not None:
+            recent_dev = recent_summary.to(dtype=context.dtype, device=device)
+            if recent_dev.ndim == 1:
+                recent_dev = recent_dev.unsqueeze(0)
+            context = context + self.recent_events_mlp(recent_dev).squeeze(0)
 
         if return_hierarchical:
             hier_dict = {
@@ -551,7 +589,9 @@ class ActorCriticWork3(nn.Module):
         """兼容没有图模块参数或缺少分层参数的旧工作三 Actor 检查点。"""
         has_graph_weights = any(key.startswith("graph_encoder.") for key in state_dict)
         has_hier_weights = any(key.startswith("hierarchical_task_fusion.") for key in state_dict)
-        if strict and (not has_graph_weights or not has_hier_weights):
+        has_role_weights = any(key.startswith("graph_encoder.aircraft_role_mlp.") for key in state_dict)
+        has_recent_weights = any(key.startswith("graph_encoder.recent_events_mlp.") for key in state_dict)
+        if strict and (not has_graph_weights or not has_hier_weights or not has_role_weights or not has_recent_weights):
             strict = False
         self.graph_policy_enabled = has_graph_weights
         if "time_fusion.time_mlp.0.weight" in state_dict:
@@ -742,8 +782,10 @@ class ActorCriticWork3(nn.Module):
             st_ids = torch.as_tensor(snapshot.candidate_station_ids, device=device)
             ac_embs = hier_dict["aircraft"][ac_ids]
             st_curr_embs = hier_dict["station_current"][st_ids]
+            has_next_st = (st_ids + 1 < hier_dict["station_next"].size(0)).unsqueeze(-1)
             target_st_ids = torch.clamp(st_ids + 1, max=hier_dict["station_next"].size(0) - 1)
-            st_next_embs = hier_dict["station_next"][target_st_ids]
+            st_next_raw = hier_dict["station_next"][target_st_ids]
+            st_next_embs = torch.where(has_next_st, st_next_raw, torch.zeros_like(st_next_raw))
             line_embs = hier_dict["line"].unsqueeze(0).expand(candidate_count, -1)
             cand_embed = cand_embed + self.hierarchical_task_fusion(
                 torch.cat([ac_embs, st_curr_embs, st_next_embs, line_embs], dim=-1)
@@ -977,8 +1019,10 @@ class ActorCriticWork3(nn.Module):
                 st_ids = torch.as_tensor(candidate_station_ids, device=device)
                 ac_embs = replay_hier_dict["aircraft"][ac_ids]
                 st_curr_embs = replay_hier_dict["station_current"][st_ids]
+                has_next_st = (st_ids + 1 < replay_hier_dict["station_next"].size(0)).unsqueeze(-1)
                 target_st_ids = torch.clamp(st_ids + 1, max=replay_hier_dict["station_next"].size(0) - 1)
-                st_next_embs = replay_hier_dict["station_next"][target_st_ids]
+                st_next_raw = replay_hier_dict["station_next"][target_st_ids]
+                st_next_embs = torch.where(has_next_st, st_next_raw, torch.zeros_like(st_next_raw))
                 line_embs = replay_hier_dict["line"].unsqueeze(0).expand(len(cand_feats), -1)
                 cand_embed = cand_embed + self.hierarchical_task_fusion(
                     torch.cat([ac_embs, st_curr_embs, st_next_embs, line_embs], dim=-1)

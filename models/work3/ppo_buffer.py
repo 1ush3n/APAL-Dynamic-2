@@ -55,6 +55,10 @@ class PPOTransition:
     action_dict: dict[str, Any] = field(default_factory=dict)
     terminated: bool | None = None   # 真实终止；None 时回退到旧 done 语义
     truncated: bool = False           # 采样截断，不代表生产终止
+    predictor_version: int | None = None
+    predictor_source: str = "none"
+    time_input_source: str = "none"
+    phi_source: str = "none"
 
 
 @dataclass(frozen=True)
@@ -531,6 +535,10 @@ class RolloutBufferWork3:
                 action_dict=_copy_to_cpu(transition.action_dict),
                 terminated=transition.terminated,
                 truncated=bool(transition.truncated),
+                predictor_version=transition.predictor_version,
+                predictor_source=str(transition.predictor_source),
+                time_input_source=str(transition.time_input_source),
+                phi_source=str(transition.phi_source),
             )
         )
         self.is_finalized = False

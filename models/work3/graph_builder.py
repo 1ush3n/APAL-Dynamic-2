@@ -290,11 +290,14 @@ class MultiAircraftGraphBuilder:
         station_future_workload = [0.0] * 5
         station_running_count = [0] * 5
 
-        # 飞机与站位分层任务索引列表 (R04)
+        # 飞机与站位分层任务索引列表 (R04 & R08)
         current_task_indices: list[list[int]] = [[] for _ in range(5)]
         next_task_indices: list[list[int]] = [[] for _ in range(5)]
         further_task_indices: list[list[int]] = [[] for _ in range(5)]
         task_indices_by_aircraft: dict[int, list[int]] = {k: [] for k in range(state.num_aircraft)}
+        ac_current_task_indices: list[list[int]] = [[] for _ in range(state.num_aircraft)]
+        ac_next_task_indices: list[list[int]] = [[] for _ in range(state.num_aircraft)]
+        ac_further_task_indices: list[list[int]] = [[] for _ in range(state.num_aircraft)]
 
         curr_ac_id = [state.get_aircraft_at_station(s) for s in range(5)]
         next_ac_id = [
@@ -409,6 +412,22 @@ class MultiAircraftGraphBuilder:
                 assigned_ts_dst.append(st)
                 if t_rt.status != TaskStatus.COMPLETED and getattr(t_rt, "is_physical", True):
                     task_indices_by_aircraft[t_rt.aircraft_id].append(idx)
+                    ac_id = t_rt.aircraft_id
+                    ac_obj = state.aircraft.get(ac_id)
+                    ac_st = ac_obj.current_station if ac_obj is not None else -1
+                    if ac_st >= 0:
+                        if st == ac_st:
+                            ac_current_task_indices[ac_id].append(idx)
+                        elif st == ac_st + 1:
+                            ac_next_task_indices[ac_id].append(idx)
+                        else:
+                            ac_further_task_indices[ac_id].append(idx)
+                    else:
+                        if ac_id == state.current_cycle and st == 0:
+                            ac_next_task_indices[ac_id].append(idx)
+                        else:
+                            ac_further_task_indices[ac_id].append(idx)
+
                     execution_duration = float(
                         t_rt.execution_duration
                         if t_rt.execution_duration is not None
@@ -582,7 +601,7 @@ class MultiAircraftGraphBuilder:
             skill_hub_topology=self.skill_hub_topology,
         )
 
-        # 6. 挂载分层读出分区张量索引 (R04)
+        # 6. 挂载分层读出分区张量索引与动态演化摘要 (R04, R07, R08 / U19-U21)
         data._current_task_indices = [
             torch.tensor(current_task_indices[s], dtype=torch.long) for s in range(5)
         ]
@@ -596,6 +615,37 @@ class MultiAircraftGraphBuilder:
             torch.tensor(task_indices_by_aircraft[k], dtype=torch.long)
             for k in range(state.num_aircraft)
         ]
+        data._ac_current_task_indices = [
+            torch.tensor(ac_current_task_indices[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
+        data._ac_next_task_indices = [
+            torch.tensor(ac_next_task_indices[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
+        data._ac_further_task_indices = [
+            torch.tensor(ac_further_task_indices[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
+
+        recent_vec = torch.tensor(
+            [
+                float(state.last_action_branch) / 3.0,
+                float(getattr(state, "last_action_task_id", -1) + 1) / float(max(1, self.num_tasks)),
+                float(getattr(state, "last_action_aircraft_id", -1) + 1) / float(max(1, state.num_aircraft)),
+                float(getattr(state, "last_action_station_id", -1) + 1) / 5.0,
+                float(state.micro_steps_in_timestamp) / 10.0,
+                float(state.recent_postponed_count) / 10.0,
+                float(state.recent_reserved_count) / 10.0,
+                float(getattr(state, "recent_events_count", 0)) / 10.0,
+                float(getattr(state, "recent_material_delays", 0)) / 10.0,
+                float(getattr(state, "recent_worker_disturbances", 0)) / 10.0,
+                float(cycle_elapsed) / h0,
+                1.0,
+            ],
+            dtype=torch.float32,
+        )
+        data._recent_events_summary = recent_vec
 
         return data
 

@@ -139,9 +139,15 @@ class AirLineEnvWork3:
         # 初始化首次就绪时刻事实记录与演化语义 (R05 & R08)
         self.state.station_first_cleared_times = {1: {}}
         self.state.last_action_branch = 0
+        self.state.last_action_task_id = -1
+        self.state.last_action_aircraft_id = -1
+        self.state.last_action_station_id = -1
         self.state.micro_steps_in_timestamp = 0
         self.state.recent_postponed_count = 0
         self.state.recent_reserved_count = 0
+        self.state.recent_events_count = 0
+        self.state.recent_material_delays = 0
+        self.state.recent_worker_disturbances = 0
         self._last_step_time = 0.0
         self._record_station_first_cleared_if_ready()
 
@@ -756,6 +762,9 @@ class AirLineEnvWork3:
     def step(self, action: dict[str, Any]) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         """执行单步调度动作。"""
         cost_before = self.cumulative_cost
+        self.state.recent_events_count = 0
+        self.state.recent_material_delays = 0
+        self.state.recent_worker_disturbances = 0
         task_key_value = action.get("task_key")
         task_key = None if task_key_value is None else str(task_key_value)
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
@@ -936,6 +945,15 @@ class AirLineEnvWork3:
                 info["termination_reason"] = "deadlock"
         # 记录高频动态演化语义摘要 (R08) - 仅在动作生效后更新
         self.state.last_action_branch = int(branch.value)
+        if not explicit_advance and task_key is not None and task_key in self.state.tasks:
+            t_obj = self.state.tasks[task_key]
+            self.state.last_action_task_id = int(t_obj.task_id)
+            self.state.last_action_aircraft_id = int(t_obj.aircraft_id)
+            self.state.last_action_station_id = int(t_obj.current_station)
+        else:
+            self.state.last_action_task_id = -1
+            self.state.last_action_aircraft_id = -1
+            self.state.last_action_station_id = -1
         if abs(self.state.current_time - getattr(self, "_last_step_time", self.state.current_time)) < self.tolerance:
             self.state.micro_steps_in_timestamp += 1
         else:
@@ -1122,6 +1140,9 @@ class AirLineEnvWork3:
 
     def _dispatch_event(self, event: SimulationEvent) -> None:
         """执行一个已按时间和优先级取出的事件。"""
+        self.state.recent_events_count += 1
+        if event.event_type == EventType.DISTURBANCE:
+            self.state.recent_material_delays += 1
         if event.event_type == EventType.TASK_START:
             self._handle_task_start_event(event)
         elif event.event_type == EventType.TASK_FINISH:
