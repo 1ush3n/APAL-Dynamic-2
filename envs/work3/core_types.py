@@ -405,6 +405,23 @@ class CycleExecutionRecord:
             cleared = {int(k): float(v) for k, v in dict(self.station_first_cleared_times).items()}
         object.__setattr__(self, "station_first_cleared_times", MappingProxyType(cleared))
 
+    def __deepcopy__(self, memo: dict[int, Any]) -> CycleExecutionRecord:
+        memo[id(self)] = self
+        return self
+
+    def __reduce__(self) -> tuple[type, tuple[Any, ...]]:
+        return (
+            type(self),
+            (
+                self.cycle_id,
+                self.cycle_start_time,
+                self.transfer_time,
+                self.occupied_stations,
+                self.aircraft_at_stations,
+                dict(self.station_first_cleared_times),
+            ),
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "cycle_id": int(self.cycle_id),
@@ -431,7 +448,7 @@ class CycleExecutionRecord:
 
 
 def validate_cycle_execution_record(rec: CycleExecutionRecord, tolerance: float = 1e-6) -> None:
-    """原子校验周期执行事实记录的物理合法性与数据完整性 (U03-U04)。"""
+    """原子校验周期执行事实记录的物理合法性与数据完整性 (U03-U04/N01)。"""
     if not isinstance(rec, CycleExecutionRecord):
         raise TypeError(f"期望 CycleExecutionRecord，收到: {type(rec)}")
     if rec.cycle_id < 1:
@@ -445,12 +462,16 @@ def validate_cycle_execution_record(rec: CycleExecutionRecord, tolerance: float 
     if len(rec.aircraft_at_stations) != 5:
         raise ValueError(f"站位飞机数必须为5，当前为: {len(rec.aircraft_at_stations)}")
 
+    occupied_ac_ids: list[int] = []
     for s in range(5):
         is_occ = rec.occupied_stations[s]
         ac_id = rec.aircraft_at_stations[s]
         if is_occ:
             if ac_id is None:
                 raise ValueError(f"站位 {s} 标记为占用但飞机ID为None")
+            if ac_id < 0:
+                raise ValueError(f"站位 {s} 飞机ID非法 (为负): {ac_id}")
+            occupied_ac_ids.append(ac_id)
             if s not in rec.station_first_cleared_times:
                 raise ValueError(f"占用站位 {s} (飞机 {ac_id}) 缺少首次就绪时刻 F[m, q]")
             f_val = rec.station_first_cleared_times[s]
@@ -463,6 +484,77 @@ def validate_cycle_execution_record(rec: CycleExecutionRecord, tolerance: float 
         else:
             if ac_id is not None:
                 raise ValueError(f"站位 {s} 标记为空但存在飞机ID {ac_id}")
+
+    if len(occupied_ac_ids) != len(set(occupied_ac_ids)):
+        raise ValueError(f"占用站位出现重复飞机ID: {occupied_ac_ids}")
+
+
+def parse_and_validate_step_cycle_records(
+    raw_records: Any,
+    *,
+    before_cycle: int | None = None,
+    after_cycle: int | None = None,
+) -> list[CycleExecutionRecord]:
+    """从环境步返回的 info['cycle_execution_records'] 解析并严格校验连续周期记录 (R1/N01)。"""
+    if raw_records is None:
+        raise ValueError("缺少周期执行记录 (cycle_execution_records is None)")
+
+    parsed_records: list[CycleExecutionRecord] = []
+    if isinstance(raw_records, dict):
+        items = list(raw_records.items())
+        items.sort(key=lambda kv: int(kv[0]))
+        for cycle_id_key, rec_data in items:
+            if isinstance(rec_data, CycleExecutionRecord):
+                rec = rec_data
+            elif isinstance(rec_data, dict):
+                rec = CycleExecutionRecord.from_dict(rec_data)
+            else:
+                raise TypeError(f"未知的周期记录类型: {type(rec_data)}")
+            if rec.cycle_id != int(cycle_id_key):
+                raise ValueError(f"周期字典键 {cycle_id_key} 与记录内周期号 {rec.cycle_id} 不一致")
+            validate_cycle_execution_record(rec)
+            parsed_records.append(rec)
+    elif isinstance(raw_records, (list, tuple)):
+        for item in raw_records:
+            if isinstance(item, CycleExecutionRecord):
+                rec = item
+            elif isinstance(item, dict):
+                rec = CycleExecutionRecord.from_dict(item)
+            else:
+                raise TypeError(f"未知的周期记录类型: {type(item)}")
+            validate_cycle_execution_record(rec)
+            parsed_records.append(rec)
+        parsed_records.sort(key=lambda r: r.cycle_id)
+    else:
+        raise TypeError(f"未知的原始周期记录集合类型: {type(raw_records)}")
+
+    # 校验周期连续性与起止衔接
+    if before_cycle is not None and after_cycle is not None:
+        expected_count = max(0, int(after_cycle) - int(before_cycle))
+        if len(parsed_records) != expected_count:
+            raise ValueError(
+                f"周期记录数量与周期跨度不符：before={before_cycle}, after={after_cycle}, "
+                f"期望 {expected_count} 条，实际收到 {len(parsed_records)} 条"
+            )
+        for idx, rec in enumerate(parsed_records):
+            expected_cid = int(before_cycle) + idx
+            if rec.cycle_id != expected_cid:
+                raise ValueError(
+                    f"周期记录不连续：第 {idx} 条记录周期号为 {rec.cycle_id}，期望为 {expected_cid}"
+                )
+
+    for i in range(len(parsed_records) - 1):
+        r_curr = parsed_records[i]
+        r_next = parsed_records[i + 1]
+        if r_next.cycle_id != r_curr.cycle_id + 1:
+            raise ValueError(f"周期号不连续: {r_curr.cycle_id} -> {r_next.cycle_id}")
+        if abs(r_curr.transfer_time - r_next.cycle_start_time) > 1e-4:
+            raise ValueError(
+                f"相邻周期起止时刻不衔接：周期 {r_curr.cycle_id} 脉动时刻 {r_curr.transfer_time} "
+                f"!= 周期 {r_next.cycle_id} 起点 {r_next.cycle_start_time}"
+            )
+
+    return parsed_records
 
 
 

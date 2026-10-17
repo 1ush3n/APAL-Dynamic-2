@@ -87,6 +87,7 @@ class PendingTimeLabelCache:
         self._ready: list[dict[str, Any]] = []
         self._last_decision_ids: dict[tuple[int, int], int] = {}
         self._last_transfer_times: dict[tuple[int, int, int], float] = {}
+        self._transfer_facts: dict[tuple[int, int, int], tuple[Any, ...]] = {}
         self.abandoned_current_samples: int = 0
         self.abandoned_next_samples: int = 0
 
@@ -247,7 +248,7 @@ class PendingTimeLabelCache:
         next_cycle_station_mask: Sequence[bool] | None = None,
         cycle_record: CycleExecutionRecord | None = None,
     ) -> bool:
-        """用真实转站时刻补齐一个周期的归一化残差，并结算上一周期的下一周期预测向量 (R07/U03-U06)。"""
+        """用真实转站时刻补齐一个周期的归一化残差，并结算上一周期的下一周期预测向量 (R07/U03-U06/R1)。"""
         worker = int(worker_id)
         episode = int(episode_id)
         cycle = int(cycle_id)
@@ -256,6 +257,7 @@ class PendingTimeLabelCache:
         if not math.isfinite(float(actual_transfer_time)):
             raise ValueError(f"实际转站时刻非有限数值: {actual_transfer_time}")
 
+        # 1. 周期记录与参数一致性校验 (R1/N01/N03)
         if cycle_record is not None:
             validate_cycle_execution_record(cycle_record)
             if cycle_record.cycle_id != cycle:
@@ -264,28 +266,70 @@ class PendingTimeLabelCache:
                 raise ValueError(
                     f"cycle_record转站时刻 {cycle_record.transfer_time} 与参数 {actual_transfer_time} 不一致"
                 )
-            if station_cleared_times is None:
+            if station_cleared_times is not None:
+                # 必须完全一致，严禁冲突或覆盖
+                if dict(cycle_record.station_first_cleared_times) != {int(k): float(v) for k, v in station_cleared_times.items()}:
+                    raise ValueError("传入的 station_cleared_times 与 cycle_record 不一致")
+            else:
                 station_cleared_times = dict(cycle_record.station_first_cleared_times)
-            if next_cycle_station_mask is None:
+
+            if next_cycle_station_mask is not None:
+                if tuple(bool(x) for x in next_cycle_station_mask) != tuple(cycle_record.occupied_stations):
+                    raise ValueError("传入的 next_cycle_station_mask 与 cycle_record 不一致")
+            else:
                 next_cycle_station_mask = cycle_record.occupied_stations
 
-        # 幂等性与冲突校验 (U05)：
-        if key in self._last_transfer_times:
+            aircraft_at_stations = tuple(cycle_record.aircraft_at_stations)
+            cycle_start_time = float(cycle_record.cycle_start_time)
+        else:
+            # 兼容模式：必须严格校验 mask 维度和数值有限性 (N03)
+            if next_cycle_station_mask is not None:
+                if len(next_cycle_station_mask) != 5:
+                    raise ValueError(f"下一周期站位掩码长度必须为5，收到: {len(next_cycle_station_mask)}")
+            if station_cleared_times is not None:
+                for s, f_val in station_cleared_times.items():
+                    if not (0 <= int(s) < 5):
+                        raise ValueError(f"站位索引 {s} 超出五站范围 [0, 4]")
+                    if not math.isfinite(float(f_val)):
+                        raise ValueError(f"站位 {s} 清空时刻非有限数值: {f_val}")
+            aircraft_at_stations = None
+            cycle_start_time = None
+
+        norm_mask = tuple(bool(x) for x in next_cycle_station_mask) if next_cycle_station_mask is not None else None
+        norm_cleared = tuple(sorted((int(k), round(float(v), 6)) for k, v in (station_cleared_times or {}).items()))
+        fact_fingerprint = (
+            cycle,
+            round(cycle_start_time, 6) if cycle_start_time is not None else None,
+            round(float(actual_transfer_time), 6),
+            norm_mask,
+            aircraft_at_stations,
+            norm_cleared,
+        )
+
+        # 2. 幂等性与冲突校验 (N02):
+        if key in self._transfer_facts:
+            existing_fact = self._transfer_facts[key]
+            if existing_fact != fact_fingerprint:
+                raise ValueError(
+                    f"冲突的周期转站事实：周期 {cycle} 已记录事实 {existing_fact}，收到冲突事实 {fact_fingerprint}"
+                )
+            if key in self._pending_next_cycle and key not in self._pending:
+                # 相同事实重交幂等，已消费不重复提交
+                return True
+        elif key in self._last_transfer_times:
             recorded_t = self._last_transfer_times[key]
             if abs(recorded_t - float(actual_transfer_time)) > 1e-4:
                 raise ValueError(
                     f"冲突的周期转站事实：周期 {cycle} 已记录转站时刻 {recorded_t}，收到冲突时刻 {actual_transfer_time}"
                 )
             if key in self._pending_next_cycle and key not in self._pending:
-                # 已经完成过该周期的结算，事实一致时幂等返回 True
                 return True
 
-        # 原子提交校验：在所有合法性判断完成后，才写入 transfer_times
-        self._last_transfer_times[key] = float(actual_transfer_time)
-
-        # 1. 如果上一周期 (cycle - 1) 在等待本周期的就绪事实，在此结算其下一周期向量
+        # 3. 预先计算所有增量与变更，校验通过前不修改内部任何状态 (原子性保证 N01/N03)
+        # 3.1 预计算上一周期 (cycle - 1) 的 next_cycle 结算
         prev_key = (worker, episode, cycle - 1)
         prev_samples = self._pending_next_cycle.get(prev_key)
+        computed_prev_updates: list[tuple[dict[str, Any], torch.Tensor, torch.Tensor]] = []
         if prev_samples:
             for item in prev_samples:
                 p_prev = item["actual_transfer_time"]
@@ -300,53 +344,66 @@ class PendingTimeLabelCache:
                     )
                     if has_ac:
                         if station_cleared_times is not None and m in station_cleared_times:
-                            f_m = station_cleared_times[m]
-                            target_next[m] = (float(f_m) - float(p_prev) - float(h0)) / float(h0)
+                            f_m = float(station_cleared_times[m])
+                            if not math.isfinite(f_m):
+                                raise ValueError(f"站位 {m} 清空时刻非有限数值: {f_m}")
+                            target_next[m] = (f_m - float(p_prev) - float(h0)) / float(h0)
                             mask_next[m] = True
                         else:
                             # 占用站位缺少 F 记录，严禁静默回退到 P；保持 mask 为 False！
                             mask_next[m] = False
                     else:
                         mask_next[m] = False
-                item["target_next_residuals"] = target_next
-                item["next_cycle_masks"] = mask_next
-                item["has_next_ready"] = True
+                computed_prev_updates.append((item, target_next, mask_next))
 
-        # 2. 结算本周期的当前残差
-        samples = self._pending.pop(key, None)
-        if not samples:
+        # 3.2 预计算当前周期 samples
+        samples = self._pending.get(key)
+        computed_cycle_items: list[dict[str, Any]] = []
+        if samples:
+            for sample in samples:
+                label_y = (float(actual_transfer_time) - sample.estimated_cmax) / sample.h0
+                if not math.isfinite(label_y):
+                    raise ValueError(f"计算的当前残差标签非有限数值: {label_y}")
+                default_next = torch.zeros(5, dtype=torch.float)
+                default_mask = torch.zeros(5, dtype=torch.bool)
+                item = {
+                    "worker_id": sample.worker_id,
+                    "episode_id": sample.episode_id,
+                    "cycle_id": sample.cycle_id,
+                    "decision_id": sample.decision_id,
+                    "state_feat": sample.state_feat,
+                    "graph_snapshot": sample.graph_snapshot,
+                    "estimated_cmax": sample.estimated_cmax,
+                    "current_time": sample.current_time,
+                    "h0": sample.h0,
+                    "predictor_version": sample.predictor_version,
+                    "time_urgency": sample.time_urgency,
+                    "actual_transfer_time": float(actual_transfer_time),
+                    "target_residual": float(label_y),
+                    "target_next_residuals": default_next,
+                    "next_cycle_masks": default_mask,
+                    "has_current_ready": True,
+                    "current_drained": False,
+                    "has_next_ready": False,
+                    "next_drained": False,
+                }
+                computed_cycle_items.append(item)
+
+        # 4. 全部校验与计算均成功，原子提交写入！
+        self._last_transfer_times[key] = float(actual_transfer_time)
+        self._transfer_facts[key] = fact_fingerprint
+
+        for item, target_next, mask_next in computed_prev_updates:
+            item["target_next_residuals"] = target_next
+            item["next_cycle_masks"] = mask_next
+            item["has_next_ready"] = True
+
+        if samples:
+            self._pending.pop(key, None)
+            self._pending_next_cycle[key] = computed_cycle_items
+            return True
+        else:
             return False
-
-        cycle_items: list[dict[str, Any]] = []
-        for sample in samples:
-            label_y = (float(actual_transfer_time) - sample.estimated_cmax) / sample.h0
-            default_next = torch.zeros(5, dtype=torch.float)
-            default_mask = torch.zeros(5, dtype=torch.bool)
-            item = {
-                "worker_id": sample.worker_id,
-                "episode_id": sample.episode_id,
-                "cycle_id": sample.cycle_id,
-                "decision_id": sample.decision_id,
-                "state_feat": sample.state_feat,
-                "graph_snapshot": sample.graph_snapshot,
-                "estimated_cmax": sample.estimated_cmax,
-                "current_time": sample.current_time,
-                "h0": sample.h0,
-                "predictor_version": sample.predictor_version,
-                "time_urgency": sample.time_urgency,
-                "actual_transfer_time": float(actual_transfer_time),
-                "target_residual": float(label_y),
-                "target_next_residuals": default_next,
-                "next_cycle_masks": default_mask,
-                "has_current_ready": True,
-                "current_drained": False,
-                "has_next_ready": False,
-                "next_drained": False,
-            }
-            cycle_items.append(item)
-
-        self._pending_next_cycle[key] = cycle_items
-        return True
 
     def drain_ready(self) -> dict[str, Any] | None:
         """取出已补齐标签的批次；跨采样段保留 _pending_next_cycle，直到获得下一周期事实。"""
@@ -470,6 +527,11 @@ class PendingTimeLabelCache:
         self._last_transfer_times = {
             key: t_val
             for key, t_val in self._last_transfer_times.items()
+            if not (key[1] == episode and (w_filter is None or key[0] == w_filter))
+        }
+        self._transfer_facts = {
+            key: fact
+            for key, fact in self._transfer_facts.items()
             if not (key[1] == episode and (w_filter is None or key[0] == w_filter))
         }
 

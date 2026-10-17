@@ -46,6 +46,7 @@ import copy
 import json
 import math
 from pathlib import Path
+import pickle
 import sys
 from typing import Any
 
@@ -264,6 +265,88 @@ def test_u05_idempotent_facts_and_conflict_rejection():
             station_cleared_times={0: 15.0},
             next_cycle_station_mask=[True, False, False, False, False],
         )
+
+    # 冲突拒绝：相同 P 但不同 F
+    with pytest.raises(ValueError, match="冲突的周期转站事实"):
+        cache.attach_transfer(
+            episode_id=0,
+            worker_id=0,
+            cycle_id=1,
+            actual_transfer_time=20.0,
+            station_cleared_times={0: 16.0},  # F 冲突
+            next_cycle_station_mask=[True, False, False, False, False],
+        )
+
+    # 冲突拒绝：相同 P 但不同掩码
+    with pytest.raises(ValueError, match="冲突的周期转站事实"):
+        cache.attach_transfer(
+            episode_id=0,
+            worker_id=0,
+            cycle_id=1,
+            actual_transfer_time=20.0,
+            station_cleared_times={0: 15.0},
+            next_cycle_station_mask=[True, True, False, False, False],  # 掩码冲突
+        )
+
+    # 短掩码原子拒绝，状态不被污染
+    fresh_cache = PendingTimeLabelCache()
+    fresh_cache.add(
+        worker_id=0, episode_id=0, cycle_id=1, decision_id=1,
+        state_feat=torch.zeros(32), graph_snapshot=None,
+        estimated_cmax=30.0, current_time=10.0, h0=10.0, predictor_version=1,
+    )
+    with pytest.raises(ValueError, match="下一周期站位掩码长度必须为5"):
+        fresh_cache.attach_transfer(
+            episode_id=0,
+            worker_id=0,
+            cycle_id=1,
+            actual_transfer_time=20.0,
+            next_cycle_station_mask=[True],  # 短掩码
+        )
+    assert (0, 0, 1) not in fresh_cache._last_transfer_times
+    assert (0, 0, 1) not in fresh_cache._transfer_facts
+    assert fresh_cache.waiting_current_samples == 1
+
+
+def test_cycle_record_serialization_and_state_snapshot():
+    """N04: 验证 CycleExecutionRecord 的 deepcopy/pickle 往返以及包含转站记录的 state.snapshot()。"""
+    rec = CycleExecutionRecord(
+        cycle_id=1,
+        cycle_start_time=0.0,
+        transfer_time=10.0,
+        occupied_stations=(True, False, False, False, False),
+        aircraft_at_stations=(0, None, None, None, None),
+        station_first_cleared_times={0: 8.0},
+    )
+
+    # deepcopy 往返
+    cp = copy.deepcopy(rec)
+    assert cp is rec  # 不可变记录保持单例语义或相同引用
+    assert cp.cycle_id == 1
+    assert cp.station_first_cleared_times[0] == 8.0
+
+    # pickle 往返
+    dumped = pickle.dumps(rec)
+    loaded = pickle.loads(dumped)
+    assert loaded.cycle_id == rec.cycle_id
+    assert loaded.transfer_time == rec.transfer_time
+    assert loaded.station_first_cleared_times[0] == 8.0
+    assert loaded.occupied_stations == rec.occupied_stations
+
+    # 包含转站记录的全局状态 snapshot 与 restore 往返
+    env = AirLineEnvWork3(baseline_json_path=BASELINE_PATH)
+    env.reset()
+    env.state.cycle_execution_records[1] = rec
+    snapshot = env.state.snapshot()
+    assert 1 in snapshot["cycle_execution_records"]
+
+    env.reset()
+    assert 1 not in env.state.cycle_execution_records
+    env.state.restore(snapshot)
+    assert 1 in env.state.cycle_execution_records
+    restored_rec = env.state.cycle_execution_records[1]
+    assert restored_rec.transfer_time == 10.0
+    assert restored_rec.station_first_cleared_times[0] == 8.0
 
 
 def test_u06_multi_cycle_transfers_recorded_distinctly():

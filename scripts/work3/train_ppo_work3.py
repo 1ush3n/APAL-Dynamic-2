@@ -37,7 +37,11 @@ import torch
 import lightning.pytorch as pl
 
 from envs.work3.environment import AirLineEnvWork3
-from envs.work3.core_types import ADVANCE_CAUSES
+from envs.work3.core_types import (
+    ADVANCE_CAUSES,
+    CycleExecutionRecord,
+    parse_and_validate_step_cycle_records,
+)
 from envs.work3.decision_snapshot import DecisionSnapshot
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3
@@ -1537,41 +1541,46 @@ def run_training(
                     for event in result.processed_events
                     if event[1] == "SYNCHRONOUS_TRANSFER"
                 ]
-                cycle_records = result.info.get("cycle_execution_records", {})
-                for offset, actual_transfer_time in enumerate(actual_transfers):
-                    transfer_cycle_id = context["cycle_id"] + offset
-                    label_count = pending_time_labels.pending_cycle_counts(
-                        state.episode_id,
-                        worker_id=worker_id,
-                    ).get(transfer_cycle_id, 0)
-                    cycle_rec = cycle_records.get(transfer_cycle_id)
-                    if cycle_rec is not None:
-                        station_cleared_times = cycle_rec.get("station_first_cleared_times", {})
-                        next_cycle_station_mask = cycle_rec.get("occupied_stations")
-                    else:
-                        station_cleared_times = result.info.get("station_first_cleared_times", {}).get(transfer_cycle_id, {})
-                        next_cycle_station_mask = result.info.get("next_cycle_station_mask")
-                    label_available = pending_time_labels.attach_transfer(
-                        episode_id=state.episode_id,
-                        worker_id=worker_id,
-                        cycle_id=transfer_cycle_id,
-                        actual_transfer_time=actual_transfer_time,
-                        station_cleared_times=station_cleared_times,
-                        next_cycle_station_mask=next_cycle_station_mask,
+                if actual_transfers:
+                    raw_cycle_records = result.info.get("cycle_execution_records")
+                    if not raw_cycle_records:
+                        raise ValueError(
+                            f"发生实际转站 {actual_transfers}，但 result.info 缺少 cycle_execution_records！"
+                        )
+                    step_records = parse_and_validate_step_cycle_records(
+                        raw_cycle_records,
+                        before_cycle=context["cycle_id"],
+                        after_cycle=snapshot.cycle_id,
                     )
-                    if profile.use_time_auxiliary:
-                        cycle_time_labels.append({
-                            "worker_id": worker_id,
-                            "episode_id": state.episode_id,
-                            "cycle_id": transfer_cycle_id,
-                            "actual_transfer_time": actual_transfer_time,
-                            "label_count": int(label_count) if label_available else 0,
-                            "pending_decision_count": 0,
-                            "label_available": bool(label_available),
-                        })
-                    state.scenario_log["actual_transfer_times"].append(
-                        actual_transfer_time
-                    )
+                    if len(step_records) != len(actual_transfers):
+                        raise ValueError(
+                            f"解析出的合法周期记录数 ({len(step_records)}) 与转站事件数 ({len(actual_transfers)}) 不匹配！"
+                        )
+                    for rec in step_records:
+                        label_count = pending_time_labels.pending_cycle_counts(
+                            state.episode_id,
+                            worker_id=worker_id,
+                        ).get(rec.cycle_id, 0)
+                        label_available = pending_time_labels.attach_transfer(
+                            episode_id=state.episode_id,
+                            worker_id=worker_id,
+                            cycle_id=rec.cycle_id,
+                            actual_transfer_time=rec.transfer_time,
+                            cycle_record=rec,
+                        )
+                        if profile.use_time_auxiliary:
+                            cycle_time_labels.append({
+                                "worker_id": worker_id,
+                                "episode_id": state.episode_id,
+                                "cycle_id": rec.cycle_id,
+                                "actual_transfer_time": rec.transfer_time,
+                                "label_count": int(label_count) if label_available else 0,
+                                "pending_decision_count": 0,
+                                "label_available": bool(label_available),
+                            })
+                        state.scenario_log["actual_transfer_times"].append(
+                            rec.transfer_time
+                        )
 
                 if terminated:
                     phi_next = 0.0
