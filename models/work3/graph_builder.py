@@ -202,7 +202,7 @@ class MultiAircraftGraphBuilder:
             # [10] 基准站内偏移
             self.base_task_x[i, 10] = float(t.in_station_offset) / self.h0
             # [14] 是否物理工序
-            self.base_task_x[i, 14] = 1.0 if t.duration > 1e-5 else 0.0
+            self.base_task_x[i, 14] = 1.0 if getattr(t, "is_physical", True) else 0.0
             # [16] 需求人数
             self.base_task_x[i, 16] = float(t.demand)
 
@@ -407,7 +407,7 @@ class MultiAircraftGraphBuilder:
             if 0 <= st < 5:
                 assigned_ts_src.append(idx)
                 assigned_ts_dst.append(st)
-                if t_rt.status != TaskStatus.COMPLETED and t_rt.duration > 1e-5:
+                if t_rt.status != TaskStatus.COMPLETED and getattr(t_rt, "is_physical", True):
                     task_indices_by_aircraft[t_rt.aircraft_id].append(idx)
                     execution_duration = float(
                         t_rt.execution_duration

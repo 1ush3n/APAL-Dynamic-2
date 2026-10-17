@@ -236,12 +236,19 @@ class AirLineEnvWork3:
             required_skills[i] = int(df_raw.iloc[i]["skill_type"])
             demands[i] = int(df_raw.iloc[i]["demand_workers"])
 
+        node_types = (
+            df_raw["node_type"].values.astype(int)
+            if "node_type" in df_raw.columns
+            else (df_raw["类型"].values.astype(int) if "类型" in df_raw.columns else None)
+        )
+
         engine = ConstraintEngine.build(
             num_tasks=num_raw_tasks,
             num_stations=self.state.num_stations,
             edges=edge_array,
             durations=durations,
             fixed_stations=fixed_stations,
+            node_types=node_types,
         )
 
         successors: list[list[int]] = [[] for _ in range(num_raw_tasks)]
