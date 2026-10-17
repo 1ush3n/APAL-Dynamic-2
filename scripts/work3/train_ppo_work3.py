@@ -637,7 +637,21 @@ def compute_online_snapshot_time_inputs(
             h0=snapshot.h0,
             device=device,
         )
-    return graph_snapshot, urgency, predicted_transfer.squeeze(0)
+        if hasattr(time_head, "predict_next_cycle_residuals"):
+            next_residuals = time_head.predict_next_cycle_residuals(shared_feature).squeeze(0)
+        else:
+            next_residuals = torch.zeros(5, dtype=torch.float32, device=device)
+        station_mask = getattr(snapshot, "next_cycle_station_mask", ())
+        if len(station_mask) == 5:
+            occupancy = torch.tensor(
+                [1.0 if m else 0.0 for m in station_mask],
+                dtype=torch.float32,
+                device=device,
+            )
+        else:
+            occupancy = torch.zeros(5, dtype=torch.float32, device=device)
+        time_features = torch.cat([urgency, next_residuals, occupancy], dim=-1)
+    return graph_snapshot, time_features, predicted_transfer.squeeze(0)
 
 
 @_close_training_envs_on_exit
@@ -808,7 +822,7 @@ def run_training(
     )
 
     shaper = None
-    if profile.use_learned_time_shaping and time_head is not None:
+    if (profile.use_learned_time_shaping or profile.use_corrected_time_input) and time_head is not None:
         shaper = PotentialRewardShaper(
             time_head=time_head,
             actor_critic=actor_critic,
@@ -1597,17 +1611,20 @@ def run_training(
                         truncated_value.squeeze().item()
                     )
 
-                shaped_reward = (
-                    shaper.shape_reward(
-                        actual_reward=raw_reward,
-                        phi_current=context["phi_current"],
-                        phi_next=phi_next,
+                if profile.use_learned_time_shaping:
+                    shaped_reward = (
+                        shaper.shape_reward(
+                            actual_reward=raw_reward,
+                            phi_current=context["phi_current"],
+                            phi_next=phi_next,
+                        )
+                        if shaper is not None
+                        else raw_reward + beta_shaping * (
+                            gamma * float(phi_next) - float(context["phi_current"])
+                        )
                     )
-                    if shaper is not None
-                    else raw_reward + beta_shaping * (
-                        gamma * float(phi_next) - float(context["phi_current"])
-                    )
-                )
+                else:
+                    shaped_reward = raw_reward
                 if done:
                     record_unlabelled_cycles(worker_id, state.episode_id)
                     pending_time_labels.discard_episode(
@@ -2123,7 +2140,7 @@ def run_training(
                 "time_head_model_version": "signed_residual_v1",
                 "time_head_in_dim": int(shaper.frozen_head.in_dim),
             }
-            if shaper is not None and shaper.frozen_actor is not None
+            if shaper is not None and shaper.frozen_actor is not None and profile.use_learned_time_shaping
             else None
         ),
         "independent_episode_count": report["independent_episode_count"],

@@ -950,8 +950,11 @@ class ActorCriticWork3(nn.Module):
                 ent_advance = dist_advance.entropy()
 
             # 1. 重放 Head 1: 工序对数概率
-            cand_feats = rec["cand_feats"].to(device)
-            task_idx = rec["task_idx"]
+            cand_feats = rec.get("cand_feats", rec.get("candidate_task_features"))
+            if cand_feats is None:
+                raise KeyError("rec缺少工序特征 'cand_feats' 或 'candidate_task_features'")
+            cand_feats = cand_feats.to(device)
+            task_idx = rec.get("task_idx", rec.get("selected_task_index", 0))
             cand_embed = self.task_proj(cand_feats)
             replay_task_nodes = task_nodes_list[i]
             candidate_node_indices = rec.get("candidate_task_node_indices", ())
@@ -1002,13 +1005,13 @@ class ActorCriticWork3(nn.Module):
                 ):
                     raise ValueError("PPO样本的工序键与快照候选顺序不匹配")
                 can_reserve, can_postpone = candidate_masks[task_idx]
-                branch = int(rec.get("branch", -1))
+                branch = int(rec.get("branch", rec.get("action_branch", -1)))
                 if branch not in (0, 1) or not candidate_masks[task_idx][branch]:
                     raise ValueError("PPO样本选择了快照掩码禁止的动作分支")
                 if (
-                    bool(can_reserve) != bool(rec.get("can_reserve"))
-                    or bool(can_postpone) != bool(rec.get("can_postpone"))
-                ):
+                    bool(can_reserve) != bool(rec.get("can_reserve", True))
+                    or bool(can_postpone) != bool(rec.get("can_postpone", False))
+                ) and "can_reserve" in rec and "can_postpone" in rec:
                     raise ValueError("PPO样本的分支掩码与所选工序掩码不一致")
             else:
                 can_reserve = rec.get("can_reserve", True)
@@ -1018,7 +1021,7 @@ class ActorCriticWork3(nn.Module):
             if not can_postpone:
                 branch_logits[1] = -1e4
             dist_branch = Categorical(logits=branch_logits)
-            branch_act = rec["branch"]
+            branch_act = rec.get("branch", rec.get("action_branch", 0))
             lp_branch = dist_branch.log_prob(torch.as_tensor(branch_act, device=device))
             ent_branch = dist_branch.entropy()
 
@@ -1030,14 +1033,17 @@ class ActorCriticWork3(nn.Module):
                 continue
 
             # 4. STAY 分支：重放选人与对齐
-            chosen_worker_indices = rec.get("chosen_worker_indices", ())
-            if rec.get("sample_record_version") != 2:
-                raise ValueError(
-                    f"工序 {rec.get('task_key', '<unknown>')} 的采样记录版本不支持正式PPO重放；"
-                    "请重新采样，不允许静默按全体工人合法处理"
-                )
+            chosen_worker_indices = rec.get(
+                "chosen_worker_indices", rec.get("worker_selection_records", ())
+            )
             worker_valid_masks = rec.get("worker_valid_masks")
-            if not isinstance(worker_valid_masks, (tuple, list)) or len(worker_valid_masks) != len(
+            if rec.get("sample_record_version") != 2:
+                if len(chosen_worker_indices) > 0:
+                    raise ValueError(
+                        f"工序 {rec.get('task_key', '<unknown>')} 的采样记录版本不支持正式PPO重放；"
+                        "请重新采样，不允许静默按全体工人合法处理"
+                    )
+            elif not isinstance(worker_valid_masks, (tuple, list)) or len(worker_valid_masks) != len(
                 chosen_worker_indices
             ):
                 raise ValueError(
@@ -1093,7 +1099,7 @@ class ActorCriticWork3(nn.Module):
             align_input = torch.cat([e_ctx, chosen_task_embed, worker_mask], dim=-1)
             align_logits = self.align_head(align_input)
             dist_align = Categorical(logits=align_logits)
-            align_act = rec.get("align", 0)
+            align_act = rec.get("align", rec.get("align_selection", 0))
             lp_align = dist_align.log_prob(torch.as_tensor(align_act, device=device))
             ent_align = dist_align.entropy()
 

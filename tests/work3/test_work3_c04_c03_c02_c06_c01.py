@@ -949,6 +949,7 @@ def test_t20_12dim_time_features_ppo_replay_exactness(env: AirLineEnvWork3) -> N
     - 在 PPO evaluate_action_log_probs 重放中，使用保存的 12 维特征必须重建精确一致的 log_prob。
     - 改变 12 维时间特征中任意一维，动作输出概率必须发生敏感变化（验证 12 维真实参与策略运算）。
     """
+    torch.manual_seed(42)
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=16)
     actor.eval()
 
@@ -975,7 +976,7 @@ def test_t20_12dim_time_features_ppo_replay_exactness(env: AirLineEnvWork3) -> N
     assert action is not None
 
     # 重放验证
-    replay_log_probs, values, entropies = actor.evaluate_action_log_probs(
+    values, replay_log_probs, entropies = actor.evaluate_action_log_probs(
         state_feats=state_feat.unsqueeze(0),
         time_urgencies=time_12dim.unsqueeze(0),
         sample_records=[sample_record],
@@ -988,7 +989,7 @@ def test_t20_12dim_time_features_ppo_replay_exactness(env: AirLineEnvWork3) -> N
     # 敏感性检验：修改 [2..6] 站位预测偏差，重放概率应发生响应变化
     perturbed_time = time_12dim.clone()
     perturbed_time[2] += 2.0  # 大幅改变下一周期站位 0 偏差
-    perturbed_log_probs, _, _ = actor.evaluate_action_log_probs(
+    _, perturbed_log_probs, _ = actor.evaluate_action_log_probs(
         state_feats=state_feat.unsqueeze(0),
         time_urgencies=perturbed_time.unsqueeze(0),
         sample_records=[sample_record],

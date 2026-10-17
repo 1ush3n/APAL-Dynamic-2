@@ -89,14 +89,12 @@ class PPOTrainerWork3:
             raise RuntimeError("未配置时间残差头，不能计算时间辅助损失")
         state_feats = batch["state_feats"].to(self.device)
         graph_snapshots = batch["graph_snapshots"]
-        targets = batch["target_residuals"].to(self.device)
         worker_ids = batch.get("worker_ids", [0] * state_feats.size(0))
         episode_ids = batch["episode_ids"]
         cycle_ids = batch["cycle_ids"]
         decision_ids = batch["decision_ids"]
         assert state_feats.ndim == 2
         assert len(graph_snapshots) == state_feats.size(0)
-        assert targets.shape == (state_feats.size(0),)
         assert len(worker_ids) == state_feats.size(0)
         assert len(episode_ids) == state_feats.size(0)
         assert len(cycle_ids) == state_feats.size(0)
@@ -112,39 +110,74 @@ class PPOTrainerWork3:
             )
             for index in range(state_feats.size(0))
         ])
-        predictions = self.time_head(shared_features)
-        assert predictions.shape == targets.shape
-        with torch.amp.autocast(device_type=self.device.type, enabled=False):
-            per_sample_loss = F.smooth_l1_loss(
-                predictions.float(),
-                targets.float(),
-                beta=0.01,
-                reduction="none",
-            )
-        current_loss = per_sample_loss.mean()
 
-        if "target_next_residuals" in batch and hasattr(self.time_head, "predict_next_cycle_residuals"):
-            next_targets = batch["target_next_residuals"].to(self.device)
-            next_masks = batch.get("next_cycle_masks")
-            if next_masks is not None:
-                next_masks = next_masks.to(self.device)
-            next_preds = self.time_head.predict_next_cycle_residuals(shared_features)
+        current_masks = batch.get("current_target_masks")
+        if current_masks is not None:
+            current_masks = current_masks.to(device=self.device, dtype=torch.bool)
+        elif "target_residuals" in batch:
+            targets_raw = batch["target_residuals"].to(self.device)
+            current_masks = torch.isfinite(targets_raw)
+        else:
+            current_masks = torch.zeros(state_feats.size(0), dtype=torch.bool, device=self.device)
+
+        has_current = bool(current_masks.any().item())
+        current_loss: torch.Tensor | None = None
+        if has_current:
+            targets = batch["target_residuals"].to(self.device)
+            predictions = self.time_head(shared_features[current_masks])
             with torch.amp.autocast(device_type=self.device.type, enabled=False):
-                if next_masks is not None and bool(next_masks.any().item()):
-                    next_loss = F.smooth_l1_loss(
-                        next_preds[next_masks].float(),
-                        next_targets[next_masks].float(),
-                        beta=0.01,
-                    )
-                    return current_loss + next_loss
-                elif next_masks is None:
+                current_loss = F.smooth_l1_loss(
+                    predictions.float(),
+                    targets[current_masks].float(),
+                    beta=0.01,
+                    reduction="mean",
+                )
+
+        next_masks = batch.get("next_cycle_masks")
+        if next_masks is not None:
+            next_masks = next_masks.to(device=self.device, dtype=torch.bool)
+
+        has_next = False
+        next_loss: torch.Tensor | None = None
+        if (
+            "target_next_residuals" in batch
+            and hasattr(self.time_head, "predict_next_cycle_residuals")
+        ):
+            next_targets = batch["target_next_residuals"].to(self.device)
+            if next_masks is not None:
+                has_next = bool(next_masks.any().item())
+                if has_next:
+                    row_mask = next_masks.any(dim=-1)
+                    next_preds = self.time_head.predict_next_cycle_residuals(shared_features[row_mask])
+                    active_masks = next_masks[row_mask]
+                    with torch.amp.autocast(device_type=self.device.type, enabled=False):
+                        next_loss = F.smooth_l1_loss(
+                            next_preds[active_masks].float(),
+                            next_targets[row_mask][active_masks].float(),
+                            beta=0.01,
+                            reduction="mean",
+                        )
+            else:
+                has_next = True
+                next_preds = self.time_head.predict_next_cycle_residuals(shared_features)
+                with torch.amp.autocast(device_type=self.device.type, enabled=False):
                     next_loss = F.smooth_l1_loss(
                         next_preds.float(),
                         next_targets.float(),
                         beta=0.01,
+                        reduction="mean",
                     )
-                    return current_loss + next_loss
-        return current_loss
+
+        if current_loss is not None and next_loss is not None:
+            total_aux_loss = current_loss + next_loss
+        elif current_loss is not None:
+            total_aux_loss = current_loss
+        elif next_loss is not None:
+            total_aux_loss = next_loss
+        else:
+            total_aux_loss = 0.0 * shared_features.sum()
+
+        return total_aux_loss
 
     def compute_ppo_minibatch_loss(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:
         """纯计算一个PPO minibatch的损失，不反传、不创建或更新优化器。"""
@@ -154,7 +187,8 @@ class PPOTrainerWork3:
         advantages = batch["advantages"].to(self.device, dtype=torch.float32)
         target_values = batch["target_values"].to(self.device, dtype=torch.float32)
         assert state_feats.ndim == 2 and state_feats.size(-1) == 32
-        assert time_urgencies.shape == (state_feats.size(0), 2)
+        assert time_urgencies.ndim == 2 and time_urgencies.size(0) == state_feats.size(0)
+        assert time_urgencies.size(1) in (2, 7, 12)
         assert old_log_probs.shape == advantages.shape == target_values.shape == (
             state_feats.size(0),
         )

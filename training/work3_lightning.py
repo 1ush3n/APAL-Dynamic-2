@@ -78,13 +78,15 @@ class Work3LightningModule(LightningModule):
         vf_coef: float = 0.5,
         ent_coef: float = 0.01,
         max_grad_norm: float = 0.5,
-        time_loss_coef: float = 0.0,
+        time_loss_coef: float | None = None,
         ppo_epochs: int = 4,
         batch_size: int = 64,
         time_auxiliary_epochs: int = 1,
         time_auxiliary_batch_size: int = 64,
     ) -> None:
         super().__init__()
+        if time_loss_coef is None:
+            time_loss_coef = 1.0 if time_head is not None else 0.0
         if learning_rate <= 0 or ppo_epochs < 0 or batch_size < 1:
             raise ValueError("Lightning PPO学习率与batch_size必须为正数，epoch不能为负数")
         if max_grad_norm <= 0 or time_auxiliary_epochs < 0 or time_auxiliary_batch_size < 1:
@@ -206,7 +208,12 @@ class Work3LightningModule(LightningModule):
         if loss.ndim != 0 or not bool(torch.isfinite(loss).item()):
             raise FloatingPointError("Lightning收到非有限或非标量训练损失")
         optimizer.zero_grad()
-        self.manual_backward(loss)
+        try:
+            self.manual_backward(loss)
+        except RuntimeError:
+            loss.backward()
+        if self._trainer is None:
+            self.on_before_optimizer_step(optimizer)
         self._step_grad_norm = None
         self._step_has_non_finite_gradients = False
         scaler = self._active_grad_scaler()
@@ -235,7 +242,10 @@ class Work3LightningModule(LightningModule):
         self.actor_critic.train()
         if self.time_head is not None:
             self.time_head.train()
-        optimizer = self.optimizers()
+        try:
+            optimizer = self.optimizers()
+        except RuntimeError:
+            optimizer = self.configure_optimizers() if self._optimizer is None else self._optimizer
         metrics: dict[str, list[float]] = {
             "total_loss": [],
             "policy_loss": [],
@@ -295,7 +305,11 @@ class Work3LightningModule(LightningModule):
             and self.time_head is not None
             and self.objective.time_loss_coef > 0.0
         ):
-            count = int(auxiliary["target_residuals"].numel())
+            count = (
+                int(auxiliary["state_feats"].size(0))
+                if "state_feats" in auxiliary
+                else int(auxiliary["target_residuals"].numel())
+            )
             for _ in range(self.time_auxiliary_epochs):
                 indices = torch.randperm(count).tolist()
                 for start in range(0, count, self.time_auxiliary_batch_size):
@@ -309,6 +323,12 @@ class Work3LightningModule(LightningModule):
                         "cycle_ids": [auxiliary["cycle_ids"][i] for i in chosen],
                         "decision_ids": [auxiliary["decision_ids"][i] for i in chosen],
                     }
+                    if "current_target_masks" in auxiliary:
+                        minibatch["current_target_masks"] = auxiliary["current_target_masks"][chosen]
+                    if "target_next_residuals" in auxiliary:
+                        minibatch["target_next_residuals"] = auxiliary["target_next_residuals"][chosen]
+                    if "next_cycle_masks" in auxiliary:
+                        minibatch["next_cycle_masks"] = auxiliary["next_cycle_masks"][chosen]
                     time_loss = self.objective.compute_time_auxiliary_loss(minibatch)
                     grad_norm = self._manual_update(
                         self.objective.time_loss_coef * time_loss,

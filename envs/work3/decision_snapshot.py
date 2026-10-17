@@ -93,6 +93,7 @@ class DecisionSnapshot:
     graph_version: str
     candidate_aircraft_ids: tuple[int, ...] = ()
     candidate_station_ids: tuple[int, ...] = ()
+    next_cycle_station_mask: tuple[bool, ...] = ()
 
     def __post_init__(self) -> None:
         # 输入形状：[32]、[2/7/12]、[N, 8]；快照拥有独立CPU副本。
@@ -318,4 +319,5 @@ def build_decision_snapshot(
         graph_version=GRAPH_FEATURE_VERSION,
         candidate_aircraft_ids=tuple(int(task.aircraft_id) for task in candidates),
         candidate_station_ids=tuple(int(task.current_station) for task in candidates),
+        next_cycle_station_mask=tuple(bool(m) for m in env.state.get_next_cycle_station_mask()),
     )

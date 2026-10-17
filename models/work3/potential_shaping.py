@@ -42,22 +42,35 @@ class PotentialRewardShaper:
 
     def __init__(
         self,
-        time_head: TimeResidualHead,
+        time_head: TimeResidualHead | None = None,
         actor_critic: Any | None = None,
         a: float = 0.5,
         b: float = 1.0,
         beta: float = 1.0,
         gamma: float = 0.99,
+        *,
+        initial_head: TimeResidualHead | None = None,
+        initial_actor: Any | None = None,
     ) -> None:
         """初始化势函数塑形器。
 
         Args:
             time_head: 时间残差预测头模型
+            actor_critic: 共享表征Actor模型
             a: 周期内推进引导系数 (a >= 0)
             b: 预计超期惩罚系数 (b >= 0)
             beta: 势函数差分奖励缩放权重 (beta >= 0)
             gamma: 折扣因子 (0 < gamma <= 1.0)
+            initial_head: 别名参数，等同于 time_head
+            initial_actor: 别名参数，等同于 actor_critic
         """
+        if time_head is None and initial_head is not None:
+            time_head = initial_head
+        if actor_critic is None and initial_actor is not None:
+            actor_critic = initial_actor
+        if time_head is None:
+            raise ValueError("必须提供 time_head 或 initial_head")
+
         self.a = float(a)
         self.b = float(b)
         self.beta = float(beta)
@@ -86,7 +99,7 @@ class PotentialRewardShaper:
     def retained_snapshot_versions(self) -> tuple[int, ...]:
         return tuple(sorted(self._snapshots))
 
-    def begin_episode(self, *, worker_id: int, episode_id: int) -> int:
+    def begin_episode(self, worker_id: int = 0, episode_id: int = 0) -> int:
         """将生产episode绑定到启动时的不可变势函数预测器版本。"""
         key = (int(worker_id), int(episode_id))
         if key in self._episode_versions:
@@ -97,7 +110,9 @@ class PotentialRewardShaper:
         self._episode_versions[key] = version
         return version
 
-    def end_episode(self, *, worker_id: int, episode_id: int) -> bool:
+    bind_episode = begin_episode
+
+    def end_episode(self, worker_id: int = 0, episode_id: int = 0) -> bool:
         """释放episode的版本引用；旧版本在最后一个引用结束后回收。"""
         version = self._episode_versions.pop((int(worker_id), int(episode_id)), None)
         if version is None:
