@@ -1340,7 +1340,7 @@ def run_training(
 
             budget_reason = current_budget_reason()
             if budget_reason is not None:
-                mark_budget_truncated(budget_reason)
+                request_budget_truncation(budget_reason)
                 break
 
             remaining_global_steps = (
@@ -1441,6 +1441,7 @@ def run_training(
                     "log_prob": log_prob,
                     "phi_current": phi_current,
                     "cycle_id": int(snapshot.cycle_id),
+                    "last_transfer_time": float(snapshot.last_transfer_time),
                     "predictor_version": state.predictor_version,
                 }
 
@@ -1556,21 +1557,34 @@ def run_training(
                     for event in result.processed_events
                     if event[1] == "SYNCHRONOUS_TRANSFER"
                 ]
-                if actual_transfers:
+                cycle_changed = snapshot.cycle_id > context["cycle_id"]
+                if actual_transfers or cycle_changed:
                     raw_cycle_records = result.info.get("cycle_execution_records")
                     if not raw_cycle_records:
                         raise ValueError(
-                            f"发生实际转站 {actual_transfers}，但 result.info 缺少 cycle_execution_records！"
+                            f"发生实际转站 (事件={actual_transfers}, cycle_id从 {context['cycle_id']} 变为 {snapshot.cycle_id})，"
+                            f"但 result.info 缺少 cycle_execution_records！"
                         )
                     step_records = parse_and_validate_step_cycle_records(
                         raw_cycle_records,
                         before_cycle=context["cycle_id"],
                         after_cycle=snapshot.cycle_id,
                     )
-                    if len(step_records) != len(actual_transfers):
+                    if actual_transfers and len(step_records) != len(actual_transfers):
                         raise ValueError(
                             f"解析出的合法周期记录数 ({len(step_records)}) 与转站事件数 ({len(actual_transfers)}) 不匹配！"
                         )
+                    if step_records:
+                        first_rec = step_records[0]
+                        if abs(first_rec.cycle_start_time - context["last_transfer_time"]) > 1e-5:
+                            raise ValueError(
+                                f"周期记录起点时刻 {first_rec.cycle_start_time} 与动作前快照 last_transfer_time {context['last_transfer_time']} 不一致！"
+                            )
+                        last_rec = step_records[-1]
+                        if abs(last_rec.transfer_time - snapshot.last_transfer_time) > 1e-5:
+                            raise ValueError(
+                                f"末尾周期记录脉动时刻 {last_rec.transfer_time} 与动作后快照 last_transfer_time {snapshot.last_transfer_time} 不一致！"
+                            )
                     for rec in step_records:
                         label_count = pending_time_labels.pending_cycle_counts(
                             state.episode_id,

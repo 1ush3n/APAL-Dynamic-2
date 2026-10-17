@@ -876,23 +876,28 @@ def evaluate_single_trajectory(
     else:
         objective_breakdown = {}
         objective_report = {}
-        weighted_components_match = True
+        weighted_components_match = False
     total_cost = float(env.cumulative_cost)
-    independent_j_total = float(objective_report.get("j_total", total_cost))
     step_rewards = getattr(env, "step_rewards", None)
-    actual_reward_sum = float(sum(step_rewards)) if step_rewards is not None else -independent_j_total
-    reward_sum_matches = math.isclose(
-        actual_reward_sum,
-        -independent_j_total,
-        rel_tol=1e-9,
-        abs_tol=1e-8,
-    )
-    ledger_consistent = weighted_components_match and math.isclose(
-        total_cost,
-        independent_j_total,
-        rel_tol=1e-9,
-        abs_tol=1e-8,
-    ) and reward_sum_matches
+    if not objective_report or step_rewards is None or "j_total" not in objective_report:
+        reward_sum_matches = False
+        ledger_consistent = False
+        independent_j_total = float("nan")
+    else:
+        independent_j_total = float(objective_report["j_total"])
+        actual_reward_sum = float(sum(step_rewards))
+        reward_sum_matches = math.isclose(
+            actual_reward_sum,
+            -independent_j_total,
+            rel_tol=1e-9,
+            abs_tol=1e-8,
+        )
+        ledger_consistent = weighted_components_match and math.isclose(
+            total_cost,
+            independent_j_total,
+            rel_tol=1e-9,
+            abs_tol=1e-8,
+        ) and reward_sum_matches
     if success and not ledger_consistent:
         raise RuntimeError(
             "已完成可行轨迹的环境费用与独立目标账本不一致: "

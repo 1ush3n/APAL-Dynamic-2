@@ -91,6 +91,7 @@ class PendingTimeLabelCache:
         self.abandoned_current_samples: int = 0
         self.abandoned_next_samples: int = 0
         self.discard_reasons: dict[str, int] = {}
+        self.discarded_counts_by_episode: dict[tuple[int, int], dict[str, Any]] = {}
 
     @property
     def waiting_current_samples(self) -> int:
@@ -108,18 +109,22 @@ class PendingTimeLabelCache:
     @property
     def available_current_samples(self) -> int:
         """当前残差已就绪且尚未被训练取出的样本数。"""
-        return sum(
+        count = sum(
             sum(1 for item in items if item.get("has_current_ready", False) and not item.get("current_drained", False))
             for items in self._pending_next_cycle.values()
         )
+        count += sum(1 for item in self._ready if item.get("current_target_mask", False))
+        return count
 
     @property
     def available_next_samples(self) -> int:
         """下一周期残差已就绪且尚未被训练取出的样本数。"""
-        return sum(
+        count = sum(
             sum(1 for item in items if item.get("has_next_ready", False) and not item.get("next_drained", False))
             for items in self._pending_next_cycle.values()
         )
+        count += sum(1 for item in self._ready if bool(item.get("has_next_ready", False)))
+        return count
 
     @property
     def available_next_station_targets(self) -> int:
@@ -131,6 +136,11 @@ class PendingTimeLabelCache:
                     mask = item.get("next_cycle_masks")
                     if mask is not None and isinstance(mask, torch.Tensor):
                         count += int(mask.sum().item())
+        for item in self._ready:
+            if bool(item.get("has_next_ready", False)):
+                mask = item.get("next_cycle_masks")
+                if mask is not None and isinstance(mask, torch.Tensor):
+                    count += int(mask.sum().item())
         return count
 
     @property
@@ -194,6 +204,11 @@ class PendingTimeLabelCache:
                 "total_pending_count": self.total_pending_count,
                 "abandoned_current_samples": self.abandoned_current_samples,
                 "abandoned_next_samples": self.abandoned_next_samples,
+                "discard_reasons": dict(self.discard_reasons),
+                "discarded_counts_by_episode": {
+                    f"{k[0]}_{k[1]}": dict(v)
+                    for k, v in self.discarded_counts_by_episode.items()
+                },
             }
 
         waiting_current = 0
@@ -243,7 +258,15 @@ class PendingTimeLabelCache:
             "total_pending_count": waiting_current + waiting_next,
             "abandoned_current_samples": self.abandoned_current_samples,
             "abandoned_next_samples": self.abandoned_next_samples,
+            "discard_reasons": dict(self.discard_reasons),
+            "discarded_counts_by_episode": {
+                f"{k[0]}_{k[1]}": dict(v)
+                for k, v in self.discarded_counts_by_episode.items()
+                if (ep_filter is None or k[1] == ep_filter) and (w_filter is None or k[0] == w_filter)
+            },
         }
+
+    diagnostics = stats
 
     def add(
         self,
@@ -592,6 +615,13 @@ class PendingTimeLabelCache:
         self.abandoned_current_samples += discarded_current
         self.abandoned_next_samples += discarded_next
         self.discard_reasons[reason] = self.discard_reasons.get(reason, 0) + (discarded_current + discarded_next)
+
+        ep_key = (w_filter if w_filter is not None else -1, episode)
+        if ep_key not in self.discarded_counts_by_episode:
+            self.discarded_counts_by_episode[ep_key] = {"discarded_current": 0, "discarded_next": 0}
+        self.discarded_counts_by_episode[ep_key]["discarded_current"] += discarded_current
+        self.discarded_counts_by_episode[ep_key]["discarded_next"] += discarded_next
+        self.discarded_counts_by_episode[ep_key]["reason"] = str(reason)
 
         return {
             "discarded_current": discarded_current,
