@@ -1,22 +1,27 @@
 {
-  "timestamp": "2026-10-17 12:41:57",
-  "total_elapsed_seconds": 168.8735022000037,
+  "timestamp": "2026-10-17 14:39:05",
+  "total_elapsed_seconds": 277.5490299999947,
   "section_9_1": {
     "status": "PASS",
-    "completed_tasks": 42,
-    "total_tasks": 42,
+    "completed_tasks": 70,
+    "total_tasks": 70,
     "transfers": 11,
-    "elapsed_seconds": 0.1529280000104336,
+    "elapsed_seconds": 0.15590370001154952,
     "cost_breakdown": {
       "j_takt": 0.0,
-      "d_time": 3.252593489320697e-20,
+      "d_time": 0.0001300534368508665,
       "d_team": 0.0,
       "j_postpone": 0.0,
       "j_revision": 0.0,
-      "j_total": 3.252593489320697e-20
+      "j_total": 0.0001300534368508665
     },
     "ledger_gap": 0.0,
-    "reward_cost_gap": 0.0
+    "reward_cost_gap": 0.0,
+    "feasible": true,
+    "violations": {},
+    "actual_hit_task_keys": [
+      "2_13"
+    ]
   },
   "section_9_2": {
     "status": "PASS",
@@ -26,35 +31,41 @@
       "feasible": true,
       "makespan": 3055.4313412919582,
       "j_total": 1.310728848589564e-12,
-      "elapsed_seconds": 50.70619019999867
+      "elapsed_seconds": 49.591659300000174
     },
     "disturbed": {
-      "scenario_id": "EARLY_LOW_S0",
+      "scenario_id": "REAL_283_DEDICATED_HIT",
       "completed_tasks": 2830,
       "transfers": 14,
       "feasible": true,
       "makespan": 3055.4313412919582,
-      "j_total": 1.310728848589564e-12,
-      "elapsed_seconds": 49.881488300001365
+      "j_total": 8.334776250315195e-06,
+      "actual_disturbance_hits": 1,
+      "actual_hit_task_keys": [
+        "5_16"
+      ],
+      "elapsed_seconds": 49.80265749999671
     }
   },
   "section_9_3": {
     "status": "PASS",
     "method_c": {
-      "decisions": 16,
-      "elapsed_seconds": 25.075043200005894,
+      "decisions": 32,
+      "elapsed_seconds": 60.86814440001035,
       "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_c_smoke.pt"
     },
     "method_d": {
-      "decisions": 16,
-      "elapsed_seconds": 41.367436200001976,
+      "decisions": 32,
+      "elapsed_seconds": 114.3820538,
       "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_d_smoke.pt"
     },
     "dual_target_gradient_check": {
-      "loss": 0.4047725200653076,
-      "shared_grad_norm": 1.6704697608947754,
-      "current_head_grad_norm": 6.648153305053711,
-      "next_head_grad_norm": 3.214144229888916
+      "loss": 0.4663698077201843,
+      "compact_grad_norm": 3.4614179134368896,
+      "line_fusion_grad_norm": 9.925722122192383,
+      "station_summary_grad_norm": 0.016161570325493813,
+      "current_head_grad_norm": 7.398929595947266,
+      "next_head_grad_norm": 4.167670726776123
     }
   }
 }

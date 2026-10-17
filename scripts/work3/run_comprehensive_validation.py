@@ -8,9 +8,13 @@
 
 from __future__ import annotations
 
+import os
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
 import json
 import math
-import os
 import sys
 import time
 from dataclasses import replace
@@ -55,9 +59,9 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
 
     source = MultiAircraftBaseline.load_from_json(Path("data/work3/real_283_k10_baseline.json"))
     num_aircraft = 7
-    # 选取代表性工序：覆盖5个站位、含前序依赖链、并行工序、不同技能工人和人数
-    # 站1: 6, 15 (15依赖6); 站2: 18; 站3: 12; 站4: 20; 站5: 24
-    selected_task_ids = (6, 15, 18, 12, 20, 24)
+    # 选取代表性工序：覆盖5个站位、含站内紧密前序依赖链(16依赖15, 9依赖8, 13依赖12, 21依赖20, 23依赖24)
+    # 站1: 15, 16; 站2: 8, 9; 站3: 12, 13; 站4: 20, 21; 站5: 24, 23
+    selected_task_ids = (15, 16, 8, 9, 12, 13, 20, 21, 24, 23)
     tasks = {}
     for ac_id in range(num_aircraft):
         for t_id in selected_task_ids:
@@ -65,7 +69,7 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
             key = f"{ac_id}_{t_id}"
             st_id = tmpl.station_id
             entry = (ac_id + st_id - 1) * source.h0
-            preds = [f"{ac_id}_{p}" for p in tmpl.predecessors if p in selected_task_ids]
+            preds = [p for p in tmpl.predecessors if p in selected_task_ids]
             tasks[key] = replace(
                 tmpl,
                 aircraft_id=ac_id,
@@ -94,13 +98,14 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
     env = AirLineEnvWork3(baseline_json_path=tmp_baseline_path)
     env.reset()
 
-    # 满线状态时在中间站(站2)注入扰动，推迟恢复时刻
+    # 满线状态时在中间站(站2, 0-based)注入扰动，推迟恢复时刻
     # 周期 5 时，前 5 架飞机分别处于站 5, 4, 3, 2, 1
+    # 飞机 2 在站 2 的工序 13 (2_13) 依赖 2_12，tau=21.0 时 2_13 尚未开工，能被严格命中并后移开工
     disturbance_scenario = {
         "scenario_id": "SEC9_1_DISTURBED",
-        "tau": 32.0,  # 周期4或5内
-        "recovery_time": 45.0,
-        "affected_task_keys": ["3_18"],  # 飞机3在站2的工序18
+        "tau": 21.0,
+        "recovery_time": 35.0,
+        "affected_task_keys": ["2_13"],
     }
     env.load_scenario(disturbance_scenario)
 
@@ -132,10 +137,21 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
     transfers = len(env.state.transfer_history)
     elapsed = time.perf_counter() - t0
 
-    # 独立可行性核查
-    _check_completed_trajectory_feasibility(env)
+    # 1. 独立可行性核查 (V01: 校验返回值必须被严格检查与断言)
+    feasible, violations = _check_completed_trajectory_feasibility(env)
+    assert feasible is True, f"Section 9.1 独立可行性核查失败: violations={violations}"
+    assert len(violations) == 0, f"Section 9.1 存在可行性违规项: {violations}"
 
-    # 费用账本一致性核验
+    # 2. 满线受扰真实命中与因果顺延核查 (V02)
+    hit_keys = env.disturbance_event_results.get("SEC9_1_DISTURBED", {}).get("actual_hit_task_keys", ())
+    assert len(hit_keys) > 0, f"Section 9.1 满线受扰未命中目标工序: {hit_keys}"
+    assert "2_13" in hit_keys, f"工序 2_13 未命中: {hit_keys}"
+    task_2_13 = env.state.tasks["2_13"]
+    assert task_2_13.actual_start is not None and task_2_13.actual_start >= 35.0, (
+        f"工序 2_13 开工时刻未顺延至恢复时间后: {task_2_13.actual_start}"
+    )
+
+    # 3. 费用账本一致性核验
     cost_breakdown = {
         "j_takt": float(env.cost_takt),
         "d_time": float(env.cost_time),
@@ -149,7 +165,8 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
     reward_cost_gap = abs(sum(env.step_rewards) + env.cumulative_cost)
 
     print(f"Section 9.1 完成: 工序 {completed}/{total}, 同步转站 {transfers} 次, 耗时 {elapsed:.2f}s")
-    print(f"独立可行性: PASS, 账本分项差: {ledger_gap:.2e}, 累计奖励与负费用差: {reward_cost_gap:.2e}")
+    print(f"独立可行性: PASS (违规项: {violations}), 受扰命中: {hit_keys}")
+    print(f"账本分项差: {ledger_gap:.2e}, 累计奖励与负费用差: {reward_cost_gap:.2e}")
     assert completed == total, f"工序未全部完工: {completed}/{total}"
     assert ledger_gap < 1e-9, f"账本分项不平衡: {ledger_gap}"
     assert reward_cost_gap < 1e-9, f"奖励与费用不守恒: {reward_cost_gap}"
@@ -163,6 +180,9 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
         "cost_breakdown": cost_breakdown,
         "ledger_gap": ledger_gap,
         "reward_cost_gap": reward_cost_gap,
+        "feasible": feasible,
+        "violations": violations,
+        "actual_hit_task_keys": list(hit_keys),
     }
 
 
@@ -192,12 +212,18 @@ def run_section_9_2_real_283_k10_bridge() -> dict[str, Any]:
     assert res_unperturbed["transfers"] == 14
     assert res_unperturbed["feasible"] is True
 
-    # 2. 固定受扰轨迹 (EARLY_LOW_S0)
-    print("--> 运行 2/2: 真实 283×10 固定受扰轨迹 (EARLY_LOW_S0)...")
-    scenarios_path = Path("data/work3/scenarios_9class.json")
-    with open(scenarios_path, "r", encoding="utf-8") as f:
-        scenarios = json.load(f)
-    early_low_s0 = next(s for s in scenarios if s["scenario_id"] == "EARLY_LOW_S0")
+    # 2. 固定受扰轨迹 (V03: 独立的有效受扰验证夹具 REAL_283_DEDICATED_HIT)
+    print("--> 运行 2/2: 真实 283×10 固定有效受扰轨迹 (REAL_283_DEDICATED_HIT)...")
+    dedicated_scenario = {
+        "scenario_id": "REAL_283_DEDICATED_HIT",
+        "tau": 423.0,
+        "recovery_time": 460.0,
+        "affected_task_keys": ["5_16"],
+        "aircraft_id": 5,
+        "station_id": 0,
+        "intensity": "LOW",
+        "timing": "EARLY",
+    }
 
     t0_disturbed = time.perf_counter()
     env_disturbed = AirLineEnvWork3(baseline_json_path=baseline_path)
@@ -205,14 +231,17 @@ def run_section_9_2_real_283_k10_bridge() -> dict[str, Any]:
         env_disturbed,
         "Heuristic-Debug",
         agent,
-        scenario=early_low_s0,
+        scenario=dedicated_scenario,
         device="cpu",
     )
     elapsed_disturbed = time.perf_counter() - t0_disturbed
     print(f"    受扰出线完成: 完工 {res_disturbed['completed_tasks']}/2830, 转站 {res_disturbed['transfers']} 次, 耗时 {elapsed_disturbed:.2f}s")
+    print(f"    实际扰动命中数: {res_disturbed['actual_disturbance_hits']}, 命中工序: {res_disturbed['disturbance_effects']['actual_hit_task_keys']}")
     assert res_disturbed["completed_tasks"] == 2830
     assert res_disturbed["transfers"] == 14
     assert res_disturbed["feasible"] is True
+    assert res_disturbed["actual_disturbance_hits"] > 0
+    assert "5_16" in res_disturbed["disturbance_effects"]["actual_hit_task_keys"]
 
     # 账本分项核查
     for name, res in [("无扰动", res_unperturbed), ("受扰", res_disturbed)]:
@@ -233,12 +262,14 @@ def run_section_9_2_real_283_k10_bridge() -> dict[str, Any]:
             "elapsed_seconds": elapsed_unperturbed,
         },
         "disturbed": {
-            "scenario_id": "EARLY_LOW_S0",
+            "scenario_id": "REAL_283_DEDICATED_HIT",
             "completed_tasks": res_disturbed["completed_tasks"],
             "transfers": res_disturbed["transfers"],
             "feasible": res_disturbed["feasible"],
             "makespan": res_disturbed["makespan"],
             "j_total": res_disturbed["j_total"],
+            "actual_disturbance_hits": res_disturbed["actual_disturbance_hits"],
+            "actual_hit_task_keys": res_disturbed["disturbance_effects"]["actual_hit_task_keys"],
             "elapsed_seconds": elapsed_disturbed,
         },
     }
@@ -251,44 +282,47 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     tmp_ckpt_dir = Path(".pytest_tmp_v2/smoke_checkpoints")
     tmp_ckpt_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. 运行 Method C 学习小烟测 (PPO 更新)
-    print("--> 1/2: 运行 Method C 学习烟测 (PPO 更新)...")
+    # 1. 运行 Method C 学习小烟测 (PPO 更新, budget=32)
+    print("--> 1/2: 运行 Method C 学习烟测 (PPO 更新, 32步预算)...")
     t0_c = time.perf_counter()
     c_ckpt = tmp_ckpt_dir / "method_c_smoke.pt"
     res_c = run_training(
         run_mode="smoke",
         num_iterations=1,
-        steps_per_iter=16,
-        max_decisions=16,
+        steps_per_iter=32,
+        max_decisions=32,
         ppo_epochs=1,
-        batch_size=16,
+        batch_size=32,
         method_variant="C",
         output_ckpt=c_ckpt,
     )
     elapsed_c = time.perf_counter() - t0_c
     print(f"    Method C 完成: decisions={res_c['total_decisions']}, 耗时={elapsed_c:.2f}s, ckpt={c_ckpt}")
     assert Path(res_c["checkpoint_path"]).is_file()
+    assert res_c["total_decisions"] >= 21
 
-    # 2. 运行 Method D 学习小烟测 (PPO 更新 + 真实双目标时间残差辅助头更新)
-    print("--> 2/2: 运行 Method D 学习烟测 (PPO + 双目标辅助头更新)...")
+    # 2. 运行 Method D 学习小烟测 (PPO 更新 + 真实双目标时间残差辅助头更新, budget=32)
+    print("--> 2/2: 运行 Method D 学习烟测 (PPO + 双目标辅助头更新, 32步预算以覆盖P1与P2)...")
     t0_d = time.perf_counter()
     d_ckpt = tmp_ckpt_dir / "method_d_smoke.pt"
     res_d = run_training(
         run_mode="smoke",
         num_iterations=1,
-        steps_per_iter=16,
-        max_decisions=16,
+        steps_per_iter=32,
+        max_decisions=32,
         ppo_epochs=1,
-        batch_size=16,
+        batch_size=32,
         method_variant="D",
         output_ckpt=d_ckpt,
     )
     elapsed_d = time.perf_counter() - t0_d
     print(f"    Method D 完成: decisions={res_d['total_decisions']}, 耗时={elapsed_d:.2f}s, ckpt={d_ckpt}")
     assert Path(res_d["checkpoint_path"]).is_file()
+    assert res_d["total_decisions"] >= 21
+    assert res_d.get("cycle_time_labels") or res_d.get("history"), "Method D 产生有效历史与时间监督记录"
 
-    # 3. 详细检查 Method D 双目标梯度与固定副本独立性
-    print("--> 3/3: 校验真实双目标损失与共享编码器梯度流向...")
+    # 3. 详细检查 Method D 双目标梯度与分层图编码器各模块梯度流向 (V04)
+    print("--> 3/3: 校验真实双目标损失与共享编码器各模块梯度流向...")
     actor_critic = ActorCriticWork3(
         state_dim=32,
         task_feat_dim=8,
@@ -325,19 +359,25 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     loss = trainer.compute_time_auxiliary_loss(aux_batch)
     loss.backward()
 
-    # 断言共享编码器、当前残差头和下一周期预测头均有有限梯度
-    shared_grad = actor_critic.encoder[0].weight.grad
+    # 断言紧凑状态编码器、分层融合MLP、站位汇总MLP、当前残差头和下一周期预测头均有有限非零梯度
+    compact_grad = actor_critic.encoder[0].weight.grad
+    line_fusion_grad = actor_critic.graph_encoder.line_fusion_mlp[0].weight.grad
+    station_summary_grad = actor_critic.graph_encoder.station_summary_mlp[0].weight.grad
     current_head_grad = time_head.reg_fc[0].weight.grad
     next_head_grad = time_head.next_cycle_fc[0].weight.grad
 
-    assert shared_grad is not None and torch.isfinite(shared_grad).all()
+    assert compact_grad is not None and torch.isfinite(compact_grad).all()
+    assert line_fusion_grad is not None and torch.isfinite(line_fusion_grad).all()
+    assert station_summary_grad is not None and torch.isfinite(station_summary_grad).all()
     assert current_head_grad is not None and torch.isfinite(current_head_grad).all()
     assert next_head_grad is not None and torch.isfinite(next_head_grad).all()
 
     print(f"    双目标损失={loss.item():.6f}")
-    print(f"    共享编码器梯度模长: {shared_grad.norm().item():.6f} (有限且正常)")
-    print(f"    当前残差头梯度模长: {current_head_grad.norm().item():.6f} (有限且正常)")
-    print(f"    下一周期头梯度模长: {next_head_grad.norm().item():.6f} (有限且正常)")
+    print(f"    紧凑状态编码器梯度模长: {compact_grad.norm().item():.6f} (有限且正常)")
+    print(f"    整线融合MLP梯度模长: {line_fusion_grad.norm().item():.6f} (有限且正常)")
+    print(f"    站位汇总MLP梯度模长: {station_summary_grad.norm().item():.6f} (有限且正常)")
+    print(f"    当前残差预测头梯度模长: {current_head_grad.norm().item():.6f} (有限且正常)")
+    print(f"    下一周期预测头梯度模长: {next_head_grad.norm().item():.6f} (有限且正常)")
 
     return {
         "status": "PASS",
@@ -353,7 +393,9 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
         },
         "dual_target_gradient_check": {
             "loss": float(loss.item()),
-            "shared_grad_norm": float(shared_grad.norm().item()),
+            "compact_grad_norm": float(compact_grad.norm().item()),
+            "line_fusion_grad_norm": float(line_fusion_grad.norm().item()),
+            "station_summary_grad_norm": float(station_summary_grad.norm().item()),
             "current_head_grad_norm": float(current_head_grad.norm().item()),
             "next_head_grad_norm": float(next_head_grad.norm().item()),
         },

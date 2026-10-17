@@ -562,7 +562,11 @@ def summarize_disturbance_effects(
 
     baseline_ready = baseline_material_ready_by_key or {}
     target_keys = [str(key) for key in scenario.get("affected_task_keys", [])]
-    target_aircraft_ids = {int(scenario["aircraft_id"])}
+    target_aircraft_ids = (
+        {int(scenario["aircraft_id"])}
+        if "aircraft_id" in scenario and scenario["aircraft_id"] is not None
+        else {int(key.split("_")[0]) for key in target_keys if "_" in key}
+    )
     tau_value = scenario.get("tau")
     tau = None if tau_value is None else float(tau_value)
     recorded_hit_keys = (
