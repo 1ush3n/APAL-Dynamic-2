@@ -32,7 +32,6 @@ from typing import Any
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.distributions import Categorical
 from torch_geometric.data import HeteroData
 
@@ -380,10 +379,8 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
         ac_id = state.get_aircraft_at_station(s)
         st_tasks = (
             [
-                t for t in state.tasks.values()
-                if t.aircraft_id == ac_id
-                and t.current_station == s
-                and t.status != TaskStatus.COMPLETED
+                t for t in state.get_tasks_for_station(s)
+                if t.status != TaskStatus.COMPLETED
             ]
             if ac_id is not None
             else []
@@ -412,6 +409,7 @@ def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: fl
     completed = sum(1 for t in state.tasks.values() if t.status == TaskStatus.COMPLETED)
     feat[29] = float(completed) / total_tasks
 
+    # [30] 综合后移压力指标：历史累计改派后移次数加本脉动周期内新发生的后移数 (Q08)
     postponed = sum(t.postpone_count for t in state.tasks.values()) + float(getattr(state, "recent_postponed_count", 0))
     feat[30] = float(postponed) / 50.0
 
@@ -601,6 +599,17 @@ class ActorCriticWork3(nn.Module):
                 if model_dict[k].shape == v.shape:
                     filtered_dict[k] = v
                     loaded_keys.append(k)
+                elif (
+                    k == "graph_encoder.embedder.linears.task.weight"
+                    and model_dict[k].shape == (self.hidden_dim, 28)
+                    and v.shape == (self.hidden_dim, 26)
+                ):
+                    # 显式将旧版 26 维 Task 特征投影层迁移至 28 维，新增的 2 个槽位补零 (S02)
+                    adapted_w = model_dict[k].clone()
+                    adapted_w[:, :26] = v
+                    adapted_w[:, 26:] = 0.0
+                    filtered_dict[k] = adapted_w
+                    loaded_keys.append(f"{k} (adapted from 26-dim to 28-dim via zero-init)")
                 else:
                     unexpected_keys.append(f"{k} (shape mismatch: expected {model_dict[k].shape}, got {v.shape})")
             else:
@@ -734,6 +743,8 @@ class ActorCriticWork3(nn.Module):
         self,
         snapshot: DecisionSnapshot,
         deterministic: bool = False,
+        *,
+        time_features_override: torch.Tensor | None = None,
     ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
         """只依据独立CPU快照采样动作；不读取环境对象或可变现场状态。"""
         if snapshot.graph_version != GRAPH_FEATURE_VERSION:
@@ -743,7 +754,14 @@ class ActorCriticWork3(nn.Module):
             )
         device = next(self.parameters()).device
         state_feat = snapshot.state_features.to(device)
-        time_urgency = snapshot.time_features.to(device)
+        if time_features_override is not None:
+            if time_features_override.ndim != 1 or time_features_override.shape[0] not in (2, 7, 12):
+                raise ValueError(
+                    f"time_features_override 形状无效: {time_features_override.shape}"
+                )
+            time_urgency = time_features_override.to(device)
+        else:
+            time_urgency = snapshot.time_features.to(device)
         graph_snapshot = snapshot.graph_snapshot
         v, e_fused, task_nodes, worker_nodes, hier_dict = self._encode_state_components(
             state_feat,

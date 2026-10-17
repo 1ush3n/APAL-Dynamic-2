@@ -610,7 +610,7 @@ def test_u21_u22_aircraft_role_and_end_station_zero_masking():
 
 def test_u23_graph_schema_verification_and_checkpoint_compatibility():
     """U23: 图 schema 严格校验与旧检查点向后兼容。"""
-    assert GRAPH_FEATURE_VERSION == "work3_graph_v5"
+    assert GRAPH_FEATURE_VERSION == "work3_graph_v6"
     assert "dims" in GRAPH_FEATURE_SCHEMA
     assert "task" in GRAPH_FEATURE_SCHEMA["dims"]
     assert GRAPH_FEATURE_SCHEMA.get("aircraft_role_partition") == ("current", "next", "further")

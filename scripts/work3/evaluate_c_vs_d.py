@@ -355,11 +355,20 @@ def build_formal_evaluation_agent(
         return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
 
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
-    from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
+    from models.work3.graph_builder import (
+        GRAPH_FEATURE_DIMS,
+        GRAPH_FEATURE_VERSION,
+        get_graph_feature_schema_hash,
+    )
 
-    if checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION or dict(
-        checkpoint.get("graph_feature_dims") or {}
-    ) != dict(GRAPH_FEATURE_DIMS):
+    expected_schema_hash = get_graph_feature_schema_hash()
+    ckpt_schema_hash = checkpoint.get("graph_feature_schema_hash")
+    schema_mismatch = (
+        checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION
+        or dict(checkpoint.get("graph_feature_dims") or {}) != dict(GRAPH_FEATURE_DIMS)
+        or (ckpt_schema_hash is not None and ckpt_schema_hash != expected_schema_hash)
+    )
+    if schema_mismatch:
         if debug_random:
             if profile.use_time_auxiliary:
                 time_head = TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64).to(torch_device)
@@ -368,9 +377,9 @@ def build_formal_evaluation_agent(
                 time_head.eval()
             return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
         raise ValueError(
-            f"正式方法 {profile.name} 检查点图特征版本或维度不匹配："
-            f"期望 {GRAPH_FEATURE_VERSION} {GRAPH_FEATURE_DIMS}，"
-            f"实际 {checkpoint.get('graph_feature_version')} {checkpoint.get('graph_feature_dims')}"
+            f"正式方法 {profile.name} 检查点图特征版本、维度或模式哈希不匹配："
+            f"期望 {GRAPH_FEATURE_VERSION} {GRAPH_FEATURE_DIMS} (hash={expected_schema_hash[:8]})，"
+            f"实际 {checkpoint.get('graph_feature_version')} {checkpoint.get('graph_feature_dims')} (hash={str(ckpt_schema_hash)[:8]})"
         )
     actor_state = checkpoint.get("actor_critic_state")
     if actor_state is None:
@@ -849,55 +858,52 @@ def evaluate_single_trajectory(
     warmup_steps = 0 if warmup_result is None else warmup_result.step_count
     policy_steps = max(0, int(env.step_count) - warmup_steps)
     weights = getattr(env, "weights", None)
+    if weights is None:
+        raise ValueError("轨迹审计要求环境包含有效的 weights 配置")
     h0 = getattr(getattr(env, "state", None), "h0", None)
-    if weights is not None and h0 is not None:
-        objective_breakdown = evaluate_trajectory_objective(env, weights=weights)
-        objective_report = build_objective_report(
-            objective_breakdown,
-            weights,
-            h0=float(h0),
-        )
-        environment_cost_components = {
-            "j_takt": float(env.cost_takt),
-            "d_time": float(env.cost_time),
-            "d_team": float(env.cost_team),
-            "j_postpone": float(env.cost_postpone),
-            "j_revision": float(env.cost_revision),
-        }
-        weighted_components_match = all(
-            math.isclose(
-                environment_cost_components[name],
-                float(objective_report["cost_components_weighted"][name]),
-                rel_tol=1e-9,
-                abs_tol=1e-8,
-            )
-            for name in environment_cost_components
-        )
-    else:
-        objective_breakdown = {}
-        objective_report = {}
-        weighted_components_match = False
-    total_cost = float(env.cumulative_cost)
+    if h0 is None:
+        raise ValueError("轨迹审计要求环境状态包含有效的 h0 节拍时长")
     step_rewards = getattr(env, "step_rewards", None)
-    if not objective_report or step_rewards is None or "j_total" not in objective_report:
-        reward_sum_matches = False
-        ledger_consistent = False
-        independent_j_total = float("nan")
-    else:
-        independent_j_total = float(objective_report["j_total"])
-        actual_reward_sum = float(sum(step_rewards))
-        reward_sum_matches = math.isclose(
-            actual_reward_sum,
-            -independent_j_total,
+    if step_rewards is None:
+        raise ValueError("轨迹审计要求环境包含 step_rewards 历史记录")
+
+    objective_breakdown = evaluate_trajectory_objective(env, weights=weights)
+    objective_report = build_objective_report(
+        objective_breakdown,
+        weights,
+        h0=float(h0),
+    )
+    environment_cost_components = {
+        "j_takt": float(env.cost_takt),
+        "d_time": float(env.cost_time),
+        "d_team": float(env.cost_team),
+        "j_postpone": float(env.cost_postpone),
+        "j_revision": float(env.cost_revision),
+    }
+    weighted_components_match = all(
+        math.isclose(
+            environment_cost_components[name],
+            float(objective_report["cost_components_weighted"][name]),
             rel_tol=1e-9,
             abs_tol=1e-8,
         )
-        ledger_consistent = weighted_components_match and math.isclose(
-            total_cost,
-            independent_j_total,
-            rel_tol=1e-9,
-            abs_tol=1e-8,
-        ) and reward_sum_matches
+        for name in environment_cost_components
+    )
+    total_cost = float(env.cumulative_cost)
+    independent_j_total = float(objective_report["j_total"])
+    actual_reward_sum = float(sum(step_rewards))
+    reward_sum_matches = math.isclose(
+        actual_reward_sum,
+        -independent_j_total,
+        rel_tol=1e-9,
+        abs_tol=1e-8,
+    )
+    ledger_consistent = weighted_components_match and math.isclose(
+        total_cost,
+        independent_j_total,
+        rel_tol=1e-9,
+        abs_tol=1e-8,
+    ) and reward_sum_matches
     if success and not ledger_consistent:
         raise RuntimeError(
             "已完成可行轨迹的环境费用与独立目标账本不一致: "

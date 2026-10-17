@@ -25,7 +25,6 @@ from dataclasses import dataclass
 from typing import Any
 
 import torch
-import torch.nn as nn
 
 from models.work3.time_head import TimeResidualHead
 
@@ -35,6 +34,24 @@ class _PredictorSnapshot:
     head: TimeResidualHead
     actor: Any | None
     references: int = 0
+
+
+def compute_potential_scalar_from_h_est(
+    h_est: float,
+    h0: float,
+    a: float,
+    b: float,
+) -> float:
+    """Φ(s) = -a · (H^_q / H_0) - b · ([H^_q - H_0]_+ / H_0) (Q02)"""
+    h0_f = float(h0)
+    # H^_q / H_0
+    h_ratio = float(h_est) / h0_f
+    # [H^_q - H_0]_+ / H_0
+    overdue_ratio = max(0.0, float(h_est) - h0_f) / h0_f
+
+    # Φ(s) = -a · (H^_q / H_0) - b · ([H^_q - H_0]_+ / H_0)
+    phi = -float(a) * h_ratio - float(b) * overdue_ratio
+    return float(phi)
 
 
 class PotentialRewardShaper:
@@ -234,15 +251,18 @@ class PotentialRewardShaper:
             )
             h_est = float(h_est_tensor.item())
 
-        h0_f = float(h0)
-        # H^_q / H_0
-        h_ratio = h_est / h0_f
-        # [H^_q - H_0]_+ / H_0
-        overdue_ratio = max(0.0, h_est - h0_f) / h0_f
+        return compute_potential_scalar_from_h_est(h_est, h0, self.a, self.b)
 
-        # Φ(s) = -a · (H^_q / H_0) - b · ([H^_q - H_0]_+ / H_0)
-        phi = -self.a * h_ratio - self.b * overdue_ratio
-        return float(phi)
+    def compute_potential_from_h_est(
+        self,
+        h_est: float,
+        h0: float,
+        is_terminal: bool = False,
+    ) -> float:
+        """从已计算的预测节拍 H^_q 直接计算势函数，复用前向结果避免重复编码 (Q02)。"""
+        if is_terminal:
+            return 0.0
+        return compute_potential_scalar_from_h_est(h_est, h0, self.a, self.b)
 
     def shape_reward(
         self,

@@ -92,11 +92,40 @@ class TimeResidualHead(nn.Module):
         strict: bool = True,
         assign: bool = False,
     ):
-        """兼容缺少 next_cycle_fc 的旧权重。"""
-        has_next_cycle = any(k.startswith("next_cycle_fc.") for k in state_dict)
-        if strict and not has_next_cycle:
-            strict = False
+        """严格加载状态字典；严禁在 strict=True 时私自降级为 False (Q01)。"""
         return super().load_state_dict(state_dict, strict=strict, assign=assign)
+
+    def load_warm_start_weights(
+        self,
+        state_dict: dict[str, torch.Tensor],
+    ) -> dict[str, list[str]]:
+        """显式热启动旧模型权重入口：允许缺少下一周期残差预测头并留存迁移记录 (Q01)。"""
+        model_dict = self.state_dict()
+        filtered_dict: dict[str, torch.Tensor] = {}
+        missing_keys: list[str] = []
+        unexpected_keys: list[str] = []
+        loaded_keys: list[str] = []
+
+        for k, v in state_dict.items():
+            if k in model_dict:
+                if model_dict[k].shape == v.shape:
+                    filtered_dict[k] = v
+                    loaded_keys.append(k)
+                else:
+                    unexpected_keys.append(f"{k} (shape mismatch: expected {model_dict[k].shape}, got {v.shape})")
+            else:
+                unexpected_keys.append(k)
+
+        for k in model_dict:
+            if k not in filtered_dict:
+                missing_keys.append(k)
+
+        super().load_state_dict(filtered_dict, strict=False)
+        return {
+            "loaded_keys": loaded_keys,
+            "missing_keys": missing_keys,
+            "unexpected_keys": unexpected_keys,
+        }
 
     def predict_corrected_time(
         self,

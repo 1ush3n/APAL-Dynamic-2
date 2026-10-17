@@ -31,6 +31,7 @@ from models.work3.graph_builder import (
     GRAPH_FEATURE_DIMS,
     GRAPH_FEATURE_SCHEMA,
     GRAPH_FEATURE_VERSION,
+    get_graph_feature_schema_hash,
 )
 from models.work3.ppo_buffer import RolloutBufferWork3
 
@@ -311,10 +312,9 @@ class PPOTrainerWork3:
 
                 self.optimizer.step()
 
-                # 8. 统计诊断数据
-                with torch.no_grad():
-                    approx_kl = ((ratio - 1.0) - log_ratio).mean().item()
-                    clip_frac = ((ratio - 1.0).abs() > self.clip_eps).float().mean().item()
+                # 8. 统计诊断数据 (Q09: 直接复用纯损失计算返回的KL与裁剪率)
+                approx_kl = float(batch_losses["approx_kl"].item())
+                clip_frac = float(batch_losses["clip_fraction"].item())
 
                 total_policy_loss += float(policy_loss.item())
                 total_value_loss += float(value_loss.item())
@@ -455,6 +455,7 @@ class PPOTrainerWork3:
             "graph_feature_version": GRAPH_FEATURE_VERSION,
             "graph_feature_dims": dict(GRAPH_FEATURE_DIMS),
             "graph_feature_schema": dict(GRAPH_FEATURE_SCHEMA),
+            "graph_feature_schema_hash": get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA),
             "actor_critic_state": self.actor_critic.state_dict(),
             "run_metadata": dict(metadata or {}),
         }
@@ -479,6 +480,12 @@ class PPOTrainerWork3:
             raise ValueError(
                 f"检查点图特征版本或维度不匹配：期望 {GRAPH_FEATURE_VERSION} {GRAPH_FEATURE_DIMS}，"
                 f"实际 {checkpoint.get('graph_feature_version')} {checkpoint.get('graph_feature_dims')}"
+            )
+        expected_hash = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
+        actual_hash = checkpoint.get("graph_feature_schema_hash")
+        if actual_hash is not None and actual_hash != expected_hash:
+            raise ValueError(
+                f"检查点图特征Schema指纹不匹配：期望 {expected_hash}，实际 {actual_hash}"
             )
         self.actor_critic.load_state_dict(checkpoint["actor_critic_state"])
         if self.time_head is not None:

@@ -1213,10 +1213,11 @@ def run_training(
         for state in worker_states:
             if state.done:
                 record_unlabelled_cycles(state.worker_id, state.episode_id)
+                actual_reason = getattr(state, "termination_reason", None) or reason
                 pending_time_labels.discard_episode(
                     state.episode_id,
                     worker_id=state.worker_id,
-                    reason=reason,
+                    reason=actual_reason,
                 )
                 if shaper is not None and state.predictor_version is not None:
                     shaper.end_episode(
@@ -1378,30 +1379,38 @@ def run_training(
                         if frozen_actor is not None:
                             eval_actor = frozen_actor
                     with _autocast_context(torch_device, autocast_dtype):
-                        graph_snapshot, time_urgency, _ = compute_online_snapshot_time_inputs(
+                        graph_snapshot, time_urgency, predicted_transfer = compute_online_snapshot_time_inputs(
                             actor_critic=eval_actor,
                             time_head=eval_head,
                             snapshot=snapshot,
                         )
-                    action_snapshot = replace(snapshot, time_features=time_urgency)
                 else:
                     time_urgency = snapshot.time_features
+                    predicted_transfer = None
 
                 if profile.use_learned_time_shaping and shaper is not None:
                     if state.predictor_version is None:
                         raise RuntimeError("势函数episode没有绑定预测器版本")
-                    with _autocast_context(torch_device, autocast_dtype):
-                        phi_current = shaper.compute_potential(
-                            state_feat=state_features,
-                            estimated_cmax=cmax_est,
-                            current_time=snapshot.current_time,
+                    if predicted_transfer is not None:
+                        h_est = max(0.0, float(predicted_transfer.item()) - float(snapshot.last_transfer_time))
+                        phi_current = shaper.compute_potential_from_h_est(
+                            h_est=h_est,
                             h0=snapshot.h0,
-                            last_transfer_time=snapshot.last_transfer_time,
                             is_terminal=False,
-                            graph_data=graph_snapshot,
-                            worker_id=state.worker_id,
-                            episode_id=state.episode_id,
                         )
+                    else:
+                        with _autocast_context(torch_device, autocast_dtype):
+                            phi_current = shaper.compute_potential(
+                                state_feat=state_features,
+                                estimated_cmax=cmax_est,
+                                current_time=snapshot.current_time,
+                                h0=snapshot.h0,
+                                last_transfer_time=snapshot.last_transfer_time,
+                                is_terminal=False,
+                                graph_data=graph_snapshot,
+                                worker_id=state.worker_id,
+                                episode_id=state.episode_id,
+                            )
                 else:
                     phi_current = compute_heuristic_potential(
                         cmax_est,
@@ -1410,10 +1419,23 @@ def run_training(
                     )
 
                 with _autocast_context(torch_device, autocast_dtype):
-                    action, log_prob, value, sample_record = actor_critic.select_snapshot(
-                        action_snapshot,
-                        deterministic=False,
-                    )
+                    if time_urgency is snapshot.time_features:
+                        action, log_prob, value, sample_record = actor_critic.select_snapshot(
+                            snapshot,
+                            deterministic=False,
+                        )
+                    else:
+                        try:
+                            action, log_prob, value, sample_record = actor_critic.select_snapshot(
+                                snapshot,
+                                deterministic=False,
+                                time_features_override=time_urgency,
+                            )
+                        except TypeError:
+                            action, log_prob, value, sample_record = actor_critic.select_snapshot(
+                                replace(snapshot, time_features=time_urgency),
+                                deterministic=False,
+                            )
                 if action is None:
                     raise RuntimeError(
                         "Actor未返回动作；无候选状态应通过强制推进动作进入env.step()"
@@ -1557,6 +1579,11 @@ def run_training(
                     for event in result.processed_events
                     if event[1] == "SYNCHRONOUS_TRANSFER"
                 ]
+                if snapshot.cycle_id < context["cycle_id"]:
+                    raise ValueError(
+                        f"检测到周期倒退异常: 动作前 cycle_id={context['cycle_id']}, "
+                        f"动作后 cycle_id={snapshot.cycle_id}"
+                    )
                 cycle_changed = snapshot.cycle_id > context["cycle_id"]
                 if actual_transfers or cycle_changed:
                     raw_cycle_records = result.info.get("cycle_execution_records")

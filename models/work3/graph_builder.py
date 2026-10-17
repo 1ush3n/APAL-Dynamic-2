@@ -7,21 +7,23 @@
    - station: 5 个物理脉动装配工位 (0 ~ 4)；
    - skill: 5 个工种技能中转节点 (0 ~ 4，经典 Skill Hub 模式)。
 2. 特征排布：
-   - 与已有代码 (environment.py / utils.resource_graph) 100% 对齐；
-   - task_x: 包含工时、状态/技能、相对当前脉动的投产顺序偏移、物理站位偏移和到目标站的剩余转站数；
-   - worker_x: [效率, 5技能资质(1:6), 等待时间, 空闲标记, 站位锁定(8:13), 疲劳度等]，共 17 维；
-   - station_x: [剩余负荷, 在场飞机指示量, 可用槽位, 槽位等待时间, 宏观特征]，共 15 维；
+   - 版本规范：严格对齐 work3_graph_v6 规范；
+   - task_x: 包含工时、状态/技能、相对投产脉动偏移、站位偏移、发布位置与最近扰动命中 (28 维)；
+   - worker_x: [效率, 5技能资质(1:6), 等待时间, 空闲标记, 站位锁定(8:13), 预约区间等]，共 21 维；
+   - station_x: [剩余负荷, 在场飞机指示量, 可用槽位, 槽位等待时间, 分层负荷等]，共 15 维；
    - skill_x: 5 个技能节点的动态资源统计特征，共 11 维。
 3. 边拓扑体系：
    - DAG 偏序边: ("task", "precedes", "task")；
    - 站位归属边: ("task", "assigned_to", "station"), ("station", "has_task", "task")；
    - 工人执行边: ("task", "done_by", "worker")；
    - 双向 Skill Hub: worker <-> skill <-> task。
-4. 性能指标：预构建静态图骨架，单步动态更新耗时 < 2ms。
+4. 性能指标设计目标：预构建静态图骨架，283x10基准下单步动态更新耗时 < 2ms。
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from dataclasses import dataclass
 from typing import Any
@@ -56,9 +58,9 @@ TASK_STATUS_TO_SLOT: dict[TaskStatus, int | None] = {
 }
 
 
-GRAPH_FEATURE_VERSION = "work3_graph_v5"
+GRAPH_FEATURE_VERSION = "work3_graph_v6"
 GRAPH_FEATURE_DIMS: dict[str, int] = {
-    "task": 26,
+    "task": 28,
     "worker": 21,
     "station": 15,
     "skill": 11,
@@ -110,6 +112,8 @@ GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
         "has_last_published_position",
         "last_published_station_norm",
         "last_published_position_norm",
+        "recent_material_delay_hit",
+        "recent_material_delay_increment_norm",
     ),
     "worker_features": (
         "efficiency",
@@ -140,7 +144,19 @@ GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
         "known_future_remaining_processing_work_norm",
     ),
     "station_occupancy_semantics": "binary_presence_indicator_0_or_1",
+    "recent_hit_tasks_contract": "explicit_task_node_features_and_tensors",
 }
+
+
+def get_graph_feature_schema_hash(schema: dict[str, Any] | None = None) -> str:
+    """计算图特征 Schema 的稳定 SHA-256 指纹（涵盖版本、维度、字段布局与语义）。"""
+    s = schema if schema is not None else GRAPH_FEATURE_SCHEMA
+    clean_s = {k: v for k, v in s.items() if k != "schema_fingerprint"}
+    raw = json.dumps(clean_s, sort_keys=True)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+GRAPH_FEATURE_SCHEMA["schema_fingerprint"] = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
 
 
 @dataclass
@@ -422,6 +438,15 @@ class MultiAircraftGraphBuilder:
                 else float(t_rt.base_station) / 4.0
             )
 
+            # [26..27] 最近受外生扰动影响与下界推迟增量 (S06 / R7)
+            recent_hit_increments = getattr(state, "recent_material_delay_hit_task_increments", {})
+            if key in recent_hit_increments:
+                task_x_np[idx, 26] = 1.0
+                task_x_np[idx, 27] = float(recent_hit_increments[key]) / max(1.0, float(h0))
+            else:
+                task_x_np[idx, 26] = 0.0
+                task_x_np[idx, 27] = 0.0
+
             # 动态边收集与站位负荷累积
             st = t_rt.current_station
             if 0 <= st < 5:
@@ -664,6 +689,8 @@ class MultiAircraftGraphBuilder:
             dtype=torch.float32,
         )
         data._recent_events_summary = recent_vec
+        data._recent_hit_task_mask = torch.from_numpy(task_x_np[:, 26] > 0.5)
+        data._recent_hit_task_increments = torch.from_numpy(task_x_np[:, 27])
 
         return data
 

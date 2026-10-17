@@ -159,8 +159,8 @@ def test_future_reservation_times_and_replay_snapshot_are_distinguishable(
     first_task_features = first_graph["task"].x[task_index]
 
     # 新图契约：18为is_reserved，19为has_schedule，20为开工剩余时间/H0，
-    # 21为has_schedule_end，22为预计完工剩余时间/H0。
-    assert first_task_features.shape == (26,)
+    # 21为has_schedule_end，22为预计完工剩余时间/H0，26为hit_indicator，27为increment_norm。
+    assert first_task_features.shape == (28,)
     assert first_task_features[18:23].tolist() == pytest.approx(
         [1.0, 1.0, 10.0 / env.state.h0, 1.0, 12.0 / env.state.h0]
     )
@@ -758,10 +758,10 @@ def test_checkpoints_declare_graph_feature_schema_and_reject_old_schema(
     trainer.save_checkpoint(str(checkpoint_path))
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
-    assert GRAPH_FEATURE_VERSION == "work3_graph_v5"
+    assert GRAPH_FEATURE_VERSION == "work3_graph_v6"
     assert checkpoint["graph_feature_version"] == GRAPH_FEATURE_VERSION
     assert checkpoint["graph_feature_dims"] == {
-        "task": 26,
+        "task": 28,
         "worker": 21,
         "station": 15,
         "skill": 11,
@@ -779,16 +779,23 @@ def test_checkpoints_declare_graph_feature_schema_and_reject_old_schema(
     assert checkpoint["graph_feature_schema"]["task_features"][15] == (
         "transfers_remaining_to_target_station_norm"
     )
+    assert checkpoint["graph_feature_schema"]["task_features"][26] == (
+        "recent_material_delay_hit"
+    )
+    assert checkpoint["graph_feature_schema"]["task_features"][27] == (
+        "recent_material_delay_increment_norm"
+    )
     assert checkpoint["graph_feature_schema"]["station_occupancy_semantics"] == (
         "binary_presence_indicator_0_or_1"
     )
+    assert "graph_feature_schema_hash" in checkpoint
 
     old_path = tmp_path / "legacy_graph.pt"
     old_checkpoint = {
         "actor_critic_state": actor.state_dict(),
         "time_head_state": head.state_dict(),
         "time_head_model_version": "signed_residual_v1",
-        "graph_feature_version": "work3_graph_v3",
+        "graph_feature_version": "work3_graph_v5",
         "graph_feature_dims": {"task": 26, "worker": 21, "station": 15, "skill": 11},
     }
     torch.save(old_checkpoint, old_path)

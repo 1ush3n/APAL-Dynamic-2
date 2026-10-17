@@ -548,7 +548,11 @@ def parse_and_validate_step_cycle_records(
 
     # 校验周期连续性与起止衔接
     if before_cycle is not None and after_cycle is not None:
-        expected_count = max(0, int(after_cycle) - int(before_cycle))
+        if int(after_cycle) < int(before_cycle):
+            raise ValueError(
+                f"周期号倒退：before_cycle={before_cycle} > after_cycle={after_cycle}"
+            )
+        expected_count = int(after_cycle) - int(before_cycle)
         if len(parsed_records) != expected_count:
             raise ValueError(
                 f"周期记录数量与周期跨度不符：before={before_cycle}, after={after_cycle}, "
@@ -607,8 +611,11 @@ class MultiAircraftState:
     recent_material_delays_hit: int = 0  # 自上一决策以来实际命中非冻结工序的扰动数 (R7)
     recent_material_delay_increment: float = 0.0 # 自上一决策以来扰动造成的就绪下界推迟增量 (R7)
     recent_worker_disturbances: int = 0  # 保留字段：当前域不支持人员扰动 (R7)
+    recent_material_delay_hit_task_keys: list[str] = field(default_factory=list) # 当前步实际命中任务键列表 (S06/R7)
+    recent_material_delay_hit_task_increments: dict[str, float] = field(default_factory=dict) # 当前步各命中工序推迟增量 (S06/R7)
     cumulative_material_delays_hit: int = 0 # 全局累计命中非冻结工序的扰动数
     cumulative_material_delay_increment: float = 0.0 # 全局累计扰动造成的就绪下界推迟增量
+    cumulative_material_delay_hit_task_increments: dict[str, float] = field(default_factory=dict) # 全局累计各工序扰动增量
 
     aircraft: dict[int, AircraftRuntimeState] = field(default_factory=dict)
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
@@ -659,7 +666,7 @@ class MultiAircraftState:
         return None
 
     def get_tasks_for_station(self, station_id: int) -> list[TaskRuntimeState]:
-        """获取当前停靠在指定站位的飞机归属在该站的全部活动任务 (O(1) 索引)。"""
+        """获取当前停靠在指定站位的飞机归属在该站的全部活动任务（O(1) 字典键定位飞机与站位桶，并浅拷贝物化列表副本）。"""
         k = self.get_aircraft_at_station(station_id)
         if k is None:
             return []
@@ -718,8 +725,15 @@ class MultiAircraftState:
             "recent_material_delays_hit": self.recent_material_delays_hit,
             "recent_material_delay_increment": self.recent_material_delay_increment,
             "recent_worker_disturbances": self.recent_worker_disturbances,
+            "recent_material_delay_hit_task_keys": list(getattr(self, "recent_material_delay_hit_task_keys", [])),
+            "recent_material_delay_hit_task_increments": {
+                str(k): float(v) for k, v in getattr(self, "recent_material_delay_hit_task_increments", {}).items()
+            },
             "cumulative_material_delays_hit": self.cumulative_material_delays_hit,
             "cumulative_material_delay_increment": self.cumulative_material_delay_increment,
+            "cumulative_material_delay_hit_task_increments": {
+                str(k): float(v) for k, v in getattr(self, "cumulative_material_delay_hit_task_increments", {}).items()
+            },
             "recent_change_summary": copy.deepcopy(getattr(self, "recent_change_summary", {})),
             "aircraft": {k: ac.copy() for k, ac in self.aircraft.items()},
             "tasks": {k: t.copy() for k, t in self.tasks.items()},
@@ -749,8 +763,15 @@ class MultiAircraftState:
         self.recent_material_delays_hit = int(snap.get("recent_material_delays_hit", 0))
         self.recent_material_delay_increment = float(snap.get("recent_material_delay_increment", 0.0))
         self.recent_worker_disturbances = int(snap.get("recent_worker_disturbances", 0))
+        self.recent_material_delay_hit_task_keys = list(snap.get("recent_material_delay_hit_task_keys", []))
+        self.recent_material_delay_hit_task_increments = {
+            str(k): float(v) for k, v in snap.get("recent_material_delay_hit_task_increments", {}).items()
+        }
         self.cumulative_material_delays_hit = int(snap.get("cumulative_material_delays_hit", 0))
         self.cumulative_material_delay_increment = float(snap.get("cumulative_material_delay_increment", 0.0))
+        self.cumulative_material_delay_hit_task_increments = {
+            str(k): float(v) for k, v in snap.get("cumulative_material_delay_hit_task_increments", {}).items()
+        }
         self.recent_change_summary = copy.deepcopy(snap.get("recent_change_summary", {}))
         self.aircraft = {k: ac.copy() for k, ac in snap["aircraft"].items()}
         self.tasks = {k: t.copy() for k, t in snap["tasks"].items()}

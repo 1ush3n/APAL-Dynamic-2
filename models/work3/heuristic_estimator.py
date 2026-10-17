@@ -38,10 +38,10 @@ def compute_station_estimated_finish(
     if ac_id is None:
         return current_time
 
-    # 收集归属本站且未完工的活动工序
+    # 收集归属本站且未完工的活动工序 (Q04: 使用站位索引直接获取)
     st_tasks = [
-        t for t in state.tasks.values()
-        if t.aircraft_id == ac_id and t.current_station == station_id and t.status != TaskStatus.COMPLETED
+        t for t in state.get_tasks_for_station(station_id)
+        if t.status != TaskStatus.COMPLETED
     ]
 
     if not st_tasks:

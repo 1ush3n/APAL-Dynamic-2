@@ -4,7 +4,7 @@
 依据《方法设计确认稿》第 4 节（条件分支强化学习）与标准 PPO 算法规范：
 1. 存储多架次脉动节拍仿真中的步步决策转移 (Transition)：
    - state_feat: 32 维精炼物理状态特征张量；
-   - time_urgency: 2 维显式时间紧迫度张量 [u_1, u_2]；
+   - time_urgency: 12 维时间紧迫度与下一周期站位特征张量 (含基础2维、下一周期5站残差预测及5站飞机停靠掩码；兼容旧版2/7维输入)；
    - sample_record: 包含工序索引、分支决策、工人选择、二元对齐等重放元数据的字典；
    - reward: 经势函数塑形后的标量回报 R_t = r_t^raw + F_t；
    - value: Critic 估计的状态价值 V(s_t)；
@@ -35,7 +35,7 @@ from envs.work3.core_types import CycleExecutionRecord, validate_cycle_execution
 class PPOTransition:
     """单步 PPO 交互样本数据类。"""
     state_feat: torch.Tensor          # (32,)
-    time_urgency: torch.Tensor        # (2,)
+    time_urgency: torch.Tensor        # 12维 (含旧版2/7维兼容)
     sample_record: dict[str, Any]     # 重放字典 (含 task_idx, branch, cand_feats, etc.)
     reward: float                     # 塑形后步步奖励
     raw_reward: float                 # 原始物理步步奖励
@@ -248,6 +248,19 @@ class PendingTimeLabelCache:
                     if mask is not None and isinstance(mask, torch.Tensor):
                         available_next_targets += int(mask.sum().item())
 
+        filtered_abandoned_current = 0
+        filtered_abandoned_next = 0
+        filtered_discard_reasons: dict[str, int] = {}
+        for (w, ep), v in self.discarded_counts_by_episode.items():
+            if (ep_filter is None or ep == ep_filter) and (w_filter is None or w == w_filter):
+                c = int(v.get("discarded_current", 0))
+                n = int(v.get("discarded_next", 0))
+                filtered_abandoned_current += c
+                filtered_abandoned_next += n
+                r = str(v.get("reason", "unknown"))
+                if c + n > 0:
+                    filtered_discard_reasons[r] = filtered_discard_reasons.get(r, 0) + (c + n)
+
         return {
             "waiting_current_samples": waiting_current,
             "waiting_next_samples": waiting_next,
@@ -256,9 +269,21 @@ class PendingTimeLabelCache:
             "available_next_station_targets": available_next_targets,
             "ready_rows": ready_rows_count,
             "total_pending_count": waiting_current + waiting_next,
-            "abandoned_current_samples": self.abandoned_current_samples,
-            "abandoned_next_samples": self.abandoned_next_samples,
-            "discard_reasons": dict(self.discard_reasons),
+            "abandoned_current_samples": (
+                self.abandoned_current_samples
+                if ep_filter is None and w_filter is None
+                else filtered_abandoned_current
+            ),
+            "abandoned_next_samples": (
+                self.abandoned_next_samples
+                if ep_filter is None and w_filter is None
+                else filtered_abandoned_next
+            ),
+            "discard_reasons": (
+                dict(self.discard_reasons)
+                if ep_filter is None and w_filter is None
+                else filtered_discard_reasons
+            ),
             "discarded_counts_by_episode": {
                 f"{k[0]}_{k[1]}": dict(v)
                 for k, v in self.discarded_counts_by_episode.items()
@@ -403,8 +428,16 @@ class PendingTimeLabelCache:
                 return True
 
         # 3. 预先计算所有增量与变更，校验通过前不修改内部任何状态 (原子性保证 N01/N03)
-        # 3.1 预计算上一周期 (cycle - 1) 的 next_cycle 结算
+        # 3.0 校验本周期起点时刻与上一周期转站终点时刻的连续性 (S04 / R1)
         prev_key = (worker, episode, cycle - 1)
+        if prev_key in self._last_transfer_times and cycle_start_time is not None:
+            prev_t = float(self._last_transfer_times[prev_key])
+            if abs(float(cycle_start_time) - prev_t) > 1e-4:
+                raise ValueError(
+                    f"周期 {cycle} 起点时刻 {cycle_start_time} 与上一周期 {cycle - 1} 实际转站时刻 {prev_t} 不衔接！"
+                )
+
+        # 3.1 预计算上一周期 (cycle - 1) 的 next_cycle 结算
         prev_samples = self._pending_next_cycle.get(prev_key)
         computed_prev_updates: list[tuple[dict[str, Any], torch.Tensor, torch.Tensor]] = []
         if prev_samples:
@@ -566,13 +599,19 @@ class PendingTimeLabelCache:
 
         discarded_current = 0
         discarded_next = 0
+        worker_current_discards: dict[int, int] = {}
+        worker_next_discards: dict[int, int] = {}
 
         # 1. 丢弃尚未收到本周期转站时刻 P_q 的样本
         retained_pending: dict[tuple[int, int, int], list[PendingTimeLabel]] = {}
         for key, samples in self._pending.items():
             if key[1] == episode and (w_filter is None or key[0] == w_filter):
-                discarded_current += len(samples)
-                discarded_next += len(samples)
+                w = key[0]
+                cnt = len(samples)
+                worker_current_discards[w] = worker_current_discards.get(w, 0) + cnt
+                worker_next_discards[w] = worker_next_discards.get(w, 0) + cnt
+                discarded_current += cnt
+                discarded_next += cnt
             else:
                 retained_pending[key] = samples
         self._pending = retained_pending
@@ -581,8 +620,10 @@ class PendingTimeLabelCache:
         retained_next = {}
         for key, items in self._pending_next_cycle.items():
             if key[1] == episode and (w_filter is None or key[0] == w_filter):
+                w = key[0]
                 for item in items:
                     if not item.get("has_next_ready", False):
+                        worker_next_discards[w] = worker_next_discards.get(w, 0) + 1
                         discarded_next += 1
                     if not item["current_drained"] or not item["next_drained"]:
                         out_item = copy.deepcopy(item)
@@ -614,14 +655,35 @@ class PendingTimeLabelCache:
 
         self.abandoned_current_samples += discarded_current
         self.abandoned_next_samples += discarded_next
-        self.discard_reasons[reason] = self.discard_reasons.get(reason, 0) + (discarded_current + discarded_next)
+        if discarded_current + discarded_next > 0:
+            self.discard_reasons[reason] = self.discard_reasons.get(reason, 0) + (discarded_current + discarded_next)
 
-        ep_key = (w_filter if w_filter is not None else -1, episode)
-        if ep_key not in self.discarded_counts_by_episode:
-            self.discarded_counts_by_episode[ep_key] = {"discarded_current": 0, "discarded_next": 0}
-        self.discarded_counts_by_episode[ep_key]["discarded_current"] += discarded_current
-        self.discarded_counts_by_episode[ep_key]["discarded_next"] += discarded_next
-        self.discarded_counts_by_episode[ep_key]["reason"] = str(reason)
+        all_workers = set(worker_current_discards.keys()) | set(worker_next_discards.keys())
+        if all_workers:
+            for w in all_workers:
+                c = worker_current_discards.get(w, 0)
+                n = worker_next_discards.get(w, 0)
+                ep_key = (w, episode)
+                if ep_key not in self.discarded_counts_by_episode:
+                    self.discarded_counts_by_episode[ep_key] = {
+                        "discarded_current": 0,
+                        "discarded_next": 0,
+                        "reason": str(reason),
+                    }
+                self.discarded_counts_by_episode[ep_key]["discarded_current"] += c
+                self.discarded_counts_by_episode[ep_key]["discarded_next"] += n
+                if c + n > 0 or not self.discarded_counts_by_episode[ep_key].get("reason"):
+                    self.discarded_counts_by_episode[ep_key]["reason"] = str(reason)
+        else:
+            ep_key = (w_filter if w_filter is not None else -1, episode)
+            if ep_key not in self.discarded_counts_by_episode:
+                self.discarded_counts_by_episode[ep_key] = {
+                    "discarded_current": 0,
+                    "discarded_next": 0,
+                    "reason": str(reason),
+                }
+            elif not self.discarded_counts_by_episode[ep_key].get("reason"):
+                self.discarded_counts_by_episode[ep_key]["reason"] = str(reason)
 
         return {
             "discarded_current": discarded_current,

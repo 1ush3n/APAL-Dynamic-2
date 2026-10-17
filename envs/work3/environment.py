@@ -150,6 +150,8 @@ class AirLineEnvWork3:
         self.state.recent_material_delays = 0
         self.state.recent_material_delays_hit = 0
         self.state.recent_material_delay_increment = 0.0
+        self.state.recent_material_delay_hit_task_keys = []
+        self.state.recent_material_delay_hit_task_increments = {}
         self.state.recent_worker_disturbances = 0
         self._last_step_time = 0.0
         self._record_station_first_cleared_if_ready()
@@ -779,6 +781,8 @@ class AirLineEnvWork3:
         self.state.recent_worker_disturbances = 0
         self.state.recent_material_delays_hit = 0
         self.state.recent_material_delay_increment = 0.0
+        self.state.recent_material_delay_hit_task_keys = []
+        self.state.recent_material_delay_hit_task_increments = {}
         task_key_value = action.get("task_key")
         task_key = None if task_key_value is None else str(task_key_value)
         branch = ActionBranch(action.get("branch", ActionBranch.STATION_EXECUTE))
@@ -1278,6 +1282,14 @@ class AirLineEnvWork3:
             inc = max(0.0, float(task.material_ready_time) - old_ready)
             self.state.recent_material_delay_increment += inc
             self.state.cumulative_material_delay_increment += inc
+            if task_key not in self.state.recent_material_delay_hit_task_keys:
+                self.state.recent_material_delay_hit_task_keys.append(task_key)
+            self.state.recent_material_delay_hit_task_increments[task_key] = (
+                self.state.recent_material_delay_hit_task_increments.get(task_key, 0.0) + inc
+            )
+            self.state.cumulative_material_delay_hit_task_increments[task_key] = (
+                self.state.cumulative_material_delay_hit_task_increments.get(task_key, 0.0) + inc
+            )
 
             if task.status == TaskStatus.RESERVED:
                 # 扰动只使固定决定被动顺延，不能清空决定或重新选队
