@@ -27,6 +27,7 @@ from envs.work3.core_types import (
     ADVANCE_CAUSES,
     ActionBranch,
     AircraftRuntimeState,
+    CycleExecutionRecord,
     MultiAircraftState,
     TaskRuntimeState,
     TaskStatus,
@@ -81,6 +82,7 @@ class AirLineEnvWork3:
         self.disturbance_event_results: dict[str, dict[str, Any]] = {}
         self._transfer_scheduled_for_cycle: int = 0
         self.total_tasks: int = len(self.state.tasks)
+        self._step_cycle_records: list[CycleExecutionRecord] = []
         self._station_occupied_tasks: dict[int, set[str]] = {
             s: set() for s in range(self.state.num_stations)
         }
@@ -112,6 +114,7 @@ class AirLineEnvWork3:
         self.disturbance_event_triggered = False
         self.disturbance_event_results.clear()
         self._transfer_scheduled_for_cycle = 0
+        self._step_cycle_records.clear()
         self.total_tasks = len(self.state.tasks)
         self._station_occupied_tasks = {s: set() for s in range(self.state.num_stations)}
 
@@ -970,6 +973,10 @@ class AirLineEnvWork3:
             c: dict(m) for c, m in self.state.station_first_cleared_times.items()
         }
         info["next_cycle_station_mask"] = tuple(self.state.get_next_cycle_station_mask())
+        info["cycle_execution_records"] = {
+            r.cycle_id: r.to_dict() for r in self._step_cycle_records
+        }
+        self._step_cycle_records.clear()
 
         return obs, reward, terminated, truncated, info
 
@@ -1374,6 +1381,19 @@ class AirLineEnvWork3:
         for s in range(self.state.num_stations):
             if s not in cleared_map and self.state.get_aircraft_at_station(s) is not None:
                 cleared_map[s] = float(timestamp)
+
+        occupied = tuple(self.state.get_aircraft_at_station(s) is not None for s in range(self.state.num_stations))
+        aircraft_at_stations = tuple(self.state.get_aircraft_at_station(s) for s in range(self.state.num_stations))
+        cycle_rec = CycleExecutionRecord(
+            cycle_id=current_q,
+            cycle_start_time=float(self.state.last_transfer_time),
+            transfer_time=float(timestamp),
+            occupied_stations=occupied,
+            aircraft_at_stations=aircraft_at_stations,
+            station_first_cleared_times=dict(cleared_map),
+        )
+        self.state.cycle_execution_records[current_q] = cycle_rec
+        self._step_cycle_records.append(cycle_rec)
 
         self.state.last_transfer_time = float(timestamp)
         self.state.transfer_history.append(float(timestamp))

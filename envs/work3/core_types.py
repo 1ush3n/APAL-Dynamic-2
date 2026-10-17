@@ -376,6 +376,28 @@ class AircraftRuntimeState:
 
 
 @dataclass
+class CycleExecutionRecord:
+    """单个脉动周期的实际执行与结算事实记录 (R01)。"""
+
+    cycle_id: int
+    cycle_start_time: float
+    transfer_time: float
+    occupied_stations: tuple[bool, ...]
+    aircraft_at_stations: tuple[int | None, ...]
+    station_first_cleared_times: dict[int, float]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "cycle_id": self.cycle_id,
+            "cycle_start_time": self.cycle_start_time,
+            "transfer_time": self.transfer_time,
+            "occupied_stations": tuple(self.occupied_stations),
+            "aircraft_at_stations": tuple(self.aircraft_at_stations),
+            "station_first_cleared_times": dict(self.station_first_cleared_times),
+        }
+
+
+@dataclass
 class MultiAircraftState:
     """多架次装配协同调度的全局环境完整快照。"""
 
@@ -390,6 +412,7 @@ class MultiAircraftState:
 
     # 首次实际就绪时刻跟踪与高频动态演化语义摘要 (R05 & R08)
     station_first_cleared_times: dict[int, dict[int, float]] = field(default_factory=dict)
+    cycle_execution_records: dict[int, CycleExecutionRecord] = field(default_factory=dict)
     last_action_branch: int = 0          # 上一决策动作分支 (0: NONE, 1: STAY, 2: POSTPONE, 3: ADVANCE)
     micro_steps_in_timestamp: int = 0    # 同刻微决策轮数计数
     recent_postponed_count: int = 0      # 当前周期内后移工序数
@@ -487,6 +510,7 @@ class MultiAircraftState:
             "last_transfer_time": self.last_transfer_time,
             "transfer_history": list(self.transfer_history),
             "station_first_cleared_times": copy.deepcopy(self.station_first_cleared_times),
+            "cycle_execution_records": copy.deepcopy(self.cycle_execution_records),
             "last_action_branch": self.last_action_branch,
             "micro_steps_in_timestamp": self.micro_steps_in_timestamp,
             "recent_postponed_count": self.recent_postponed_count,
@@ -504,6 +528,7 @@ class MultiAircraftState:
         self.last_transfer_time = float(snap["last_transfer_time"])
         self.transfer_history = list(snap["transfer_history"])
         self.station_first_cleared_times = copy.deepcopy(snap.get("station_first_cleared_times", {}))
+        self.cycle_execution_records = copy.deepcopy(snap.get("cycle_execution_records", {}))
         self.last_action_branch = int(snap.get("last_action_branch", 0))
         self.micro_steps_in_timestamp = int(snap.get("micro_steps_in_timestamp", 0))
         self.recent_postponed_count = int(snap.get("recent_postponed_count", 0))

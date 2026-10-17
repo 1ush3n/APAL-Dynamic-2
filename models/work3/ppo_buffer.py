@@ -243,19 +243,23 @@ class PendingTimeLabelCache:
                 if item["has_current_ready"] and not item["current_drained"]:
                     # 若此时下一周期也已结算，合并为单条双目标样本输出
                     if item["has_next_ready"] and not item["next_drained"]:
-                        ready_items.append(copy.deepcopy(item))
+                        out_item = copy.deepcopy(item)
+                        out_item["current_target_mask"] = True
+                        ready_items.append(out_item)
                         item["current_drained"] = True
                         item["next_drained"] = True
                     else:
                         # 仅输出当前残差，下一周期掩码置空
                         out_item = copy.deepcopy(item)
                         out_item["next_cycle_masks"] = torch.zeros(5, dtype=torch.bool)
+                        out_item["current_target_mask"] = True
                         ready_items.append(out_item)
                         item["current_drained"] = True
 
                 # 若当前残差在之前采样段已取出，现在下一周期目标刚结算：
                 elif item["has_next_ready"] and not item["next_drained"]:
                     out_item = copy.deepcopy(item)
+                    out_item["current_target_mask"] = False
                     ready_items.append(out_item)
                     item["next_drained"] = True
 
@@ -284,6 +288,10 @@ class PendingTimeLabelCache:
             "predictor_versions": [item["predictor_version"] for item in ready_items],
             "actual_transfer_times": torch.tensor([item["actual_transfer_time"] for item in ready_items]),
             "target_residuals": torch.tensor([item["target_residual"] for item in ready_items]),
+            "current_target_masks": torch.tensor(
+                [item.get("current_target_mask", True) for item in ready_items],
+                dtype=torch.bool,
+            ),
             "target_next_residuals": torch.stack([item["target_next_residuals"] for item in ready_items]),
             "next_cycle_masks": torch.stack([item["next_cycle_masks"] for item in ready_items]),
         }
@@ -304,8 +312,10 @@ class PendingTimeLabelCache:
                 for item in items:
                     if not item["current_drained"] or not item["next_drained"]:
                         out_item = copy.deepcopy(item)
-                        # 真实终止，未来不再有下一个周期，掩码全设为 False
-                        out_item["next_cycle_masks"] = torch.zeros(5, dtype=torch.bool)
+                        if not item.get("has_next_ready", False):
+                            # 真实终止且未来未揭示，未来不再有下一个周期，掩码全设为 False
+                            out_item["next_cycle_masks"] = torch.zeros(5, dtype=torch.bool)
+                        out_item["current_target_mask"] = not item["current_drained"]
                         self._ready.append(out_item)
             else:
                 retained_next[key] = items

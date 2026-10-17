@@ -1536,14 +1536,20 @@ def run_training(
                     for event in result.processed_events
                     if event[1] == "SYNCHRONOUS_TRANSFER"
                 ]
+                cycle_records = result.info.get("cycle_execution_records", {})
                 for offset, actual_transfer_time in enumerate(actual_transfers):
                     transfer_cycle_id = context["cycle_id"] + offset
                     label_count = pending_time_labels.pending_cycle_counts(
                         state.episode_id,
                         worker_id=worker_id,
                     ).get(transfer_cycle_id, 0)
-                    station_cleared_times = result.info.get("station_first_cleared_times", {}).get(transfer_cycle_id, {})
-                    next_cycle_station_mask = result.info.get("next_cycle_station_mask")
+                    cycle_rec = cycle_records.get(transfer_cycle_id)
+                    if cycle_rec is not None:
+                        station_cleared_times = cycle_rec.get("station_first_cleared_times", {})
+                        next_cycle_station_mask = cycle_rec.get("occupied_stations")
+                    else:
+                        station_cleared_times = result.info.get("station_first_cleared_times", {}).get(transfer_cycle_id, {})
+                        next_cycle_station_mask = result.info.get("next_cycle_station_mask")
                     label_available = pending_time_labels.attach_transfer(
                         episode_id=state.episode_id,
                         worker_id=worker_id,
