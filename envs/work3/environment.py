@@ -933,6 +933,7 @@ class AirLineEnvWork3:
             self._advance_events_until_next_decision()
             if not self.get_action_candidates() and not self._check_terminated():
                 info["success"] = False
+                info["termination_reason"] = "deadlock"
         # 记录高频动态演化语义摘要 (R08) - 仅在动作生效后更新
         self.state.last_action_branch = int(branch.value)
         if abs(self.state.current_time - getattr(self, "_last_step_time", self.state.current_time)) < self.tolerance:

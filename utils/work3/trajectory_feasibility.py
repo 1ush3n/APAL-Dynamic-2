@@ -94,7 +94,23 @@ def validate_trajectory(
             add("unknown_task", record)
             continue
 
-        if record.start < -tolerance or record.end <= record.start + tolerance:
+        # 时间有限性与顺序校验 (U14-U17)
+        if (
+            not math.isfinite(record.start)
+            or not math.isfinite(record.end)
+            or (record.material_ready_time is not None and not math.isfinite(record.material_ready_time))
+            or (record.station_entry_time is not None and not math.isfinite(record.station_entry_time))
+            or (record.station_exit_time is not None and not math.isfinite(record.station_exit_time))
+        ):
+            add("invalid_time", record)
+        elif record.start < -tolerance or record.end < record.start - tolerance:
+            add("invalid_time", record)
+        elif (
+            constraint.standard_duration is not None
+            and constraint.standard_duration > tolerance
+            and record.end <= record.start + tolerance
+        ):
+            # 正工时标准时间任务，异常以零工时执行 (U17)
             add("invalid_time", record)
         if record.start < record.material_ready_time - tolerance:
             add("material_release", record, release_time=record.material_ready_time)
@@ -140,7 +156,7 @@ def validate_trajectory(
         if worker_efficiencies is not None:
             if constraint.standard_duration is None:
                 add("missing_duration_inputs", record, field="standard_duration")
-            elif constraint.standard_duration < -tolerance:
+            elif not math.isfinite(constraint.standard_duration) or constraint.standard_duration < -tolerance:
                 add(
                     "invalid_duration_inputs",
                     record,
@@ -153,34 +169,47 @@ def validate_trajectory(
                     efficiencies = [float(worker_efficiencies[worker_id]) for worker_id in record.team]
                     if any(not math.isfinite(value) or value <= 0.0 for value in efficiencies):
                         add("invalid_duration_inputs", record, field="worker_efficiencies")
-                    elif constraint.standard_duration <= tolerance:
-                        expected_duration = 0.0
                     else:
-                        effective_capacity = sum(efficiencies) * calculate_team_synergy_factor(
-                            len(record.team)
-                        )
-                        if effective_capacity <= tolerance:
-                            add("invalid_duration_inputs", record, field="effective_capacity")
+                        if constraint.standard_duration <= tolerance:
+                            expected_duration = 0.0
                         else:
-                            expected_duration = (
-                                float(constraint.standard_duration)
-                                * int(constraint.demand)
-                                / effective_capacity
+                            effective_capacity = sum(efficiencies) * calculate_team_synergy_factor(
+                                len(record.team)
                             )
-                            actual_duration = record.end - record.start
-                            if (
-                                not math.isfinite(expected_duration)
-                                or not math.isfinite(actual_duration)
-                            ):
-                                add("invalid_duration_inputs", record, field="duration")
-                            elif abs(expected_duration - actual_duration) > 1e-4:
-                                add(
-                                    "duration_mismatch",
-                                    record,
-                                    expected_duration=expected_duration,
-                                    actual_duration=actual_duration,
-                                    tolerance_hours=1e-4,
+                            if effective_capacity <= tolerance:
+                                add("invalid_duration_inputs", record, field="effective_capacity")
+                                expected_duration = None
+                            else:
+                                expected_duration = (
+                                    float(constraint.standard_duration)
+                                    * int(constraint.demand)
+                                    / effective_capacity
                                 )
+
+                        if expected_duration is not None:
+                            actual_duration = record.end - record.start
+                            if not math.isfinite(expected_duration) or not math.isfinite(actual_duration):
+                                add("invalid_duration_inputs", record, field="duration")
+                            elif expected_duration <= tolerance:
+                                # 零工时任务：实际时长必须在容差内等于0 (U14/U15)
+                                if actual_duration < -tolerance or actual_duration > tolerance + 1e-4:
+                                    add(
+                                        "duration_mismatch",
+                                        record,
+                                        expected_duration=0.0,
+                                        actual_duration=actual_duration,
+                                        tolerance_hours=1e-4,
+                                    )
+                            else:
+                                # 正工时任务：核对工时一致性 (U17)
+                                if abs(expected_duration - actual_duration) > 1e-4:
+                                    add(
+                                        "duration_mismatch",
+                                        record,
+                                        expected_duration=expected_duration,
+                                        actual_duration=actual_duration,
+                                        tolerance_hours=1e-4,
+                                    )
 
     for (aircraft_id, task_id), record in keyed.items():
         constraint = task_constraints.get(task_id)
@@ -196,7 +225,11 @@ def validate_trajectory(
                 add("station_precedence", record, predecessor_id=predecessor_id)
 
     for worker_id, intervals in worker_intervals.items():
-        ordered = sorted(intervals, key=lambda item: (item.start, item.end))
+        # 零时资源区间按空半开区间 [t, t) 处理，不阻塞人员并发；只对正工时记录进行相邻重叠判定 (U18)
+        positive_intervals = [
+            item for item in intervals if item.end > item.start + tolerance
+        ]
+        ordered = sorted(positive_intervals, key=lambda item: (item.start, item.end))
         for previous, current in zip(ordered, ordered[1:]):
             if previous.end > current.start + tolerance:
                 add("worker_overlap", current, worker_id=worker_id)
