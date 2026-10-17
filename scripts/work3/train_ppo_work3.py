@@ -603,7 +603,18 @@ def compute_online_time_inputs(
             h0=env.state.h0,
             device=device,
         )
-    return graph_snapshot, urgency, predicted_transfer.squeeze(0)
+        if hasattr(time_head, "predict_next_cycle_residuals"):
+            next_residuals = time_head.predict_next_cycle_residuals(shared_feature).squeeze(0)
+        else:
+            next_residuals = torch.zeros(5, dtype=torch.float32, device=device)
+        next_mask = env.state.get_next_cycle_station_mask()
+        occupancy = torch.tensor(
+            [1.0 if m else 0.0 for m in next_mask],
+            dtype=torch.float32,
+            device=device,
+        )
+        time_features = torch.cat([urgency, next_residuals, occupancy], dim=-1)
+    return graph_snapshot, time_features, predicted_transfer.squeeze(0)
 
 
 def compute_online_snapshot_time_inputs(

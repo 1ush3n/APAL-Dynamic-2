@@ -119,6 +119,17 @@ class FormalEvaluationAgent:
                     h0=env.state.h0,
                     device=device,
                 )
+                if hasattr(self.time_head, "predict_next_cycle_residuals"):
+                    next_residuals = self.time_head.predict_next_cycle_residuals(shared_feature).squeeze(0)
+                else:
+                    next_residuals = torch.zeros(5, dtype=torch.float32, device=device)
+                next_mask = env.state.get_next_cycle_station_mask()
+                occupancy = torch.tensor(
+                    [1.0 if m else 0.0 for m in next_mask],
+                    dtype=torch.float32,
+                    device=device,
+                )
+                time_features = torch.cat([time_urgency, next_residuals, occupancy], dim=-1)
         else:
             time_urgency = compute_time_urgency_vector(
                 estimated_r=max(0.0, cmax - float(env.state.current_time)),
@@ -127,6 +138,14 @@ class FormalEvaluationAgent:
                 h0=env.state.h0,
                 device=device,
             )
+            next_residuals = torch.zeros(5, dtype=torch.float32, device=device)
+            next_mask = env.state.get_next_cycle_station_mask()
+            occupancy = torch.tensor(
+                [1.0 if m else 0.0 for m in next_mask],
+                dtype=torch.float32,
+                device=device,
+            )
+            time_features = torch.cat([time_urgency, next_residuals, occupancy], dim=-1)
         self.last_time_prediction = (
             int(env.state.current_cycle),
             float(cmax),
@@ -136,7 +155,7 @@ class FormalEvaluationAgent:
         action, _, _, _ = self.actor_critic.select_action(
             env=env,
             state_feat=state_feat,
-            time_urgency=time_urgency,
+            time_urgency=time_features,
             deterministic=True,
             allow_postpone=self.profile.allow_postpone,
         )

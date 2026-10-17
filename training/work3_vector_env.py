@@ -358,12 +358,19 @@ def _worker_main(
                         env.state,
                         estimated_cmax,
                     )
-                    time_features = compute_time_urgency_vector(
+                    urgency = compute_time_urgency_vector(
                         estimated_r=max(0.0, estimated_cmax - env.state.current_time),
                         current_time=env.state.current_time,
                         last_transfer_time=env.state.last_transfer_time,
                         h0=env.state.h0,
                     )
+                    next_residuals = torch.zeros(5, dtype=torch.float32)
+                    next_mask = env.state.get_next_cycle_station_mask()
+                    occupancy = torch.tensor(
+                        [1.0 if m else 0.0 for m in next_mask],
+                        dtype=torch.float32,
+                    )
+                    time_features = torch.cat([urgency, next_residuals, occupancy], dim=-1)
                     result = build_decision_snapshot(
                         env,
                         graph_builder,

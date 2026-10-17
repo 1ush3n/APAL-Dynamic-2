@@ -331,7 +331,11 @@ class PPOTrainerWork3:
         if time_auxiliary_batch is not None:
             if self.time_head is None:
                 raise RuntimeError("收到时间标签批次，但训练器未配置时间头")
-            time_label_count = int(time_auxiliary_batch["target_residuals"].numel())
+            time_label_count = (
+                int(time_auxiliary_batch["state_feats"].size(0))
+                if "state_feats" in time_auxiliary_batch
+                else int(time_auxiliary_batch["target_residuals"].numel())
+            )
             if time_label_count and self.time_loss_coef > 0.0:
                 graph_snapshots = time_auxiliary_batch["graph_snapshots"]
                 worker_ids = time_auxiliary_batch.get(
@@ -371,6 +375,18 @@ class PPOTrainerWork3:
                             "cycle_ids": [cycle_ids[index] for index in batch_indices],
                             "decision_ids": [decision_ids[index] for index in batch_indices],
                         }
+                        if "current_target_masks" in time_auxiliary_batch:
+                            auxiliary_minibatch["current_target_masks"] = time_auxiliary_batch[
+                                "current_target_masks"
+                            ][batch_indices]
+                        if "target_next_residuals" in time_auxiliary_batch:
+                            auxiliary_minibatch["target_next_residuals"] = time_auxiliary_batch[
+                                "target_next_residuals"
+                            ][batch_indices]
+                        if "next_cycle_masks" in time_auxiliary_batch:
+                            auxiliary_minibatch["next_cycle_masks"] = time_auxiliary_batch[
+                                "next_cycle_masks"
+                            ][batch_indices]
                         self.optimizer.zero_grad()
                         time_loss = self.compute_time_auxiliary_loss(auxiliary_minibatch)
                         auxiliary_loss = self.time_loss_coef * time_loss
