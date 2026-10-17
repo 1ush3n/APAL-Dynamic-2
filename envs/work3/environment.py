@@ -32,6 +32,7 @@ from envs.work3.core_types import (
     TaskRuntimeState,
     TaskStatus,
     initialize_multi_aircraft_state,
+    validate_cycle_execution_record,
 )
 from envs.work3.decision_snapshot import (
     TeamCompletionContext,
@@ -1367,23 +1368,29 @@ class AirLineEnvWork3:
 
     def _execute_synchronous_transfer(self, timestamp: float) -> None:
         """执行全线同步脉动流转（Task 2.5）：各机站位+1，唤醒后移任务。"""
-        # 计账：结算本周期节拍超期 J_takt 增量
-        duration_h = float(timestamp) - self.state.last_transfer_time
-        overdue_h = max(0.0, duration_h - self.state.h0)
-        takt_violation = overdue_h / self.state.h0
-        cost_takt_inc = self.weights.w_h * takt_violation
-        self.cost_takt += cost_takt_inc
-        self.cumulative_cost += cost_takt_inc
-
-        # 确保当前周期所有占位站位记录首次就绪时刻 (R05)
         current_q = self.state.current_cycle
         cleared_map = self.state.station_first_cleared_times.setdefault(current_q, {})
-        for s in range(self.state.num_stations):
-            if s not in cleared_map and self.state.get_aircraft_at_station(s) is not None:
-                cleared_map[s] = float(timestamp)
 
+        # 原子校验：确保当前周期所有占位站位具有合法有效的首次就绪时刻 F[m, q] (R01/U04)
         occupied = tuple(self.state.get_aircraft_at_station(s) is not None for s in range(self.state.num_stations))
         aircraft_at_stations = tuple(self.state.get_aircraft_at_station(s) for s in range(self.state.num_stations))
+        for s in range(self.state.num_stations):
+            ac_id = aircraft_at_stations[s]
+            if ac_id is not None:
+                if s not in cleared_map:
+                    raise RuntimeError(
+                        f"脉动周期 {current_q} 转站校验失败：占位站位 {s} (飞机 {ac_id}) 缺少首次就绪时刻 F[m, q]，严禁静默补造或替代！"
+                    )
+                f_val = cleared_map[s]
+                if not math.isfinite(f_val):
+                    raise RuntimeError(
+                        f"脉动周期 {current_q} 转站校验失败：占位站位 {s} (飞机 {ac_id}) 的首次就绪时刻非有限: {f_val}"
+                    )
+                if f_val < self.state.last_transfer_time - self.tolerance or f_val > float(timestamp) + self.tolerance:
+                    raise RuntimeError(
+                        f"脉动周期 {current_q} 转站校验失败：占位站位 {s} 的就绪时刻 {f_val} 超出周期区间 [{self.state.last_transfer_time}, {timestamp}]"
+                    )
+
         cycle_rec = CycleExecutionRecord(
             cycle_id=current_q,
             cycle_start_time=float(self.state.last_transfer_time),
@@ -1392,6 +1399,16 @@ class AirLineEnvWork3:
             aircraft_at_stations=aircraft_at_stations,
             station_first_cleared_times=dict(cleared_map),
         )
+        validate_cycle_execution_record(cycle_rec, tolerance=self.tolerance)
+
+        # 计账：结算本周期节拍超期 J_takt 增量（必须在校验通过后才计费，保持原子性）
+        duration_h = float(timestamp) - self.state.last_transfer_time
+        overdue_h = max(0.0, duration_h - self.state.h0)
+        takt_violation = overdue_h / self.state.h0
+        cost_takt_inc = self.weights.w_h * takt_violation
+        self.cost_takt += cost_takt_inc
+        self.cumulative_cost += cost_takt_inc
+
         self.state.cycle_execution_records[current_q] = cycle_rec
         self._step_cycle_records.append(cycle_rec)
 

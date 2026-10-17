@@ -375,7 +375,10 @@ class AircraftRuntimeState:
         )
 
 
-@dataclass
+import math
+
+
+@dataclass(frozen=True)
 class CycleExecutionRecord:
     """单个脉动周期的实际执行与结算事实记录 (R01)。"""
 
@@ -384,17 +387,83 @@ class CycleExecutionRecord:
     transfer_time: float
     occupied_stations: tuple[bool, ...]
     aircraft_at_stations: tuple[int | None, ...]
-    station_first_cleared_times: dict[int, float]
+    station_first_cleared_times: Mapping[int, float] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "cycle_id", int(self.cycle_id))
+        object.__setattr__(self, "cycle_start_time", float(self.cycle_start_time))
+        object.__setattr__(self, "transfer_time", float(self.transfer_time))
+        object.__setattr__(self, "occupied_stations", tuple(bool(x) for x in self.occupied_stations))
+        object.__setattr__(
+            self,
+            "aircraft_at_stations",
+            tuple(int(x) if x is not None else None for x in self.aircraft_at_stations),
+        )
+        if isinstance(self.station_first_cleared_times, Mapping):
+            cleared = {int(k): float(v) for k, v in self.station_first_cleared_times.items()}
+        else:
+            cleared = {int(k): float(v) for k, v in dict(self.station_first_cleared_times).items()}
+        object.__setattr__(self, "station_first_cleared_times", MappingProxyType(cleared))
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "cycle_id": self.cycle_id,
-            "cycle_start_time": self.cycle_start_time,
-            "transfer_time": self.transfer_time,
+            "cycle_id": int(self.cycle_id),
+            "cycle_start_time": float(self.cycle_start_time),
+            "transfer_time": float(self.transfer_time),
             "occupied_stations": tuple(self.occupied_stations),
             "aircraft_at_stations": tuple(self.aircraft_at_stations),
-            "station_first_cleared_times": dict(self.station_first_cleared_times),
+            "station_first_cleared_times": {int(k): float(v) for k, v in self.station_first_cleared_times.items()},
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CycleExecutionRecord:
+        cleared = data.get("station_first_cleared_times", {})
+        return cls(
+            cycle_id=int(data["cycle_id"]),
+            cycle_start_time=float(data["cycle_start_time"]),
+            transfer_time=float(data["transfer_time"]),
+            occupied_stations=tuple(bool(x) for x in data["occupied_stations"]),
+            aircraft_at_stations=tuple(
+                int(x) if x is not None else None for x in data["aircraft_at_stations"]
+            ),
+            station_first_cleared_times={int(k): float(v) for k, v in cleared.items()},
+        )
+
+
+def validate_cycle_execution_record(rec: CycleExecutionRecord, tolerance: float = 1e-6) -> None:
+    """原子校验周期执行事实记录的物理合法性与数据完整性 (U03-U04)。"""
+    if not isinstance(rec, CycleExecutionRecord):
+        raise TypeError(f"期望 CycleExecutionRecord，收到: {type(rec)}")
+    if rec.cycle_id < 1:
+        raise ValueError(f"周期号非法: {rec.cycle_id}")
+    if not math.isfinite(rec.cycle_start_time) or rec.cycle_start_time < -tolerance:
+        raise ValueError(f"周期起点时间非有限或为负: {rec.cycle_start_time}")
+    if not math.isfinite(rec.transfer_time) or rec.transfer_time < rec.cycle_start_time - tolerance:
+        raise ValueError(f"脉动时刻 {rec.transfer_time} 早于起点 {rec.cycle_start_time}")
+    if len(rec.occupied_stations) != 5:
+        raise ValueError(f"占用站位数必须为5，当前为: {len(rec.occupied_stations)}")
+    if len(rec.aircraft_at_stations) != 5:
+        raise ValueError(f"站位飞机数必须为5，当前为: {len(rec.aircraft_at_stations)}")
+
+    for s in range(5):
+        is_occ = rec.occupied_stations[s]
+        ac_id = rec.aircraft_at_stations[s]
+        if is_occ:
+            if ac_id is None:
+                raise ValueError(f"站位 {s} 标记为占用但飞机ID为None")
+            if s not in rec.station_first_cleared_times:
+                raise ValueError(f"占用站位 {s} (飞机 {ac_id}) 缺少首次就绪时刻 F[m, q]")
+            f_val = rec.station_first_cleared_times[s]
+            if not math.isfinite(f_val):
+                raise ValueError(f"占用站位 {s} 的就绪时刻 F 非有限数值: {f_val}")
+            if f_val < rec.cycle_start_time - tolerance:
+                raise ValueError(f"占用站位 {s} 的就绪时刻 {f_val} 早于周期起点 {rec.cycle_start_time}")
+            if f_val > rec.transfer_time + tolerance:
+                raise ValueError(f"占用站位 {s} 的就绪时刻 {f_val} 晚于脉动时刻 {rec.transfer_time}")
+        else:
+            if ac_id is not None:
+                raise ValueError(f"站位 {s} 标记为空但存在飞机ID {ac_id}")
+
 
 
 @dataclass

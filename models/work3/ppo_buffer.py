@@ -22,10 +22,13 @@
 from __future__ import annotations
 
 import copy
+import math
 from dataclasses import dataclass, field
 from typing import Any, Iterator, Mapping
 
 import torch
+
+from envs.work3.core_types import CycleExecutionRecord, validate_cycle_execution_record
 
 
 @dataclass
@@ -80,23 +83,107 @@ class PendingTimeLabelCache:
         self._ready: list[dict[str, Any]] = []
         self._last_decision_ids: dict[tuple[int, int], int] = {}
         self._last_transfer_times: dict[tuple[int, int, int], float] = {}
+        self.abandoned_current_samples: int = 0
+        self.abandoned_next_samples: int = 0
+
+    @property
+    def waiting_current_samples(self) -> int:
+        """等待当前周期转站时刻 P_q 结算的样本总数。"""
+        return sum(len(samples) for samples in self._pending.values())
+
+    @property
+    def waiting_next_samples(self) -> int:
+        """等待下一周期就绪事实 F[m, q+1] 结算的样本总数。"""
+        return sum(
+            sum(1 for item in items if not item.get("has_next_ready", False))
+            for items in self._pending_next_cycle.values()
+        )
+
+    @property
+    def available_current_samples(self) -> int:
+        """当前残差已就绪且尚未被训练取出的样本数。"""
+        return sum(
+            sum(1 for item in items if item.get("has_current_ready", False) and not item.get("current_drained", False))
+            for items in self._pending_next_cycle.values()
+        )
+
+    @property
+    def available_next_samples(self) -> int:
+        """下一周期残差已就绪且尚未被训练取出的样本数。"""
+        return sum(
+            sum(1 for item in items if item.get("has_next_ready", False) and not item.get("next_drained", False))
+            for items in self._pending_next_cycle.values()
+        )
+
+    @property
+    def available_next_station_targets(self) -> int:
+        """下一周期残差已就绪且尚未取出的有效站位目标总数。"""
+        count = 0
+        for items in self._pending_next_cycle.values():
+            for item in items:
+                if item.get("has_next_ready", False) and not item.get("next_drained", False):
+                    mask = item.get("next_cycle_masks")
+                    if mask is not None and isinstance(mask, torch.Tensor):
+                        count += int(mask.sum().item())
+        return count
+
+    @property
+    def ready_rows(self) -> int:
+        """暂存在 _ready 中的行数。"""
+        return len(self._ready)
+
+    @property
+    def total_pending_count(self) -> int:
+        """等待结算的样本总数 (当前 + 下一)。"""
+        return self.waiting_current_samples + self.waiting_next_samples
 
     @property
     def pending_count(self) -> int:
-        return sum(len(samples) for samples in self._pending.values())
+        """保留旧接口：返回等待当前周期结算的样本数。"""
+        return self.waiting_current_samples
 
     def pending_cycle_counts(
         self,
         episode_id: int,
         worker_id: int = 0,
     ) -> dict[int, int]:
-        """返回指定episode中尚未获得真实转站标签的周期样本数。"""
+        """返回指定episode中尚未获得当前转站标签的周期样本数。"""
         episode = int(episode_id)
         worker = int(worker_id)
         return {
             cycle_id: len(samples)
             for (pending_worker, pending_episode, cycle_id), samples in self._pending.items()
             if pending_worker == worker and pending_episode == episode
+        }
+
+    def pending_next_cycle_counts(
+        self,
+        episode_id: int,
+        worker_id: int = 0,
+    ) -> dict[int, int]:
+        """返回指定episode中已获得P_q但仍在等待下一周期事实的周期样本数 (U11)。"""
+        episode = int(episode_id)
+        worker = int(worker_id)
+        counts: dict[int, int] = {}
+        for (w, ep, c), items in self._pending_next_cycle.items():
+            if w == worker and ep == episode:
+                unsettled = sum(1 for item in items if not item.get("has_next_ready", False))
+                if unsettled > 0:
+                    counts[c] = unsettled
+        return counts
+
+    def stats(self, episode_id: int | None = None, worker_id: int | None = None) -> dict[str, int]:
+        """返回详细的样本与目标分项统计报告 (U11)。"""
+        return {
+            "waiting_current_samples": self.waiting_current_samples,
+            "waiting_next_samples": self.waiting_next_samples,
+            "available_current_samples": self.available_current_samples,
+            "available_next_samples": self.available_next_samples,
+            "available_next_station_targets": self.available_next_station_targets,
+            "ready_rows": self.ready_rows,
+            "total_pending_count": self.total_pending_count,
+            "abandoned_current_samples": self.abandoned_current_samples,
+            "abandoned_next_samples": self.abandoned_next_samples,
         }
 
     def add(
@@ -154,12 +241,42 @@ class PendingTimeLabelCache:
         worker_id: int = 0,
         station_cleared_times: dict[int, float] | None = None,
         next_cycle_station_mask: Sequence[bool] | None = None,
+        cycle_record: CycleExecutionRecord | None = None,
     ) -> bool:
-        """用真实转站时刻补齐一个周期的归一化残差，并结算上一周期的下一周期预测向量 (R07)。"""
+        """用真实转站时刻补齐一个周期的归一化残差，并结算上一周期的下一周期预测向量 (R07/U03-U06)。"""
         worker = int(worker_id)
         episode = int(episode_id)
         cycle = int(cycle_id)
         key = (worker, episode, cycle)
+
+        if not math.isfinite(float(actual_transfer_time)):
+            raise ValueError(f"实际转站时刻非有限数值: {actual_transfer_time}")
+
+        if cycle_record is not None:
+            validate_cycle_execution_record(cycle_record)
+            if cycle_record.cycle_id != cycle:
+                raise ValueError(f"cycle_record周期号 {cycle_record.cycle_id} 与参数 {cycle} 不一致")
+            if abs(cycle_record.transfer_time - float(actual_transfer_time)) > 1e-4:
+                raise ValueError(
+                    f"cycle_record转站时刻 {cycle_record.transfer_time} 与参数 {actual_transfer_time} 不一致"
+                )
+            if station_cleared_times is None:
+                station_cleared_times = dict(cycle_record.station_first_cleared_times)
+            if next_cycle_station_mask is None:
+                next_cycle_station_mask = cycle_record.occupied_stations
+
+        # 幂等性与冲突校验 (U05)：
+        if key in self._last_transfer_times:
+            recorded_t = self._last_transfer_times[key]
+            if abs(recorded_t - float(actual_transfer_time)) > 1e-4:
+                raise ValueError(
+                    f"冲突的周期转站事实：周期 {cycle} 已记录转站时刻 {recorded_t}，收到冲突时刻 {actual_transfer_time}"
+                )
+            if key in self._pending_next_cycle and key not in self._pending:
+                # 已经完成过该周期的结算，事实一致时幂等返回 True
+                return True
+
+        # 原子提交校验：在所有合法性判断完成后，才写入 transfer_times
         self._last_transfer_times[key] = float(actual_transfer_time)
 
         # 1. 如果上一周期 (cycle - 1) 在等待本周期的就绪事实，在此结算其下一周期向量
@@ -299,17 +416,36 @@ class PendingTimeLabelCache:
             result["time_urgencies"] = torch.stack([item["time_urgency"] for item in ready_items])
         return result
 
-    def discard_episode(self, episode_id: int, worker_id: int | None = None) -> None:
-        """丢弃失败/终止episode未揭示的标签；已通过attach_transfer揭示当前标签的样本转入ready。"""
+    def discard_episode(
+        self,
+        episode_id: int,
+        worker_id: int | None = None,
+        reason: str = "episode_ended",
+    ) -> dict[str, int]:
+        """清空指定worker/episode的待定样本与结果索引，审计丢弃数量并释放内存 (U12-U13)。"""
         episode = int(episode_id)
-        self._pending = {
-            key: samples for key, samples in self._pending.items()
-            if not (key[1] == episode and (worker_id is None or key[0] == int(worker_id)))
-        }
+        w_filter = int(worker_id) if worker_id is not None else None
+
+        discarded_current = 0
+        discarded_next = 0
+
+        # 1. 丢弃尚未收到本周期转站时刻 P_q 的样本
+        retained_pending: dict[tuple[int, int, int], list[PendingTimeLabel]] = {}
+        for key, samples in self._pending.items():
+            if key[1] == episode and (w_filter is None or key[0] == w_filter):
+                discarded_current += len(samples)
+                discarded_next += len(samples)
+            else:
+                retained_pending[key] = samples
+        self._pending = retained_pending
+
+        # 2. 检查已结算当前残差但仍在等待下一周期的样本，转入 _ready
         retained_next = {}
         for key, items in self._pending_next_cycle.items():
-            if key[1] == episode and (worker_id is None or key[0] == int(worker_id)):
+            if key[1] == episode and (w_filter is None or key[0] == w_filter):
                 for item in items:
+                    if not item.get("has_next_ready", False):
+                        discarded_next += 1
                     if not item["current_drained"] or not item["next_drained"]:
                         out_item = copy.deepcopy(item)
                         if not item.get("has_next_ready", False):
@@ -320,10 +456,25 @@ class PendingTimeLabelCache:
             else:
                 retained_next[key] = items
         self._pending_next_cycle = retained_next
+
+        # 3. 清理结果索引与缓存，避免跨 episode 内存泄漏 (U13)
         self._last_decision_ids = {
             key: decision_id
             for key, decision_id in self._last_decision_ids.items()
-            if not (key[1] == episode and (worker_id is None or key[0] == int(worker_id)))
+            if not (key[1] == episode and (w_filter is None or key[0] == w_filter))
+        }
+        self._last_transfer_times = {
+            key: t_val
+            for key, t_val in self._last_transfer_times.items()
+            if not (key[1] == episode and (w_filter is None or key[0] == w_filter))
+        }
+
+        self.abandoned_current_samples += discarded_current
+        self.abandoned_next_samples += discarded_next
+
+        return {
+            "discarded_current": discarded_current,
+            "discarded_next": discarded_next,
         }
 
 
