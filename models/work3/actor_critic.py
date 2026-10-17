@@ -979,7 +979,7 @@ class ActorCriticWork3(nn.Module):
         batch_size = len(sample_records)
         for record in sample_records:
             act_type = record.get("action_type")
-            if act_type not in ("forced_advance", "advance_to_next_event", "station_execute", "postpone"):
+            if act_type not in ("forced_advance", "advance_to_next_event", "schedule", "station_execute", "postpone"):
                 raise ValueError(f"PPO样本缺少合法动作类型 action_type: {act_type!r}")
             graph_version = record.get("graph_version")
             if not allow_legacy and record.get("graph_snapshot") is not None and not graph_version:

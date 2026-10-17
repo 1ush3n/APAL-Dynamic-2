@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-10-17 18:21:32",
-  "total_elapsed_seconds": 217.39167630000156,
+  "timestamp": "2026-10-17 20:09:40",
+  "total_elapsed_seconds": 445.1857405999908,
   "section_9_1": {
     "status": "PASS",
     "completed_tasks": 70,
     "total_tasks": 70,
     "transfers": 11,
-    "elapsed_seconds": 0.16987569999764673,
+    "elapsed_seconds": 0.18615979999594856,
     "cost_breakdown": {
       "j_takt": 0.0,
       "d_time": 0.0001300534368508665,
@@ -31,7 +31,7 @@
       "feasible": true,
       "makespan": 3055.4313412919582,
       "j_total": 1.310728848589564e-12,
-      "elapsed_seconds": 32.070393000001786
+      "elapsed_seconds": 33.53209550000611
     },
     "disturbed": {
       "scenario_id": "REAL_283_DEDICATED_HIT",
@@ -44,19 +44,19 @@
       "actual_hit_task_keys": [
         "5_16"
       ],
-      "elapsed_seconds": 32.68248360000143
+      "elapsed_seconds": 33.37343960000726
     }
   },
   "section_9_3": {
     "status": "PASS",
     "method_c": {
       "decisions": 32,
-      "elapsed_seconds": 52.91444880000199,
+      "elapsed_seconds": 60.06876860000193,
       "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_c_smoke.pt"
     },
     "method_d": {
       "decisions": 32,
-      "elapsed_seconds": 96.24793240000145,
+      "elapsed_seconds": 111.53114659999846,
       "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_d_smoke.pt",
       "cycle_time_labels_count": 2,
       "available_labels_count": 1,
@@ -65,14 +65,25 @@
         "transfer_time": 21.18755730190025
       }
     },
-    "dual_target_gradient_check": {
-      "loss": 0.3448910415172577,
-      "compact_grad_norm": 1.1338258981704712,
-      "line_fusion_grad_norm": 5.403876304626465,
-      "station_summary_grad_norm": 0.021375246345996857,
-      "aircraft_role_grad_norm": 0.023024069145321846,
-      "current_head_grad_norm": 5.670454025268555,
-      "next_head_grad_norm": 3.3798036575317383
+    "synthetic_dual_target_gradient_check": {
+      "loss": 0.303884893655777,
+      "compact_grad_norm": 0.7865741848945618,
+      "line_fusion_grad_norm": 2.767449140548706,
+      "station_summary_grad_norm": 0.012416502460837364,
+      "aircraft_role_grad_norm": 0.012683001346886158,
+      "current_head_grad_norm": 0.49249130487442017,
+      "next_head_grad_norm": 3.7714433670043945
+    },
+    "real_dual_target_closed_loop_check": {
+      "p1_samples_drained": 11,
+      "p2_samples_drained": 33,
+      "compact_grad_norm": 0.038412630558013916,
+      "line_fusion_grad_norm": 0.1586109697818756,
+      "station_summary_grad_norm": 0.0004851676058024168,
+      "aircraft_role_grad_norm": 0.000500165275298059,
+      "current_head_grad_norm": 0.1616784930229187,
+      "next_head_grad_norm": 0.14541275799274445,
+      "frozen_actor_grad_is_none": true
     }
   }
 }

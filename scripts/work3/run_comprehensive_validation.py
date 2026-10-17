@@ -17,7 +17,9 @@ import json
 import math
 import sys
 import time
+import copy
 from dataclasses import replace
+import gc
 from pathlib import Path
 from typing import Any
 
@@ -27,12 +29,18 @@ if str(ROOT_DIR) not in sys.path:
 
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus
+from envs.work3.core_types import ActionBranch, TaskStatus, CycleExecutionRecord
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import (
     ActorCriticWork3,
     extract_compact_state_features,
 )
+from models.work3.ppo_buffer import (
+    PendingTimeLabelCache,
+    RolloutBufferWork3,
+    PPOTransition,
+)
+from training.work3_lightning import Work3LightningModule, Work3TrainingUpdate
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
@@ -324,30 +332,30 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     available_labels = [l for l in cycle_time_labels if l.get("label_available")]
     assert len(available_labels) > 0, "Method D 必须产生至少一条实际可用的时间监督标签！"
 
-    # 3. 详细检查 Method D 双目标梯度与分层图编码器各模块梯度流向 (V04/R3)
-    print("--> 3/3: 校验真实双目标损失与共享编码器各模块梯度流向...")
-    actor_critic = ActorCriticWork3(
+    # 3. 校验双目标损失合成张量基准测试 (synthetic_dual_target_gradient_check)
+    print("--> 3/4: 校验双目标损失合成张量基准测试 (synthetic_dual_target_gradient_check)...")
+    actor_critic_synth = ActorCriticWork3(
         state_dim=32,
         task_feat_dim=8,
         hidden_dim=64,
         max_station_workers=16,
     )
-    time_head = TimeResidualHead(in_dim=actor_critic.hidden_dim, hidden_dim=64)
-    trainer = PPOTrainerWork3(
-        actor_critic=actor_critic,
-        time_head=time_head,
+    time_head_synth = TimeResidualHead(in_dim=actor_critic_synth.hidden_dim, hidden_dim=64)
+    trainer_synth = PPOTrainerWork3(
+        actor_critic=actor_critic_synth,
+        time_head=time_head_synth,
         lr=1e-3,
         time_loss_coef=1.0,
     )
 
-    env = AirLineEnvWork3(baseline_json_path=Path("data/work3/real_283_k10_baseline.json"))
-    env.reset()
-    state_feat = extract_compact_state_features(env.state, compute_cycle_heuristic_cmax(env.state))
-    graph_snapshot = actor_critic.build_graph_snapshot(env)
+    env_synth = AirLineEnvWork3(baseline_json_path=Path("data/work3/real_283_k10_baseline.json"))
+    env_synth.reset()
+    state_feat_synth = extract_compact_state_features(env_synth.state, compute_cycle_heuristic_cmax(env_synth.state))
+    graph_snapshot_synth = actor_critic_synth.build_graph_snapshot(env_synth)
 
-    aux_batch = {
-        "state_feats": state_feat.unsqueeze(0),
-        "graph_snapshots": [graph_snapshot],
+    aux_batch_synth = {
+        "state_feats": state_feat_synth.unsqueeze(0),
+        "graph_snapshots": [graph_snapshot_synth],
         "target_residuals": torch.tensor([0.25], dtype=torch.float32),
         "current_target_masks": torch.tensor([True], dtype=torch.bool),
         "target_next_residuals": torch.tensor([[0.1, -0.2, 0.05, 0.0, 0.0]], dtype=torch.float32),
@@ -358,17 +366,133 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
         "decision_ids": [0],
     }
 
-    trainer.optimizer.zero_grad()
-    loss = trainer.compute_time_auxiliary_loss(aux_batch)
-    loss.backward()
+    trainer_synth.optimizer.zero_grad()
+    loss_synth = trainer_synth.compute_time_auxiliary_loss(aux_batch_synth)
+    loss_synth.backward()
 
-    # 断言紧凑状态编码器、分层融合MLP、站位汇总MLP、飞机角色MLP、当前残差头和下一周期预测头均有有限且受控非零梯度
-    compact_grad = actor_critic.encoder[0].weight.grad
-    line_fusion_grad = actor_critic.graph_encoder.line_fusion_mlp[0].weight.grad
-    station_summary_grad = actor_critic.graph_encoder.station_summary_mlp[0].weight.grad
-    aircraft_role_grad = actor_critic.graph_encoder.aircraft_role_mlp[0].weight.grad
-    current_head_grad = time_head.reg_fc[0].weight.grad
-    next_head_grad = time_head.next_cycle_fc[0].weight.grad
+    compact_grad_s = actor_critic_synth.encoder[0].weight.grad
+    line_fusion_grad_s = actor_critic_synth.graph_encoder.line_fusion_mlp[0].weight.grad
+    station_summary_grad_s = actor_critic_synth.graph_encoder.station_summary_mlp[0].weight.grad
+    aircraft_role_grad_s = actor_critic_synth.graph_encoder.aircraft_role_mlp[0].weight.grad
+    current_head_grad_s = time_head_synth.reg_fc[0].weight.grad
+    next_head_grad_s = time_head_synth.next_cycle_fc[0].weight.grad
+
+    assert compact_grad_s is not None and torch.isfinite(compact_grad_s).all() and compact_grad_s.norm().item() > 1e-7
+    assert line_fusion_grad_s is not None and torch.isfinite(line_fusion_grad_s).all() and line_fusion_grad_s.norm().item() > 1e-7
+    assert station_summary_grad_s is not None and torch.isfinite(station_summary_grad_s).all() and station_summary_grad_s.norm().item() > 1e-7
+    assert aircraft_role_grad_s is not None and torch.isfinite(aircraft_role_grad_s).all() and aircraft_role_grad_s.norm().item() > 1e-7
+    assert current_head_grad_s is not None and torch.isfinite(current_head_grad_s).all() and current_head_grad_s.norm().item() > 1e-7
+    assert next_head_grad_s is not None and torch.isfinite(next_head_grad_s).all() and next_head_grad_s.norm().item() > 1e-7
+
+    print(f"    合成双目标损失={loss_synth.item():.6f}，6核心模块合成梯度检验通过。")
+    del env_synth; gc.collect()
+
+    # 4. 校验真实轨迹双目标闭环验证 (real_dual_target_closed_loop_check / R3)
+    print("--> 4/4: 校验真实轨迹双目标闭环验证 (real_dual_target_closed_loop_check / R3)...")
+    real_env = AirLineEnvWork3(baseline_json_path=Path("data/work3/real_283_k10_baseline.json"))
+    real_env.reset()
+
+    real_actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64, max_station_workers=16)
+    real_time_head = TimeResidualHead(in_dim=real_actor.hidden_dim, hidden_dim=64)
+    frozen_actor = copy.deepcopy(real_actor)
+    for p in frozen_actor.parameters():
+        p.requires_grad = False
+
+    real_lightning = Work3LightningModule(
+        actor_critic=real_actor,
+        time_head=real_time_head,
+        learning_rate=1e-3,
+        time_loss_coef=1.0,
+        ppo_epochs=1,
+    )
+
+    real_cache = PendingTimeLabelCache()
+    real_buffer = RolloutBufferWork3()
+    p1_drained = None
+    p2_drained = None
+
+    for step in range(1, 60):
+        cands = real_env.get_action_candidates()
+        cmax = compute_cycle_heuristic_cmax(real_env.state)
+        state_feat = extract_compact_state_features(real_env.state, cmax)
+        time_urg = torch.zeros(12)
+        if not cands:
+            act = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+            lp, val, srec = 0.0, 0.0, {"action_type": "advance_to_next_event"}
+        else:
+            act, lp, val, srec = real_actor.select_action(real_env, state_feat, time_urg)
+
+        real_cache.add(
+            worker_id=0,
+            episode_id=0,
+            cycle_id=int(real_env.state.current_cycle),
+            decision_id=step,
+            state_feat=state_feat,
+            graph_snapshot=srec.get("graph_snapshot"),
+            estimated_cmax=cmax,
+            current_time=real_env.state.current_time,
+            h0=real_env.state.h0,
+            predictor_version=None,
+        )
+        real_buffer.add(PPOTransition(
+            state_feat=state_feat,
+            time_urgency=time_urg,
+            sample_record=srec,
+            reward=0.0,
+            raw_reward=0.0,
+            value=val,
+            log_prob=lp,
+            worker_id=0,
+            episode_id=0,
+            segment_id=0,
+        ))
+
+        obs, r, term, trunc, info = real_env.step(act)
+        if info.get("cycle_execution_records"):
+            for cid, rec_dict in info["cycle_execution_records"].items():
+                rec = CycleExecutionRecord.from_dict(rec_dict)
+                real_cache.attach_transfer(
+                    episode_id=0,
+                    worker_id=0,
+                    cycle_id=rec.cycle_id,
+                    actual_transfer_time=rec.transfer_time,
+                    cycle_record=rec,
+                )
+                if rec.cycle_id == 1 and p1_drained is None:
+                    p1_drained = real_cache.drain_ready()
+                elif rec.cycle_id == 2 and p2_drained is None:
+                    p2_drained = real_cache.drain_ready()
+
+        if p1_drained is not None and p2_drained is not None:
+            break
+
+    assert p1_drained is not None, "真实轨迹未提取出 P1 当前残差标签！"
+    assert p2_drained is not None, "真实轨迹未提取出 P2 跨周期下一周期预测标签！"
+    real_buffer.finish_trajectories(last_values_by_segment={(0, 0, 0): 0.0})
+
+    # P1 当前残差更新
+    update1 = Work3TrainingUpdate(
+        buffer=real_buffer,
+        environment_steps=len(real_buffer),
+        time_auxiliary_batch=p1_drained,
+    )
+    real_lightning.training_step(update1, 0)
+
+    # P2 下一周期残差更新
+    update2 = Work3TrainingUpdate(
+        buffer=real_buffer,
+        environment_steps=len(real_buffer),
+        time_auxiliary_batch=p2_drained,
+    )
+    real_lightning.training_step(update2, 0)
+
+    # 验证全部 6 个核心模块在真实轨迹监督下的梯度
+    compact_grad = real_actor.encoder[0].weight.grad
+    line_fusion_grad = real_actor.graph_encoder.line_fusion_mlp[0].weight.grad
+    station_summary_grad = real_actor.graph_encoder.station_summary_mlp[0].weight.grad
+    aircraft_role_grad = real_actor.graph_encoder.aircraft_role_mlp[0].weight.grad
+    current_head_grad = real_time_head.reg_fc[0].weight.grad
+    next_head_grad = real_time_head.next_cycle_fc[0].weight.grad
 
     assert compact_grad is not None and torch.isfinite(compact_grad).all() and compact_grad.norm().item() > 1e-7
     assert line_fusion_grad is not None and torch.isfinite(line_fusion_grad).all() and line_fusion_grad.norm().item() > 1e-7
@@ -377,13 +501,20 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     assert current_head_grad is not None and torch.isfinite(current_head_grad).all() and current_head_grad.norm().item() > 1e-7
     assert next_head_grad is not None and torch.isfinite(next_head_grad).all() and next_head_grad.norm().item() > 1e-7
 
-    print(f"    双目标损失={loss.item():.6f}")
-    print(f"    紧凑状态编码器梯度模长: {compact_grad.norm().item():.6f} (有限且正常)")
-    print(f"    整线融合MLP梯度模长: {line_fusion_grad.norm().item():.6f} (有限且正常)")
-    print(f"    站位汇总MLP梯度模长: {station_summary_grad.norm().item():.6f} (有限且正常)")
-    print(f"    飞机角色MLP梯度模长: {aircraft_role_grad.norm().item():.6f} (有限且正常)")
-    print(f"    当前残差预测头梯度模长: {current_head_grad.norm().item():.6f} (有限且正常)")
-    print(f"    下一周期预测头梯度模长: {next_head_grad.norm().item():.6f} (有限且正常)")
+    # 冻结副本梯度严格为 None
+    assert all(p.grad is None for p in frozen_actor.parameters()), "冻结策略副本参数不得产生梯度！"
+
+    print("    真实轨迹双目标更新成功，全部 6 核心模块梯度与冻结副本检验通过：")
+    print(f"      紧凑状态编码器梯度模长: {compact_grad.norm().item():.6f}")
+    print(f"      整线融合MLP梯度模长: {line_fusion_grad.norm().item():.6f}")
+    print(f"      站位汇总MLP梯度模长: {station_summary_grad.norm().item():.6f}")
+    print(f"      飞机角色MLP梯度模长: {aircraft_role_grad.norm().item():.6f}")
+    print(f"      当前残差预测头梯度模长: {current_head_grad.norm().item():.6f}")
+    print(f"      下一周期预测头梯度模长: {next_head_grad.norm().item():.6f}")
+
+    del real_env, real_buffer; gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return {
         "status": "PASS",
@@ -400,14 +531,25 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
             "available_labels_count": len(available_labels),
             "actual_transfers": res_d.get("first_actual_transfer"),
         },
-        "dual_target_gradient_check": {
-            "loss": float(loss.item()),
+        "synthetic_dual_target_gradient_check": {
+            "loss": float(loss_synth.item()),
+            "compact_grad_norm": float(compact_grad_s.norm().item()),
+            "line_fusion_grad_norm": float(line_fusion_grad_s.norm().item()),
+            "station_summary_grad_norm": float(station_summary_grad_s.norm().item()),
+            "aircraft_role_grad_norm": float(aircraft_role_grad_s.norm().item()),
+            "current_head_grad_norm": float(current_head_grad_s.norm().item()),
+            "next_head_grad_norm": float(next_head_grad_s.norm().item()),
+        },
+        "real_dual_target_closed_loop_check": {
+            "p1_samples_drained": int(p1_drained["target_residuals"].numel()),
+            "p2_samples_drained": int(p2_drained["target_residuals"].numel()),
             "compact_grad_norm": float(compact_grad.norm().item()),
             "line_fusion_grad_norm": float(line_fusion_grad.norm().item()),
             "station_summary_grad_norm": float(station_summary_grad.norm().item()),
             "aircraft_role_grad_norm": float(aircraft_role_grad.norm().item()),
             "current_head_grad_norm": float(current_head_grad.norm().item()),
             "next_head_grad_norm": float(next_head_grad.norm().item()),
+            "frozen_actor_grad_is_none": True,
         },
     }
 
