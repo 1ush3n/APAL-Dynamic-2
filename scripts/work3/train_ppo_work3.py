@@ -1368,7 +1368,7 @@ def run_training(
                 else:
                     time_urgency = snapshot.time_features
 
-                if shaper is not None:
+                if profile.use_learned_time_shaping and shaper is not None:
                     if state.predictor_version is None:
                         raise RuntimeError("势函数episode没有绑定预测器版本")
                     with _autocast_context(torch_device, autocast_dtype):
@@ -1579,7 +1579,7 @@ def run_training(
                     if next_cmax_est is None:
                         raise RuntimeError("环境worker下一状态快照缺少时间预测")
                     next_graph = snapshot.graph_snapshot
-                    if shaper is not None:
+                    if profile.use_learned_time_shaping and shaper is not None:
                         with _autocast_context(torch_device, autocast_dtype):
                             phi_next = shaper.compute_potential(
                                 state_feat=snapshot.state_features,
@@ -1709,15 +1709,6 @@ def run_training(
                 stop_reason = "successful_batch_target_reached"
                 break
 
-        if stop_reason is None:
-            budget_reason = current_budget_reason()
-            if budget_reason is not None:
-                mark_budget_truncated(budget_reason)
-
-        for state in worker_states:
-            if not state.done:
-                update_scenario_effect_log(state)
-
         # -------------------------
         # GAE 与价值目标结算
         # -------------------------
@@ -1770,6 +1761,18 @@ def run_training(
             buffer.finish_trajectories(
                 last_values_by_segment=rollout_bootstraps,
             )
+
+        # 固化结算与清理顺序：在完成段尾bootstrap特征生成后，再执行预算截断与快照释放 (U30)
+        if stop_reason is None:
+            budget_reason = current_budget_reason()
+            if budget_reason is not None:
+                mark_budget_truncated(budget_reason)
+
+        for state in worker_states:
+            if not state.done:
+                update_scenario_effect_log(state)
+
+        if len(buffer) > 0:
             time_auxiliary_batch = (
                 pending_time_labels.drain_ready()
                 if profile.use_time_auxiliary

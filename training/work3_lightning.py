@@ -207,15 +207,18 @@ class Work3LightningModule(LightningModule):
     def _manual_update(self, loss: torch.Tensor, optimizer: Any) -> float | None:
         if loss.ndim != 0 or not bool(torch.isfinite(loss).item()):
             raise FloatingPointError("Lightning收到非有限或非标量训练损失")
-        optimizer.zero_grad()
-        try:
-            self.manual_backward(loss)
-        except RuntimeError:
-            loss.backward()
-        if self._trainer is None:
-            self.on_before_optimizer_step(optimizer)
+        # 本步梯度诊断状态在反传前重置 (U25)
         self._step_grad_norm = None
         self._step_has_non_finite_gradients = False
+        optimizer.zero_grad()
+
+        # 根据运行上下文清晰分支，严禁吞掉真实反传异常后继续优化 (U25)
+        if self._trainer is not None:
+            self.manual_backward(loss)
+        else:
+            loss.backward()
+            self.on_before_optimizer_step(optimizer)
+
         scaler = self._active_grad_scaler()
         scale_before = scaler.get_scale() if scaler is not None else None
         self.optimizer_step_attempts += 1
