@@ -65,7 +65,7 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
     print("=" * 80)
     t0 = time.perf_counter()
 
-    source = MultiAircraftBaseline.load_from_json(Path("data/work3/real_283_k10_baseline.json"))
+    source = MultiAircraftBaseline.load_from_json(ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json")
     num_aircraft = 7
     # 选取代表性工序：覆盖5个站位、含站内紧密前序依赖链(16依赖15, 9依赖8, 13依赖12, 21依赖20, 23依赖24)
     # 站1: 15, 16; 站2: 8, 9; 站3: 12, 13; 站4: 20, 21; 站5: 24, 23
@@ -198,7 +198,7 @@ def run_section_9_2_real_283_k10_bridge() -> dict[str, Any]:
     print("\n" + "=" * 80)
     print(">>> 执行 Section 9.2: 真实283工序×10架 (2,830工序) 桥接验证")
     print("=" * 80)
-    baseline_path = Path("data/work3/real_283_k10_baseline.json")
+    baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     if not baseline_path.is_file():
         raise FileNotFoundError(f"基准计划文件不存在: {baseline_path}")
 
@@ -331,6 +331,10 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     assert cycle_time_labels and len(cycle_time_labels) > 0, "Method D 必须产生真实周期时间监督记录 (cycle_time_labels)！"
     available_labels = [l for l in cycle_time_labels if l.get("label_available")]
     assert len(available_labels) > 0, "Method D 必须产生至少一条实际可用的时间监督标签！"
+    assert res_d.get("time_supervision_optimizer_updates", 0) > 0, "Method D 必须执行至少一次时间监督优化器更新！"
+    replay_error = res_d.get("sampling_replay_max_abs_error")
+    if replay_error is not None:
+        assert replay_error < 1e-4, f"采样重放误差过大: {replay_error}"
 
     # 3. 校验双目标损失合成张量基准测试 (synthetic_dual_target_gradient_check)
     print("--> 3/4: 校验双目标损失合成张量基准测试 (synthetic_dual_target_gradient_check)...")
@@ -348,7 +352,7 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
         time_loss_coef=1.0,
     )
 
-    env_synth = AirLineEnvWork3(baseline_json_path=Path("data/work3/real_283_k10_baseline.json"))
+    env_synth = AirLineEnvWork3(baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json")
     env_synth.reset()
     state_feat_synth = extract_compact_state_features(env_synth.state, compute_cycle_heuristic_cmax(env_synth.state))
     graph_snapshot_synth = actor_critic_synth.build_graph_snapshot(env_synth)
@@ -389,7 +393,7 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
 
     # 4. 校验真实轨迹双目标闭环验证 (real_dual_target_closed_loop_check / R3)
     print("--> 4/4: 校验真实轨迹双目标闭环验证 (real_dual_target_closed_loop_check / R3)...")
-    real_env = AirLineEnvWork3(baseline_json_path=Path("data/work3/real_283_k10_baseline.json"))
+    real_env = AirLineEnvWork3(baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json")
     real_env.reset()
 
     real_actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64, max_station_workers=16)
@@ -407,11 +411,14 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     )
 
     real_cache = PendingTimeLabelCache()
-    real_buffer = RolloutBufferWork3()
     p1_drained = None
     p2_drained = None
+    step_count = 0
 
-    for step in range(1, 60):
+    # --- 阶段 1: Rollout 轨迹段 1 直至到达 P1 转站并生成当前周期残差标签 ---
+    buffer1 = RolloutBufferWork3()
+    while p1_drained is None and step_count < 60:
+        step_count += 1
         cands = real_env.get_action_candidates()
         cmax = compute_cycle_heuristic_cmax(real_env.state)
         state_feat = extract_compact_state_features(real_env.state, cmax)
@@ -426,7 +433,7 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
             worker_id=0,
             episode_id=0,
             cycle_id=int(real_env.state.current_cycle),
-            decision_id=step,
+            decision_id=step_count,
             state_feat=state_feat,
             graph_snapshot=srec.get("graph_snapshot"),
             estimated_cmax=cmax,
@@ -434,7 +441,7 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
             h0=real_env.state.h0,
             predictor_version=None,
         )
-        real_buffer.add(PPOTransition(
+        buffer1.add(PPOTransition(
             state_feat=state_feat,
             time_urgency=time_urg,
             sample_record=srec,
@@ -460,28 +467,94 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
                 )
                 if rec.cycle_id == 1 and p1_drained is None:
                     p1_drained = real_cache.drain_ready()
-                elif rec.cycle_id == 2 and p2_drained is None:
-                    p2_drained = real_cache.drain_ready()
-
-        if p1_drained is not None and p2_drained is not None:
-            break
 
     assert p1_drained is not None, "真实轨迹未提取出 P1 当前残差标签！"
-    assert p2_drained is not None, "真实轨迹未提取出 P2 跨周期下一周期预测标签！"
-    real_buffer.finish_trajectories(last_values_by_segment={(0, 0, 0): 0.0})
+    assert p1_drained["current_target_masks"].any(), "P1 提取批次必须包含至少一个有效当前周期残差目标！"
+    buffer1.finish_trajectories(last_values_by_segment={(0, 0, 0): 0.0})
 
     # P1 当前残差更新
     update1 = Work3TrainingUpdate(
-        buffer=real_buffer,
-        environment_steps=len(real_buffer),
+        buffer=buffer1,
+        environment_steps=len(buffer1),
         time_auxiliary_batch=p1_drained,
     )
     real_lightning.training_step(update1, 0)
 
+    # 验证 real_actor 参数已更新
+    actor_params_changed = any(
+        not torch.equal(p_new, p_orig)
+        for p_new, p_orig in zip(real_actor.parameters(), frozen_actor.parameters())
+    )
+    assert actor_params_changed, "P1 训练步必须使在线 real_actor 产生参数更新！"
+
+    # 清空 buffer1，杜绝 PPO 轨迹跨更新段复用
+    del buffer1
+    gc.collect()
+
+    # --- 阶段 2: 保持缓存跨段保留，使用已更新的在线 real_actor 继续 Rollout 段 2 直至到达 P2 转站 ---
+    buffer2 = RolloutBufferWork3()
+    while p2_drained is None and step_count < 100:
+        step_count += 1
+        cands = real_env.get_action_candidates()
+        cmax = compute_cycle_heuristic_cmax(real_env.state)
+        state_feat = extract_compact_state_features(real_env.state, cmax)
+        time_urg = torch.zeros(12)
+        if not cands:
+            act = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+            lp, val, srec = 0.0, 0.0, {"action_type": "advance_to_next_event"}
+        else:
+            act, lp, val, srec = real_actor.select_action(real_env, state_feat, time_urg)
+
+        real_cache.add(
+            worker_id=0,
+            episode_id=0,
+            cycle_id=int(real_env.state.current_cycle),
+            decision_id=step_count,
+            state_feat=state_feat,
+            graph_snapshot=srec.get("graph_snapshot"),
+            estimated_cmax=cmax,
+            current_time=real_env.state.current_time,
+            h0=real_env.state.h0,
+            predictor_version=None,
+        )
+        buffer2.add(PPOTransition(
+            state_feat=state_feat,
+            time_urgency=time_urg,
+            sample_record=srec,
+            reward=0.0,
+            raw_reward=0.0,
+            value=val,
+            log_prob=lp,
+            worker_id=0,
+            episode_id=0,
+            segment_id=1,
+        ))
+
+        obs, r, term, trunc, info = real_env.step(act)
+        if info.get("cycle_execution_records"):
+            for cid, rec_dict in info["cycle_execution_records"].items():
+                rec = CycleExecutionRecord.from_dict(rec_dict)
+                real_cache.attach_transfer(
+                    episode_id=0,
+                    worker_id=0,
+                    cycle_id=rec.cycle_id,
+                    actual_transfer_time=rec.transfer_time,
+                    cycle_record=rec,
+                )
+                if rec.cycle_id == 2 and p2_drained is None:
+                    p2_drained = real_cache.drain_ready()
+
+    assert p2_drained is not None, "真实轨迹未提取出 P2 跨周期下一周期预测标签！"
+    assert p2_drained["next_cycle_masks"].any(), "P2 批次必须包含至少一个有效下一周期预测目标！"
+    next_only_mask = (~p2_drained["current_target_masks"]) & p2_drained["next_cycle_masks"].any(dim=-1)
+    assert next_only_mask.any(), "P2 批次必须包含跨段保留的 next-only 样本 (段1决策由段2转站结算)！"
+
+    buffer2.finish_trajectories(last_values_by_segment={(0, 0, 1): 0.0})
+
     # P2 下一周期残差更新
     update2 = Work3TrainingUpdate(
-        buffer=real_buffer,
-        environment_steps=len(real_buffer),
+        buffer=buffer2,
+        environment_steps=len(buffer2),
         time_auxiliary_batch=p2_drained,
     )
     real_lightning.training_step(update2, 0)
@@ -512,7 +585,7 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     print(f"      当前残差预测头梯度模长: {current_head_grad.norm().item():.6f}")
     print(f"      下一周期预测头梯度模长: {next_head_grad.norm().item():.6f}")
 
-    del real_env, real_buffer; gc.collect()
+    del real_env, buffer2; gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
@@ -576,7 +649,7 @@ def main() -> None:
         "section_9_2": r92,
         "section_9_3": r93,
     }
-    summary_path = Path("docs/section9_comprehensive_validation_report.json")
+    summary_path = ROOT_DIR / "docs" / "section9_comprehensive_validation_report.json"
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     print(f"综合验证报告已保存至: {summary_path}")

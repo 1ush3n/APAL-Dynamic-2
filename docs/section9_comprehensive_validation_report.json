@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-10-17 20:09:40",
-  "total_elapsed_seconds": 445.1857405999908,
+  "timestamp": "2026-10-17 22:32:14",
+  "total_elapsed_seconds": 300.34443300000567,
   "section_9_1": {
     "status": "PASS",
     "completed_tasks": 70,
     "total_tasks": 70,
     "transfers": 11,
-    "elapsed_seconds": 0.18615979999594856,
+    "elapsed_seconds": 0.14436249999562278,
     "cost_breakdown": {
       "j_takt": 0.0,
       "d_time": 0.0001300534368508665,
@@ -31,7 +31,7 @@
       "feasible": true,
       "makespan": 3055.4313412919582,
       "j_total": 1.310728848589564e-12,
-      "elapsed_seconds": 33.53209550000611
+      "elapsed_seconds": 31.192869199992856
     },
     "disturbed": {
       "scenario_id": "REAL_283_DEDICATED_HIT",
@@ -44,45 +44,45 @@
       "actual_hit_task_keys": [
         "5_16"
       ],
-      "elapsed_seconds": 33.37343960000726
+      "elapsed_seconds": 31.475319199991645
     }
   },
   "section_9_3": {
     "status": "PASS",
     "method_c": {
       "decisions": 32,
-      "elapsed_seconds": 60.06876860000193,
+      "elapsed_seconds": 52.775282100003096,
       "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_c_smoke.pt"
     },
     "method_d": {
       "decisions": 32,
-      "elapsed_seconds": 111.53114659999846,
+      "elapsed_seconds": 90.08010780000768,
       "checkpoint": ".pytest_tmp_v2\\smoke_checkpoints\\method_d_smoke.pt",
       "cycle_time_labels_count": 2,
       "available_labels_count": 1,
       "actual_transfers": {
         "episode_id": 0,
-        "transfer_time": 21.18755730190025
+        "transfer_time": 19.014229023045708
       }
     },
     "synthetic_dual_target_gradient_check": {
-      "loss": 0.303884893655777,
-      "compact_grad_norm": 0.7865741848945618,
-      "line_fusion_grad_norm": 2.767449140548706,
-      "station_summary_grad_norm": 0.012416502460837364,
-      "aircraft_role_grad_norm": 0.012683001346886158,
-      "current_head_grad_norm": 0.49249130487442017,
-      "next_head_grad_norm": 3.7714433670043945
+      "loss": 0.1417119801044464,
+      "compact_grad_norm": 0.8517804145812988,
+      "line_fusion_grad_norm": 4.140777587890625,
+      "station_summary_grad_norm": 0.017209574580192566,
+      "aircraft_role_grad_norm": 0.014874441549181938,
+      "current_head_grad_norm": 4.387794017791748,
+      "next_head_grad_norm": 2.2226381301879883
     },
     "real_dual_target_closed_loop_check": {
-      "p1_samples_drained": 11,
-      "p2_samples_drained": 33,
-      "compact_grad_norm": 0.038412630558013916,
-      "line_fusion_grad_norm": 0.1586109697818756,
-      "station_summary_grad_norm": 0.0004851676058024168,
-      "aircraft_role_grad_norm": 0.000500165275298059,
-      "current_head_grad_norm": 0.1616784930229187,
-      "next_head_grad_norm": 0.14541275799274445,
+      "p1_samples_drained": 12,
+      "p2_samples_drained": 31,
+      "compact_grad_norm": 0.07172150909900665,
+      "line_fusion_grad_norm": 0.11644790321588516,
+      "station_summary_grad_norm": 0.00024557564756833017,
+      "aircraft_role_grad_norm": 0.0003912390675395727,
+      "current_head_grad_norm": 0.17890964448451996,
+      "next_head_grad_norm": 0.1304747462272644,
       "frozen_actor_grad_is_none": true
     }
   }
