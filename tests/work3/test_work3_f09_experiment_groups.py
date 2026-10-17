@@ -735,6 +735,8 @@ def test_formal_d_checkpoint_reload_preserves_prediction_and_policy_output(
         state_feat: torch.Tensor,
         time_urgency: torch.Tensor,
         deterministic: bool = False,
+        *args: Any,
+        **kwargs: Any,
     ) -> tuple[Any, ...]:
         output = original_select(
             actor,
@@ -742,6 +744,8 @@ def test_formal_d_checkpoint_reload_preserves_prediction_and_policy_output(
             state_feat,
             time_urgency,
             deterministic=deterministic,
+            *args,
+            **kwargs,
         )
         captured[id(actor)] = (
             state_feat.detach().cpu().clone(),

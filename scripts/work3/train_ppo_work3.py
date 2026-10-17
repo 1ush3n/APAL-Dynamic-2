@@ -1095,7 +1095,9 @@ def run_training(
                     "truncated": True,
                     "termination_reason": state.termination_reason,
                 })
-            scenario_log_entry["potential_snapshot_version"] = state.predictor_version
+            scenario_log_entry["potential_snapshot_version"] = (
+                state.predictor_version if profile.use_learned_time_shaping else None
+            )
             worker_states.append(state)
             scenario_log.append(scenario_log_entry)
             update_scenario_effect_log(state)
