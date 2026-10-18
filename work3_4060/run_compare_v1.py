@@ -80,12 +80,13 @@ def run_training(seed: int, method: str, device: str = "cuda:0") -> Path:
     run_data = json.loads(run_json_path.read_text(encoding="utf-8"))
     tot_dec = run_data.get("total_decisions", 0)
     term_reason = run_data.get("termination_reason", "")
-    succ_batches = run_data.get("successful_batches", 0)
+    succ_batches = run_data.get("successful_batch_count", run_data.get("successful_batches", 0))
     logger.info(f"  指标验证: total_decisions={tot_dec}, reason={term_reason}, succ_batches={succ_batches}")
 
     assert tot_dec == 2048, f"决策数未达到预算 2048: {tot_dec}"
     assert term_reason == "decision_limit", f"终止原因不是 decision_limit: {term_reason}"
     assert succ_batches >= 1, f"未完成至少 1 个完整批次: {succ_batches}"
+    assert weights_path.is_file(), f"权重文件缺失: {weights_path}"
 
     # 若开启审计，立即运行独立检查器
     if enable_audit:
