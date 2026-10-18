@@ -179,6 +179,55 @@ class PPOTrainerWork3:
         else:
             total_aux_loss = 0.0 * shared_features.sum()
 
+        with torch.no_grad():
+            B = state_feats.size(0)
+            row_curr_preds: list[float | None] = [None] * B
+            row_curr_targets: list[float | None] = [None] * B
+            row_curr_errors: list[float | None] = [None] * B
+            if has_current:
+                curr_idx = 0
+                for i in range(B):
+                    if current_masks[i]:
+                        p_val = float(predictions[curr_idx].item())
+                        t_val = float(targets[i].item())
+                        row_curr_preds[i] = p_val
+                        row_curr_targets[i] = t_val
+                        row_curr_errors[i] = abs(p_val - t_val)
+                        curr_idx += 1
+
+            row_next_preds: list[list[float] | None] = [None] * B
+            row_next_targets: list[list[float] | None] = [None] * B
+            row_next_errors: list[list[float] | None] = [None] * B
+            row_next_max_errors: list[float | None] = [None] * B
+            if has_next and next_preds is not None:
+                n_idx = 0
+                for i in range(B):
+                    is_active_row = bool(row_mask[i].item()) if next_masks is not None else True
+                    if is_active_row:
+                        preds_row = [float(x) for x in next_preds[n_idx].detach().cpu().tolist()]
+                        targets_row = [float(x) for x in next_targets[i].detach().cpu().tolist()]
+                        masks_row = [bool(m) for m in next_masks[i].detach().cpu().tolist()] if next_masks is not None else [True] * 5
+                        errs_row = [
+                            abs(p - t) if m else 0.0
+                            for p, t, m in zip(preds_row, targets_row, masks_row)
+                        ]
+                        row_next_preds[i] = preds_row
+                        row_next_targets[i] = targets_row
+                        row_next_errors[i] = errs_row
+                        active_errs = [e for e, m in zip(errs_row, masks_row) if m]
+                        row_next_max_errors[i] = max(active_errs) if active_errs else 0.0
+                        n_idx += 1
+
+            self.last_aux_details = {
+                "row_current_preds": row_curr_preds,
+                "row_current_targets": row_curr_targets,
+                "row_current_errors": row_curr_errors,
+                "row_next_preds": row_next_preds,
+                "row_next_targets": row_next_targets,
+                "row_next_errors": row_next_errors,
+                "row_next_max_errors": row_next_max_errors,
+            }
+
         return total_aux_loss
 
     def compute_ppo_minibatch_loss(self, batch: dict[str, Any]) -> dict[str, torch.Tensor]:

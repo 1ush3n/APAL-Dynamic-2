@@ -1,0 +1,342 @@
+[
+  {
+    "scenario_id": "COMPARE_TRAIN_S0_EARLY_L",
+    "valid": true,
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "station_id": 0,
+    "aircraft_id": 0,
+    "tau": 1.2169088888023936,
+    "delta": 15.0,
+    "recovery_time": 18.216908888802394,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "0_16"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TRAIN_S1_EARLY_M",
+    "valid": true,
+    "timing": "EARLY",
+    "intensity": "MED",
+    "station_id": 3,
+    "aircraft_id": 1,
+    "tau": 131.86505831724162,
+    "delta": 25.0,
+    "recovery_time": 158.86505831724162,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_21"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TRAIN_S2_MID_L",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "LOW",
+    "station_id": 2,
+    "aircraft_id": 1,
+    "tau": 78.68106887937586,
+    "delta": 15.0,
+    "recovery_time": 95.68106887937586,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_13"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TRAIN_S3_MID_H",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 281.8200123427191,
+    "delta": 35.0,
+    "recovery_time": 318.8200123427191,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_24"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TRAIN_S0_MID_M",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "MED",
+    "station_id": 0,
+    "aircraft_id": 3,
+    "tau": 80.29673959018713,
+    "delta": 25.0,
+    "recovery_time": 107.29673959018713,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_16"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TRAIN_S4_MID_M",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "MED",
+    "station_id": 4,
+    "aircraft_id": 2,
+    "tau": 357.2729372838096,
+    "delta": 25.0,
+    "recovery_time": 384.2729372838096,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_125"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TRAIN_S1_LATE_L",
+    "valid": true,
+    "timing": "LATE",
+    "intensity": "LOW",
+    "station_id": 1,
+    "aircraft_id": 4,
+    "tau": 205.3201699100716,
+    "delta": 15.0,
+    "recovery_time": 222.3201699100716,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_8"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TRAIN_S2_LATE_H",
+    "valid": true,
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "station_id": 2,
+    "aircraft_id": 3,
+    "tau": 206.36391272120193,
+    "delta": 35.0,
+    "recovery_time": 243.36391272120193,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_13"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "valid": true,
+    "timing": "EARLY",
+    "intensity": "MED",
+    "station_id": 0,
+    "aircraft_id": 1,
+    "tau": 15.444071218335893,
+    "delta": 20.0,
+    "recovery_time": 37.44407121833589,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_16"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "MED",
+    "station_id": 2,
+    "aircraft_id": 2,
+    "tau": 129.3065749216936,
+    "delta": 25.0,
+    "recovery_time": 156.3065749216936,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_13"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "LOW",
+    "station_id": 4,
+    "aircraft_id": 3,
+    "tau": 358.87735014222744,
+    "delta": 15.0,
+    "recovery_time": 375.87735014222744,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_24"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "valid": true,
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "station_id": 4,
+    "aircraft_id": 3,
+    "tau": 434.33027508331793,
+    "delta": 35.0,
+    "recovery_time": 471.33027508331793,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_125"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S0_EARLY_M",
+    "valid": true,
+    "timing": "EARLY",
+    "intensity": "MED",
+    "station_id": 0,
+    "aircraft_id": 2,
+    "tau": 29.67123354786939,
+    "delta": 25.0,
+    "recovery_time": 56.67123354786939,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_16"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S1_EARLY_L",
+    "valid": true,
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "station_id": 3,
+    "aircraft_id": 2,
+    "tau": 208.92239611674995,
+    "delta": 15.0,
+    "recovery_time": 225.92239611674995,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_21"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S2_MID_H",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 1,
+    "aircraft_id": 2,
+    "tau": 79.8575269244222,
+    "delta": 35.0,
+    "recovery_time": 116.8575269244222,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_9"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S3_MID_M",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "MED",
+    "station_id": 4,
+    "aircraft_id": 3,
+    "tau": 362.45245392092886,
+    "delta": 25.0,
+    "recovery_time": 389.45245392092886,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_23"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S4_MID_L",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "LOW",
+    "station_id": 4,
+    "aircraft_id": 4,
+    "tau": 511.38761288282626,
+    "delta": 15.0,
+    "recovery_time": 528.3876128828263,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_125"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S1_MID_H",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "HIGH",
+    "station_id": 1,
+    "aircraft_id": 3,
+    "tau": 128.26283211056327,
+    "delta": 35.0,
+    "recovery_time": 165.26283211056327,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_8"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S0_LATE_L",
+    "valid": true,
+    "timing": "LATE",
+    "intensity": "LOW",
+    "station_id": 0,
+    "aircraft_id": 4,
+    "tau": 130.92224563250488,
+    "delta": 15.0,
+    "recovery_time": 147.92224563250488,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_16"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  },
+  {
+    "scenario_id": "COMPARE_TEST_S2_LATE_M",
+    "valid": true,
+    "timing": "LATE",
+    "intensity": "MED",
+    "station_id": 2,
+    "aircraft_id": 4,
+    "tau": 283.4212505207102,
+    "delta": 25.0,
+    "recovery_time": 310.4212505207102,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "4_13"
+    ],
+    "timing_reference": "compare_v1_offline_heuristic"
+  }
+]

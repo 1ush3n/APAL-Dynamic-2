@@ -1,0 +1,14 @@
+{
+  "dataset": "mini210",
+  "description": "Dedicated scenario pack for Work-3 Method C vs Method D comparison (compare_v1)",
+  "train_count": 8,
+  "validation_count": 4,
+  "test_count": 8,
+  "total_scenarios": 20,
+  "files": {
+    "scenarios.json": "7cdc1d09edbc3b4a972a08f41fe42913c90dbc659e7738d50734d21ec9294975",
+    "train.json": "e651cca9b3c7207542e38df6a9b46100a370fe1a9fe4d58a8f099e880d09b43c",
+    "validation.json": "8d0b89e0fa62034be5e0923e68e8d2544693c669521130c82fcfc1157799347f",
+    "test.json": "93d12dc7d6afe1770ee91f80309db2d30d0a800c44cf2cf887afdf1eb4d8e3a5"
+  }
+}

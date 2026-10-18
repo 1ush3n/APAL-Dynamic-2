@@ -377,6 +377,7 @@ class Work3LightningModule(LightningModule):
                             loss=time_loss,
                             grad_norm=grad_norm,
                             time_head=self.time_head,
+                            aux_details=getattr(self.objective, "last_aux_details", None),
                         )
 
         self.environment_steps += batch.environment_steps

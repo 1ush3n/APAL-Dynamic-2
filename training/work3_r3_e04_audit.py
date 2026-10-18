@@ -122,6 +122,7 @@ class Work3R3E04Auditor:
         self.frozen_test_snapshot: Any | None = None
         self.frozen_eval_checks: list[dict[str, Any]] = []
         self._pre_fit_state: dict[str, Any] | None = None
+        self._representative_e04_state: dict[str, Any] | None = None
 
     def log_event(self, event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
         """记录一条结构化审计事件并递增序号。"""
@@ -331,11 +332,34 @@ class Work3R3E04Auditor:
             # 捕获一份真实的 CPU 决策快照用于同一输入的重复推理对比
             self.frozen_test_snapshot = copy.deepcopy(test_snapshot)
 
-        try:
+        episode_key = (int(worker_id), int(episode_id))
+        is_episode_active = episode_key in getattr(shaper, "_episode_versions", {})
+        if is_episode_active:
+            real_bound_version = shaper._episode_versions[episode_key]
             frozen_head, frozen_actor = shaper.get_predictor_snapshot(worker_id, episode_id)
-        except (ValueError, KeyError):
+        else:
+            real_bound_version = None
             frozen_head, frozen_actor = shaper.get_predictor_snapshot(worker_id, None)
-        bound_version = shaper.snapshot_version
+
+        # 检查真实调用路径状态（在进行任何审计推理前，核查 requires_grad 与 training mode）
+        frozen_actor_requires_grad = (
+            any(p.requires_grad for p in frozen_actor.parameters())
+            if frozen_actor is not None
+            else False
+        )
+        frozen_head_requires_grad = (
+            any(p.requires_grad for p in frozen_head.parameters())
+            if frozen_head is not None
+            else False
+        )
+        frozen_actor_training_mode = (
+            frozen_actor.training if frozen_actor is not None else False
+        )
+        frozen_head_training_mode = (
+            frozen_head.training if frozen_head is not None else False
+        )
+
+        bound_version = real_bound_version if real_bound_version is not None else shaper.snapshot_version
 
         frozen_actor_sha = compute_state_dict_sha256(frozen_actor)
         frozen_head_sha = compute_state_dict_sha256(frozen_head)
@@ -350,8 +374,35 @@ class Work3R3E04Auditor:
             shaper,
         )
 
+        if (
+            self._representative_e04_state is None
+            and is_episode_active
+            and self.frozen_test_snapshot is not None
+        ):
+            self._representative_e04_state = {
+                "rollout_id": int(rollout_id),
+                "episode_id": int(episode_id),
+                "worker_id": int(worker_id),
+                "bound_version": int(real_bound_version),
+                "frozen_actor_state_dict": {
+                    k: v.detach().cpu().clone()
+                    for k, v in frozen_actor.state_dict().items()
+                } if frozen_actor is not None else None,
+                "frozen_head_state_dict": {
+                    k: v.detach().cpu().clone()
+                    for k, v in frozen_head.state_dict().items()
+                } if frozen_head is not None else None,
+                "frozen_actor_requires_grad": frozen_actor_requires_grad,
+                "frozen_head_requires_grad": frozen_head_requires_grad,
+                "frozen_actor_training_mode": frozen_actor_training_mode,
+                "frozen_head_training_mode": frozen_head_training_mode,
+                "ref_inference_pre": copy.deepcopy(ref_inference),
+            }
+
         self._pre_fit_state = {
             "rollout_id": int(rollout_id),
+            "is_episode_active": is_episode_active,
+            "real_bound_version": real_bound_version,
             "bound_version": int(bound_version),
             "frozen_actor_sha": frozen_actor_sha,
             "frozen_head_sha": frozen_head_sha,
@@ -366,13 +417,17 @@ class Work3R3E04Auditor:
             "PRE_ROLLOUT_FIT",
             {
                 "rollout_id": int(rollout_id),
+                "is_episode_active": is_episode_active,
+                "real_bound_version": real_bound_version,
                 "bound_version": int(bound_version),
                 "frozen_actor_sha": frozen_actor_sha,
                 "frozen_head_sha": frozen_head_sha,
                 "online_actor_sha": online_actor_sha,
                 "online_head_sha": online_head_sha,
-                "frozen_actor_eval": not frozen_actor.training if frozen_actor is not None else True,
-                "frozen_head_eval": not frozen_head.training if frozen_head is not None else True,
+                "frozen_actor_eval": not frozen_actor_training_mode,
+                "frozen_head_eval": not frozen_head_training_mode,
+                "frozen_actor_requires_grad": frozen_actor_requires_grad,
+                "frozen_head_requires_grad": frozen_head_requires_grad,
             },
         )
 
@@ -411,6 +466,7 @@ class Work3R3E04Auditor:
         loss: torch.Tensor,
         grad_norm: float | None,
         time_head: nn.Module,
+        aux_details: dict[str, Any] | None = None,
     ) -> None:
         """时间辅助监督 mini-batch 优化步完成时调用。"""
         self.optimization_seq += 1
@@ -437,6 +493,12 @@ class Work3R3E04Auditor:
             else [ [False] * 5 for _ in minibatch_sample_ids ]
         )
 
+        row_current_errors = aux_details.get("row_current_errors") if aux_details else None
+        row_next_max_errors = aux_details.get("row_next_max_errors") if aux_details else None
+        row_next_errors = aux_details.get("row_next_errors") if aux_details else None
+        row_next_preds = aux_details.get("row_next_preds") if aux_details else None
+        row_next_targets = aux_details.get("row_next_targets") if aux_details else None
+
         # 检查是否包含跟踪的候选样本
         for sample_id in minibatch_sample_ids:
             if sample_id in self.tracked_history:
@@ -449,6 +511,11 @@ class Work3R3E04Auditor:
                     "next_masks": next_masks[idx],
                     "grad_norm": float(grad_norm) if grad_norm is not None else None,
                     "loss": float(loss.detach().float().item()),
+                    "row_current_error": row_current_errors[idx] if row_current_errors and idx < len(row_current_errors) else None,
+                    "row_next_max_error": row_next_max_errors[idx] if row_next_max_errors and idx < len(row_next_max_errors) else None,
+                    "row_next_errors": row_next_errors[idx] if row_next_errors and idx < len(row_next_errors) else None,
+                    "row_next_preds": row_next_preds[idx] if row_next_preds and idx < len(row_next_preds) else None,
+                    "row_next_targets": row_next_targets[idx] if row_next_targets and idx < len(row_next_targets) else None,
                 })
             # 若处于两次转站中间，该优化也算作一次有效的在线更新
             if sample_id in self.tracked_history:
@@ -478,6 +545,11 @@ class Work3R3E04Auditor:
                 "grad_norm": float(grad_norm) if grad_norm is not None else None,
                 "update_successful": bool(grad_norm is not None and math.isfinite(grad_norm)),
                 "next_error_max": next_err_max,
+                "row_current_errors": row_current_errors,
+                "row_next_max_errors": row_next_max_errors,
+                "row_next_errors": row_next_errors,
+                "row_next_preds": row_next_preds,
+                "row_next_targets": row_next_targets,
             },
         )
 
@@ -495,11 +567,33 @@ class Work3R3E04Auditor:
         if self._pre_fit_state is None:
             return
 
-        try:
+        episode_key = (int(worker_id), int(episode_id))
+        is_episode_active = episode_key in getattr(shaper, "_episode_versions", {})
+        if is_episode_active:
+            real_bound_version = shaper._episode_versions[episode_key]
             frozen_head, frozen_actor = shaper.get_predictor_snapshot(worker_id, episode_id)
-        except (ValueError, KeyError):
+        else:
+            real_bound_version = None
             frozen_head, frozen_actor = shaper.get_predictor_snapshot(worker_id, None)
-        bound_version = shaper.snapshot_version
+
+        frozen_actor_requires_grad = (
+            any(p.requires_grad for p in frozen_actor.parameters())
+            if frozen_actor is not None
+            else False
+        )
+        frozen_head_requires_grad = (
+            any(p.requires_grad for p in frozen_head.parameters())
+            if frozen_head is not None
+            else False
+        )
+        frozen_actor_training_mode = (
+            frozen_actor.training if frozen_actor is not None else False
+        )
+        frozen_head_training_mode = (
+            frozen_head.training if frozen_head is not None else False
+        )
+
+        bound_version = real_bound_version if real_bound_version is not None else shaper.snapshot_version
 
         frozen_actor_sha_after = compute_state_dict_sha256(frozen_actor)
         frozen_head_sha_after = compute_state_dict_sha256(frozen_head)
@@ -528,8 +622,24 @@ class Work3R3E04Auditor:
                 abs(a - b) for a, b in zip(ref["next_residuals_5d"], curr_inference["next_residuals_5d"])
             )
 
+        if (
+            self._representative_e04_state is not None
+            and "frozen_actor_state_dict_post" not in self._representative_e04_state
+        ):
+            self._representative_e04_state["frozen_actor_state_dict_post"] = {
+                k: v.detach().cpu().clone()
+                for k, v in frozen_actor.state_dict().items()
+            } if frozen_actor is not None else None
+            self._representative_e04_state["frozen_head_state_dict_post"] = {
+                k: v.detach().cpu().clone()
+                for k, v in frozen_head.state_dict().items()
+            } if frozen_head is not None else None
+            self._representative_e04_state["ref_inference_post"] = copy.deepcopy(curr_inference)
+
         check_result = {
             "rollout_id": int(rollout_id),
+            "is_episode_active": is_episode_active,
+            "real_bound_version": real_bound_version,
             "bound_version": int(bound_version),
             "frozen_actor_sha_match": (frozen_actor_sha_after == self._pre_fit_state["frozen_actor_sha"]),
             "frozen_head_sha_match": (frozen_head_sha_after == self._pre_fit_state["frozen_head_sha"]),
@@ -537,7 +647,8 @@ class Work3R3E04Auditor:
             "online_head_param_delta_l2": head_delta,
             "online_params_changed": bool(actor_delta > 1e-7 or head_delta > 1e-7),
             "inference_diffs": diff_metrics,
-            "frozen_eval_mode": (not frozen_head.training) and (frozen_actor is None or not frozen_actor.training),
+            "frozen_eval_mode": (not frozen_head_training_mode) and (frozen_actor is None or not frozen_actor_training_mode),
+            "frozen_requires_grad_false": (not frozen_head_requires_grad) and (not frozen_actor_requires_grad),
         }
         self.frozen_eval_checks.append(check_result)
 
@@ -792,6 +903,7 @@ class Work3R3E04Auditor:
                 "run_id": self.run_id,
                 "tracked_inputs": self.tracked_inputs,
                 "frozen_test_snapshot": self.frozen_test_snapshot,
+                "e04_representative": self._representative_e04_state,
             },
             inputs_path,
         )

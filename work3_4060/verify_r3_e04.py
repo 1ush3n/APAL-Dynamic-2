@@ -196,22 +196,45 @@ def main():
             if d_curr["seq"] < s < d_next["seq"]
         ]
 
-        # 6.5 寻找包含该样本的 next-only 辅助优化步
-        aux_opts = [
-            ev for ev in aux_opt_events
-            if sample_id in ev.get("sample_ids", [])
-        ]
-        next_aux_opts = [
-            ev for ev in aux_opts
-            if ev.get("update_successful") and ev.get("next_error_max", 0.0) > 1e-4
-        ]
-
-        # 6.6 独立数值重算
         fact_1 = transfer_facts.get((w, ep, cyc))
         fact_2 = transfer_facts.get((w, ep, cyc + 1))
 
         if not (fact_1 and fact_2):
             continue
+
+        # 6.5 寻找包含该样本的 current-only 与 next-only 辅助优化步
+        # 6.5.1 current-only: 优化发生在 d_curr 之后且在 fact_2 (下一周期转站) 到达之前
+        curr_aux_opts: list[dict[str, Any]] = []
+        for ev in aux_opt_events:
+            s_ids = ev.get("sample_ids", [])
+            if sample_id in s_ids:
+                idx = s_ids.index(sample_id)
+                c_mask = ev.get("current_masks", [])
+                if idx < len(c_mask) and c_mask[idx] is True:
+                    if d_curr["seq"] < ev["seq"] < fact_2["seq"] and ev.get("update_successful"):
+                        curr_aux_opts.append(ev)
+
+        # 6.5.2 next-only: 优化发生在 d_next 之后，行掩码 current_target_mask 为 False 且 any(next_cycle_masks)
+        next_aux_opts: list[dict[str, Any]] = []
+        for ev in aux_opt_events:
+            s_ids = ev.get("sample_ids", [])
+            if sample_id in s_ids:
+                idx = s_ids.index(sample_id)
+                c_mask = ev.get("current_masks", [])
+                n_mask = ev.get("next_masks", [])
+                is_curr_f = (idx < len(c_mask) and c_mask[idx] is False)
+                is_next_t = (idx < len(n_mask) and any(n_mask[idx]))
+                if is_curr_f and is_next_t and ev["seq"] > d_next["seq"] and ev.get("update_successful"):
+                    # 检查行级误差或全局误差
+                    row_errs = ev.get("row_next_max_errors")
+                    if row_errs is not None and idx < len(row_errs) and row_errs[idx] is not None:
+                        if row_errs[idx] > 1e-4:
+                            next_aux_opts.append(ev)
+                    else:
+                        if ev.get("next_error_max", 0.0) > 1e-4:
+                            next_aux_opts.append(ev)
+
+        # 6.6 独立数值重算
 
         p1 = fact_1["actual_transfer_time"]
         theoretical_curr = (p1 - est_cmax) / h0
@@ -239,6 +262,7 @@ def main():
 
         is_valid_case = bool(
             len(updates_between) >= 1
+            and len(curr_aux_opts) >= 1
             and len(next_aux_opts) >= 1
             and diff_curr <= tol_curr
             and diff_next_max <= (args.tol + args.tol * 10.0)
@@ -251,6 +275,7 @@ def main():
             "decision_id": dec,
             "valid": is_valid_case,
             "updates_between_count": len(updates_between),
+            "curr_aux_opt_count": len(curr_aux_opts),
             "next_aux_opt_count": len(next_aux_opts),
             "diff_curr": diff_curr,
             "diff_next_max": diff_next_max,
@@ -267,27 +292,65 @@ def main():
 
     e04_valid = False
     if e04_checks:
+        active_checks = [c for c in e04_checks if c.get("is_episode_active", True) is True]
+        if not active_checks:
+            incomplete.append("未在活跃绑定的 episode 中捕获到 E04 核查记录")
+
         frozen_matched = all(
             c.get("frozen_actor_sha_match") and c.get("frozen_head_sha_match") and c.get("frozen_eval_mode")
-            for c in e04_checks
+            for c in active_checks
         )
-        online_changed = any(c.get("online_params_changed") for c in e04_checks)
+        online_changed = any(c.get("online_params_changed") for c in active_checks)
+
+        # 检查 requires_grad 是否为 False（若字段存在）
+        frozen_requires_grad_ok = all(
+            c.get("frozen_requires_grad_false", True) for c in active_checks
+        )
 
         max_inf_diff = 0.0
-        for c in e04_checks:
+        has_inference_diffs = False
+        for c in active_checks:
             diffs = c.get("inference_diffs", {})
-            for v in diffs.values():
-                if isinstance(v, (int, float)) and v > max_inf_diff:
-                    max_inf_diff = v
+            if diffs:
+                has_inference_diffs = True
+                for v in diffs.values():
+                    if isinstance(v, (int, float)) and v > max_inf_diff:
+                        max_inf_diff = v
 
         if not frozen_matched:
             errors.append("E04 失败：冻结预测器权重在在线更新前后发生变动或未处于 eval 模式！")
         if not online_changed:
             errors.append("E04 失败：在线模型参数未发生变化（无真实优化）！")
-        if max_inf_diff > 1e-6:
+        if not frozen_requires_grad_ok:
+            errors.append("E04 失败：冻结预测器参数 requires_grad 不为 False！")
+        if not has_inference_diffs:
+            incomplete.append("E04 不完整：未记录基准决策推理差异")
+        elif max_inf_diff > 1e-6:
             errors.append(f"E04 失败：同一输入下冻结模型推理输出最大差异为 {max_inf_diff} > 1e-6！")
 
-        e04_valid = bool(frozen_matched and online_changed and max_inf_diff <= 1e-6)
+        # 若存在保存的代表性 CPU 模型状态，独立计算 SHA-256 并重算推理差异
+        rep_e04 = inputs_pt.get("e04_representative")
+        if rep_e04 is not None:
+            from training.work3_r3_e04_audit import compute_state_dict_sha256
+            head_state = rep_e04.get("frozen_head_state_dict")
+            head_post = rep_e04.get("frozen_head_state_dict_post")
+            if head_state is not None and head_post is not None:
+                sha_pre = compute_state_dict_sha256(head_state)
+                sha_post = compute_state_dict_sha256(head_post)
+                if sha_pre != sha_post:
+                    errors.append(f"E04 独立复核失败：代表性冻结 head state_dict SHA 不匹配 ({sha_pre} != {sha_post})")
+            actor_state = rep_e04.get("frozen_actor_state_dict")
+            actor_post = rep_e04.get("frozen_actor_state_dict_post")
+            if actor_state is not None and actor_post is not None:
+                sha_pre_a = compute_state_dict_sha256(actor_state)
+                sha_post_a = compute_state_dict_sha256(actor_post)
+                if sha_pre_a != sha_post_a:
+                    errors.append(f"E04 独立复核失败：代表性冻结 actor state_dict SHA 不匹配 ({sha_pre_a} != {sha_post_a})")
+
+            if rep_e04.get("frozen_head_requires_grad", False) or rep_e04.get("frozen_actor_requires_grad", False):
+                errors.append("E04 独立复核失败：代表性冻结预测器 requires_grad 为 True")
+
+        e04_valid = bool(frozen_matched and online_changed and frozen_requires_grad_ok and has_inference_diffs and max_inf_diff <= 1e-6 and not any("E04" in e for e in errors))
 
     # 8. 综合判定
     valid_r3_cases = [c for c in candidate_results if c["valid"]]
