@@ -61,12 +61,12 @@ def init_r3_e04_auditor(
     return _GLOBAL_AUDITOR
 
 
-def compute_state_dict_sha256(module: nn.Module | None) -> str:
-    """对 nn.Module 的 state_dict（按参数与持久/非持久缓冲区名称排序）计算 SHA-256。"""
+def compute_state_dict_sha256(module: nn.Module | dict[str, torch.Tensor] | None) -> str:
+    """对 nn.Module 或 state_dict（按参数与持久/非持久缓冲区名称排序）计算 SHA-256。"""
     if module is None:
         return "none"
     h = hashlib.sha256()
-    state = module.state_dict()
+    state = module.state_dict() if isinstance(module, nn.Module) else module
     for name in sorted(state.keys()):
         tensor = state[name]
         if not isinstance(tensor, torch.Tensor):
