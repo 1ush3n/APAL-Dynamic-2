@@ -689,6 +689,9 @@ def evaluate_single_trajectory(
         "Method-B",
         "Method-C",
         "Method-D",
+        "Method-E",
+        "Method-F",
+        "Method-G",
     }:
         raise ValueError(f"未知智能体类型: {agent_type}")
     if agent_type == "Baseline-Repair-A" and not isinstance(
@@ -775,7 +778,14 @@ def evaluate_single_trajectory(
 
             if agent_type == "Heuristic-Debug":
                 action = agent.select_action(env)
-            elif agent_type in {"Method-B", "Method-C", "Method-D"}:
+            elif agent_type in {
+                "Method-B",
+                "Method-C",
+                "Method-D",
+                "Method-E",
+                "Method-F",
+                "Method-G",
+            }:
                 if isinstance(agent, FormalEvaluationAgent):
                     action = agent.select_action(env)
                 else:

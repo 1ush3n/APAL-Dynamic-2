@@ -1,0 +1,4638 @@
+[
+  {
+    "scenario_id": "NOMINAL",
+    "method": "C",
+    "result": {
+      "agent": "Method-C",
+      "scenario_id": "NOMINAL",
+      "disturbance_type": null,
+      "disturbance_label": null,
+      "disturbance_definition": null,
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.0036497286647580694,
+        "d_w": 0.2,
+        "g_postpone": 0.0,
+        "r_t": 0.003649728664758058,
+        "r_w": 0.2
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.000729945732951614,
+        "d_team": 0.010000000000000002,
+        "j_postpone": 0.0,
+        "j_revision": 0.010729945732951614
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0007299457329516117,
+        "team": 0.010000000000000002
+      },
+      "objective_j_total": 0.021459891465903227,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.021459891465903234,
+        "independent_j_total": 0.021459891465903227,
+        "difference": 6.938893903907228e-18,
+        "components_match": true,
+        "actual_reward_sum": -0.021459891465903234,
+        "expected_actual_reward_sum": -0.021459891465903227,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007299457329516148,
+      "d_team": 0.010000000000000009,
+      "j_postpone": 0.0,
+      "j_revision": 0.010729945732951617,
+      "j_total": 0.021459891465903227,
+      "environment_cumulative_cost": 0.021459891465903234,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007299457329516148,
+        "d_team": 0.010000000000000009,
+        "j_postpone": 0.0,
+        "j_revision": 0.010729945732951617
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 669.7093905685989,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 0,
+      "disturbance_effects": {
+        "disturbance_type": null,
+        "disturbance_label": null,
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 0,
+        "actual_hit_count": 0,
+        "actual_hit_rate": 0.0,
+        "actual_hit_task_keys": [],
+        "start_availability_advanced_count": 0,
+        "start_availability_advanced_task_keys": [],
+        "material_ready_advanced_count": 0,
+        "material_ready_advanced_task_keys": [],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": false
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 57.029601746782674,
+        "heuristic_mae_h0": 0.19492461583253545,
+        "corrected_mae_hours": 57.029601746782674,
+        "corrected_mae_h0": 0.19492461583253545
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "NOMINAL",
+    "method": "E",
+    "result": {
+      "agent": "Method-E",
+      "scenario_id": "NOMINAL",
+      "disturbance_type": null,
+      "disturbance_label": null,
+      "disturbance_definition": null,
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 211,
+      "total_steps": 211,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 200
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 203,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 211,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.018997296768778656,
+        "d_w": 0.25238095238095243,
+        "g_postpone": 0.1,
+        "r_t": 0.018997296768778656,
+        "r_w": 0.25238095238095243
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003799459353755731,
+        "d_team": 0.012619047619047622,
+        "j_postpone": 0.1,
+        "j_revision": 0.01641850697280335
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.003799459353755731,
+        "team": 0.012619047619047622
+      },
+      "objective_j_total": 0.1328370139456067,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.13283701394560687,
+        "independent_j_total": 0.1328370139456067,
+        "difference": 1.6653345369377348e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.13283701394560687,
+        "expected_actual_reward_sum": -0.1328370139456067,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 1,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.004761904761904762,
+        "observed_started_ratio": 0.004761904761904762
+      },
+      "j_takt": 0.0,
+      "d_time": 0.003799459353755731,
+      "d_team": 0.012619047619047632,
+      "j_postpone": 0.1,
+      "j_revision": 0.016418506972803365,
+      "j_total": 0.1328370139456067,
+      "environment_cumulative_cost": 0.13283701394560687,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.003799459353755731,
+        "d_team": 0.012619047619047632,
+        "j_postpone": 0.1,
+        "j_revision": 0.016418506972803365
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 683.0796812294017,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 0,
+      "disturbance_effects": {
+        "disturbance_type": null,
+        "disturbance_label": null,
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 0,
+        "actual_hit_count": 0,
+        "actual_hit_rate": 0.0,
+        "actual_hit_task_keys": [],
+        "start_availability_advanced_count": 0,
+        "start_availability_advanced_task_keys": [],
+        "material_ready_advanced_count": 0,
+        "material_ready_advanced_task_keys": [],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": false
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 211,
+        "heuristic_mae_hours": 58.451415898870124,
+        "heuristic_mae_h0": 0.19978431270735306,
+        "corrected_mae_hours": 58.451415898870124,
+        "corrected_mae_h0": 0.19978431270735306
+      },
+      "postponed_count": 1,
+      "postponed_task_count": 1,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 211,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "NOMINAL",
+    "method": "F",
+    "result": {
+      "agent": "Method-F",
+      "scenario_id": "NOMINAL",
+      "disturbance_type": null,
+      "disturbance_label": null,
+      "disturbance_definition": null,
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.0035941148170870007,
+        "d_w": 0.2666666666666667,
+        "g_postpone": 0.0,
+        "r_t": 0.0035941148170869895,
+        "r_w": 0.2666666666666667
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0007188229634174001,
+        "d_team": 0.013333333333333336,
+        "j_postpone": 0.0,
+        "j_revision": 0.014052156296750735
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.000718822963417398,
+        "team": 0.013333333333333336
+      },
+      "objective_j_total": 0.02810431259350147,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.028104312593501456,
+        "independent_j_total": 0.02810431259350147,
+        "difference": -1.3877787807814457e-17,
+        "components_match": true,
+        "actual_reward_sum": -0.028104312593501456,
+        "expected_actual_reward_sum": -0.02810431259350147,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007188229634174006,
+      "d_team": 0.013333333333333346,
+      "j_postpone": 0.0,
+      "j_revision": 0.014052156296750743,
+      "j_total": 0.02810431259350147,
+      "environment_cumulative_cost": 0.028104312593501456,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007188229634174006,
+        "d_team": 0.013333333333333346,
+        "j_postpone": 0.0,
+        "j_revision": 0.014052156296750743
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 671.4977646872286,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 0,
+      "disturbance_effects": {
+        "disturbance_type": null,
+        "disturbance_label": null,
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 0,
+        "actual_hit_count": 0,
+        "actual_hit_rate": 0.0,
+        "actual_hit_task_keys": [],
+        "start_availability_advanced_count": 0,
+        "start_availability_advanced_task_keys": [],
+        "material_ready_advanced_count": 0,
+        "material_ready_advanced_task_keys": [],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": false
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 57.28014309543597,
+        "heuristic_mae_h0": 0.1957809549027828,
+        "corrected_mae_hours": 44.253399436332955,
+        "corrected_mae_h0": 0.15125613050414785
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "NOMINAL",
+    "method": "D",
+    "result": {
+      "agent": "Method-D",
+      "scenario_id": "NOMINAL",
+      "disturbance_type": null,
+      "disturbance_label": null,
+      "disturbance_definition": null,
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 217,
+      "total_steps": 217,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 206
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 62,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 93,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 124,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 155,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 178,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 196,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 209,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 217,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.01739557746655046,
+        "d_w": 0.5333333333333334,
+        "g_postpone": 0.7,
+        "r_t": 0.017395577441784993,
+        "r_w": 0.5333333333333334
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003479115493310092,
+        "d_team": 0.026666666666666672,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0034791154883569986,
+        "team": 0.026666666666666672
+      },
+      "objective_j_total": 0.7602915643150003,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.7602915643150013,
+        "independent_j_total": 0.7602915643150003,
+        "difference": 9.992007221626409e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.7602915643150013,
+        "expected_actual_reward_sum": -0.7602915643150003,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 7,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.03333333333333333,
+        "observed_started_ratio": 0.03333333333333333
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0034791154933100964,
+      "d_team": 0.026666666666666707,
+      "j_postpone": 0.7,
+      "j_revision": 0.03014578215502367,
+      "j_total": 0.7602915643150003,
+      "environment_cumulative_cost": 0.7602915643150013,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0034791154933100964,
+        "d_team": 0.026666666666666707,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 442.7493558306961,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 0,
+      "disturbance_effects": {
+        "disturbance_type": null,
+        "disturbance_label": null,
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 0,
+        "actual_hit_count": 0,
+        "actual_hit_rate": 0.0,
+        "actual_hit_task_keys": [],
+        "start_availability_advanced_count": 0,
+        "start_availability_advanced_task_keys": [],
+        "material_ready_advanced_count": 0,
+        "material_ready_advanced_task_keys": [],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": false
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 217,
+        "heuristic_mae_hours": 38.61466872957625,
+        "heuristic_mae_h0": 0.1319832023557461,
+        "corrected_mae_hours": 11.926849555510307,
+        "corrected_mae_h0": 0.04076543578232937
+      },
+      "postponed_count": 7,
+      "postponed_task_count": 7,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 217,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "method": "C",
+    "result": {
+      "agent": "Method-C",
+      "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.003975248194235677,
+        "d_w": 0.2,
+        "g_postpone": 0.0,
+        "r_t": 0.003649728664758058,
+        "r_w": 0.2
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0007950496388471354,
+        "d_team": 0.010000000000000002,
+        "j_postpone": 0.0,
+        "j_revision": 0.010729945732951614
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0007299457329516117,
+        "team": 0.010000000000000002
+      },
+      "objective_j_total": 0.02152499537179875,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.021524995371798753,
+        "independent_j_total": 0.02152499537179875,
+        "difference": 3.469446951953614e-18,
+        "components_match": true,
+        "actual_reward_sum": -0.021524995371798753,
+        "expected_actual_reward_sum": -0.02152499537179875,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007950496388471366,
+      "d_team": 0.010000000000000009,
+      "j_postpone": 0.0,
+      "j_revision": 0.010729945732951617,
+      "j_total": 0.02152499537179875,
+      "environment_cumulative_cost": 0.021524995371798753,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007950496388471366,
+        "d_team": 0.010000000000000009,
+        "j_postpone": 0.0,
+        "j_revision": 0.010729945732951617
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 679.9916451351162,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "1_16"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "1_16"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "1_16"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 57.66612226756708,
+        "heuristic_mae_h0": 0.1971002143670356,
+        "corrected_mae_hours": 57.66612226756708,
+        "corrected_mae_h0": 0.1971002143670356
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "method": "E",
+    "result": {
+      "agent": "Method-E",
+      "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 211,
+      "total_steps": 211,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 200
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 203,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 211,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.019322816298256267,
+        "d_w": 0.25238095238095243,
+        "g_postpone": 0.1,
+        "r_t": 0.018997296768778663,
+        "r_w": 0.25238095238095243
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0038645632596512533,
+        "d_team": 0.012619047619047622,
+        "j_postpone": 0.1,
+        "j_revision": 0.016418506972803355
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.003799459353755733,
+        "team": 0.012619047619047622
+      },
+      "objective_j_total": 0.13290211785150224,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.13290211785150238,
+        "independent_j_total": 0.13290211785150224,
+        "difference": 1.3877787807814457e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.13290211785150238,
+        "expected_actual_reward_sum": -0.13290211785150224,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 1,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.004761904761904762,
+        "observed_started_ratio": 0.004761904761904762
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0038645632596512537,
+      "d_team": 0.012619047619047632,
+      "j_postpone": 0.1,
+      "j_revision": 0.016418506972803365,
+      "j_total": 0.13290211785150224,
+      "environment_cumulative_cost": 0.13290211785150238,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0038645632596512537,
+        "d_team": 0.012619047619047632,
+        "j_postpone": 0.1,
+        "j_revision": 0.016418506972803365
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 693.3619357959188,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "1_16"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "1_16"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "1_16"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 211,
+        "heuristic_mae_hours": 59.084919734721915,
+        "heuristic_mae_h0": 0.20194960034832474,
+        "corrected_mae_hours": 59.084919734721915,
+        "corrected_mae_h0": 0.20194960034832474
+      },
+      "postponed_count": 1,
+      "postponed_task_count": 1,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 211,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "method": "F",
+    "result": {
+      "agent": "Method-F",
+      "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.003919634346564609,
+        "d_w": 0.2666666666666667,
+        "g_postpone": 0.0,
+        "r_t": 0.0035941148170869895,
+        "r_w": 0.2666666666666667
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0007839268693129218,
+        "d_team": 0.013333333333333336,
+        "j_postpone": 0.0,
+        "j_revision": 0.014052156296750735
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.000718822963417398,
+        "team": 0.013333333333333336
+      },
+      "objective_j_total": 0.02816941649939699,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.02816941649939697,
+        "independent_j_total": 0.02816941649939699,
+        "difference": -2.0816681711721685e-17,
+        "components_match": true,
+        "actual_reward_sum": -0.02816941649939697,
+        "expected_actual_reward_sum": -0.02816941649939699,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007839268693129224,
+      "d_team": 0.013333333333333346,
+      "j_postpone": 0.0,
+      "j_revision": 0.014052156296750742,
+      "j_total": 0.02816941649939699,
+      "environment_cumulative_cost": 0.02816941649939697,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007839268693129224,
+        "d_team": 0.013333333333333346,
+        "j_postpone": 0.0,
+        "j_revision": 0.014052156296750742
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 681.7800192537459,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "1_16"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "1_16"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "1_16"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 57.91666361622036,
+        "heuristic_mae_h0": 0.19795655343728294,
+        "corrected_mae_hours": 44.60993146871482,
+        "corrected_mae_h0": 0.15247474096810634
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "method": "D",
+    "result": {
+      "agent": "Method-D",
+      "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 217,
+      "total_steps": 217,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 206
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 62,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 93,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 124,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 155,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 178,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 196,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 209,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 217,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.01758396803368137,
+        "d_w": 0.5333333333333334,
+        "g_postpone": 0.7,
+        "r_t": 0.017395577441784996,
+        "r_w": 0.5333333333333334
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003516793606736274,
+        "d_team": 0.026666666666666672,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0034791154883569994,
+        "team": 0.026666666666666672
+      },
+      "objective_j_total": 0.7603292424284265,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.7603292424284275,
+        "independent_j_total": 0.7603292424284265,
+        "difference": 9.992007221626409e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.7603292424284275,
+        "expected_actual_reward_sum": -0.7603292424284265,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 7,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.03333333333333333,
+        "observed_started_ratio": 0.03333333333333333
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0035167936067362774,
+      "d_team": 0.026666666666666707,
+      "j_postpone": 0.7,
+      "j_revision": 0.03014578215502367,
+      "j_total": 0.7603292424284265,
+      "environment_cumulative_cost": 0.7603292424284275,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0035167936067362774,
+        "d_team": 0.026666666666666707,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 453.0316106300437,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "1_16"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "1_16"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "1_16"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 6,
+        "cross_aircraft_affected_aircraft_ids": [
+          0
+        ],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 217,
+        "heuristic_mae_hours": 39.23065634428372,
+        "heuristic_mae_h0": 0.13408862034003394,
+        "corrected_mae_hours": 11.309925353318597,
+        "corrected_mae_h0": 0.038656816584111034
+      },
+      "postponed_count": 7,
+      "postponed_task_count": 7,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 217,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "method": "C",
+    "result": {
+      "agent": "Method-C",
+      "scenario_id": "COMPARE_VAL_S2_MID_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.003960310042464286,
+        "d_w": 0.2,
+        "g_postpone": 0.0,
+        "r_t": 0.003960310042464276,
+        "r_w": 0.2
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0007920620084928573,
+        "d_team": 0.010000000000000002,
+        "j_postpone": 0.0,
+        "j_revision": 0.010792062008492857
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0007920620084928552,
+        "team": 0.010000000000000002
+      },
+      "objective_j_total": 0.021584124016985715,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.021584124016985718,
+        "independent_j_total": 0.021584124016985715,
+        "difference": 3.469446951953614e-18,
+        "components_match": true,
+        "actual_reward_sum": -0.021584124016985718,
+        "expected_actual_reward_sum": -0.021584124016985715,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007920620084928583,
+      "d_team": 0.010000000000000009,
+      "j_postpone": 0.0,
+      "j_revision": 0.01079206200849286,
+      "j_total": 0.021584124016985715,
+      "environment_cumulative_cost": 0.021584124016985718,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007920620084928583,
+        "d_team": 0.010000000000000009,
+        "j_postpone": 0.0,
+        "j_revision": 0.01079206200849286
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 669.7093905685989,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "2_13"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "2_13"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "2_13"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 54.383077272732365,
+        "heuristic_mae_h0": 0.18587891411632512,
+        "corrected_mae_hours": 54.383077272732365,
+        "corrected_mae_h0": 0.18587891411632512
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "method": "E",
+    "result": {
+      "agent": "Method-E",
+      "scenario_id": "COMPARE_VAL_S2_MID_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 211,
+      "total_steps": 211,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 200
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 203,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 211,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.018997296768778656,
+        "d_w": 0.25238095238095243,
+        "g_postpone": 0.1,
+        "r_t": 0.018997296768778656,
+        "r_w": 0.25238095238095243
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003799459353755731,
+        "d_team": 0.012619047619047622,
+        "j_postpone": 0.1,
+        "j_revision": 0.01641850697280335
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.003799459353755731,
+        "team": 0.012619047619047622
+      },
+      "objective_j_total": 0.1328370139456067,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.13283701394560687,
+        "independent_j_total": 0.1328370139456067,
+        "difference": 1.6653345369377348e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.13283701394560687,
+        "expected_actual_reward_sum": -0.1328370139456067,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 1,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.004761904761904762,
+        "observed_started_ratio": 0.004761904761904762
+      },
+      "j_takt": 0.0,
+      "d_time": 0.003799459353755731,
+      "d_team": 0.012619047619047632,
+      "j_postpone": 0.1,
+      "j_revision": 0.016418506972803365,
+      "j_total": 0.1328370139456067,
+      "environment_cumulative_cost": 0.13283701394560687,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.003799459353755731,
+        "d_team": 0.012619047619047632,
+        "j_postpone": 0.1,
+        "j_revision": 0.016418506972803365
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 683.0796812294017,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "2_13"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "2_13"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "2_13"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 211,
+        "heuristic_mae_hours": 57.69495807707385,
+        "heuristic_mae_h0": 0.19719877386803478,
+        "corrected_mae_hours": 57.69495807707385,
+        "corrected_mae_h0": 0.19719877386803478
+      },
+      "postponed_count": 1,
+      "postponed_task_count": 1,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 211,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "method": "F",
+    "result": {
+      "agent": "Method-F",
+      "scenario_id": "COMPARE_VAL_S2_MID_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.0039060391892983787,
+        "d_w": 0.2666666666666667,
+        "g_postpone": 0.0,
+        "r_t": 0.0039060391892983683,
+        "r_w": 0.2666666666666667
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0007812078378596758,
+        "d_team": 0.013333333333333336,
+        "j_postpone": 0.0,
+        "j_revision": 0.014114541171193009
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0007812078378596737,
+        "team": 0.013333333333333336
+      },
+      "objective_j_total": 0.02822908234238602,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.028229082342386004,
+        "independent_j_total": 0.02822908234238602,
+        "difference": -1.734723475976807e-17,
+        "components_match": true,
+        "actual_reward_sum": -0.028229082342386004,
+        "expected_actual_reward_sum": -0.02822908234238602,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007812078378596766,
+      "d_team": 0.013333333333333346,
+      "j_postpone": 0.0,
+      "j_revision": 0.01411454117119302,
+      "j_total": 0.02822908234238602,
+      "environment_cumulative_cost": 0.028229082342386004,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007812078378596766,
+        "d_team": 0.013333333333333346,
+        "j_postpone": 0.0,
+        "j_revision": 0.01411454117119302
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 671.4977646872286,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "2_13"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "2_13"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "2_13"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 54.626116721991195,
+        "heuristic_mae_h0": 0.18670961203158126,
+        "corrected_mae_hours": 41.737276631963724,
+        "corrected_mae_h0": 0.1426561358345932
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "method": "D",
+    "result": {
+      "agent": "Method-D",
+      "scenario_id": "COMPARE_VAL_S2_MID_M",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 217,
+      "total_steps": 217,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 206
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 62,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 93,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 124,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 155,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 178,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 196,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 209,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 217,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.01739557746655046,
+        "d_w": 0.5333333333333334,
+        "g_postpone": 0.7,
+        "r_t": 0.017395577441784993,
+        "r_w": 0.5333333333333334
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003479115493310092,
+        "d_team": 0.026666666666666672,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0034791154883569986,
+        "team": 0.026666666666666672
+      },
+      "objective_j_total": 0.7602915643150003,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.7602915643150013,
+        "independent_j_total": 0.7602915643150003,
+        "difference": 9.992007221626409e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.7602915643150013,
+        "expected_actual_reward_sum": -0.7602915643150003,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 7,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.03333333333333333,
+        "observed_started_ratio": 0.03333333333333333
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0034791154933100964,
+      "d_team": 0.026666666666666707,
+      "j_postpone": 0.7,
+      "j_revision": 0.03014578215502367,
+      "j_total": 0.7602915643150003,
+      "environment_cumulative_cost": 0.7602915643150013,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0034791154933100964,
+        "d_team": 0.026666666666666707,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 442.7493558306961,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "2_13"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "2_13"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "2_13"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 6,
+        "cross_aircraft_affected_aircraft_ids": [
+          0
+        ],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 217,
+        "heuristic_mae_hours": 37.555495403608546,
+        "heuristic_mae_h0": 0.12836299552735156,
+        "corrected_mae_hours": 12.981949077973487,
+        "corrected_mae_h0": 0.044371718533424184
+      },
+      "postponed_count": 7,
+      "postponed_task_count": 7,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 217,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "method": "C",
+    "result": {
+      "agent": "Method-C",
+      "scenario_id": "COMPARE_VAL_S3_MID_L",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.003995233500623997,
+        "d_w": 0.2,
+        "g_postpone": 0.0,
+        "r_t": 0.003995233500623987,
+        "r_w": 0.2
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0007990467001247995,
+        "d_team": 0.010000000000000002,
+        "j_postpone": 0.0,
+        "j_revision": 0.0107990467001248
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0007990467001247974,
+        "team": 0.010000000000000002
+      },
+      "objective_j_total": 0.021598093400249603,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.021598093400249607,
+        "independent_j_total": 0.021598093400249603,
+        "difference": 3.469446951953614e-18,
+        "components_match": true,
+        "actual_reward_sum": -0.021598093400249607,
+        "expected_actual_reward_sum": -0.021598093400249603,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007990467001248005,
+      "d_team": 0.010000000000000009,
+      "j_postpone": 0.0,
+      "j_revision": 0.010799046700124803,
+      "j_total": 0.021598093400249603,
+      "environment_cumulative_cost": 0.021598093400249607,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007990467001248005,
+        "d_team": 0.010000000000000009,
+        "j_postpone": 0.0,
+        "j_revision": 0.010799046700124803
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 669.7093905685989,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "3_24"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "3_24"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "3_24"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 56.377708193852676,
+        "heuristic_mae_h0": 0.19269647296503348,
+        "corrected_mae_hours": 56.377708193852676,
+        "corrected_mae_h0": 0.19269647296503348
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "method": "E",
+    "result": {
+      "agent": "Method-E",
+      "scenario_id": "COMPARE_VAL_S3_MID_L",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 211,
+      "total_steps": 211,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 200
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 203,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 211,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.018997296768778656,
+        "d_w": 0.25238095238095243,
+        "g_postpone": 0.1,
+        "r_t": 0.018997296768778656,
+        "r_w": 0.25238095238095243
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003799459353755731,
+        "d_team": 0.012619047619047622,
+        "j_postpone": 0.1,
+        "j_revision": 0.01641850697280335
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.003799459353755731,
+        "team": 0.012619047619047622
+      },
+      "objective_j_total": 0.1328370139456067,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.13283701394560687,
+        "independent_j_total": 0.1328370139456067,
+        "difference": 1.6653345369377348e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.13283701394560687,
+        "expected_actual_reward_sum": -0.1328370139456067,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 1,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.004761904761904762,
+        "observed_started_ratio": 0.004761904761904762
+      },
+      "j_takt": 0.0,
+      "d_time": 0.003799459353755731,
+      "d_team": 0.012619047619047632,
+      "j_postpone": 0.1,
+      "j_revision": 0.016418506972803365,
+      "j_total": 0.1328370139456067,
+      "environment_cumulative_cost": 0.13283701394560687,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.003799459353755731,
+        "d_team": 0.012619047619047632,
+        "j_postpone": 0.1,
+        "j_revision": 0.016418506972803365
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 683.0796812294017,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "3_24"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "3_24"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "3_24"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 211,
+        "heuristic_mae_hours": 58.451415898870124,
+        "heuristic_mae_h0": 0.19978431270735306,
+        "corrected_mae_hours": 58.451415898870124,
+        "corrected_mae_h0": 0.19978431270735306
+      },
+      "postponed_count": 1,
+      "postponed_task_count": 1,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 211,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "method": "F",
+    "result": {
+      "agent": "Method-F",
+      "scenario_id": "COMPARE_VAL_S3_MID_L",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.0037721132942968353,
+        "d_w": 0.2666666666666667,
+        "g_postpone": 0.0,
+        "r_t": 0.0037721132942968244,
+        "r_w": 0.2666666666666667
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0007544226588593671,
+        "d_team": 0.013333333333333336,
+        "j_postpone": 0.0,
+        "j_revision": 0.0140877559921927
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0007544226588593649,
+        "team": 0.013333333333333336
+      },
+      "objective_j_total": 0.028175511984385403,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.0281755119843854,
+        "independent_j_total": 0.028175511984385403,
+        "difference": -3.469446951953614e-18,
+        "components_match": true,
+        "actual_reward_sum": -0.0281755119843854,
+        "expected_actual_reward_sum": -0.028175511984385403,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0007544226588593678,
+      "d_team": 0.013333333333333346,
+      "j_postpone": 0.0,
+      "j_revision": 0.01408775599219271,
+      "j_total": 0.028175511984385403,
+      "environment_cumulative_cost": 0.0281755119843854,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007544226588593678,
+        "d_team": 0.013333333333333346,
+        "j_postpone": 0.0,
+        "j_revision": 0.01408775599219271
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 671.4977646872286,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "3_24"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "3_24"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "3_24"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 56.747837774243166,
+        "heuristic_mae_h0": 0.1939615592370052,
+        "corrected_mae_hours": 43.72089385143451,
+        "corrected_mae_h0": 0.14943605034602428
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "method": "D",
+    "result": {
+      "agent": "Method-D",
+      "scenario_id": "COMPARE_VAL_S3_MID_L",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 217,
+      "total_steps": 217,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 206
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 62,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 93,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 124,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 155,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 178,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 196,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 209,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 217,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.01739557746655046,
+        "d_w": 0.5333333333333334,
+        "g_postpone": 0.7,
+        "r_t": 0.017395577441784993,
+        "r_w": 0.5333333333333334
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003479115493310092,
+        "d_team": 0.026666666666666672,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0034791154883569986,
+        "team": 0.026666666666666672
+      },
+      "objective_j_total": 0.7602915643150003,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.7602915643150013,
+        "independent_j_total": 0.7602915643150003,
+        "difference": 9.992007221626409e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.7602915643150013,
+        "expected_actual_reward_sum": -0.7602915643150003,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 7,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.03333333333333333,
+        "observed_started_ratio": 0.03333333333333333
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0034791154933100964,
+      "d_team": 0.026666666666666707,
+      "j_postpone": 0.7,
+      "j_revision": 0.03014578215502367,
+      "j_total": 0.7602915643150003,
+      "environment_cumulative_cost": 0.7602915643150013,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0034791154933100964,
+        "d_team": 0.026666666666666707,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 442.7493558306961,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 0,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 0,
+        "actual_hit_rate": 0.0,
+        "actual_hit_task_keys": [],
+        "start_availability_advanced_count": 0,
+        "start_availability_advanced_task_keys": [],
+        "material_ready_advanced_count": 0,
+        "material_ready_advanced_task_keys": [],
+        "unhit_reasons": {
+          "3_24": "already_started_or_completed_at_event"
+        },
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 6,
+        "cross_aircraft_affected_aircraft_ids": [
+          0
+        ],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 217,
+        "heuristic_mae_hours": 38.61466872957625,
+        "heuristic_mae_h0": 0.1319832023557461,
+        "corrected_mae_hours": 11.927327095838512,
+        "corrected_mae_h0": 0.040767067993710285
+      },
+      "postponed_count": 7,
+      "postponed_task_count": 7,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 217,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "method": "C",
+    "result": {
+      "agent": "Method-C",
+      "scenario_id": "COMPARE_VAL_S4_LATE_H",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.004215183831757532,
+        "d_w": 0.2,
+        "g_postpone": 0.0,
+        "r_t": 0.003649728664758058,
+        "r_w": 0.2
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0008430367663515064,
+        "d_team": 0.010000000000000002,
+        "j_postpone": 0.0,
+        "j_revision": 0.010729945732951614
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0007299457329516117,
+        "team": 0.010000000000000002
+      },
+      "objective_j_total": 0.021572982499303124,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.021572982499303124,
+        "independent_j_total": 0.021572982499303124,
+        "difference": 0.0,
+        "components_match": true,
+        "actual_reward_sum": -0.021572982499303124,
+        "expected_actual_reward_sum": -0.021572982499303124,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0008430367663515073,
+      "d_team": 0.010000000000000009,
+      "j_postpone": 0.0,
+      "j_revision": 0.010729945732951617,
+      "j_total": 0.021572982499303124,
+      "environment_cumulative_cost": 0.021572982499303124,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0008430367663515073,
+        "d_team": 0.010000000000000009,
+        "j_postpone": 0.0,
+        "j_revision": 0.010729945732951617
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 704.4510951850256,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "3_125"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "3_125"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "3_125"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 60.66920889707498,
+        "heuristic_mae_h0": 0.2073646295065237,
+        "corrected_mae_hours": 60.66920889707498,
+        "corrected_mae_h0": 0.2073646295065237
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "method": "E",
+    "result": {
+      "agent": "Method-E",
+      "scenario_id": "COMPARE_VAL_S4_LATE_H",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 211,
+      "total_steps": 211,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 200
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 203,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 211,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.019345137399533946,
+        "d_w": 0.25238095238095243,
+        "g_postpone": 0.1,
+        "r_t": 0.01899729676877866,
+        "r_w": 0.25238095238095243
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0038690274799067894,
+        "d_team": 0.012619047619047622,
+        "j_postpone": 0.1,
+        "j_revision": 0.016418506972803355
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.003799459353755732,
+        "team": 0.012619047619047622
+      },
+      "objective_j_total": 0.1329065820717578,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.13290658207175793,
+        "independent_j_total": 0.1329065820717578,
+        "difference": 1.3877787807814457e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.13290658207175793,
+        "expected_actual_reward_sum": -0.1329065820717578,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 1,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.004761904761904762,
+        "observed_started_ratio": 0.004761904761904762
+      },
+      "j_takt": 0.0,
+      "d_time": 0.00386902747990679,
+      "d_team": 0.012619047619047632,
+      "j_postpone": 0.1,
+      "j_revision": 0.016418506972803365,
+      "j_total": 0.1329065820717578,
+      "environment_cumulative_cost": 0.13290658207175793,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.00386902747990679,
+        "d_team": 0.012619047619047632,
+        "j_postpone": 0.1,
+        "j_revision": 0.016418506972803365
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 704.4510951850256,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "3_125"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "3_125"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "3_125"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 211,
+        "heuristic_mae_hours": 60.67971498429058,
+        "heuristic_mae_h0": 0.20740053884047838,
+        "corrected_mae_hours": 60.67971498429058,
+        "corrected_mae_h0": 0.20740053884047838
+      },
+      "postponed_count": 1,
+      "postponed_task_count": 1,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 211,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "method": "F",
+    "result": {
+      "agent": "Method-F",
+      "scenario_id": "COMPARE_VAL_S4_LATE_H",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 210,
+      "total_steps": 210,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 199
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 61,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 91,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 121,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 151,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 173,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 190,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 202,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 210,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.004140119650187687,
+        "d_w": 0.2666666666666667,
+        "g_postpone": 0.0,
+        "r_t": 0.0035941148170869895,
+        "r_w": 0.2666666666666667
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.0008280239300375374,
+        "d_team": 0.013333333333333336,
+        "j_postpone": 0.0,
+        "j_revision": 0.014052156296750735
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.000718822963417398,
+        "team": 0.013333333333333336
+      },
+      "objective_j_total": 0.028213513560121608,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.028213513560121594,
+        "independent_j_total": 0.028213513560121608,
+        "difference": -1.3877787807814457e-17,
+        "components_match": true,
+        "actual_reward_sum": -0.028213513560121594,
+        "expected_actual_reward_sum": -0.028213513560121608,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 0,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.0,
+        "observed_started_ratio": 0.0
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0008280239300375381,
+      "d_team": 0.013333333333333346,
+      "j_postpone": 0.0,
+      "j_revision": 0.014052156296750743,
+      "j_total": 0.028213513560121608,
+      "environment_cumulative_cost": 0.028213513560121594,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0008280239300375381,
+        "d_team": 0.013333333333333346,
+        "j_postpone": 0.0,
+        "j_revision": 0.014052156296750743
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 705.0444360022746,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 1,
+        "actual_hit_rate": 1.0,
+        "actual_hit_task_keys": [
+          "3_125"
+        ],
+        "start_availability_advanced_count": 1,
+        "start_availability_advanced_task_keys": [
+          "3_125"
+        ],
+        "material_ready_advanced_count": 1,
+        "material_ready_advanced_task_keys": [
+          "3_125"
+        ],
+        "unhit_reasons": {},
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 0,
+        "cross_aircraft_affected_aircraft_ids": [],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 210,
+        "heuristic_mae_hours": 60.7945562808217,
+        "heuristic_mae_h0": 0.20779306123099792,
+        "corrected_mae_hours": 47.780438958912214,
+        "corrected_mae_h0": 0.1633113930854565
+      },
+      "postponed_count": 0,
+      "postponed_task_count": 0,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 210,
+      "transfers": 11
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "method": "D",
+    "result": {
+      "agent": "Method-D",
+      "scenario_id": "COMPARE_VAL_S4_LATE_H",
+      "disturbance_type": "task_start_availability_delay",
+      "disturbance_label": "工序延迟开工（开工可用性延迟）",
+      "disturbance_definition": "事件e=(tau,k*,A,R)满足R>tau；tau后才揭示目标和恢复时刻。命中且尚未开工目标的下界更新为r_new=max(r_old,R)，实际开工不得早于该下界；已开工/完工工序不撤回。不模拟共享物料、BOM或供应链传播。",
+      "disturbance_legacy_names": {
+        "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+        "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+        "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+        "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+        "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+        "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+        "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+        "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+      },
+      "warmup_mode": "none",
+      "warmup": null,
+      "warmup_steps": 0,
+      "policy_steps": 217,
+      "total_steps": 217,
+      "advance_cause_scope": "evaluation_policy_steps",
+      "advance_cause_counts": {
+        "explicit": 0,
+        "identical_resubmission": 0,
+        "forced_no_candidate": 0,
+        "auto_after_action": 11,
+        "none": 206
+      },
+      "advance_cause_events": [
+        {
+          "step_count": 8,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 21,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 39,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 62,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 93,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 124,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 155,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 178,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 196,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 209,
+          "advance_cause": "auto_after_action"
+        },
+        {
+          "step_count": 217,
+          "advance_cause": "auto_after_action"
+        }
+      ],
+      "cost_schema_version": "work3_trajectory_cost_v2",
+      "metrics_unweighted": {
+        "j_h": 0.0,
+        "d_t": 0.01739557746655046,
+        "d_w": 0.5333333333333334,
+        "g_postpone": 0.7,
+        "r_t": 0.017395577441784993,
+        "r_w": 0.5333333333333334
+      },
+      "metric_coverage": {
+        "status": "all_tasks_started",
+        "all_tasks_started": true,
+        "started_task_count": 210,
+        "fixed_task_count": 210
+      },
+      "cost_components_weighted": {
+        "j_takt": 0.0,
+        "d_time": 0.003479115493310092,
+        "d_team": 0.026666666666666672,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "objective_weights": {
+        "w_h": 1.0,
+        "w_t": 0.2,
+        "w_w": 0.05,
+        "w_p": 1.0,
+        "lambda_1": 0.1,
+        "lambda_2": 0.2,
+        "normalize_by_n": true,
+        "w_revision_time": null,
+        "w_revision_team": null
+      },
+      "objective_normalization": {
+        "h0_hours": 292.5726004548256,
+        "normalize_by_n": true,
+        "fixed_task_count": 210,
+        "metric_rules": {
+          "j_h": "每次全线同步转站超期小时除以H0后求和",
+          "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+          "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+          "g_postpone": "累计g(n)，不除以N",
+          "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+          "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+        }
+      },
+      "revision_weighted_components": {
+        "time": 0.0034791154883569986,
+        "team": 0.026666666666666672
+      },
+      "objective_j_total": 0.7602915643150003,
+      "ledger_reconciliation": {
+        "environment_cumulative_cost": 0.7602915643150013,
+        "independent_j_total": 0.7602915643150003,
+        "difference": 9.992007221626409e-16,
+        "components_match": true,
+        "actual_reward_sum": -0.7602915643150013,
+        "expected_actual_reward_sum": -0.7602915643150003,
+        "reward_sum_matches": true,
+        "consistent": true
+      },
+      "final_station_deviation": {
+        "valid_for_final_comparison": true,
+        "status": "complete_feasible",
+        "termination_reason": "completed",
+        "changed_started_task_count": 7,
+        "started_task_count": 210,
+        "station_observed_task_count": 210,
+        "total_task_count": 210,
+        "final_deviation_ratio": 0.03333333333333333,
+        "observed_started_ratio": 0.03333333333333333
+      },
+      "j_takt": 0.0,
+      "d_time": 0.0034791154933100964,
+      "d_team": 0.026666666666666707,
+      "j_postpone": 0.7,
+      "j_revision": 0.03014578215502367,
+      "j_total": 0.7602915643150003,
+      "environment_cumulative_cost": 0.7602915643150013,
+      "raw_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0034791154933100964,
+        "d_team": 0.026666666666666707,
+        "j_postpone": 0.7,
+        "j_revision": 0.03014578215502367
+      },
+      "legacy_field_semantics": {
+        "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+        "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+      },
+      "makespan": 442.7493558306961,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "termination_reason": "completed",
+      "failure_reason": null,
+      "constraint_violations": {},
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 0,
+      "disturbance_effects": {
+        "disturbance_type": "task_start_availability_delay",
+        "disturbance_label": "工序延迟开工（开工可用性延迟）",
+        "disturbance_legacy_names": {
+          "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+          "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+          "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+          "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+          "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+          "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+          "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+          "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+        },
+        "target_count": 1,
+        "actual_hit_count": 0,
+        "actual_hit_rate": 0.0,
+        "actual_hit_task_keys": [],
+        "start_availability_advanced_count": 0,
+        "start_availability_advanced_task_keys": [],
+        "material_ready_advanced_count": 0,
+        "material_ready_advanced_task_keys": [],
+        "unhit_reasons": {
+          "3_125": "already_started_or_completed_at_event"
+        },
+        "observed_added_wait_hours": 0.0,
+        "observed_start_deviation_from_baseline_hours": 0.0,
+        "metric_semantics": {
+          "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+          "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+          "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+          "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+        },
+        "cross_aircraft_affected_task_count": 6,
+        "cross_aircraft_affected_aircraft_ids": [
+          0
+        ],
+        "event_triggered": true
+      },
+      "time_prediction_metrics": {
+        "labeled_cycle_count": 11,
+        "sample_count": 217,
+        "heuristic_mae_hours": 38.61466872957625,
+        "heuristic_mae_h0": 0.1319832023557461,
+        "corrected_mae_hours": 11.9268480788533,
+        "corrected_mae_h0": 0.04076543073518209
+      },
+      "postponed_count": 7,
+      "postponed_task_count": 7,
+      "multiply_postponed_task_count": 0,
+      "takt_violation_hours": 0.0,
+      "decisions": 217,
+      "transfers": 11
+    }
+  }
+]

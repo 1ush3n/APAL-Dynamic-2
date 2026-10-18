@@ -1,0 +1,402 @@
+[
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "seed": 42,
+    "covered": true,
+    "station_id": 0,
+    "aircraft_station_at_handover": "ac1@st1",
+    "timing": "EARLY",
+    "intensity": "MED",
+    "handover_step": 21,
+    "handover_time": 38.73657922558419,
+    "hit_targets": "1_16",
+    "handover_cost": {
+      "j_total": 6.51039058955218e-05,
+      "j_takt": 0.0,
+      "d_time": 6.51039058955218e-05,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "methods": {
+      "C": {
+        "method": "C",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 189,
+        "total_makespan": 679.9916451351162,
+        "post_makespan": 641.255065909532,
+        "total_j_total": 0.021524995371798753,
+        "post_j_total": 0.02145989146590323,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0007299457329516148,
+          "d_team": 0.010000000000000009,
+          "j_postpone": 0.0,
+          "j_revision": 0.010729945732951617
+        },
+        "post_postponed_count": 0
+      },
+      "E": {
+        "method": "E",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 190,
+        "total_makespan": 693.3619357959188,
+        "post_makespan": 654.6253565703347,
+        "total_j_total": 0.13290211785150238,
+        "post_j_total": 0.13283701394560687,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.003799459353755732,
+          "d_team": 0.012619047619047632,
+          "j_postpone": 0.1,
+          "j_revision": 0.016418506972803365
+        },
+        "post_postponed_count": 1
+      },
+      "F": {
+        "method": "F",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 189,
+        "total_makespan": 681.7800192537459,
+        "post_makespan": 643.0434400281617,
+        "total_j_total": 0.02816941649939697,
+        "post_j_total": 0.02810431259350145,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0007188229634174006,
+          "d_team": 0.013333333333333346,
+          "j_postpone": 0.0,
+          "j_revision": 0.014052156296750742
+        },
+        "post_postponed_count": 0
+      },
+      "D": {
+        "method": "D",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 196,
+        "total_makespan": 453.0316106300437,
+        "post_makespan": 414.2950314044595,
+        "total_j_total": 0.7577462630548621,
+        "post_j_total": 0.7576811591489666,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0031262938626736903,
+          "d_team": 0.025714285714285752,
+          "j_postpone": 0.7,
+          "j_revision": 0.02884057957200631
+        },
+        "post_postponed_count": 7
+      }
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "seed": 42,
+    "covered": true,
+    "station_id": 2,
+    "aircraft_station_at_handover": "ac2@st2",
+    "timing": "MID",
+    "intensity": "MED",
+    "handover_step": 61,
+    "handover_time": 129.70533674370247,
+    "hit_targets": "2_13",
+    "handover_cost": {
+      "j_total": 2.330101778161837e-13,
+      "j_takt": 0.0,
+      "d_time": 2.330101778161837e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "methods": {
+      "C": {
+        "method": "C",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 149,
+        "total_makespan": 669.7093905685989,
+        "post_makespan": 540.0040538248965,
+        "total_j_total": 0.019520835782041328,
+        "post_j_total": 0.019520835781808316,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0007127988432851093,
+          "d_team": 0.009047619047619054,
+          "j_postpone": 0.0,
+          "j_revision": 0.00976041789090416
+        },
+        "post_postponed_count": 0
+      },
+      "E": {
+        "method": "E",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 150,
+        "total_makespan": 669.7093905685989,
+        "post_makespan": 540.0040538248965,
+        "total_j_total": 0.12799108748666443,
+        "post_j_total": 0.12799108748643143,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0028050675527395265,
+          "d_team": 0.0111904761904762,
+          "j_postpone": 0.1,
+          "j_revision": 0.013995543743215731
+        },
+        "post_postponed_count": 1
+      },
+      "F": {
+        "method": "F",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 149,
+        "total_makespan": 671.4977646872286,
+        "post_makespan": 541.7924279435261,
+        "total_j_total": 0.026170655577078934,
+        "post_j_total": 0.026170655576845923,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0007043754074705856,
+          "d_team": 0.012380952380952392,
+          "j_postpone": 0.0,
+          "j_revision": 0.013085327788422975
+        },
+        "post_postponed_count": 0
+      },
+      "D": {
+        "method": "D",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 154,
+        "total_makespan": 433.0560397438895,
+        "post_makespan": 303.3507030001871,
+        "total_j_total": 0.5491801147312244,
+        "post_j_total": 0.5491801147309914,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0026852954628563694,
+          "d_team": 0.021904761904761934,
+          "j_postpone": 0.5,
+          "j_revision": 0.02459005736337276
+        },
+        "post_postponed_count": 5
+      }
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "seed": 42,
+    "covered": true,
+    "station_id": 4,
+    "aircraft_station_at_handover": "ac3@st4",
+    "timing": "MID",
+    "intensity": "LOW",
+    "handover_step": 151,
+    "handover_time": 360.87735014222744,
+    "hit_targets": "3_24",
+    "handover_cost": {
+      "j_total": 5.825270921597614e-13,
+      "j_takt": 0.0,
+      "d_time": 5.825270921597614e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "methods": {
+      "C": {
+        "method": "C",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 59,
+        "total_makespan": 669.4510951850256,
+        "post_makespan": 308.5737450427981,
+        "total_j_total": 0.010341072030793853,
+        "post_j_total": 0.010341072030211326,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0004086312532009004,
+          "d_team": 0.004761904761904762,
+          "j_postpone": 0.0,
+          "j_revision": 0.005170536015105664
+        },
+        "post_postponed_count": 0
+      },
+      "E": {
+        "method": "E",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 60,
+        "total_makespan": 669.4510951850256,
+        "post_makespan": 308.5737450427981,
+        "total_j_total": 0.11397436025774298,
+        "post_j_total": 0.11397436025716044,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0011538467952469753,
+          "d_team": 0.005833333333333336,
+          "j_postpone": 0.1,
+          "j_revision": 0.006987180128580312
+        },
+        "post_postponed_count": 1
+      },
+      "F": {
+        "method": "F",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 59,
+        "total_makespan": 671.0444729201995,
+        "post_makespan": 310.16712277797205,
+        "total_j_total": 0.014091303297001045,
+        "post_j_total": 0.014091303296418518,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0003789849815425862,
+          "d_team": 0.006666666666666666,
+          "j_postpone": 0.0,
+          "j_revision": 0.0070456516482092545
+        },
+        "post_postponed_count": 0
+      },
+      "D": {
+        "method": "D",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 61,
+        "total_makespan": 497.8115605360057,
+        "post_makespan": 136.93421039377824,
+        "total_j_total": 0.22344916059384282,
+        "post_j_total": 0.22344916059326028,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0012483898215011721,
+          "d_team": 0.01047619047619048,
+          "j_postpone": 0.2,
+          "j_revision": 0.011724580295568894
+        },
+        "post_postponed_count": 2
+      }
+    }
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "seed": 42,
+    "covered": true,
+    "station_id": 4,
+    "aircraft_station_at_handover": "ac3@st5",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "handover_step": 173,
+    "handover_time": 472.9346879417358,
+    "hit_targets": "3_125",
+    "handover_cost": {
+      "j_total": 0.00011393183601619588,
+      "j_takt": 0.0,
+      "d_time": 0.00011393183601619588,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "methods": {
+      "C": {
+        "method": "C",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 37,
+        "total_makespan": 704.3649967238345,
+        "post_makespan": 231.43030878209868,
+        "total_j_total": 0.0072477399433687525,
+        "post_j_total": 0.007133808107352557,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.000233570720342943,
+          "d_team": 0.003333333333333333,
+          "j_postpone": 0.0,
+          "j_revision": 0.0035669040536762757
+        },
+        "post_postponed_count": 0
+      },
+      "E": {
+        "method": "E",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 38,
+        "total_makespan": 704.3649967238345,
+        "post_makespan": 231.43030878209868,
+        "total_j_total": 0.10930774607951518,
+        "post_j_total": 0.10919381424349899,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0005492880741305379,
+          "d_team": 0.004047619047619046,
+          "j_postpone": 0.1,
+          "j_revision": 0.004596907121749586
+        },
+        "post_postponed_count": 1
+      },
+      "F": {
+        "method": "F",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 37,
+        "total_makespan": 705.5600300252148,
+        "post_makespan": 232.62534208347904,
+        "total_j_total": 0.010100210467691035,
+        "post_j_total": 0.009986278631674839,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.00023123455393265412,
+          "d_team": 0.004761904761904763,
+          "j_postpone": 0.0,
+          "j_revision": 0.004993139315837418
+        },
+        "post_postponed_count": 0
+      },
+      "D": {
+        "method": "D",
+        "feasible": true,
+        "violations": {},
+        "termination_reason": "completed",
+        "post_decisions": 38,
+        "total_makespan": 554.3967341333779,
+        "post_makespan": 81.46204619164212,
+        "total_j_total": 0.11518280123719786,
+        "post_j_total": 0.11506886940118166,
+        "post_cost_components": {
+          "j_takt": 0.0,
+          "d_time": 0.0008677680346317276,
+          "d_team": 0.0066666666666666645,
+          "j_postpone": 0.1,
+          "j_revision": 0.007534434699883223
+        },
+        "post_postponed_count": 1
+      }
+    }
+  }
+]
