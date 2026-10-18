@@ -176,24 +176,24 @@ def generate_summary():
             "c_feasible": nom_c.get("feasible"),
             "c_success": nom_c.get("success"),
             "c_makespan": nom_c.get("makespan"),
-            "c_j_total": nom_c.get("objective", {}).get("j_total"),
-            "c_cost_takt": nom_c.get("objective", {}).get("j_h"),
-            "c_cost_time": nom_c.get("objective", {}).get("d_t"),
-            "c_cost_team": nom_c.get("objective", {}).get("d_w"),
+            "c_j_total": nom_c.get("j_total"),
+            "c_cost_takt": nom_c.get("j_takt"),
+            "c_cost_time": nom_c.get("d_time"),
+            "c_cost_team": nom_c.get("d_team"),
             "d_feasible": nom_d.get("feasible"),
             "d_success": nom_d.get("success"),
             "d_makespan": nom_d.get("makespan"),
-            "d_j_total": nom_d.get("objective", {}).get("j_total"),
-            "d_cost_takt": nom_d.get("objective", {}).get("j_h"),
-            "d_cost_time": nom_d.get("objective", {}).get("d_t"),
-            "d_cost_team": nom_d.get("objective", {}).get("d_w"),
+            "d_j_total": nom_d.get("j_total"),
+            "d_cost_takt": nom_d.get("j_takt"),
+            "d_cost_time": nom_d.get("d_time"),
+            "d_cost_team": nom_d.get("d_team"),
             "j_diff_c_minus_d": (
-                (nom_c.get("objective", {}).get("j_total", 0.0) - nom_d.get("objective", {}).get("j_total", 0.0))
-                if nom_c.get("objective") and nom_d.get("objective") else None
+                (nom_c.get("j_total", 0.0) - nom_d.get("j_total", 0.0))
+                if nom_c.get("j_total") is not None and nom_d.get("j_total") is not None else None
             ),
             "makespan_diff_c_minus_d": (
                 (nom_c.get("makespan", 0.0) - nom_d.get("makespan", 0.0))
-                if nom_c.get("makespan") and nom_d.get("makespan") else None
+                if nom_c.get("makespan") is not None and nom_d.get("makespan") is not None else None
             ),
             "c_hits": 0,
             "d_hits": 0,
@@ -201,7 +201,7 @@ def generate_summary():
         })
 
         # 2. 8 个测试扰动场景
-        scenarios = data.get("scenarios", [])
+        scenarios = data.get("scenario_results", [])
         for sc in scenarios:
             sc_id = sc.get("scenario_id")
             rc = sc.get("method_c", {})
@@ -210,8 +210,8 @@ def generate_summary():
             d_hits = rd.get("actual_disturbance_hits", 0)
             hit_st = "BOTH" if (c_hits > 0 and d_hits > 0) else "ONE_SIDED" if (c_hits > 0 or d_hits > 0) else "NEITHER"
 
-            jc = rc.get("objective", {}).get("j_total")
-            jd = rd.get("objective", {}).get("j_total")
+            jc = rc.get("j_total")
+            jd = rd.get("j_total")
             j_diff = (jc - jd) if (jc is not None and jd is not None) else None
 
             mc = rc.get("makespan")
@@ -228,16 +228,16 @@ def generate_summary():
                 "c_success": rc.get("success"),
                 "c_makespan": mc,
                 "c_j_total": jc,
-                "c_cost_takt": rc.get("objective", {}).get("j_h"),
-                "c_cost_time": rc.get("objective", {}).get("d_t"),
-                "c_cost_team": rc.get("objective", {}).get("d_w"),
+                "c_cost_takt": rc.get("j_takt"),
+                "c_cost_time": rc.get("d_time"),
+                "c_cost_team": rc.get("d_team"),
                 "d_feasible": rd.get("feasible"),
                 "d_success": rd.get("success"),
                 "d_makespan": md,
                 "d_j_total": jd,
-                "d_cost_takt": rd.get("objective", {}).get("j_h"),
-                "d_cost_time": rd.get("objective", {}).get("d_t"),
-                "d_cost_team": rd.get("objective", {}).get("d_w"),
+                "d_cost_takt": rd.get("j_takt"),
+                "d_cost_time": rd.get("d_time"),
+                "d_cost_team": rd.get("d_team"),
                 "j_diff_c_minus_d": j_diff,
                 "makespan_diff_c_minus_d": m_diff,
                 "c_hits": c_hits,
