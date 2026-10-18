@@ -29,6 +29,7 @@ from typing import Any, Iterator, Mapping
 import torch
 
 from envs.work3.core_types import CycleExecutionRecord, validate_cycle_execution_record
+from training.work3_r3_e04_audit import get_r3_e04_auditor
 
 
 @dataclass
@@ -337,6 +338,21 @@ class PendingTimeLabelCache:
         )
         self._pending.setdefault(key, []).append(sample)
         self._last_decision_ids[decision_scope] = unique_decision_id
+        auditor = get_r3_e04_auditor()
+        if auditor is not None:
+            auditor.on_buffer_add(
+                worker_id=worker,
+                episode_id=episode,
+                cycle_id=key[2],
+                decision_id=unique_decision_id,
+                state_feat=state_feat,
+                graph_snapshot=graph_snapshot,
+                estimated_cmax=estimated_cmax,
+                current_time=current_time,
+                h0=h0,
+                time_urgency=time_urgency,
+                predictor_version=predictor_version,
+            )
         return True
 
     def attach_transfer(
@@ -508,6 +524,19 @@ class PendingTimeLabelCache:
             item["next_cycle_masks"] = mask_next
             item["has_next_ready"] = True
 
+        auditor = get_r3_e04_auditor()
+        if auditor is not None:
+            auditor.on_buffer_attach_transfer(
+                worker_id=worker,
+                episode_id=episode,
+                cycle_id=cycle,
+                actual_transfer_time=float(actual_transfer_time),
+                cycle_start_time=cycle_start_time,
+                station_first_cleared_times=station_cleared_times,
+                next_cycle_station_mask=next_cycle_station_mask,
+                aircraft_at_stations=aircraft_at_stations,
+            )
+
         if samples:
             self._pending.pop(key, None)
             self._pending_next_cycle[key] = computed_cycle_items
@@ -562,6 +591,10 @@ class PendingTimeLabelCache:
 
         if not ready_items:
             return None
+
+        auditor = get_r3_e04_auditor()
+        if auditor is not None:
+            auditor.on_buffer_drain_ready(ready_items)
 
         result: dict[str, Any] = {
             "worker_ids": [item["worker_id"] for item in ready_items],

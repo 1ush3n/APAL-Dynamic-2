@@ -22,6 +22,7 @@ def main():
     p.add_argument("--steps",type=int)
     p.add_argument("--max-decisions",type=int)
     p.add_argument("--wall-seconds",type=float)
+    p.add_argument("--r3-e04-audit",action="store_true",help="Enable R3/E04 audit")
     p.add_argument("--dry-run",action="store_true")
     args=p.parse_args();repo=args.repo.resolve();bundle=Path(__file__).resolve().parent
     if bundle.parent!=repo:
@@ -51,6 +52,8 @@ def main():
             cmd+=["--max-decisions",str(args.steps)]
     if args.max_decisions is not None:cmd+=["--max-decisions",str(args.max_decisions)]
     if args.wall_seconds is not None:cmd+=["--max-wall-seconds",str(args.wall_seconds)]
+    if args.r3_e04_audit or os.environ.get("WORK3_R3_E04_AUDIT") in ("1", "true", "TRUE"):
+        cmd+=["--r3-e04-audit"]
     if args.dry_run:
         print(json.dumps({"cwd":str(repo),"argv":cmd,"config":config},ensure_ascii=False,indent=2));return
     out.mkdir(parents=True,exist_ok=False)

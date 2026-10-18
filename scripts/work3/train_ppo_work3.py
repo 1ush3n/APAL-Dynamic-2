@@ -55,6 +55,7 @@ from scripts.work3.collect_validation_trajectories import load_scenarios_for_spl
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
 from training.work3_vector_env import Work3VectorEnv
 from training.work3_lightning import Work3PPODataModule, Work3LightningModule, Work3TrainingUpdate
+from training.work3_r3_e04_audit import init_r3_e04_auditor, get_r3_e04_auditor, is_r3_e04_audit_enabled
 from training.work3_runtime_config import (
     apply_work3_runtime_overrides,
     load_work3_runtime_config,
@@ -743,6 +744,7 @@ def run_training(
     resolved_config_sha256: str | None = None,
     amp_dtype: str = "fp32",
     warmup_mode: str = "none",
+    r3_e04_audit: bool = False,
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
@@ -845,6 +847,12 @@ def run_training(
 
     output_ckpt.parent.mkdir(parents=True, exist_ok=True)
     report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    auditor = init_r3_e04_auditor(
+        output_dir=report_path.parent,
+        run_id=report_path.parent.name,
+        enabled=r3_e04_audit,
+    )
 
     # 1. 初始化仿真环境
     logger.info(f"初始化环境: {baseline_path}")
@@ -1897,10 +1905,25 @@ def run_training(
                 else None
             )
 
+            if auditor is not None:
+                first_snapshot = worker_states[0].snapshot if worker_states else None
+                first_w = worker_states[0].worker_id if worker_states else 0
+                first_ep = worker_states[0].episode_id if worker_states else 0
+                auditor.on_pre_rollout_fit(
+                    rollout_id=iter_idx,
+                    online_actor=actor_critic,
+                    online_head=time_head,
+                    shaper=shaper,
+                    episode_id=first_ep,
+                    worker_id=first_w,
+                    test_snapshot=first_snapshot,
+                )
+
             update = Work3TrainingUpdate(
                 buffer=buffer,
                 environment_steps=len(buffer),
                 time_auxiliary_batch=time_auxiliary_batch,
+                rollout_id=iter_idx,
             )
             data_module = Work3PPODataModule(
                 update_factory=lambda update=update: iter((update,))
@@ -1919,6 +1942,17 @@ def run_training(
                 default_root_dir=report_path.parent / ".work3_lightning",
             )
             lightning_trainer.fit(lightning_module, datamodule=data_module)
+            if auditor is not None:
+                first_w = worker_states[0].worker_id if worker_states else 0
+                first_ep = worker_states[0].episode_id if worker_states else 0
+                auditor.on_post_rollout_fit(
+                    rollout_id=iter_idx,
+                    online_actor=actor_critic,
+                    online_head=time_head,
+                    shaper=shaper,
+                    episode_id=first_ep,
+                    worker_id=first_w,
+                )
             scaler = getattr(lightning_trainer.precision_plugin, "scaler", None)
             current_scaler_enabled = bool(
                 scaler is not None and scaler.is_enabled()
@@ -2334,6 +2368,8 @@ def run_training(
         json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False),
         encoding="utf-8",
     )
+    if auditor is not None:
+        auditor.finalize_and_save(report)
     logger.info("=" * 80)
     logger.info(
         "工作三%s结束：reason=%s, steps=%s, episodes=%s, successes=%s, hits=%s, report=%s",
@@ -2421,6 +2457,12 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=None, help="模型权重检查点路径")
     parser.add_argument("--report", type=Path, default=None, help="运行报告路径；默认与检查点同名.run.json")
     parser.add_argument("--paired-report", type=Path, default=None, help="另一组C/D训练报告路径，用于核对事件、预算及实际命中")
+    parser.add_argument(
+        "--r3-e04-audit",
+        action="store_true",
+        default=False,
+        help="开启 R3/E04 专项闭环审计",
+    )
     args = parser.parse_args()
 
     runtime_config = load_work3_runtime_config(
@@ -2517,6 +2559,7 @@ def main() -> None:
         paired_report_path=args.paired_report,
         resolved_config_yaml=resolved_yaml,
         resolved_config_sha256=config_sha256,
+        r3_e04_audit=bool(args.r3_e04_audit or is_r3_e04_audit_enabled()),
     )
 
 

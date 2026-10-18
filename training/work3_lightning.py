@@ -14,6 +14,7 @@ from models.work3.actor_critic import ActorCriticWork3
 from models.work3.ppo_buffer import RolloutBufferWork3
 from models.work3.ppo_trainer import PPOTrainerWork3
 from models.work3.time_head import TimeResidualHead
+from training.work3_r3_e04_audit import get_r3_e04_auditor
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +24,7 @@ class Work3TrainingUpdate:
     buffer: RolloutBufferWork3
     environment_steps: int
     time_auxiliary_batch: dict[str, Any] | None = None
+    rollout_id: int = 0
 
     def __post_init__(self) -> None:
         if not self.buffer.is_finalized:
@@ -301,6 +303,14 @@ class Work3LightningModule(LightningModule):
                 if grad_norm is not None:
                     metrics["grad_norm"].append(grad_norm)
                 ppo_update_count += 1
+                auditor = get_r3_e04_auditor()
+                if auditor is not None:
+                    auditor.on_ppo_update_step(
+                        rollout_id=batch.rollout_id,
+                        loss_dict={k: metrics[k][-1] for k in ("total_loss", "policy_loss", "value_loss", "entropy", "approx_kl", "clip_fraction") if metrics.get(k)},
+                        grad_norm=grad_norm,
+                        online_actor=self.actor_critic,
+                    )
 
         auxiliary = batch.time_auxiliary_batch
         if (
@@ -359,6 +369,15 @@ class Work3LightningModule(LightningModule):
                     metrics.setdefault("time_loss", []).append(
                         float(time_loss.detach().float().item())
                     )
+                    auditor = get_r3_e04_auditor()
+                    if auditor is not None:
+                        auditor.on_aux_minibatch_step(
+                            rollout_id=batch.rollout_id,
+                            minibatch=minibatch,
+                            loss=time_loss,
+                            grad_norm=grad_norm,
+                            time_head=self.time_head,
+                        )
 
         self.environment_steps += batch.environment_steps
         self.last_metrics = {
