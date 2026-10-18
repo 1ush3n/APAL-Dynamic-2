@@ -1,0 +1,44 @@
+{
+  "runtime": {
+    "run_mode": "pilot",
+    "method_profile": "D",
+    "seed": 42,
+    "deterministic": true,
+    "num_envs": 1,
+    "start_method": "spawn",
+    "total_env_steps": 2048,
+    "successful_batch_target": 1,
+    "max_wall_seconds": 1800.0,
+    "settle_timeout_seconds": 10.0,
+    "device": "cuda:0",
+    "amp_dtype": "fp32",
+    "warmup_mode": "none",
+    "time_head_initialization": "random_no_pretraining",
+    "main_num_threads": 1,
+    "env_num_threads": 1,
+    "dataloader_num_workers": 0,
+    "scenario_pool_path": "work3_4060/data/real566_events.json",
+    "scenario_split_path": "work3_4060/data/real566_split.json"
+  },
+  "paths": {
+    "baseline": "work3_4060/data/real566.json",
+    "time_head_checkpoint": null,
+    "checkpoint_dir": "work3_4060/outputs",
+    "report_dir": "work3_4060/outputs"
+  },
+  "ppo": {
+    "steps_per_iter": 8,
+    "epochs": 1,
+    "batch_size": 1,
+    "learning_rate": 0.0003,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "shaping_coefficient": 1.0,
+    "time_loss_coefficient": 1.0,
+    "time_auxiliary_epochs": 1,
+    "time_auxiliary_batch_size": 1
+  }
+}

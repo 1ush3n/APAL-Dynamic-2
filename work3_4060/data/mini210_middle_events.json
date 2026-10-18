@@ -1,0 +1,17 @@
+[
+  {
+    "scenario_id": "LOCAL_MINI210_MIDDLE_S2",
+    "valid": true,
+    "timing": "MID",
+    "intensity": "DIAGNOSTIC",
+    "station_id": 2,
+    "aircraft_id": 2,
+    "tau": 130.20533674370247,
+    "recovery_time": 226.7626745432108,
+    "affected_task_keys": [
+      "2_13"
+    ],
+    "timing_reference": "pinned_nominal_heuristic_full_line_cycle5",
+    "diagnostic_only": true
+  }
+]

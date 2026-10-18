@@ -1,0 +1,93 @@
+{
+  "source_sha256": "b71031f470680c68b49ee3147d56ed2cf0429feb8745303fb77f560747daa992",
+  "fixtures": {
+    "mini70": {
+      "aircraft": 7,
+      "stations": 5,
+      "tasks_per_aircraft": 10,
+      "tasks": 70,
+      "skills": [
+        0
+      ],
+      "demands": [
+        2
+      ],
+      "station_task_counts": {
+        "3": 2,
+        "1": 2,
+        "4": 2,
+        "5": 2,
+        "2": 2
+      },
+      "files": {
+        "data/mini70.json": "34a02dbb268281786c41bc77697b9b7cefcab18085ea1b359c8f4b59843fc904",
+        "data/mini70_events.json": "68698b4c0e0370b332f4caf754382c691358bd0311d0fabac9110689f07c9287",
+        "data/mini70_split.json": "b9d6a041df630aca58702ce3a6de7f94693e25b1a0797435c0c8d62b2816bcfb"
+      }
+    },
+    "mini210": {
+      "aircraft": 7,
+      "stations": 5,
+      "tasks_per_aircraft": 30,
+      "tasks": 210,
+      "skills": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "demands": [
+        1,
+        2
+      ],
+      "station_task_counts": {
+        "3": 5,
+        "1": 8,
+        "2": 5,
+        "4": 4,
+        "5": 8
+      },
+      "files": {
+        "data/mini210.json": "b3f4285a37b1141ad6745fd69905ea41000b11922648af671c7976a5835eeb3b",
+        "data/mini210_events.json": "911f3ec330783fc351c201e206f6e03f8d1e71262c5dd5cceefa1730390af19b",
+        "data/mini210_split.json": "b42473071f8c25b8b5c49009692e4b52528ed2b816fc701bba5e9265155d7e8c"
+      }
+    },
+    "real566": {
+      "aircraft": 2,
+      "stations": 5,
+      "tasks_per_aircraft": 283,
+      "tasks": 566,
+      "skills": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "demands": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "station_task_counts": {
+        "3": 5,
+        "1": 8,
+        "2": 5,
+        "4": 4,
+        "5": 261
+      },
+      "files": {
+        "data/real566.json": "390d86c6e1adbe6f2b1f3eac38745b76545206b309622ca27959abe616bbc324",
+        "data/real566_events.json": "a3ce3acf478e0021b2e09e62fcbae7a15b393dc0ecd640c12d92791de5ea5101",
+        "data/real566_split.json": "bb5b1a2061ff9034227e0e85600d62bb2fda52fd6b2fa7c9846657fc2d72906d"
+      }
+    }
+  },
+  "middle_event_files": {
+    "data/mini210_middle_events.json": "78c65989b534dd257c0cba969118354d005877e3fb0c512da2ad6eea4757ed10",
+    "data/mini210_middle_split.json": "a68f83ae4e84bcb7d8d63b973bd49a44b93d5dc68e3ac4ccf6c68dba16576e0b"
+  }
+}

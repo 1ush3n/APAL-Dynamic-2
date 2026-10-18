@@ -1,0 +1,86 @@
+{
+  "mini70_nominal": {
+    "completed": 70,
+    "transfers": 11,
+    "feasible": true,
+    "violations": {},
+    "predecessor_closed_against_raw_DAG": true,
+    "actual_hit": false,
+    "target_start": 3.2169088888023936,
+    "ledger_gap": 0.0,
+    "reward_cost_gap": 0.0,
+    "seconds": 0.018796499993186444
+  },
+  "mini70_hit": {
+    "completed": 70,
+    "transfers": 11,
+    "feasible": true,
+    "violations": {},
+    "predecessor_closed_against_raw_DAG": true,
+    "actual_hit": true,
+    "target_start": 20.0,
+    "ledger_gap": 2.710505431213761e-20,
+    "reward_cost_gap": 0.0,
+    "seconds": 0.018567999999504536
+  },
+  "mini210_nominal": {
+    "completed": 210,
+    "transfers": 11,
+    "feasible": true,
+    "violations": {},
+    "predecessor_closed_against_raw_DAG": true,
+    "actual_hit": false,
+    "target_start": 3.2169088888023936,
+    "ledger_gap": 0.0,
+    "reward_cost_gap": 0.0,
+    "seconds": 0.09272379998583347
+  },
+  "mini210_hit": {
+    "completed": 210,
+    "transfers": 11,
+    "feasible": true,
+    "violations": {},
+    "predecessor_closed_against_raw_DAG": true,
+    "actual_hit": true,
+    "target_start": 20.0,
+    "ledger_gap": 2.303929616531697e-19,
+    "reward_cost_gap": 0.0,
+    "seconds": 0.08668070001294836
+  },
+  "mini210_middle": {
+    "completed": 210,
+    "transfers": 11,
+    "feasible": true,
+    "violations": {},
+    "predecessor_closed_against_raw_DAG": true,
+    "actual_hit": true,
+    "target_start": 226.7626745432108,
+    "ledger_gap": 0.0,
+    "reward_cost_gap": 0.0,
+    "seconds": 0.08819840001524426
+  },
+  "real566_nominal": {
+    "completed": 566,
+    "transfers": 6,
+    "feasible": true,
+    "violations": {},
+    "predecessor_closed_against_raw_DAG": true,
+    "actual_hit": false,
+    "target_start": 3.2169088888023936,
+    "ledger_gap": 2.0194839173657902e-28,
+    "reward_cost_gap": 0.0,
+    "seconds": 4.7893168999871705
+  },
+  "real566_hit": {
+    "completed": 566,
+    "transfers": 6,
+    "feasible": true,
+    "violations": {},
+    "predecessor_closed_against_raw_DAG": true,
+    "actual_hit": true,
+    "target_start": 20.0,
+    "ledger_gap": 2.676624113323589e-19,
+    "reward_cost_gap": 0.0,
+    "seconds": 4.765020599996205
+  }
+}

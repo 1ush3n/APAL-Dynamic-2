@@ -1,0 +1,90 @@
+{
+  "source_sha": "2d9cda24013b159ddc99fb4a7ef2afd659320309",
+  "scope": "Real environment + independent checker with NumPy data packaging, no Torch/GPU training",
+  "results": {
+    "mini70_nominal": {
+      "completed": 70,
+      "transfers": 11,
+      "feasible": true,
+      "violations": {},
+      "predecessor_closed_against_raw_DAG": true,
+      "actual_hit": false,
+      "target_start": 3.2169088888023936,
+      "ledger_gap": 0.0,
+      "reward_cost_gap": 0.0,
+      "seconds": 0.01637221100008901
+    },
+    "mini70_hit": {
+      "completed": 70,
+      "transfers": 11,
+      "feasible": true,
+      "violations": {},
+      "predecessor_closed_against_raw_DAG": true,
+      "actual_hit": true,
+      "target_start": 20.0,
+      "ledger_gap": 2.710505431213761e-20,
+      "reward_cost_gap": 0.0,
+      "seconds": 0.013950691999980336
+    },
+    "mini210_nominal": {
+      "completed": 210,
+      "transfers": 11,
+      "feasible": true,
+      "violations": {},
+      "predecessor_closed_against_raw_DAG": true,
+      "actual_hit": false,
+      "target_start": 3.2169088888023936,
+      "ledger_gap": 0.0,
+      "reward_cost_gap": 0.0,
+      "seconds": 0.06865705300015179
+    },
+    "mini210_hit": {
+      "completed": 210,
+      "transfers": 11,
+      "feasible": true,
+      "violations": {},
+      "predecessor_closed_against_raw_DAG": true,
+      "actual_hit": true,
+      "target_start": 20.0,
+      "ledger_gap": 2.303929616531697e-19,
+      "reward_cost_gap": 0.0,
+      "seconds": 0.06683141099983914
+    },
+    "mini210_middle": {
+      "completed": 210,
+      "transfers": 11,
+      "feasible": true,
+      "violations": {},
+      "predecessor_closed_against_raw_DAG": true,
+      "actual_hit": true,
+      "target_start": 226.7626745432108,
+      "ledger_gap": 0.0,
+      "reward_cost_gap": 0.0,
+      "seconds": 0.06978054199998951
+    },
+    "real566_nominal": {
+      "completed": 566,
+      "transfers": 6,
+      "feasible": true,
+      "violations": {},
+      "predecessor_closed_against_raw_DAG": true,
+      "actual_hit": false,
+      "target_start": 3.2169088888023936,
+      "ledger_gap": 2.0194839173657902e-28,
+      "reward_cost_gap": 0.0,
+      "seconds": 3.5627225219996035
+    },
+    "real566_hit": {
+      "completed": 566,
+      "transfers": 6,
+      "feasible": true,
+      "violations": {},
+      "predecessor_closed_against_raw_DAG": true,
+      "actual_hit": true,
+      "target_start": 20.0,
+      "ledger_gap": 2.676624113323589e-19,
+      "reward_cost_gap": 0.0,
+      "seconds": 3.778533072999835
+    }
+  }
+}

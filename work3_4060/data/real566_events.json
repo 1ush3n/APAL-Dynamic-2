@@ -1,0 +1,19 @@
+[
+  {
+    "scenario_id": "LOCAL_REAL566_INITIAL_HIT",
+    "valid": true,
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "station_id": 0,
+    "aircraft_id": 0,
+    "tau": 0.0,
+    "delta": 20.0,
+    "recovery_time": 20.0,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "0_16"
+    ],
+    "timing_reference": "local_diagnostic_fixed_event"
+  }
+]

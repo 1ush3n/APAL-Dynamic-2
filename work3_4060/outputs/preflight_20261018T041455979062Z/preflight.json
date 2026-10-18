@@ -1,0 +1,44 @@
+{
+  "python": "3.11.15 | packaged by Anaconda, Inc. | (main, Mar 11 2026, 17:12:15) [MSC v.1942 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26300-SP0",
+  "device_requested": "cuda:0",
+  "git_head": {
+    "returncode": 0,
+    "stdout": "2d9cda24013b159ddc99fb4a7ef2afd659320309\n",
+    "stderr": ""
+  },
+  "git_status": {
+    "returncode": 0,
+    "stdout": "?? work3_4060/\n",
+    "stderr": ""
+  },
+  "nvidia_smi": {
+    "returncode": 0,
+    "stdout": "name, memory.total [MiB], driver_version\nNVIDIA GeForce RTX 4060 Laptop GPU, 8188 MiB, 616.92\n",
+    "stderr": ""
+  },
+  "versions": {
+    "torch": "2.12.0+cu132",
+    "torch-geometric": "2.7.0",
+    "lightning": "2.6.5",
+    "numpy": "2.4.6",
+    "omegaconf": "2.3.0"
+  },
+  "torch_cuda_build": "13.2",
+  "cuda_available": true,
+  "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "total_memory_bytes": 8585216000,
+  "bf16_reported_supported": true,
+  "small_fp32_backward": "PASS",
+  "configs": {
+    "bridge_c.yaml": "PASS",
+    "bridge_d.yaml": "PASS",
+    "middle_d.yaml": "PASS",
+    "pilot_c.yaml": "PASS",
+    "pilot_d.yaml": "PASS",
+    "smoke_c.yaml": "PASS",
+    "smoke_d.yaml": "PASS",
+    "stability_d.yaml": "PASS"
+  },
+  "status": "PASS"
+}

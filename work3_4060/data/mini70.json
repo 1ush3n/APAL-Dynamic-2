@@ -1,0 +1,1607 @@
+{
+  "metadata": {
+    "version": "work3_k10_baseline_v1",
+    "num_aircraft": 7,
+    "num_stations": 5,
+    "h0": 292.5726004548256,
+    "total_cycles": 11,
+    "physical_tasks_per_aircraft": 10,
+    "total_physical_tasks": 70
+  },
+  "station_workers": {
+    "1": [
+      12,
+      72
+    ],
+    "2": [
+      10,
+      18,
+      22,
+      65
+    ],
+    "3": [
+      0,
+      47,
+      50,
+      51,
+      66,
+      76
+    ],
+    "4": [
+      6,
+      55
+    ],
+    "5": [
+      1,
+      25,
+      28,
+      33,
+      36,
+      44,
+      45,
+      53,
+      56,
+      70,
+      77
+    ]
+  },
+  "tasks": {
+    "0_12": {
+      "aircraft_id": 0,
+      "task_id": 12,
+      "task_key": "0_12",
+      "station_id": 3,
+      "team": [
+        50,
+        51
+      ],
+      "duration": 1.601238142200652,
+      "in_station_offset": 0.0,
+      "baseline_start": 585.1452009096512,
+      "baseline_end": 586.7464390518518,
+      "cycle_idx": 3,
+      "nominal_station_entry": 585.1452009096512,
+      "nominal_station_exit": 877.7178013644768,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0060",
+      "predecessors": []
+    },
+    "0_15": {
+      "aircraft_id": 0,
+      "task_id": 15,
+      "task_key": "0_15",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 0.5457255962124379,
+      "in_station_offset": 0.0,
+      "baseline_start": 0.0,
+      "baseline_end": 0.5457255962124379,
+      "cycle_idx": 1,
+      "nominal_station_entry": 0.0,
+      "nominal_station_exit": 292.5726004548256,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0100",
+      "predecessors": []
+    },
+    "0_20": {
+      "aircraft_id": 0,
+      "task_id": 20,
+      "task_key": "0_20",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 0.9876964384137472,
+      "in_station_offset": 0.0,
+      "baseline_start": 877.7178013644768,
+      "baseline_end": 878.7054978028906,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0150",
+      "predecessors": []
+    },
+    "0_24": {
+      "aircraft_id": 0,
+      "task_id": 24,
+      "task_key": "0_24",
+      "station_id": 5,
+      "team": [
+        28,
+        1
+      ],
+      "duration": 1.2146185704668155,
+      "in_station_offset": 0.0,
+      "baseline_start": 1170.2904018193024,
+      "baseline_end": 1171.5050203897692,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0190",
+      "predecessors": []
+    },
+    "0_8": {
+      "aircraft_id": 0,
+      "task_id": 8,
+      "task_key": "0_8",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.0660876773893384,
+      "in_station_offset": 0.5574953668607836,
+      "baseline_start": 293.1300958216864,
+      "baseline_end": 294.19618349907574,
+      "cycle_idx": 2,
+      "nominal_station_entry": 292.5726004548256,
+      "nominal_station_exit": 585.1452009096512,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0020",
+      "predecessors": []
+    },
+    "0_13": {
+      "aircraft_id": 0,
+      "task_id": 13,
+      "task_key": "0_13",
+      "station_id": 3,
+      "team": [
+        47,
+        51
+      ],
+      "duration": 1.654044557519924,
+      "in_station_offset": 1.601238142200652,
+      "baseline_start": 586.7464390518518,
+      "baseline_end": 588.4004836093717,
+      "cycle_idx": 3,
+      "nominal_station_entry": 585.1452009096512,
+      "nominal_station_exit": 877.7178013644768,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0080",
+      "predecessors": [
+        12
+      ]
+    },
+    "0_9": {
+      "aircraft_id": 0,
+      "task_id": 9,
+      "task_key": "0_9",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.3203838035050943,
+      "in_station_offset": 2.777696223037472,
+      "baseline_start": 295.35029667786307,
+      "baseline_end": 296.67068048136815,
+      "cycle_idx": 2,
+      "nominal_station_entry": 292.5726004548256,
+      "nominal_station_exit": 585.1452009096512,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0040",
+      "predecessors": [
+        8
+      ]
+    },
+    "0_16": {
+      "aircraft_id": 0,
+      "task_id": 16,
+      "task_key": "0_16",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 1.292508030074809,
+      "in_station_offset": 3.2169088888023936,
+      "baseline_start": 3.2169088888023936,
+      "baseline_end": 4.509416918877203,
+      "cycle_idx": 1,
+      "nominal_station_entry": 0.0,
+      "nominal_station_exit": 292.5726004548256,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0130",
+      "predecessors": [
+        15
+      ]
+    },
+    "0_23": {
+      "aircraft_id": 0,
+      "task_id": 23,
+      "task_key": "0_23",
+      "station_id": 5,
+      "team": [
+        1,
+        45
+      ],
+      "duration": 1.043870496408454,
+      "in_station_offset": 3.5751037787013957,
+      "baseline_start": 1173.8655055980037,
+      "baseline_end": 1174.9093760944122,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0180",
+      "predecessors": [
+        24
+      ]
+    },
+    "0_21": {
+      "aircraft_id": 0,
+      "task_id": 21,
+      "task_key": "0_21",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 2.393264516595793,
+      "in_station_offset": 4.159721573539139,
+      "baseline_start": 881.877522938016,
+      "baseline_end": 884.2707874546118,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0160",
+      "predecessors": [
+        20
+      ]
+    },
+    "1_12": {
+      "aircraft_id": 1,
+      "task_id": 12,
+      "task_key": "1_12",
+      "station_id": 3,
+      "team": [
+        50,
+        51
+      ],
+      "duration": 1.601238142200652,
+      "in_station_offset": 0.0,
+      "baseline_start": 877.7178013644768,
+      "baseline_end": 879.3190395066774,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0060",
+      "predecessors": []
+    },
+    "1_15": {
+      "aircraft_id": 1,
+      "task_id": 15,
+      "task_key": "1_15",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 0.5457255962124379,
+      "in_station_offset": 0.0,
+      "baseline_start": 292.5726004548256,
+      "baseline_end": 293.118326051038,
+      "cycle_idx": 2,
+      "nominal_station_entry": 292.5726004548256,
+      "nominal_station_exit": 585.1452009096512,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0100",
+      "predecessors": []
+    },
+    "1_20": {
+      "aircraft_id": 1,
+      "task_id": 20,
+      "task_key": "1_20",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 0.9876964384137472,
+      "in_station_offset": 0.0,
+      "baseline_start": 1170.2904018193024,
+      "baseline_end": 1171.278098257716,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0150",
+      "predecessors": []
+    },
+    "1_24": {
+      "aircraft_id": 1,
+      "task_id": 24,
+      "task_key": "1_24",
+      "station_id": 5,
+      "team": [
+        28,
+        1
+      ],
+      "duration": 1.2146185704668155,
+      "in_station_offset": 0.0,
+      "baseline_start": 1462.863002274128,
+      "baseline_end": 1464.0776208445948,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0190",
+      "predecessors": []
+    },
+    "1_8": {
+      "aircraft_id": 1,
+      "task_id": 8,
+      "task_key": "1_8",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.0660876773893384,
+      "in_station_offset": 0.5574953668607836,
+      "baseline_start": 585.7026962765119,
+      "baseline_end": 586.7687839539012,
+      "cycle_idx": 3,
+      "nominal_station_entry": 585.1452009096512,
+      "nominal_station_exit": 877.7178013644768,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0020",
+      "predecessors": []
+    },
+    "1_13": {
+      "aircraft_id": 1,
+      "task_id": 13,
+      "task_key": "1_13",
+      "station_id": 3,
+      "team": [
+        47,
+        51
+      ],
+      "duration": 1.654044557519924,
+      "in_station_offset": 1.601238142200652,
+      "baseline_start": 879.3190395066774,
+      "baseline_end": 880.9730840641973,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0080",
+      "predecessors": [
+        12
+      ]
+    },
+    "1_9": {
+      "aircraft_id": 1,
+      "task_id": 9,
+      "task_key": "1_9",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.3203838035050943,
+      "in_station_offset": 2.777696223037472,
+      "baseline_start": 587.9228971326886,
+      "baseline_end": 589.2432809361937,
+      "cycle_idx": 3,
+      "nominal_station_entry": 585.1452009096512,
+      "nominal_station_exit": 877.7178013644768,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0040",
+      "predecessors": [
+        8
+      ]
+    },
+    "1_16": {
+      "aircraft_id": 1,
+      "task_id": 16,
+      "task_key": "1_16",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 1.292508030074809,
+      "in_station_offset": 3.2169088888023936,
+      "baseline_start": 295.78950934362797,
+      "baseline_end": 297.0820173737028,
+      "cycle_idx": 2,
+      "nominal_station_entry": 292.5726004548256,
+      "nominal_station_exit": 585.1452009096512,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0130",
+      "predecessors": [
+        15
+      ]
+    },
+    "1_23": {
+      "aircraft_id": 1,
+      "task_id": 23,
+      "task_key": "1_23",
+      "station_id": 5,
+      "team": [
+        1,
+        45
+      ],
+      "duration": 1.043870496408454,
+      "in_station_offset": 3.5751037787013957,
+      "baseline_start": 1466.4381060528292,
+      "baseline_end": 1467.4819765492377,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0180",
+      "predecessors": [
+        24
+      ]
+    },
+    "1_21": {
+      "aircraft_id": 1,
+      "task_id": 21,
+      "task_key": "1_21",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 2.393264516595793,
+      "in_station_offset": 4.159721573539139,
+      "baseline_start": 1174.4501233928415,
+      "baseline_end": 1176.8433879094373,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0160",
+      "predecessors": [
+        20
+      ]
+    },
+    "2_12": {
+      "aircraft_id": 2,
+      "task_id": 12,
+      "task_key": "2_12",
+      "station_id": 3,
+      "team": [
+        50,
+        51
+      ],
+      "duration": 1.601238142200652,
+      "in_station_offset": 0.0,
+      "baseline_start": 1170.2904018193024,
+      "baseline_end": 1171.891639961503,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0060",
+      "predecessors": []
+    },
+    "2_15": {
+      "aircraft_id": 2,
+      "task_id": 15,
+      "task_key": "2_15",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 0.5457255962124379,
+      "in_station_offset": 0.0,
+      "baseline_start": 585.1452009096512,
+      "baseline_end": 585.6909265058637,
+      "cycle_idx": 3,
+      "nominal_station_entry": 585.1452009096512,
+      "nominal_station_exit": 877.7178013644768,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0100",
+      "predecessors": []
+    },
+    "2_20": {
+      "aircraft_id": 2,
+      "task_id": 20,
+      "task_key": "2_20",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 0.9876964384137472,
+      "in_station_offset": 0.0,
+      "baseline_start": 1462.863002274128,
+      "baseline_end": 1463.8506987125415,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0150",
+      "predecessors": []
+    },
+    "2_24": {
+      "aircraft_id": 2,
+      "task_id": 24,
+      "task_key": "2_24",
+      "station_id": 5,
+      "team": [
+        28,
+        1
+      ],
+      "duration": 1.2146185704668155,
+      "in_station_offset": 0.0,
+      "baseline_start": 1755.4356027289537,
+      "baseline_end": 1756.6502212994205,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0190",
+      "predecessors": []
+    },
+    "2_8": {
+      "aircraft_id": 2,
+      "task_id": 8,
+      "task_key": "2_8",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.0660876773893384,
+      "in_station_offset": 0.5574953668607836,
+      "baseline_start": 878.2752967313376,
+      "baseline_end": 879.3413844087269,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0020",
+      "predecessors": []
+    },
+    "2_13": {
+      "aircraft_id": 2,
+      "task_id": 13,
+      "task_key": "2_13",
+      "station_id": 3,
+      "team": [
+        47,
+        51
+      ],
+      "duration": 1.654044557519924,
+      "in_station_offset": 1.601238142200652,
+      "baseline_start": 1171.891639961503,
+      "baseline_end": 1173.5456845190229,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0080",
+      "predecessors": [
+        12
+      ]
+    },
+    "2_9": {
+      "aircraft_id": 2,
+      "task_id": 9,
+      "task_key": "2_9",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.3203838035050943,
+      "in_station_offset": 2.777696223037472,
+      "baseline_start": 880.4954975875143,
+      "baseline_end": 881.8158813910194,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0040",
+      "predecessors": [
+        8
+      ]
+    },
+    "2_16": {
+      "aircraft_id": 2,
+      "task_id": 16,
+      "task_key": "2_16",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 1.292508030074809,
+      "in_station_offset": 3.2169088888023936,
+      "baseline_start": 588.3621097984536,
+      "baseline_end": 589.6546178285284,
+      "cycle_idx": 3,
+      "nominal_station_entry": 585.1452009096512,
+      "nominal_station_exit": 877.7178013644768,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0130",
+      "predecessors": [
+        15
+      ]
+    },
+    "2_23": {
+      "aircraft_id": 2,
+      "task_id": 23,
+      "task_key": "2_23",
+      "station_id": 5,
+      "team": [
+        1,
+        45
+      ],
+      "duration": 1.043870496408454,
+      "in_station_offset": 3.5751037787013957,
+      "baseline_start": 1759.010706507655,
+      "baseline_end": 1760.0545770040635,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0180",
+      "predecessors": [
+        24
+      ]
+    },
+    "2_21": {
+      "aircraft_id": 2,
+      "task_id": 21,
+      "task_key": "2_21",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 2.393264516595793,
+      "in_station_offset": 4.159721573539139,
+      "baseline_start": 1467.022723847667,
+      "baseline_end": 1469.4159883642628,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0160",
+      "predecessors": [
+        20
+      ]
+    },
+    "3_12": {
+      "aircraft_id": 3,
+      "task_id": 12,
+      "task_key": "3_12",
+      "station_id": 3,
+      "team": [
+        50,
+        51
+      ],
+      "duration": 1.601238142200652,
+      "in_station_offset": 0.0,
+      "baseline_start": 1462.863002274128,
+      "baseline_end": 1464.4642404163285,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0060",
+      "predecessors": []
+    },
+    "3_15": {
+      "aircraft_id": 3,
+      "task_id": 15,
+      "task_key": "3_15",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 0.5457255962124379,
+      "in_station_offset": 0.0,
+      "baseline_start": 877.7178013644768,
+      "baseline_end": 878.2635269606893,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0100",
+      "predecessors": []
+    },
+    "3_20": {
+      "aircraft_id": 3,
+      "task_id": 20,
+      "task_key": "3_20",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 0.9876964384137472,
+      "in_station_offset": 0.0,
+      "baseline_start": 1755.4356027289537,
+      "baseline_end": 1756.4232991673673,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0150",
+      "predecessors": []
+    },
+    "3_24": {
+      "aircraft_id": 3,
+      "task_id": 24,
+      "task_key": "3_24",
+      "station_id": 5,
+      "team": [
+        28,
+        1
+      ],
+      "duration": 1.2146185704668155,
+      "in_station_offset": 0.0,
+      "baseline_start": 2048.008203183779,
+      "baseline_end": 2049.222821754246,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0190",
+      "predecessors": []
+    },
+    "3_8": {
+      "aircraft_id": 3,
+      "task_id": 8,
+      "task_key": "3_8",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.0660876773893384,
+      "in_station_offset": 0.5574953668607836,
+      "baseline_start": 1170.8478971861632,
+      "baseline_end": 1171.9139848635525,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0020",
+      "predecessors": []
+    },
+    "3_13": {
+      "aircraft_id": 3,
+      "task_id": 13,
+      "task_key": "3_13",
+      "station_id": 3,
+      "team": [
+        47,
+        51
+      ],
+      "duration": 1.654044557519924,
+      "in_station_offset": 1.601238142200652,
+      "baseline_start": 1464.4642404163285,
+      "baseline_end": 1466.1182849738484,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0080",
+      "predecessors": [
+        12
+      ]
+    },
+    "3_9": {
+      "aircraft_id": 3,
+      "task_id": 9,
+      "task_key": "3_9",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.3203838035050943,
+      "in_station_offset": 2.777696223037472,
+      "baseline_start": 1173.06809804234,
+      "baseline_end": 1174.388481845845,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0040",
+      "predecessors": [
+        8
+      ]
+    },
+    "3_16": {
+      "aircraft_id": 3,
+      "task_id": 16,
+      "task_key": "3_16",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 1.292508030074809,
+      "in_station_offset": 3.2169088888023936,
+      "baseline_start": 880.9347102532793,
+      "baseline_end": 882.2272182833541,
+      "cycle_idx": 4,
+      "nominal_station_entry": 877.7178013644768,
+      "nominal_station_exit": 1170.2904018193024,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0130",
+      "predecessors": [
+        15
+      ]
+    },
+    "3_23": {
+      "aircraft_id": 3,
+      "task_id": 23,
+      "task_key": "3_23",
+      "station_id": 5,
+      "team": [
+        1,
+        45
+      ],
+      "duration": 1.043870496408454,
+      "in_station_offset": 3.5751037787013957,
+      "baseline_start": 2051.5833069624805,
+      "baseline_end": 2052.627177458889,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0180",
+      "predecessors": [
+        24
+      ]
+    },
+    "3_21": {
+      "aircraft_id": 3,
+      "task_id": 21,
+      "task_key": "3_21",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 2.393264516595793,
+      "in_station_offset": 4.159721573539139,
+      "baseline_start": 1759.5953243024928,
+      "baseline_end": 1761.9885888190886,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0160",
+      "predecessors": [
+        20
+      ]
+    },
+    "4_12": {
+      "aircraft_id": 4,
+      "task_id": 12,
+      "task_key": "4_12",
+      "station_id": 3,
+      "team": [
+        50,
+        51
+      ],
+      "duration": 1.601238142200652,
+      "in_station_offset": 0.0,
+      "baseline_start": 1755.4356027289537,
+      "baseline_end": 1757.0368408711543,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0060",
+      "predecessors": []
+    },
+    "4_15": {
+      "aircraft_id": 4,
+      "task_id": 15,
+      "task_key": "4_15",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 0.5457255962124379,
+      "in_station_offset": 0.0,
+      "baseline_start": 1170.2904018193024,
+      "baseline_end": 1170.8361274155147,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0100",
+      "predecessors": []
+    },
+    "4_20": {
+      "aircraft_id": 4,
+      "task_id": 20,
+      "task_key": "4_20",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 0.9876964384137472,
+      "in_station_offset": 0.0,
+      "baseline_start": 2048.008203183779,
+      "baseline_end": 2048.995899622193,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0150",
+      "predecessors": []
+    },
+    "4_24": {
+      "aircraft_id": 4,
+      "task_id": 24,
+      "task_key": "4_24",
+      "station_id": 5,
+      "team": [
+        28,
+        1
+      ],
+      "duration": 1.2146185704668155,
+      "in_station_offset": 0.0,
+      "baseline_start": 2340.5808036386047,
+      "baseline_end": 2341.7954222090716,
+      "cycle_idx": 9,
+      "nominal_station_entry": 2340.5808036386047,
+      "nominal_station_exit": 2633.1534040934303,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0190",
+      "predecessors": []
+    },
+    "4_8": {
+      "aircraft_id": 4,
+      "task_id": 8,
+      "task_key": "4_8",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.0660876773893384,
+      "in_station_offset": 0.5574953668607836,
+      "baseline_start": 1463.4204976409887,
+      "baseline_end": 1464.486585318378,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0020",
+      "predecessors": []
+    },
+    "4_13": {
+      "aircraft_id": 4,
+      "task_id": 13,
+      "task_key": "4_13",
+      "station_id": 3,
+      "team": [
+        47,
+        51
+      ],
+      "duration": 1.654044557519924,
+      "in_station_offset": 1.601238142200652,
+      "baseline_start": 1757.0368408711543,
+      "baseline_end": 1758.6908854286742,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0080",
+      "predecessors": [
+        12
+      ]
+    },
+    "4_9": {
+      "aircraft_id": 4,
+      "task_id": 9,
+      "task_key": "4_9",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.3203838035050943,
+      "in_station_offset": 2.777696223037472,
+      "baseline_start": 1465.6406984971654,
+      "baseline_end": 1466.9610823006706,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0040",
+      "predecessors": [
+        8
+      ]
+    },
+    "4_16": {
+      "aircraft_id": 4,
+      "task_id": 16,
+      "task_key": "4_16",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 1.292508030074809,
+      "in_station_offset": 3.2169088888023936,
+      "baseline_start": 1173.5073107081048,
+      "baseline_end": 1174.7998187381795,
+      "cycle_idx": 5,
+      "nominal_station_entry": 1170.2904018193024,
+      "nominal_station_exit": 1462.863002274128,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0130",
+      "predecessors": [
+        15
+      ]
+    },
+    "4_23": {
+      "aircraft_id": 4,
+      "task_id": 23,
+      "task_key": "4_23",
+      "station_id": 5,
+      "team": [
+        1,
+        45
+      ],
+      "duration": 1.043870496408454,
+      "in_station_offset": 3.5751037787013957,
+      "baseline_start": 2344.155907417306,
+      "baseline_end": 2345.1997779137146,
+      "cycle_idx": 9,
+      "nominal_station_entry": 2340.5808036386047,
+      "nominal_station_exit": 2633.1534040934303,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0180",
+      "predecessors": [
+        24
+      ]
+    },
+    "4_21": {
+      "aircraft_id": 4,
+      "task_id": 21,
+      "task_key": "4_21",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 2.393264516595793,
+      "in_station_offset": 4.159721573539139,
+      "baseline_start": 2052.1679247573184,
+      "baseline_end": 2054.5611892739144,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0160",
+      "predecessors": [
+        20
+      ]
+    },
+    "5_12": {
+      "aircraft_id": 5,
+      "task_id": 12,
+      "task_key": "5_12",
+      "station_id": 3,
+      "team": [
+        50,
+        51
+      ],
+      "duration": 1.601238142200652,
+      "in_station_offset": 0.0,
+      "baseline_start": 2048.008203183779,
+      "baseline_end": 2049.60944132598,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0060",
+      "predecessors": []
+    },
+    "5_15": {
+      "aircraft_id": 5,
+      "task_id": 15,
+      "task_key": "5_15",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 0.5457255962124379,
+      "in_station_offset": 0.0,
+      "baseline_start": 1462.863002274128,
+      "baseline_end": 1463.4087278703403,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0100",
+      "predecessors": []
+    },
+    "5_20": {
+      "aircraft_id": 5,
+      "task_id": 20,
+      "task_key": "5_20",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 0.9876964384137472,
+      "in_station_offset": 0.0,
+      "baseline_start": 2340.5808036386047,
+      "baseline_end": 2341.5685000770186,
+      "cycle_idx": 9,
+      "nominal_station_entry": 2340.5808036386047,
+      "nominal_station_exit": 2633.1534040934303,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0150",
+      "predecessors": []
+    },
+    "5_24": {
+      "aircraft_id": 5,
+      "task_id": 24,
+      "task_key": "5_24",
+      "station_id": 5,
+      "team": [
+        28,
+        1
+      ],
+      "duration": 1.2146185704668155,
+      "in_station_offset": 0.0,
+      "baseline_start": 2633.1534040934303,
+      "baseline_end": 2634.368022663897,
+      "cycle_idx": 10,
+      "nominal_station_entry": 2633.1534040934303,
+      "nominal_station_exit": 2925.726004548256,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0190",
+      "predecessors": []
+    },
+    "5_8": {
+      "aircraft_id": 5,
+      "task_id": 8,
+      "task_key": "5_8",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.0660876773893384,
+      "in_station_offset": 0.5574953668607836,
+      "baseline_start": 1755.9930980958145,
+      "baseline_end": 1757.0591857732038,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0020",
+      "predecessors": []
+    },
+    "5_13": {
+      "aircraft_id": 5,
+      "task_id": 13,
+      "task_key": "5_13",
+      "station_id": 3,
+      "team": [
+        47,
+        51
+      ],
+      "duration": 1.654044557519924,
+      "in_station_offset": 1.601238142200652,
+      "baseline_start": 2049.60944132598,
+      "baseline_end": 2051.2634858835,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0080",
+      "predecessors": [
+        12
+      ]
+    },
+    "5_9": {
+      "aircraft_id": 5,
+      "task_id": 9,
+      "task_key": "5_9",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.3203838035050943,
+      "in_station_offset": 2.777696223037472,
+      "baseline_start": 1758.2132989519912,
+      "baseline_end": 1759.5336827554963,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0040",
+      "predecessors": [
+        8
+      ]
+    },
+    "5_16": {
+      "aircraft_id": 5,
+      "task_id": 16,
+      "task_key": "5_16",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 1.292508030074809,
+      "in_station_offset": 3.2169088888023936,
+      "baseline_start": 1466.0799111629303,
+      "baseline_end": 1467.372419193005,
+      "cycle_idx": 6,
+      "nominal_station_entry": 1462.863002274128,
+      "nominal_station_exit": 1755.4356027289537,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0130",
+      "predecessors": [
+        15
+      ]
+    },
+    "5_23": {
+      "aircraft_id": 5,
+      "task_id": 23,
+      "task_key": "5_23",
+      "station_id": 5,
+      "team": [
+        1,
+        45
+      ],
+      "duration": 1.043870496408454,
+      "in_station_offset": 3.5751037787013957,
+      "baseline_start": 2636.7285078721316,
+      "baseline_end": 2637.77237836854,
+      "cycle_idx": 10,
+      "nominal_station_entry": 2633.1534040934303,
+      "nominal_station_exit": 2925.726004548256,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0180",
+      "predecessors": [
+        24
+      ]
+    },
+    "5_21": {
+      "aircraft_id": 5,
+      "task_id": 21,
+      "task_key": "5_21",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 2.393264516595793,
+      "in_station_offset": 4.159721573539139,
+      "baseline_start": 2344.740525212144,
+      "baseline_end": 2347.13378972874,
+      "cycle_idx": 9,
+      "nominal_station_entry": 2340.5808036386047,
+      "nominal_station_exit": 2633.1534040934303,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0160",
+      "predecessors": [
+        20
+      ]
+    },
+    "6_12": {
+      "aircraft_id": 6,
+      "task_id": 12,
+      "task_key": "6_12",
+      "station_id": 3,
+      "team": [
+        50,
+        51
+      ],
+      "duration": 1.601238142200652,
+      "in_station_offset": 0.0,
+      "baseline_start": 2340.5808036386047,
+      "baseline_end": 2342.1820417808053,
+      "cycle_idx": 9,
+      "nominal_station_entry": 2340.5808036386047,
+      "nominal_station_exit": 2633.1534040934303,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0060",
+      "predecessors": []
+    },
+    "6_15": {
+      "aircraft_id": 6,
+      "task_id": 15,
+      "task_key": "6_15",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 0.5457255962124379,
+      "in_station_offset": 0.0,
+      "baseline_start": 1755.4356027289537,
+      "baseline_end": 1755.981328325166,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0100",
+      "predecessors": []
+    },
+    "6_20": {
+      "aircraft_id": 6,
+      "task_id": 20,
+      "task_key": "6_20",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 0.9876964384137472,
+      "in_station_offset": 0.0,
+      "baseline_start": 2633.1534040934303,
+      "baseline_end": 2634.141100531844,
+      "cycle_idx": 10,
+      "nominal_station_entry": 2633.1534040934303,
+      "nominal_station_exit": 2925.726004548256,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0150",
+      "predecessors": []
+    },
+    "6_24": {
+      "aircraft_id": 6,
+      "task_id": 24,
+      "task_key": "6_24",
+      "station_id": 5,
+      "team": [
+        28,
+        1
+      ],
+      "duration": 1.2146185704668155,
+      "in_station_offset": 0.0,
+      "baseline_start": 2925.726004548256,
+      "baseline_end": 2926.9406231187227,
+      "cycle_idx": 11,
+      "nominal_station_entry": 2925.726004548256,
+      "nominal_station_exit": 3218.2986050030813,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0190",
+      "predecessors": []
+    },
+    "6_8": {
+      "aircraft_id": 6,
+      "task_id": 8,
+      "task_key": "6_8",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.0660876773893384,
+      "in_station_offset": 0.5574953668607836,
+      "baseline_start": 2048.56569855064,
+      "baseline_end": 2049.6317862280293,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0020",
+      "predecessors": []
+    },
+    "6_13": {
+      "aircraft_id": 6,
+      "task_id": 13,
+      "task_key": "6_13",
+      "station_id": 3,
+      "team": [
+        47,
+        51
+      ],
+      "duration": 1.654044557519924,
+      "in_station_offset": 1.601238142200652,
+      "baseline_start": 2342.1820417808053,
+      "baseline_end": 2343.8360863383255,
+      "cycle_idx": 9,
+      "nominal_station_entry": 2340.5808036386047,
+      "nominal_station_exit": 2633.1534040934303,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0080",
+      "predecessors": [
+        12
+      ]
+    },
+    "6_9": {
+      "aircraft_id": 6,
+      "task_id": 9,
+      "task_key": "6_9",
+      "station_id": 2,
+      "team": [
+        18,
+        65
+      ],
+      "duration": 1.3203838035050943,
+      "in_station_offset": 2.777696223037472,
+      "baseline_start": 2050.7858994068165,
+      "baseline_end": 2052.1062832103216,
+      "cycle_idx": 8,
+      "nominal_station_entry": 2048.008203183779,
+      "nominal_station_exit": 2340.5808036386047,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJZY00-0040",
+      "predecessors": [
+        8
+      ]
+    },
+    "6_16": {
+      "aircraft_id": 6,
+      "task_id": 16,
+      "task_key": "6_16",
+      "station_id": 1,
+      "team": [
+        72,
+        12
+      ],
+      "duration": 1.292508030074809,
+      "in_station_offset": 3.2169088888023936,
+      "baseline_start": 1758.652511617756,
+      "baseline_end": 1759.9450196478308,
+      "cycle_idx": 7,
+      "nominal_station_entry": 1755.4356027289537,
+      "nominal_station_exit": 2048.008203183779,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0130",
+      "predecessors": [
+        15
+      ]
+    },
+    "6_23": {
+      "aircraft_id": 6,
+      "task_id": 23,
+      "task_key": "6_23",
+      "station_id": 5,
+      "team": [
+        1,
+        45
+      ],
+      "duration": 1.043870496408454,
+      "in_station_offset": 3.5751037787013957,
+      "baseline_start": 2929.301108326957,
+      "baseline_end": 2930.3449788233656,
+      "cycle_idx": 11,
+      "nominal_station_entry": 2925.726004548256,
+      "nominal_station_exit": 3218.2986050030813,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJWB00-0180",
+      "predecessors": [
+        24
+      ]
+    },
+    "6_21": {
+      "aircraft_id": 6,
+      "task_id": 21,
+      "task_key": "6_21",
+      "station_id": 4,
+      "team": [
+        55,
+        6
+      ],
+      "duration": 2.393264516595793,
+      "in_station_offset": 4.159721573539139,
+      "baseline_start": 2637.3131256669694,
+      "baseline_end": 2639.7063901835654,
+      "cycle_idx": 10,
+      "nominal_station_entry": 2633.1534040934303,
+      "nominal_station_exit": 2925.726004548256,
+      "demand": 2,
+      "skill": 0,
+      "ao_code": "AJCP00-0160",
+      "predecessors": [
+        20
+      ]
+    }
+  },
+  "diagnostic_fixture": {
+    "role": "engineering_debug_only",
+    "source_sha256": "b71031f470680c68b49ee3147d56ed2cf0429feb8745303fb77f560747daa992",
+    "selected_task_ids": [
+      8,
+      9,
+      12,
+      13,
+      15,
+      16,
+      20,
+      21,
+      23,
+      24
+    ],
+    "predecessor_closed": true
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "D:\\Conda\\envs\\rag_env\\python.exe",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\scripts\\work3\\train_ppo_work3.py",
+    "--config",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\configs\\smoke_c.yaml",
+    "--seed",
+    "42",
+    "--device",
+    "cuda:0",
+    "--set",
+    "runtime.amp_dtype=fp32",
+    "--output",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\outputs\\smoke-c_seed42_fp32_20261018T041836653246Z\\weights.pt",
+    "--report",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\outputs\\smoke-c_seed42_fp32_20261018T041836653246Z\\run.json"
+  ],
+  "cwd": "D:\\OneDrive\\研究生\\APAL-Dynamic-2"
+}

@@ -1,0 +1,31 @@
+{
+  "scope": "YAML+CLI/control-flow+synthetic report tests; no Torch/GPU training",
+  "stages": [
+    "bridge-c",
+    "bridge-d",
+    "middle-d",
+    "pilot-c",
+    "pilot-d",
+    "smoke-c",
+    "smoke-d",
+    "stability-d"
+  ],
+  "report_checker": {
+    "valid_basic": {
+      "exit": 0,
+      "status": "BASIC_RECORDED_CHECKS_PASS"
+    },
+    "missing_replay": {
+      "exit": 2,
+      "status": "FAIL"
+    },
+    "budget_partial": {
+      "exit": 3,
+      "status": "INCOMPLETE"
+    },
+    "nan_loss": {
+      "exit": 2,
+      "status": "FAIL"
+    }
+  }
+}
