@@ -13,6 +13,7 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 
+import hashlib
 import json
 import math
 import sys
@@ -308,6 +309,11 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     print(f"    Method C 完成: decisions={res_c['total_decisions']}, 耗时={elapsed_c:.2f}s, ckpt={c_ckpt}")
     assert Path(res_c["checkpoint_path"]).is_file()
     assert res_c["total_decisions"] >= 21
+    replay_error_c = res_c.get("sampling_replay_max_abs_error")
+    assert replay_error_c is not None, "Method C 必须记录采样重放误差！"
+    assert math.isfinite(replay_error_c), f"Method C 采样重放误差非有限值: {replay_error_c}"
+    assert replay_error_c < 1e-4, f"Method C 采样重放误差过大: {replay_error_c}"
+    assert res_c.get("sampling_replay_sample_count", res_c.get("sampling_replay_samples_count", 0)) > 0, "Method C 重放检验样本数必须大于 0！"
 
     # 2. 运行 Method D 学习小烟测 (PPO 更新 + 真实双目标时间残差辅助头更新, budget=32)
     print("--> 2/2: 运行 Method D 学习烟测 (PPO + 双目标辅助头更新, 32步预算以覆盖P1与P2)...")
@@ -332,9 +338,11 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     available_labels = [l for l in cycle_time_labels if l.get("label_available")]
     assert len(available_labels) > 0, "Method D 必须产生至少一条实际可用的时间监督标签！"
     assert res_d.get("time_supervision_optimizer_updates", 0) > 0, "Method D 必须执行至少一次时间监督优化器更新！"
-    replay_error = res_d.get("sampling_replay_max_abs_error")
-    if replay_error is not None:
-        assert replay_error < 1e-4, f"采样重放误差过大: {replay_error}"
+    replay_error_d = res_d.get("sampling_replay_max_abs_error")
+    assert replay_error_d is not None, "Method D 必须记录采样重放误差！"
+    assert math.isfinite(replay_error_d), f"Method D 采样重放误差非有限值: {replay_error_d}"
+    assert replay_error_d < 1e-4, f"Method D 采样重放误差过大: {replay_error_d}"
+    assert res_d.get("sampling_replay_sample_count", res_d.get("sampling_replay_samples_count", 0)) > 0, "Method D 重放检验样本数必须大于 0！"
 
     # 3. 校验双目标损失合成张量基准测试 (synthetic_dual_target_gradient_check)
     print("--> 3/4: 校验双目标损失合成张量基准测试 (synthetic_dual_target_gradient_check)...")
@@ -401,6 +409,18 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     frozen_actor = copy.deepcopy(real_actor)
     for p in frozen_actor.parameters():
         p.requires_grad = False
+    frozen_time_head = copy.deepcopy(real_time_head)
+    for p in frozen_time_head.parameters():
+        p.requires_grad = False
+
+    def _model_checksum(m: torch.nn.Module) -> str:
+        h = hashlib.sha256()
+        for p in m.parameters():
+            h.update(p.detach().cpu().numpy().tobytes())
+        return h.hexdigest()
+
+    frozen_actor_checksum_initial = _model_checksum(frozen_actor)
+    frozen_time_head_checksum_initial = _model_checksum(frozen_time_head)
 
     real_lightning = Work3LightningModule(
         actor_critic=real_actor,
@@ -417,17 +437,13 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
 
     # --- 阶段 1: Rollout 轨迹段 1 直至到达 P1 转站并生成当前周期残差标签 ---
     buffer1 = RolloutBufferWork3()
+    term1 = False
     while p1_drained is None and step_count < 60:
         step_count += 1
-        cands = real_env.get_action_candidates()
         cmax = compute_cycle_heuristic_cmax(real_env.state)
         state_feat = extract_compact_state_features(real_env.state, cmax)
         time_urg = torch.zeros(12)
-        if not cands:
-            act = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
-            lp, val, srec = 0.0, 0.0, {"action_type": "advance_to_next_event"}
-        else:
-            act, lp, val, srec = real_actor.select_action(real_env, state_feat, time_urg)
+        act, lp, val, srec = real_actor.select_action(real_env, state_feat, time_urg)
 
         real_cache.add(
             worker_id=0,
@@ -441,20 +457,25 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
             h0=real_env.state.h0,
             predictor_version=None,
         )
+
+        obs, r, term, trunc, info = real_env.step(act)
+        term1 = term
         buffer1.add(PPOTransition(
             state_feat=state_feat,
             time_urgency=time_urg,
             sample_record=srec,
-            reward=0.0,
-            raw_reward=0.0,
+            reward=float(r),
+            raw_reward=float(r),
             value=val,
             log_prob=lp,
+            done=(term or trunc),
+            terminated=term,
+            truncated=trunc,
             worker_id=0,
             episode_id=0,
             segment_id=0,
         ))
 
-        obs, r, term, trunc, info = real_env.step(act)
         if info.get("cycle_execution_records"):
             for cid, rec_dict in info["cycle_execution_records"].items():
                 rec = CycleExecutionRecord.from_dict(rec_dict)
@@ -470,12 +491,28 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
 
     assert p1_drained is not None, "真实轨迹未提取出 P1 当前残差标签！"
     assert p1_drained["current_target_masks"].any(), "P1 提取批次必须包含至少一个有效当前周期残差目标！"
-    buffer1.finish_trajectories(last_values_by_segment={(0, 0, 0): 0.0})
+
+    if term1:
+        bootstrap_v1 = 0.0
+    else:
+        next_cmax1 = compute_cycle_heuristic_cmax(real_env.state)
+        next_state_feat1 = extract_compact_state_features(real_env.state, next_cmax1)
+        next_graph1 = real_actor.build_graph_snapshot(real_env)
+        time_urg1 = torch.zeros(12)
+        with torch.no_grad():
+            last_value1, _ = real_actor.encode_state(
+                next_state_feat1,
+                time_urg1,
+                graph_data=next_graph1,
+            )
+            bootstrap_v1 = float(last_value1.squeeze().item())
+    buffer1.finish_trajectories(last_values_by_segment={(0, 0, 0): bootstrap_v1})
+    segment1_steps = len(buffer1)
 
     # P1 当前残差更新
     update1 = Work3TrainingUpdate(
         buffer=buffer1,
-        environment_steps=len(buffer1),
+        environment_steps=segment1_steps,
         time_auxiliary_batch=p1_drained,
     )
     real_lightning.training_step(update1, 0)
@@ -493,17 +530,13 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
 
     # --- 阶段 2: 保持缓存跨段保留，使用已更新的在线 real_actor 继续 Rollout 段 2 直至到达 P2 转站 ---
     buffer2 = RolloutBufferWork3()
+    term2 = False
     while p2_drained is None and step_count < 100:
         step_count += 1
-        cands = real_env.get_action_candidates()
         cmax = compute_cycle_heuristic_cmax(real_env.state)
         state_feat = extract_compact_state_features(real_env.state, cmax)
         time_urg = torch.zeros(12)
-        if not cands:
-            act = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
-            lp, val, srec = 0.0, 0.0, {"action_type": "advance_to_next_event"}
-        else:
-            act, lp, val, srec = real_actor.select_action(real_env, state_feat, time_urg)
+        act, lp, val, srec = real_actor.select_action(real_env, state_feat, time_urg)
 
         real_cache.add(
             worker_id=0,
@@ -517,20 +550,25 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
             h0=real_env.state.h0,
             predictor_version=None,
         )
+
+        obs, r, term, trunc, info = real_env.step(act)
+        term2 = term
         buffer2.add(PPOTransition(
             state_feat=state_feat,
             time_urgency=time_urg,
             sample_record=srec,
-            reward=0.0,
-            raw_reward=0.0,
+            reward=float(r),
+            raw_reward=float(r),
             value=val,
             log_prob=lp,
+            done=(term or trunc),
+            terminated=term,
+            truncated=trunc,
             worker_id=0,
             episode_id=0,
             segment_id=1,
         ))
 
-        obs, r, term, trunc, info = real_env.step(act)
         if info.get("cycle_execution_records"):
             for cid, rec_dict in info["cycle_execution_records"].items():
                 rec = CycleExecutionRecord.from_dict(rec_dict)
@@ -549,12 +587,27 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     next_only_mask = (~p2_drained["current_target_masks"]) & p2_drained["next_cycle_masks"].any(dim=-1)
     assert next_only_mask.any(), "P2 批次必须包含跨段保留的 next-only 样本 (段1决策由段2转站结算)！"
 
-    buffer2.finish_trajectories(last_values_by_segment={(0, 0, 1): 0.0})
+    if term2:
+        bootstrap_v2 = 0.0
+    else:
+        next_cmax2 = compute_cycle_heuristic_cmax(real_env.state)
+        next_state_feat2 = extract_compact_state_features(real_env.state, next_cmax2)
+        next_graph2 = real_actor.build_graph_snapshot(real_env)
+        time_urg2 = torch.zeros(12)
+        with torch.no_grad():
+            last_value2, _ = real_actor.encode_state(
+                next_state_feat2,
+                time_urg2,
+                graph_data=next_graph2,
+            )
+            bootstrap_v2 = float(last_value2.squeeze().item())
+    buffer2.finish_trajectories(last_values_by_segment={(0, 0, 1): bootstrap_v2})
+    segment2_steps = len(buffer2)
 
     # P2 下一周期残差更新
     update2 = Work3TrainingUpdate(
         buffer=buffer2,
-        environment_steps=len(buffer2),
+        environment_steps=segment2_steps,
         time_auxiliary_batch=p2_drained,
     )
     real_lightning.training_step(update2, 0)
@@ -574,8 +627,11 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     assert current_head_grad is not None and torch.isfinite(current_head_grad).all() and current_head_grad.norm().item() > 1e-7
     assert next_head_grad is not None and torch.isfinite(next_head_grad).all() and next_head_grad.norm().item() > 1e-7
 
-    # 冻结副本梯度严格为 None
+    # 冻结副本梯度严格为 None，参数校验和不变
     assert all(p.grad is None for p in frozen_actor.parameters()), "冻结策略副本参数不得产生梯度！"
+    assert all(p.grad is None for p in frozen_time_head.parameters()), "冻结时间头副本参数不得产生梯度！"
+    assert _model_checksum(frozen_actor) == frozen_actor_checksum_initial, "冻结策略副本参数校验和被意外修改！"
+    assert _model_checksum(frozen_time_head) == frozen_time_head_checksum_initial, "冻结时间头副本参数校验和被意外修改！"
 
     print("    真实轨迹双目标更新成功，全部 6 核心模块梯度与冻结副本检验通过：")
     print(f"      紧凑状态编码器梯度模长: {compact_grad.norm().item():.6f}")
@@ -616,6 +672,11 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
         "real_dual_target_closed_loop_check": {
             "p1_samples_drained": int(p1_drained["target_residuals"].numel()),
             "p2_samples_drained": int(p2_drained["target_residuals"].numel()),
+            "p2_next_only_samples_count": int(next_only_mask.sum().item()),
+            "segment1_steps": int(segment1_steps),
+            "segment2_steps": int(segment2_steps),
+            "segment1_optimization_steps": 1,
+            "segment2_optimization_steps": 1,
             "compact_grad_norm": float(compact_grad.norm().item()),
             "line_fusion_grad_norm": float(line_fusion_grad.norm().item()),
             "station_summary_grad_norm": float(station_summary_grad.norm().item()),
@@ -623,6 +684,9 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
             "current_head_grad_norm": float(current_head_grad.norm().item()),
             "next_head_grad_norm": float(next_head_grad.norm().item()),
             "frozen_actor_grad_is_none": True,
+            "frozen_time_head_grad_is_none": True,
+            "frozen_actor_checksum_verified": True,
+            "frozen_time_head_checksum_verified": True,
         },
     }
 

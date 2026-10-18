@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from functools import wraps
 import hashlib
+import inspect
 import json
 import logging
 import math
@@ -578,13 +579,36 @@ def count_actual_scenario_hits(env: AirLineEnvWork3, scenario: dict[str, Any]) -
     return len(actual_scenario_hit_task_keys(env, scenario))
 
 
+class OnlineSnapshotTimeInputs(tuple):
+    """3-tuple 兼容结构：(graph_snapshot, time_features, predicted_transfer)，同时挂载 .h_estimated。"""
+
+    graph_snapshot: Any
+    time_features: torch.Tensor
+    predicted_transfer: torch.Tensor
+    h_estimated: torch.Tensor
+
+    def __new__(
+        cls,
+        graph_snapshot: Any,
+        time_features: torch.Tensor,
+        predicted_transfer: torch.Tensor,
+        h_estimated: torch.Tensor,
+    ):
+        instance = super().__new__(cls, (graph_snapshot, time_features, predicted_transfer))
+        instance.graph_snapshot = graph_snapshot
+        instance.time_features = time_features
+        instance.predicted_transfer = predicted_transfer
+        instance.h_estimated = h_estimated
+        return instance
+
+
 def compute_online_time_inputs(
     actor_critic: ActorCriticWork3,
     time_head: TimeResidualHead,
     env: AirLineEnvWork3,
     state_feat: torch.Tensor,
     estimated_cmax: float,
-) -> tuple[Any, torch.Tensor, torch.Tensor]:
+) -> OnlineSnapshotTimeInputs:
     """用当前图表征和时间头生成Actor实际接收的时间输入。"""
     device = next(actor_critic.parameters()).device
     graph_snapshot = actor_critic.build_graph_snapshot(env)
@@ -593,7 +617,7 @@ def compute_online_time_inputs(
             state_feat.to(device),
             graph_snapshot,
         ).unsqueeze(0)
-        predicted_transfer, remaining, _ = time_head.predict_corrected_time(
+        predicted_transfer, remaining, h_estimated = time_head.predict_corrected_time(
             state_feat=shared_feature,
             estimated_cmax=estimated_cmax,
             current_time=float(env.state.current_time),
@@ -618,14 +642,19 @@ def compute_online_time_inputs(
             device=device,
         )
         time_features = torch.cat([urgency, next_residuals, occupancy], dim=-1)
-    return graph_snapshot, time_features, predicted_transfer.squeeze(0)
+    return OnlineSnapshotTimeInputs(
+        graph_snapshot,
+        time_features,
+        predicted_transfer.squeeze(0),
+        h_estimated.squeeze(0),
+    )
 
 
 def compute_online_snapshot_time_inputs(
     actor_critic: ActorCriticWork3,
     time_head: TimeResidualHead,
     snapshot: DecisionSnapshot,
-) -> tuple[Any, torch.Tensor, torch.Tensor]:
+) -> OnlineSnapshotTimeInputs:
     """只依赖CPU决策快照生成修正预测，不访问worker内环境对象。"""
     device = next(actor_critic.parameters()).device
     state_features = snapshot.state_features.to(device)
@@ -638,7 +667,7 @@ def compute_online_snapshot_time_inputs(
             state_features,
             graph_snapshot,
         ).unsqueeze(0)
-        predicted_transfer, remaining, _ = time_head.predict_corrected_time(
+        predicted_transfer, remaining, h_estimated = time_head.predict_corrected_time(
             state_feat=shared_feature,
             estimated_cmax=estimated_cmax,
             current_time=snapshot.current_time,
@@ -666,7 +695,12 @@ def compute_online_snapshot_time_inputs(
         else:
             occupancy = torch.zeros(5, dtype=torch.float32, device=device)
         time_features = torch.cat([urgency, next_residuals, occupancy], dim=-1)
-    return graph_snapshot, time_features, predicted_transfer.squeeze(0)
+    return OnlineSnapshotTimeInputs(
+        graph_snapshot,
+        time_features,
+        predicted_transfer.squeeze(0),
+        h_estimated.squeeze(0),
+    )
 
 
 @_close_training_envs_on_exit
@@ -1260,6 +1294,7 @@ def run_training(
         pending_time_labels.discard_episode(
             state.episode_id,
             worker_id=worker_id,
+            reason=state.termination_reason or "worker_infrastructure_interrupted",
         )
         if shaper is not None and state.predictor_version is not None:
             shaper.end_episode(
@@ -1367,6 +1402,7 @@ def run_training(
                 state_features = snapshot.state_features
                 graph_snapshot = snapshot.graph_snapshot
                 action_snapshot = snapshot
+                online_time_res = None
                 if profile.use_corrected_time_input and time_head is not None:
                     eval_actor = actor_critic
                     eval_head = time_head
@@ -1379,11 +1415,12 @@ def run_training(
                         if frozen_actor is not None:
                             eval_actor = frozen_actor
                     with _autocast_context(torch_device, autocast_dtype):
-                        graph_snapshot, time_urgency, predicted_transfer = compute_online_snapshot_time_inputs(
+                        online_time_res = compute_online_snapshot_time_inputs(
                             actor_critic=eval_actor,
                             time_head=eval_head,
                             snapshot=snapshot,
                         )
+                        graph_snapshot, time_urgency, predicted_transfer = online_time_res
                 else:
                     time_urgency = snapshot.time_features
                     predicted_transfer = None
@@ -1391,7 +1428,13 @@ def run_training(
                 if profile.use_learned_time_shaping and shaper is not None:
                     if state.predictor_version is None:
                         raise RuntimeError("势函数episode没有绑定预测器版本")
-                    if predicted_transfer is not None:
+                    if online_time_res is not None and getattr(online_time_res, "h_estimated", None) is not None:
+                        phi_current = shaper.compute_potential_from_h_est(
+                            h_est=float(online_time_res.h_estimated.item()),
+                            h0=snapshot.h0,
+                            is_terminal=False,
+                        )
+                    elif predicted_transfer is not None:
                         h_est = max(0.0, float(predicted_transfer.item()) - float(snapshot.last_transfer_time))
                         phi_current = shaper.compute_potential_from_h_est(
                             h_est=h_est,
@@ -1425,13 +1468,14 @@ def run_training(
                             deterministic=False,
                         )
                     else:
-                        try:
+                        sig = inspect.signature(actor_critic.select_snapshot)
+                        if "time_features_override" in sig.parameters:
                             action, log_prob, value, sample_record = actor_critic.select_snapshot(
                                 snapshot,
                                 deterministic=False,
                                 time_features_override=time_urgency,
                             )
-                        except TypeError:
+                        else:
                             action, log_prob, value, sample_record = actor_critic.select_snapshot(
                                 replace(snapshot, time_features=time_urgency),
                                 deterministic=False,
@@ -1585,9 +1629,9 @@ def run_training(
                         f"动作后 cycle_id={snapshot.cycle_id}"
                     )
                 cycle_changed = snapshot.cycle_id > context["cycle_id"]
-                if actual_transfers or cycle_changed:
-                    raw_cycle_records = result.info.get("cycle_execution_records")
-                    if not raw_cycle_records:
+                raw_cycle_records = result.info.get("cycle_execution_records")
+                if actual_transfers or cycle_changed or raw_cycle_records:
+                    if (actual_transfers or cycle_changed) and not raw_cycle_records:
                         raise ValueError(
                             f"发生实际转站 (事件={actual_transfers}, cycle_id从 {context['cycle_id']} 变为 {snapshot.cycle_id})，"
                             f"但 result.info 缺少 cycle_execution_records！"
@@ -1711,6 +1755,7 @@ def run_training(
                     pending_time_labels.discard_episode(
                         state.episode_id,
                         worker_id=worker_id,
+                        reason=state.termination_reason or ("completed" if terminated else "truncated"),
                     )
                     if shaper is not None and state.predictor_version is not None:
                         shaper.end_episode(

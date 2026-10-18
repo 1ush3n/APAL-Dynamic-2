@@ -600,16 +600,19 @@ class ActorCriticWork3(nn.Module):
                     filtered_dict[k] = v
                     loaded_keys.append(k)
                 elif (
-                    k == "graph_encoder.embedder.linears.task.weight"
-                    and model_dict[k].shape == (self.hidden_dim, 28)
-                    and v.shape == (self.hidden_dim, 26)
+                    k == "graph_encoder.embedder.task_emb.0.weight"
+                    and model_dict[k].ndim == 2
+                    and v.ndim == 2
+                    and model_dict[k].shape[0] == v.shape[0]
+                    and model_dict[k].shape[1] == 28
+                    and v.shape[1] == 26
                 ):
-                    # 显式将旧版 26 维 Task 特征投影层迁移至 28 维，新增的 2 个槽位补零 (S02)
+                    # 显式将旧版 26 维 Task 特征投影层迁移至 28 维，新增的 2 个槽位补零 (S02/E01)
                     adapted_w = model_dict[k].clone()
-                    adapted_w[:, :26] = v
+                    adapted_w[:, :26] = v.to(device=adapted_w.device, dtype=adapted_w.dtype)
                     adapted_w[:, 26:] = 0.0
                     filtered_dict[k] = adapted_w
-                    loaded_keys.append(f"{k} (adapted from 26-dim to 28-dim via zero-init)")
+                    loaded_keys.append(f"{k} (adapted from 26-dim {tuple(v.shape)} to 28-dim {tuple(model_dict[k].shape)} via zero-init)")
                 else:
                     unexpected_keys.append(f"{k} (shape mismatch: expected {model_dict[k].shape}, got {v.shape})")
             else:

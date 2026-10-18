@@ -32,6 +32,7 @@ from models.work3.graph_builder import (
     GRAPH_FEATURE_SCHEMA,
     GRAPH_FEATURE_VERSION,
     get_graph_feature_schema_hash,
+    validate_checkpoint_graph_feature_schema,
 )
 from models.work3.ppo_buffer import RolloutBufferWork3
 
@@ -474,19 +475,7 @@ class PPOTrainerWork3:
     def load_checkpoint(self, path: str) -> None:
         """加载模型/优化器权重；此操作不恢复环境和采样状态，不能精确续训。"""
         checkpoint = torch.load(path, map_location=self.device, weights_only=False)
-        if checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION or dict(
-            checkpoint.get("graph_feature_dims") or {}
-        ) != dict(GRAPH_FEATURE_DIMS):
-            raise ValueError(
-                f"检查点图特征版本或维度不匹配：期望 {GRAPH_FEATURE_VERSION} {GRAPH_FEATURE_DIMS}，"
-                f"实际 {checkpoint.get('graph_feature_version')} {checkpoint.get('graph_feature_dims')}"
-            )
-        expected_hash = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
-        actual_hash = checkpoint.get("graph_feature_schema_hash")
-        if actual_hash is not None and actual_hash != expected_hash:
-            raise ValueError(
-                f"检查点图特征Schema指纹不匹配：期望 {expected_hash}，实际 {actual_hash}"
-            )
+        validate_checkpoint_graph_feature_schema(checkpoint)
         self.actor_critic.load_state_dict(checkpoint["actor_critic_state"])
         if self.time_head is not None:
             if "time_head_state" not in checkpoint:

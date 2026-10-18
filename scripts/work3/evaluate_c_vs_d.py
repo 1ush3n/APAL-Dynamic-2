@@ -359,16 +359,12 @@ def build_formal_evaluation_agent(
         GRAPH_FEATURE_DIMS,
         GRAPH_FEATURE_VERSION,
         get_graph_feature_schema_hash,
+        validate_checkpoint_graph_feature_schema,
     )
 
-    expected_schema_hash = get_graph_feature_schema_hash()
-    ckpt_schema_hash = checkpoint.get("graph_feature_schema_hash")
-    schema_mismatch = (
-        checkpoint.get("graph_feature_version") != GRAPH_FEATURE_VERSION
-        or dict(checkpoint.get("graph_feature_dims") or {}) != dict(GRAPH_FEATURE_DIMS)
-        or (ckpt_schema_hash is not None and ckpt_schema_hash != expected_schema_hash)
-    )
-    if schema_mismatch:
+    try:
+        validate_checkpoint_graph_feature_schema(checkpoint)
+    except ValueError as e:
         if debug_random:
             if profile.use_time_auxiliary:
                 time_head = TimeResidualHead(in_dim=actor.hidden_dim, hidden_dim=64).to(torch_device)
@@ -377,10 +373,8 @@ def build_formal_evaluation_agent(
                 time_head.eval()
             return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
         raise ValueError(
-            f"正式方法 {profile.name} 检查点图特征版本、维度或模式哈希不匹配："
-            f"期望 {GRAPH_FEATURE_VERSION} {GRAPH_FEATURE_DIMS} (hash={expected_schema_hash[:8]})，"
-            f"实际 {checkpoint.get('graph_feature_version')} {checkpoint.get('graph_feature_dims')} (hash={str(ckpt_schema_hash)[:8]})"
-        )
+            f"正式方法 {profile.name} 检查点图特征模式校验失败：{e}"
+        ) from e
     actor_state = checkpoint.get("actor_critic_state")
     if actor_state is None:
         if debug_random:

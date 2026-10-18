@@ -77,9 +77,12 @@ from models.work3.actor_critic import (
     extract_compact_state_features,
 )
 from models.work3.graph_builder import (
+    GRAPH_FEATURE_DIMS,
     GRAPH_FEATURE_SCHEMA,
     GRAPH_FEATURE_VERSION,
     MultiAircraftGraphBuilder,
+    get_graph_feature_schema_hash,
+    validate_checkpoint_graph_feature_schema,
 )
 from models.work3.heuristic_estimator import (
     compute_cycle_heuristic_cmax,
@@ -94,6 +97,7 @@ from models.work3.ppo_trainer import PPOTrainerWork3
 from models.work3.time_head import TimeResidualHead
 from scripts.work3.experiment_protocol import build_method_profile
 from scripts.work3.train_ppo_work3 import (
+    OnlineSnapshotTimeInputs,
     compute_heuristic_potential,
     compute_online_snapshot_time_inputs,
 )
@@ -790,3 +794,108 @@ def test_u31_u32_u33_u34_named_gradients_and_failure_propagation():
     passed, errs = fake_validate_failure()
     assert passed is False
     assert len(errs) > 0
+
+
+def test_e01_warm_start_task_emb_adaptation_key_and_zero_init():
+    """E01: 校验旧版 26 维 Task 特征投影层向 28 维的热启动迁移。
+
+    验证键名为 graph_encoder.embedder.task_emb.0.weight，
+    前 26 维参数精确拷贝，后 2 维新增槽位严格补零，且不作为 unexpected_key 遗弃。
+    """
+    actor_critic = ActorCriticWork3()
+    real_target_shape = actor_critic.state_dict()["graph_encoder.embedder.task_emb.0.weight"].shape
+    assert real_target_shape[1] == 28
+
+    old_weight = torch.randn(real_target_shape[0], 26)
+    fake_state_dict = {
+        "graph_encoder.embedder.task_emb.0.weight": old_weight,
+    }
+
+    res = actor_critic.load_warm_start_weights(fake_state_dict)
+    loaded_keys = res["loaded_keys"]
+    unexpected_keys = res["unexpected_keys"]
+
+    # 验证键被成功加载并迁移，不出现在 unexpected_keys 中
+    assert any("graph_encoder.embedder.task_emb.0.weight" in k for k in loaded_keys)
+    assert not any("graph_encoder.embedder.task_emb.0.weight" in k for k in unexpected_keys)
+
+    adapted = actor_critic.state_dict()["graph_encoder.embedder.task_emb.0.weight"]
+    assert torch.equal(adapted[:, :26], old_weight)
+    assert torch.equal(adapted[:, 26:], torch.zeros_like(adapted[:, 26:]))
+
+
+def test_e02_schema_hash_tripartite_validation():
+    """E02: 校验检查点图特征 Schema 三方一致性校验网关。
+
+    checkpoint declared hash == hash(saved schema) == runtime schema hash
+    对于缺少 schema、缺少 hash、内容被篡改或哈希不匹配的检查点一律拒绝加载并抛出 ValueError。
+    """
+    valid_hash = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
+    valid_checkpoint = {
+        "graph_feature_version": GRAPH_FEATURE_VERSION,
+        "graph_feature_dims": dict(GRAPH_FEATURE_DIMS),
+        "graph_feature_schema": dict(GRAPH_FEATURE_SCHEMA),
+        "graph_feature_schema_hash": valid_hash,
+    }
+
+    # 1. 正常检查点校验通过并返回哈希
+    res_hash = validate_checkpoint_graph_feature_schema(valid_checkpoint)
+    assert res_hash == valid_hash
+
+    # 2. 缺少 schema 字典拒绝
+    ckpt_no_schema = dict(valid_checkpoint)
+    del ckpt_no_schema["graph_feature_schema"]
+    with pytest.raises(ValueError, match="缺少有效的 graph_feature_schema"):
+        validate_checkpoint_graph_feature_schema(ckpt_no_schema)
+
+    # 3. 缺少 schema 哈希拒绝
+    ckpt_no_hash = dict(valid_checkpoint)
+    del ckpt_no_hash["graph_feature_schema_hash"]
+    with pytest.raises(ValueError, match="缺少有效的 graph_feature_schema_hash"):
+        validate_checkpoint_graph_feature_schema(ckpt_no_hash)
+
+    # 4. schema 内容被篡改（内容哈希与声明哈希不符）拒绝
+    ckpt_tampered = copy.deepcopy(valid_checkpoint)
+    ckpt_tampered["graph_feature_schema"]["recent_events_summary_dim"] = 999
+    with pytest.raises(ValueError, match="模式哈希与保存的 schema 内容哈希不一致"):
+        validate_checkpoint_graph_feature_schema(ckpt_tampered)
+
+    # 5. 声明哈希与运行时哈希不一致拒绝
+    ckpt_mismatched_runtime = copy.deepcopy(valid_checkpoint)
+    ckpt_mismatched_runtime["graph_feature_schema"]["recent_events_summary_dim"] = 999
+    ckpt_mismatched_runtime["graph_feature_schema_hash"] = get_graph_feature_schema_hash(ckpt_mismatched_runtime["graph_feature_schema"])
+    with pytest.raises(ValueError, match="模式哈希与当前运行时模式哈希不匹配"):
+        validate_checkpoint_graph_feature_schema(ckpt_mismatched_runtime)
+
+    # 6. 版本不匹配拒绝
+    ckpt_bad_version = dict(valid_checkpoint, graph_feature_version="work3_graph_v5")
+    with pytest.raises(ValueError, match="版本不匹配"):
+        validate_checkpoint_graph_feature_schema(ckpt_bad_version)
+
+    # 7. 维度不匹配拒绝
+    ckpt_bad_dims = dict(valid_checkpoint, graph_feature_dims={"task": 26})
+    with pytest.raises(ValueError, match="维度不匹配"):
+        validate_checkpoint_graph_feature_schema(ckpt_bad_dims)
+
+
+def test_e03_online_snapshot_time_inputs_contract():
+    """E03: 校验 OnlineSnapshotTimeInputs 的 3-tuple 兼容性与 .h_estimated 浮点精度。"""
+    g_snap = "mock_graph_snapshot"
+    time_feat = torch.randn(12)
+    pred_transfer = torch.tensor(15.5, dtype=torch.float32)
+    h_est = torch.tensor(5.5, dtype=torch.float32)
+
+    res = OnlineSnapshotTimeInputs(g_snap, time_feat, pred_transfer, h_est)
+
+    # 1. 严格作为 3-tuple 解包与长度检验
+    assert len(res) == 3
+    a, b, c = res
+    assert a is g_snap
+    assert torch.equal(b, time_feat)
+    assert torch.equal(c, pred_transfer)
+
+    # 2. 挂载 .h_estimated
+    assert hasattr(res, "h_estimated")
+    assert torch.equal(res.h_estimated, h_est)
+    assert isinstance(float(res.h_estimated.item()), float)
+    assert abs(float(res.h_estimated.item()) - 5.5) < 1e-6

@@ -159,6 +159,48 @@ def get_graph_feature_schema_hash(schema: dict[str, Any] | None = None) -> str:
 GRAPH_FEATURE_SCHEMA["schema_fingerprint"] = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
 
 
+def validate_checkpoint_graph_feature_schema(checkpoint: dict[str, Any]) -> str:
+    """统一校验检查点的图特征 Schema 合同。
+
+    强制执行三方一致性校验 (Tripartite Equality):
+        checkpoint.declared_hash == hash(checkpoint.saved_schema) == runtime_schema_hash
+    若缺少 schema、缺少 hash、内容被篡改或与运行时不匹配，均拒绝加载并抛出 ValueError。
+
+    Returns:
+        通过校验的 16 位 Schema SHA-256 指纹字符串。
+    """
+    version = checkpoint.get("graph_feature_version")
+    if version != GRAPH_FEATURE_VERSION:
+        raise ValueError(
+            f"检查点图特征版本不匹配：期望 {GRAPH_FEATURE_VERSION}，实际 {version}"
+        )
+    dims = checkpoint.get("graph_feature_dims")
+    if not dims or dict(dims) != dict(GRAPH_FEATURE_DIMS):
+        raise ValueError(
+            f"检查点图特征维度不匹配：期望 {GRAPH_FEATURE_DIMS}，实际 {dims}"
+        )
+    saved_schema = checkpoint.get("graph_feature_schema")
+    if not isinstance(saved_schema, dict):
+        raise ValueError("检查点缺少有效的 graph_feature_schema 模式字典，拒绝加载")
+    declared_hash = checkpoint.get("graph_feature_schema_hash")
+    if not declared_hash or not isinstance(declared_hash, str):
+        raise ValueError("检查点缺少有效的 graph_feature_schema_hash 模式哈希，拒绝加载")
+
+    computed_saved_hash = get_graph_feature_schema_hash(saved_schema)
+    if declared_hash != computed_saved_hash:
+        raise ValueError(
+            f"检查点声明的模式哈希与保存的 schema 内容哈希不一致："
+            f"声明 {declared_hash}，实际内容计算 {computed_saved_hash}"
+        )
+    runtime_hash = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
+    if declared_hash != runtime_hash:
+        raise ValueError(
+            f"检查点图特征模式哈希与当前运行时模式哈希不匹配："
+            f"检查点 {declared_hash}，当前运行时 {runtime_hash}"
+        )
+    return declared_hash
+
+
 @dataclass
 class Work3ResourceConfig:
     """符合 ResourceGraphConfig 协议的工作三轻量级配置。"""
