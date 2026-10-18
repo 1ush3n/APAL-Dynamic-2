@@ -1,23 +1,51 @@
 {
-  "overall_status": "PASS",
+  "overall_status": "INCOMPLETE",
   "total_events_checked": 2048,
   "total_episodes_checked": 5,
   "completed_episodes_count": 4,
   "contracts": {
-    "single_step_formula_valid": true,
-    "single_step_failure_count": 0,
-    "step_to_step_continuity_valid": true,
-    "continuity_failure_count": 0,
-    "predictor_version_invariance_valid": true,
-    "version_failure_count": 0,
-    "terminal_zero_potential_valid": true,
-    "terminal_failure_count": 0,
-    "completed_episode_telescope_closed": true
+    "single_step_formula": "PASS",
+    "step_to_step_continuity": "PASS",
+    "predictor_version_invariance": "PASS",
+    "terminal_zero_potential": "PASS",
+    "completed_episode_telescope": "PASS",
+    "config_consistency": "PASS",
+    "boundary_contract": "INCOMPLETE",
+    "ledger_reconciliation": "INCOMPLETE"
   },
-  "step_formula_failures_sample": [],
-  "continuity_failures_sample": [],
-  "version_failures_sample": [],
-  "terminal_failures_sample": [],
+  "resolved_config": {
+    "cfg_gamma": 0.99,
+    "cfg_beta": 0.1,
+    "yaml_gamma": 0.99,
+    "yaml_beta": 0.1
+  },
+  "contract_counts": {
+    "single_step_failures": 0,
+    "continuity_failures": 0,
+    "version_failures": 0,
+    "terminal_failures": 0,
+    "boundary_failures": 0
+  },
+  "failures_sample": {
+    "step_formula": [],
+    "continuity": [],
+    "version": [],
+    "terminal": [],
+    "config": [],
+    "boundary": []
+  },
+  "ledger_details": {
+    "tail_episode_verified": {
+      "episode": [
+        0,
+        4
+      ],
+      "raw_sum": -0.45255206953449123,
+      "trajectory_audit_cumulative_cost": 0.45255206953449123,
+      "diff": 0.0,
+      "note": "尾部片段与环境 cumulative_cost 对账完全吻合 (差值 <= 1e-5)；前序批次缺少独立账本，标记为 INCOMPLETE"
+    }
+  },
   "episodes": [
     {
       "worker_id": 0,

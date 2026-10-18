@@ -390,19 +390,28 @@ def generate_overall_summary(output_dir: Path | None = None) -> Path:
         with audit_json_path.open("r", encoding="utf-8") as f:
             audit_summary = json.load(f)
 
+    contracts = audit_summary.get("contracts", {})
+    contract_counts = audit_summary.get("contract_counts", {})
+    resolved_cfg = audit_summary.get("resolved_config", {})
+    ledger_tail = audit_summary.get("ledger_details", {}).get("tail_episode_verified", {})
+
     lines = [
         "# Work-3 势函数系数单变量验证综合报告 (beta=0.1 vs beta=1.0 vs F vs C)",
         "评估对象：Method C, Method F, Method D (beta=1.0), Method D (beta=0.1) | 种子：42 | 预算：2048 决策",
         "",
         "## 1. 势函数奖励塑形闭合审计结果 (D_beta01 shaping_events.jsonl)",
-        f"- **总体审计状态**: `{audit_summary.get('overall_status', 'N/A')}`",
+        f"- **总体审计裁定**: `{audit_summary.get('overall_status', 'N/A')}`",
+        f"- **有效配置交叉比对**: gamma={resolved_cfg.get('cfg_gamma')} (YAML={resolved_cfg.get('yaml_gamma')}), beta={resolved_cfg.get('cfg_beta')} (YAML={resolved_cfg.get('yaml_beta')})",
         f"- **检查事件数**: {audit_summary.get('total_events_checked', 0)} 步",
         f"- **检查 Episode 数**: {audit_summary.get('total_episodes_checked', 0)} (完工批次: {audit_summary.get('completed_episodes_count', 0)})",
-        f"- **单步公式一致性**: `{audit_summary.get('contracts', {}).get('single_step_formula_valid', 'N/A')}` (失败数: {audit_summary.get('contracts', {}).get('single_step_failure_count', 0)})",
-        f"- **跨步相邻势连续性**: `{audit_summary.get('contracts', {}).get('step_to_step_continuity_valid', 'N/A')}` (失败数: {audit_summary.get('contracts', {}).get('continuity_failure_count', 0)})",
-        f"- **预测器版本固定**: `{audit_summary.get('contracts', {}).get('predictor_version_invariance_valid', 'N/A')}`",
-        f"- **终局势归零合同**: `{audit_summary.get('contracts', {}).get('terminal_zero_potential_valid', 'N/A')}`",
-        f"- **完工 Episode 折扣望远镜恒等式闭合**: `{audit_summary.get('contracts', {}).get('completed_episode_telescope_closed', 'N/A')}`",
+        f"- **单步公式一致性**: `{contracts.get('single_step_formula', 'N/A')}` (失败数: {contract_counts.get('single_step_failures', 0)})",
+        f"- **跨步相邻势连续性**: `{contracts.get('step_to_step_continuity', 'N/A')}` (失败数: {contract_counts.get('continuity_failures', 0)})",
+        f"- **预测器版本固定**: `{contracts.get('predictor_version_invariance', 'N/A')}` (失败数: {contract_counts.get('version_failures', 0)})",
+        f"- **终局势归零合同**: `{contracts.get('terminal_zero_potential', 'N/A')}` (失败数: {contract_counts.get('terminal_failures', 0)})",
+        f"- **完工 Episode 折扣望远镜恒等式闭合**: `{contracts.get('completed_episode_telescope', 'N/A')}`",
+        f"- **配置一致性**: `{contracts.get('config_consistency', 'N/A')}`",
+        f"- **边界与 Bootstrap 合同**: `{contracts.get('boundary_contract', 'N/A')}`",
+        f"- **原始账本对账**: `{contracts.get('ledger_reconciliation', 'N/A')}` (尾部对账残差: {ledger_tail.get('diff', 'N/A')})",
         "",
         "## 2. 验证集完整端到端对比 (Nominal + 4 Validation Scenarios)",
     ]

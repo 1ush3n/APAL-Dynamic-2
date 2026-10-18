@@ -1,0 +1,4 @@
+variant,method,total_decisions,explicit_advance_count,forced_advance_count,auto_after_action_count,adv_with_immediate_opportunity,adv_with_future_only_opportunity,adv_with_zero_candidates,zero_time_no_state_change_count,cumulative_waiting_time_hours,cumulative_advance_cost_increment,final_makespan,final_j_total,final_d_time,final_d_team,final_j_postpone,final_j_revision,postponed_count
+C,C,210,0,0,11,0,0,0,0,0,0.000000e+00,669.71,2.145989e-02,7.299457e-04,1.000000e-02,0.000000e+00,1.072995e-02,0
+F,F,210,0,0,11,0,0,0,0,0,0.000000e+00,671.5,2.810431e-02,7.188230e-04,1.333333e-02,0.000000e+00,1.405216e-02,0
+D_beta01,D,422,212,0,11,151,61,0,0,620.79,2.318765e-02,761.98,5.934238e-02,2.050452e-02,9.166667e-03,0.000000e+00,2.967119e-02,0

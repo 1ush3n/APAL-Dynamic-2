@@ -1252,6 +1252,9 @@ def run_training(
                         transition.truncated = True
                     break
 
+    recorded_cost_summaries: set[tuple[int, int]] = set()
+    latest_worker_info: dict[int, dict[str, Any]] = {}
+
     def finalize_stopped_episodes(reason: str = "budget_truncated") -> None:
         """在段尾bootstrap计算完毕后，统一释放预测快照并丢弃缓存，保证Critic价值计算无损 (R6)。"""
         for state in worker_states:
@@ -1269,6 +1272,28 @@ def run_training(
                         episode_id=state.episode_id,
                     )
                     state.predictor_version = None
+                if shaping_audit_file is not None:
+                    ep_key = (int(state.worker_id), int(state.episode_id))
+                    if ep_key not in recorded_cost_summaries and state.worker_id in latest_worker_info:
+                        recorded_cost_summaries.add(ep_key)
+                        info_dict = latest_worker_info[state.worker_id]
+                        cb = info_dict.get("cost_breakdown", {})
+                        ep_summary_rec = {
+                            "record_type": "episode_cost_summary",
+                            "run_id": report_path.parent.name,
+                            "worker_id": int(state.worker_id),
+                            "episode_id": int(state.episode_id),
+                            "cumulative_cost": float(info_dict.get("cumulative_cost", 0.0)),
+                            "cost_takt": float(cb.get("cost_takt", 0.0)),
+                            "cost_time": float(cb.get("cost_time", 0.0)),
+                            "cost_team": float(cb.get("cost_team", 0.0)),
+                            "cost_postpone": float(cb.get("cost_postpone", 0.0)),
+                            "cost_revision": float(cb.get("cost_revision", 0.0)),
+                            "success": False,
+                            "termination_reason": str(actual_reason),
+                        }
+                        shaping_audit_file.write(json.dumps(ep_summary_rec, ensure_ascii=False) + "\n")
+                        shaping_audit_file.flush()
 
     def mark_budget_truncated(
         reason: str,
@@ -1590,6 +1615,7 @@ def run_training(
                 result = step_batch.results[worker_id]
                 if result is None:
                     raise RuntimeError("向量环境worker未返回有效执行结果")
+                latest_worker_info[worker_id] = dict(result.info)
                 state.snapshot = snapshot
                 state.scenario_status = dict(result.scenario_status)
                 update_scenario_effect_log(state)
@@ -1779,6 +1805,27 @@ def run_training(
                             episode_id=state.episode_id,
                         )
                         state.predictor_version = None
+                    if shaping_audit_file is not None:
+                        ep_key = (int(worker_id), int(state.episode_id))
+                        if ep_key not in recorded_cost_summaries:
+                            recorded_cost_summaries.add(ep_key)
+                            cb = result.info.get("cost_breakdown", {})
+                            ep_summary_rec = {
+                                "record_type": "episode_cost_summary",
+                                "run_id": report_path.parent.name,
+                                "worker_id": int(worker_id),
+                                "episode_id": int(state.episode_id),
+                                "cumulative_cost": float(result.info.get("cumulative_cost", 0.0)),
+                                "cost_takt": float(cb.get("cost_takt", 0.0)),
+                                "cost_time": float(cb.get("cost_time", 0.0)),
+                                "cost_team": float(cb.get("cost_team", 0.0)),
+                                "cost_postpone": float(cb.get("cost_postpone", 0.0)),
+                                "cost_revision": float(cb.get("cost_revision", 0.0)),
+                                "success": bool(terminated and result.info.get("success", True)),
+                                "termination_reason": str(state.termination_reason or result.info.get("termination_reason") or ("completed" if terminated else "truncated")),
+                            }
+                            shaping_audit_file.write(json.dumps(ep_summary_rec, ensure_ascii=False) + "\n")
+                            shaping_audit_file.flush()
 
                 pred_ver = context.get("predictor_version")
                 buffer.add(PPOTransition(
@@ -1814,6 +1861,7 @@ def run_training(
                         else None
                     )
                     shaping_event = {
+                        "record_type": "transition",
                         "run_id": report_path.parent.name,
                         "worker_id": int(worker_id),
                         "episode_id": int(state.episode_id),
@@ -1925,6 +1973,27 @@ def run_training(
             buffer.finish_trajectories(
                 last_values_by_segment=rollout_bootstraps,
             )
+            if shaping_audit_file is not None:
+                for key, last_transition in last_transitions.items():
+                    w_id, ep_id, seg_id = key
+                    b_val = 0.0 if last_transition.terminated else float(rollout_bootstraps.get(key, 0.0))
+                    b_type = (
+                        "natural_termination"
+                        if last_transition.terminated
+                        else ("budget_truncation" if last_transition.truncated else "rollout_continuation")
+                    )
+                    seg_end_rec = {
+                        "record_type": "segment_end",
+                        "run_id": report_path.parent.name,
+                        "worker_id": int(w_id),
+                        "episode_id": int(ep_id),
+                        "rollout_id": int(seg_id),
+                        "bootstrap_value": b_val,
+                        "boundary_type": b_type,
+                        "termination_reason": str(stop_reason if last_transition.truncated else ("completed" if last_transition.terminated else "none")),
+                    }
+                    shaping_audit_file.write(json.dumps(seg_end_rec, ensure_ascii=False) + "\n")
+                shaping_audit_file.flush()
 
         # 固化结算与清理顺序：在完成段尾bootstrap特征生成后，再执行预算截断与快照释放 (U30/R6)
         if stop_reason is None:

@@ -2,14 +2,18 @@
 评估对象：Method C, Method F, Method D (beta=1.0), Method D (beta=0.1) | 种子：42 | 预算：2048 决策
 
 ## 1. 势函数奖励塑形闭合审计结果 (D_beta01 shaping_events.jsonl)
-- **总体审计状态**: `PASS`
+- **总体审计裁定**: `INCOMPLETE`
+- **有效配置交叉比对**: gamma=0.99 (YAML=0.99), beta=0.1 (YAML=0.1)
 - **检查事件数**: 2048 步
 - **检查 Episode 数**: 5 (完工批次: 4)
-- **单步公式一致性**: `True` (失败数: 0)
-- **跨步相邻势连续性**: `True` (失败数: 0)
-- **预测器版本固定**: `True`
-- **终局势归零合同**: `True`
-- **完工 Episode 折扣望远镜恒等式闭合**: `True`
+- **单步公式一致性**: `PASS` (失败数: 0)
+- **跨步相邻势连续性**: `PASS` (失败数: 0)
+- **预测器版本固定**: `PASS` (失败数: 0)
+- **终局势归零合同**: `PASS` (失败数: 0)
+- **完工 Episode 折扣望远镜恒等式闭合**: `PASS`
+- **配置一致性**: `PASS`
+- **边界与 Bootstrap 合同**: `INCOMPLETE`
+- **原始账本对账**: `INCOMPLETE` (尾部对账残差: 0.0)
 
 ## 2. 验证集完整端到端对比 (Nominal + 4 Validation Scenarios)
 | scenario_id | timing | intensity | station | c_feasible | c_makespan | c_j_total | c_j_takt | c_d_time | c_d_team | c_j_postpone | c_j_revision | c_postponed_count | c_decisions | f_feasible | f_makespan | f_j_total | f_j_takt | f_d_time | f_d_team | f_j_postpone | f_j_revision | f_postponed_count | f_decisions | d_beta1_feasible | d_beta1_makespan | d_beta1_j_total | d_beta1_j_takt | d_beta1_d_time | d_beta1_d_team | d_beta1_j_postpone | d_beta1_j_revision | d_beta1_postponed_count | d_beta1_decisions | d_beta01_feasible | d_beta01_makespan | d_beta01_j_total | d_beta01_j_takt | d_beta01_d_time | d_beta01_d_team | d_beta01_j_postpone | d_beta01_j_revision | d_beta01_postponed_count | d_beta01_decisions |
