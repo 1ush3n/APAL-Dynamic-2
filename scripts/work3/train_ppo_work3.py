@@ -745,6 +745,7 @@ def run_training(
     amp_dtype: str = "fp32",
     warmup_mode: str = "none",
     r3_e04_audit: bool = False,
+    shaping_audit: bool = False,
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
@@ -853,6 +854,13 @@ def run_training(
         run_id=report_path.parent.name,
         enabled=r3_e04_audit,
     )
+
+    shaping_audit_file = None
+    if shaping_audit:
+        audit_jsonl_path = report_path.parent / "shaping_events.jsonl"
+        audit_jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+        shaping_audit_file = audit_jsonl_path.open("w", encoding="utf-8")
+        logger.info(f"开启势函数奖励塑形闭合审计，事件输出至: {audit_jsonl_path}")
 
     # 1. 初始化仿真环境
     logger.info(f"初始化环境: {baseline_path}")
@@ -1335,6 +1343,7 @@ def run_training(
     )
     logger.info("=" * 80)
 
+    episode_step_counts: dict[tuple[int, int], int] = {}
     iter_idx = 0
     while stop_reason is None:
         if num_iterations is not None and iter_idx >= num_iterations:
@@ -1397,6 +1406,9 @@ def run_training(
             actions: list[dict[str, Any] | None] = [None] * num_envs
             action_contexts: dict[int, dict[str, Any]] = {}
             for action_offset, state in enumerate(selected_states):
+                ep_key = (int(state.worker_id), int(state.episode_id))
+                ep_step = episode_step_counts.get(ep_key, 0)
+                episode_step_counts[ep_key] = ep_step + 1
                 snapshot = state.snapshot
                 cmax_est = snapshot.estimated_cmax
                 if cmax_est is None:
@@ -1511,6 +1523,8 @@ def run_training(
                     "cycle_id": int(snapshot.cycle_id),
                     "last_transfer_time": float(snapshot.last_transfer_time),
                     "predictor_version": state.predictor_version,
+                    "decision_time": float(snapshot.current_time),
+                    "episode_step": ep_step,
                 }
 
             deadline = (
@@ -1791,6 +1805,38 @@ def run_training(
                 step_shaped_rewards.append(shaped_reward)
                 total_env_steps += 1
                 steps_this_rollout += 1
+
+                if shaping_audit_file is not None:
+                    act_dict = actions[worker_id] or {}
+                    b_val = (
+                        float(rollout_bootstraps[(worker_id, state.episode_id, iter_idx)])
+                        if (truncated and (worker_id, state.episode_id, iter_idx) in rollout_bootstraps)
+                        else None
+                    )
+                    shaping_event = {
+                        "run_id": report_path.parent.name,
+                        "worker_id": int(worker_id),
+                        "episode_id": int(state.episode_id),
+                        "rollout_id": int(iter_idx),
+                        "episode_step": int(context.get("episode_step", 0)),
+                        "action_type": int(act_dict["branch"]) if "branch" in act_dict and act_dict["branch"] is not None else None,
+                        "task_id": int(act_dict["task_id"]) if "task_id" in act_dict and act_dict["task_id"] is not None else None,
+                        "decision_time": float(context.get("decision_time", 0.0)),
+                        "cycle_id": int(context.get("cycle_id", 1)),
+                        "raw_reward": float(raw_reward),
+                        "shaped_reward": float(shaped_reward),
+                        "phi_current": float(context["phi_current"]),
+                        "phi_next": float(phi_next),
+                        "beta": float(beta_shaping),
+                        "gamma": float(gamma),
+                        "terminated": bool(terminated),
+                        "truncated": bool(truncated),
+                        "predictor_version": pred_ver,
+                        "bootstrap_value": b_val,
+                        "phi_source": "learned_phi" if (profile.use_learned_time_shaping and shaper is not None) else "heuristic_phi",
+                    }
+                    shaping_audit_file.write(json.dumps(shaping_event, ensure_ascii=False) + "\n")
+                    shaping_audit_file.flush()
 
             if interrupted_worker_ids:
                 stop_reason = "worker_infrastructure_interrupted"
@@ -2364,6 +2410,9 @@ def run_training(
     )
     if auditor is not None:
         auditor.finalize_and_save(report)
+    if shaping_audit_file is not None:
+        shaping_audit_file.close()
+        logger.info(f"势函数奖励塑形闭合审计事件保存完毕: {audit_jsonl_path}")
     logger.info("=" * 80)
     logger.info(
         "工作三%s结束：reason=%s, steps=%s, episodes=%s, successes=%s, hits=%s, report=%s",
@@ -2456,6 +2505,12 @@ def main() -> None:
         action="store_true",
         default=False,
         help="开启 R3/E04 专项闭环审计",
+    )
+    parser.add_argument(
+        "--shaping-audit",
+        action="store_true",
+        default=False,
+        help="开启势函数奖励塑形闭合审计并导出 shaping_events.jsonl",
     )
     args = parser.parse_args()
 
@@ -2554,6 +2609,7 @@ def main() -> None:
         resolved_config_yaml=resolved_yaml,
         resolved_config_sha256=config_sha256,
         r3_e04_audit=bool(args.r3_e04_audit or is_r3_e04_audit_enabled()),
+        shaping_audit=bool(args.shaping_audit),
     )
 
 

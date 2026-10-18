@@ -1,14 +1,14 @@
 """Work-3 机制消融实验驱动脚本 (E/F Ablation)。
 
 实验设计与目的：
-区分时间辅助损失 (Auxiliary Head)、修正时间观测输入 (Corrected Time Input) 与学习势函数引导 (Learned Potential Shaping) 各自的因果贡献：
-- Method C: 无时间辅助学习、无修正时间输入、无势函数引导 (纯基线图策略)
-- Method E: 有时间辅助学习、无修正时间输入、无势函数引导 (仅在线训练时间头，策略不可见亦无势函数)
-- Method F: 有时间辅助学习、有修正时间输入、无势函数引导 (策略可见时间残差修正输入，但无势函数奖励塑形)
-- Method D: 有时间辅助学习、有修正时间输入、有势函数引导 (完整方案)
+区分时间辅助损失 (Auxiliary Head)、修正时间观测输入 (Corrected Time Input) 与学习修正势函数引导 (Learned Potential Shaping vs Heuristic Potential Shaping) 各自的因果贡献：
+- Method C: 无时间辅助学习、无修正时间输入、使用启发式势函数奖励塑形 (Φ_heur)
+- Method E: 有时间辅助学习、无修正时间输入、使用启发式势函数奖励塑形 (Φ_heur)
+- Method F: 有时间辅助学习、有修正时间输入、使用启发式势函数奖励塑形 (Φ_heur)
+- Method D: 有时间辅助学习、有修正时间输入、使用学习修正势函数奖励塑形 (Φ_learned)
 
-基准配置：
-mini210, RTX 4060, FP32, 单环境, 2048 decisions, rollout=8, batch=2, epochs=1, 相同初始种子 42 与训练场景。
+注：C、E、F 均包含启发式势函数奖励塑形；F→D 的干预是切换势函数的时间估计来源（启发式 vs 学习修正头），而非从“无势函数”到“有势函数”。
+势函数数学定义为：Φ(s) = -a * (H^_q / H_0) - b * ([H^_q - H_0]_+ / H_0), a=0.5, b=1.0.
 """
 
 from __future__ import annotations
