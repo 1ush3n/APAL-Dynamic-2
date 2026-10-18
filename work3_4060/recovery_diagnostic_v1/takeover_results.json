@@ -1,0 +1,734 @@
+[
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "seed": 42,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "EARLY",
+    "intensity": "MED",
+    "handover_step": 21,
+    "handover_time": 38.73657922558419,
+    "hit_targets": "1_16",
+    "handover_cost": {
+      "j_total": 6.51039058955218e-05,
+      "j_takt": 0.0,
+      "d_time": 6.51039058955218e-05,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 189,
+      "total_makespan": 679.9916451351162,
+      "post_makespan": 641.255065909532,
+      "total_j_total": 0.021524995371798753,
+      "post_j_total": 0.02145989146590323,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007299457329516148,
+        "d_team": 0.010000000000000009,
+        "j_postpone": 0.0,
+        "j_revision": 0.010729945732951617
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 196,
+      "total_makespan": 453.0316106300437,
+      "post_makespan": 414.2950314044595,
+      "total_j_total": 0.7577462630548621,
+      "post_j_total": 0.7576811591489666,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0031262938626736903,
+        "d_team": 0.025714285714285752,
+        "j_postpone": 0.7,
+        "j_revision": 0.02884057957200631
+      },
+      "post_postponed_count": 7
+    },
+    "j_diff_c_minus_d": -0.7362212676830634,
+    "makespan_diff_c_minus_d": 226.96003450507254
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "seed": 42,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "MID",
+    "intensity": "MED",
+    "handover_step": 61,
+    "handover_time": 129.70533674370247,
+    "hit_targets": "2_13",
+    "handover_cost": {
+      "j_total": 2.330101778161837e-13,
+      "j_takt": 0.0,
+      "d_time": 2.330101778161837e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 149,
+      "total_makespan": 669.7093905685989,
+      "post_makespan": 540.0040538248965,
+      "total_j_total": 0.019520835782041328,
+      "post_j_total": 0.019520835781808316,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0007127988432851093,
+        "d_team": 0.009047619047619054,
+        "j_postpone": 0.0,
+        "j_revision": 0.00976041789090416
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 154,
+      "total_makespan": 433.0560397438895,
+      "post_makespan": 303.3507030001871,
+      "total_j_total": 0.5491801147312244,
+      "post_j_total": 0.5491801147309914,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0026852954628563694,
+        "d_team": 0.021904761904761934,
+        "j_postpone": 0.5,
+        "j_revision": 0.02459005736337276
+      },
+      "post_postponed_count": 5
+    },
+    "j_diff_c_minus_d": -0.5296592789491831,
+    "makespan_diff_c_minus_d": 236.65335082470938
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "seed": 42,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "MID",
+    "intensity": "LOW",
+    "handover_step": 151,
+    "handover_time": 360.87735014222744,
+    "hit_targets": "3_24",
+    "handover_cost": {
+      "j_total": 5.825270921597614e-13,
+      "j_takt": 0.0,
+      "d_time": 5.825270921597614e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 59,
+      "total_makespan": 669.4510951850256,
+      "post_makespan": 308.5737450427981,
+      "total_j_total": 0.010341072030793853,
+      "post_j_total": 0.010341072030211326,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0004086312532009004,
+        "d_team": 0.004761904761904762,
+        "j_postpone": 0.0,
+        "j_revision": 0.005170536015105664
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 61,
+      "total_makespan": 497.8115605360057,
+      "post_makespan": 136.93421039377824,
+      "total_j_total": 0.22344916059384282,
+      "post_j_total": 0.22344916059326028,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0012483898215011721,
+        "d_team": 0.01047619047619048,
+        "j_postpone": 0.2,
+        "j_revision": 0.011724580295568894
+      },
+      "post_postponed_count": 2
+    },
+    "j_diff_c_minus_d": -0.21310808856304897,
+    "makespan_diff_c_minus_d": 171.63953464901988
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "seed": 42,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "handover_step": 173,
+    "handover_time": 472.9346879417358,
+    "hit_targets": "3_125",
+    "handover_cost": {
+      "j_total": 0.00011393183601619588,
+      "j_takt": 0.0,
+      "d_time": 0.00011393183601619588,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 37,
+      "total_makespan": 704.3649967238345,
+      "post_makespan": 231.43030878209868,
+      "total_j_total": 0.0072477399433687525,
+      "post_j_total": 0.007133808107352557,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.000233570720342943,
+        "d_team": 0.003333333333333333,
+        "j_postpone": 0.0,
+        "j_revision": 0.0035669040536762757
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 38,
+      "total_makespan": 554.3967341333779,
+      "post_makespan": 81.46204619164212,
+      "total_j_total": 0.11518280123719786,
+      "post_j_total": 0.11506886940118166,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0008677680346317276,
+        "d_team": 0.0066666666666666645,
+        "j_postpone": 0.1,
+        "j_revision": 0.007534434699883223
+      },
+      "post_postponed_count": 1
+    },
+    "j_diff_c_minus_d": -0.1079350612938291,
+    "makespan_diff_c_minus_d": 149.96826259045656
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "seed": 43,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "EARLY",
+    "intensity": "MED",
+    "handover_step": 21,
+    "handover_time": 38.73657922558419,
+    "hit_targets": "1_16",
+    "handover_cost": {
+      "j_total": 6.51039058955218e-05,
+      "j_takt": 0.0,
+      "d_time": 6.51039058955218e-05,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 189,
+      "total_makespan": 431.9986265654391,
+      "post_makespan": 393.2620473398549,
+      "total_j_total": 0.04312784321396261,
+      "post_j_total": 0.04306273930806709,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0029599410850815306,
+        "d_team": 0.018571428571428593,
+        "j_postpone": 0.0,
+        "j_revision": 0.021531369651557015
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 189,
+      "total_makespan": 693.3341300955951,
+      "post_makespan": 654.597550870011,
+      "total_j_total": 0.042770436308737045,
+      "post_j_total": 0.04270533240284152,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0015907614395160232,
+        "d_team": 0.019761904761904786,
+        "j_postpone": 0.0,
+        "j_revision": 0.02135266620142081
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": 0.00035740690522556573,
+    "makespan_diff_c_minus_d": -261.3355035301561
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "seed": 43,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "MID",
+    "intensity": "MED",
+    "handover_step": 61,
+    "handover_time": 129.70533674370247,
+    "hit_targets": "2_13",
+    "handover_cost": {
+      "j_total": 2.330101778161837e-13,
+      "j_takt": 0.0,
+      "d_time": 2.330101778161837e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 149,
+      "total_makespan": 437.85112118951173,
+      "post_makespan": 308.1457844458092,
+      "total_j_total": 0.03869160442319426,
+      "post_j_total": 0.038691604422961254,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.002679135546936713,
+        "d_team": 0.016666666666666684,
+        "j_postpone": 0.0,
+        "j_revision": 0.01934580220935787
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 149,
+      "total_makespan": 669.3008329985931,
+      "post_makespan": 539.5954962548907,
+      "total_j_total": 0.04061394529530206,
+      "post_j_total": 0.04061394529506905,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0017355440761059808,
+        "d_team": 0.018571428571428593,
+        "j_postpone": 0.0,
+        "j_revision": 0.020306972647534574
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": -0.0019223408721077972,
+    "makespan_diff_c_minus_d": -231.44971180908146
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "seed": 43,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "MID",
+    "intensity": "LOW",
+    "handover_step": 151,
+    "handover_time": 360.87735014222744,
+    "hit_targets": "3_24",
+    "handover_cost": {
+      "j_total": 5.825270921597614e-13,
+      "j_takt": 0.0,
+      "d_time": 5.825270921597614e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 59,
+      "total_makespan": 490.8727306936436,
+      "post_makespan": 129.99538055141613,
+      "total_j_total": 0.02111431799653766,
+      "post_j_total": 0.02111431799595513,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0012714447133246503,
+        "d_team": 0.009285714285714288,
+        "j_postpone": 0.0,
+        "j_revision": 0.010557158996916186
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 59,
+      "total_makespan": 669.1442116401885,
+      "post_makespan": 308.26686149796103,
+      "total_j_total": 0.023367260972349573,
+      "post_j_total": 0.023367260971767046,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0013264876287406554,
+        "d_team": 0.01035714285714286,
+        "j_postpone": 0.0,
+        "j_revision": 0.011683630485883518
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": -0.0022529429758119147,
+    "makespan_diff_c_minus_d": -178.2714809465449
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "seed": 43,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "handover_step": 173,
+    "handover_time": 472.9346879417358,
+    "hit_targets": "3_125",
+    "handover_cost": {
+      "j_total": 0.00011393183601619588,
+      "j_takt": 0.0,
+      "d_time": 0.00011393183601619588,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 37,
+      "total_makespan": 544.9471912410719,
+      "post_makespan": 72.01250329933612,
+      "total_j_total": 0.014488191374119294,
+      "post_j_total": 0.014374259538103097,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0008776059602353241,
+        "d_team": 0.006309523809523808,
+        "j_postpone": 0.0,
+        "j_revision": 0.007187129768343964
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 37,
+      "total_makespan": 704.1597872041664,
+      "post_makespan": 231.2250992624306,
+      "total_j_total": 0.014702981970482,
+      "post_j_total": 0.014589050134465804,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0006278584005662331,
+        "d_team": 0.0066666666666666645,
+        "j_postpone": 0.0,
+        "j_revision": 0.007294525067232902
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": -0.0002147905963627069,
+    "makespan_diff_c_minus_d": -159.2125959630945
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "seed": 44,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "EARLY",
+    "intensity": "MED",
+    "handover_step": 21,
+    "handover_time": 38.73657922558419,
+    "hit_targets": "1_16",
+    "handover_cost": {
+      "j_total": 6.51039058955218e-05,
+      "j_takt": 0.0,
+      "d_time": 6.51039058955218e-05,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 300,
+      "total_makespan": 682.7800561716708,
+      "post_makespan": 644.0434769460867,
+      "total_j_total": 0.02381740141076064,
+      "post_j_total": 0.023752297504865117,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0027094820857658714,
+        "d_team": 0.009166666666666672,
+        "j_postpone": 0.0,
+        "j_revision": 0.011876148752432546
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 303,
+      "total_makespan": 503.9808221026235,
+      "post_makespan": 465.2442428770393,
+      "total_j_total": 0.059539974820332256,
+      "post_j_total": 0.059474870914436734,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.004023149744607867,
+        "d_team": 0.025714285714285752,
+        "j_postpone": 0.0,
+        "j_revision": 0.029737435455543117
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": -0.03572257340957162,
+    "makespan_diff_c_minus_d": 178.79923406904737
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "seed": 44,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "MID",
+    "intensity": "MED",
+    "handover_step": 61,
+    "handover_time": 129.70533674370247,
+    "hit_targets": "2_13",
+    "handover_cost": {
+      "j_total": 2.330101778161837e-13,
+      "j_takt": 0.0,
+      "d_time": 2.330101778161837e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 243,
+      "total_makespan": 672.4978016051535,
+      "post_makespan": 542.7924648614511,
+      "total_j_total": 0.021136413981318818,
+      "post_j_total": 0.021136413981085806,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0023539212762571757,
+        "d_team": 0.008214285714285716,
+        "j_postpone": 0.0,
+        "j_revision": 0.010568206990542898
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 240,
+      "total_makespan": 483.679866777975,
+      "post_makespan": 353.97453003427256,
+      "total_j_total": 0.05044528108560717,
+      "post_j_total": 0.05044528108537416,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.00331787863949637,
+        "d_team": 0.021904761904761934,
+        "j_postpone": 0.0,
+        "j_revision": 0.025222640541115858
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": -0.029308867104288355,
+    "makespan_diff_c_minus_d": 188.81793482717853
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "seed": 44,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "MID",
+    "intensity": "LOW",
+    "handover_step": 151,
+    "handover_time": 360.87735014222744,
+    "hit_targets": "3_24",
+    "handover_cost": {
+      "j_total": 5.825270921597614e-13,
+      "j_takt": 0.0,
+      "d_time": 5.825270921597614e-13,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 77,
+      "total_makespan": 671.0444729201995,
+      "post_makespan": 310.16712277797205,
+      "total_j_total": 0.009684155260455862,
+      "post_j_total": 0.009684155259873335,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0005563633442223785,
+        "d_team": 0.004285714285714286,
+        "j_postpone": 0.0,
+        "j_revision": 0.0048420776299366655
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 101,
+      "total_makespan": 516.3107927540152,
+      "post_makespan": 155.43344261178777,
+      "total_j_total": 0.024400028703712856,
+      "post_j_total": 0.02440002870313033,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0017238238760822716,
+        "d_team": 0.01047619047619048,
+        "j_postpone": 0.0,
+        "j_revision": 0.012200014350857581
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": -0.014715873443256994,
+    "makespan_diff_c_minus_d": 154.73368016618429
+  },
+  {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "seed": 44,
+    "covered": true,
+    "station_id": "NONE",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "handover_step": 173,
+    "handover_time": 472.9346879417358,
+    "hit_targets": "3_125",
+    "handover_cost": {
+      "j_total": 0.00011393183601619588,
+      "j_takt": 0.0,
+      "d_time": 0.00011393183601619588,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0,
+      "postponed_count": 0,
+      "postponed_task_count": 0
+    },
+    "c_result": {
+      "method": "Method-C",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 40,
+      "total_makespan": 705.5600300252148,
+      "post_makespan": 232.62534208347904,
+      "total_j_total": 0.00662615164266216,
+      "post_j_total": 0.006512219806645964,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0002799194271325047,
+        "d_team": 0.0029761904761904765,
+        "j_postpone": 0.0,
+        "j_revision": 0.0032561099033229803
+      },
+      "post_postponed_count": 0
+    },
+    "d_result": {
+      "method": "Method-D",
+      "feasible": true,
+      "violations": {},
+      "termination_reason": "completed",
+      "post_decisions": 60,
+      "total_makespan": 559.1767452770746,
+      "post_makespan": 86.24205733533881,
+      "total_j_total": 0.015422157085923482,
+      "post_j_total": 0.015308225249907286,
+      "post_cost_components": {
+        "j_takt": 0.0,
+        "d_time": 0.0009874459586407648,
+        "d_team": 0.0066666666666666645,
+        "j_postpone": 0.0,
+        "j_revision": 0.007654112624599847
+      },
+      "post_postponed_count": 0
+    },
+    "j_diff_c_minus_d": -0.008796005443261323,
+    "makespan_diff_c_minus_d": 146.38328474814023
+  }
+]
