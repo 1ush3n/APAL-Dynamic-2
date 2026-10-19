@@ -1,0 +1,28 @@
+{
+  "git_commit_sha": "5fb5d4f2676746087854f00ecd27f2e92410b3c6",
+  "effective_config": {
+    "gamma": 0.99,
+    "beta_shaping": 0.1,
+    "dataset": "mini210.json",
+    "scenario": "Nominal",
+    "decision_budget": 2048,
+    "precision": "FP32"
+  },
+  "checkpoint_summary": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\shaping_scale_v1\\seed42\\D_beta01\\weights.pt",
+    "sha256": "01cb966c1b087ff7496d273058112e28ee235decab831d141c97bfbf8a071ca0"
+  },
+  "runtime_device": "cpu",
+  "cpu_num_threads": 1,
+  "cpu_num_interop_threads": 1,
+  "witness_selection_rule": "earliest_scheduled_start_then_task_key_team_align",
+  "tolerance": {
+    "discrete_fields": "exact_match",
+    "float_time_and_cost": 1e-09
+  },
+  "target_steps": [
+    2,
+    17,
+    20
+  ]
+}

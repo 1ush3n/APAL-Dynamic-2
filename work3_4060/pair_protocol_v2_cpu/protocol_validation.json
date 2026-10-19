@@ -1,0 +1,69 @@
+{
+  "overall_protocol_pass": true,
+  "contracts": {
+    "decision_entry_unified": "PASS",
+    "prefix_reconciliation": "PASS",
+    "control_reproduction": "PASS",
+    "intervention_immediate_execution": "PASS",
+    "trajectory_feasibility": "PASS",
+    "raw_reward_accounting": "PASS"
+  },
+  "control_reproductions": {
+    "step_2": {
+      "reproduced": true,
+      "first_divergence_step": null,
+      "first_divergence_detail": null,
+      "ctrl_j_total": 0.059339067064963474,
+      "ref_j_total": 0.059339067064772995,
+      "j_abs_error": 1.9047957655615733e-13,
+      "m_abs_error": 0.0,
+      "feasible": true
+    },
+    "step_17": {
+      "reproduced": true,
+      "first_divergence_step": null,
+      "first_divergence_detail": null,
+      "ctrl_j_total": 0.059339067064963474,
+      "ref_j_total": 0.059339067064772995,
+      "j_abs_error": 1.9047957655615733e-13,
+      "m_abs_error": 0.0,
+      "feasible": true
+    },
+    "step_20": {
+      "reproduced": true,
+      "first_divergence_step": null,
+      "first_divergence_detail": null,
+      "ctrl_j_total": 0.059339067064963474,
+      "ref_j_total": 0.059339067064772995,
+      "j_abs_error": 1.9047957655615733e-13,
+      "m_abs_error": 0.0,
+      "feasible": true
+    }
+  },
+  "interventions": {
+    "step_2": {
+      "status": "PASS",
+      "is_truly_immediate": true,
+      "delta_j": 0.0001103189136562599,
+      "delta_m": 0.5457256030604185,
+      "control_feasible": true,
+      "intervention_feasible": true
+    },
+    "step_17": {
+      "status": "PASS",
+      "is_truly_immediate": true,
+      "delta_j": -0.00022357718768917234,
+      "delta_m": 0.0,
+      "control_feasible": true,
+      "intervention_feasible": true
+    },
+    "step_20": {
+      "status": "PASS",
+      "is_truly_immediate": true,
+      "delta_j": 0.00011317186124834566,
+      "delta_m": 0.5457256030604185,
+      "control_feasible": true,
+      "intervention_feasible": true
+    }
+  }
+}

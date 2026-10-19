@@ -801,9 +801,21 @@ def main():
     args = p.parse_args()
 
     device = args.device if torch.cuda.is_available() and args.device.startswith("cuda") else "cpu"
+    if device == "cpu":
+        torch.set_num_threads(1)
+        try:
+            torch.set_num_interop_threads(1)
+        except RuntimeError:
+            pass
+    num_threads = torch.get_num_threads()
+    num_interop_threads = torch.get_num_interop_threads()
+
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"运行推进诊断与配对干预协议 v2: 设备={device}, 输出目录={out_dir}")
+    logger.info(
+        f"运行推进诊断与配对干预协议 v2: 设备={device}, 输出目录={out_dir}, "
+        f"num_threads={num_threads}, num_interop_threads={num_interop_threads}"
+    )
 
     # 1. 运行三方法 Nominal 诊断
     variants = [
@@ -872,6 +884,8 @@ def main():
             "sha256": compute_file_sha256(ckpt_d),
         },
         "runtime_device": device,
+        "cpu_num_threads": num_threads,
+        "cpu_num_interop_threads": num_interop_threads,
         "witness_selection_rule": "earliest_scheduled_start_then_task_key_team_align",
         "tolerance": {
             "discrete_fields": "exact_match",
@@ -965,7 +979,7 @@ def main():
     summary_md_path = out_dir / "summary.md"
     sum_lines = [
         "# Work-3 配对诊断与 Control 复现收口报告 (Pair Protocol v2)",
-        f"评估场景：Nominal (mini210.json) | 种子：42 | 决策模式：Greedy (deterministic=True) | 运行设备：`{device}`",
+        f"评估场景：Nominal (mini210.json) | 种子：42 | 决策模式：Greedy (deterministic=True) | 运行设备：`{device}` (num_threads={num_threads}, num_interop_threads={num_interop_threads})",
         "",
         "## 1. 协议逐项技术验收状态 (Protocol Verification Contracts)",
         f"| 合同项目 | 验收要求 | 判定状态 | 详情说明 |",
