@@ -446,8 +446,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 58.58188312092339,
         "heuristic_mae_h0": 0.20023024380907015,
-        "corrected_mae_hours": 25.278824452491964,
-        "corrected_mae_h0": 0.08640188593598366
+        "corrected_mae_hours": 25.278823612350305,
+        "corrected_mae_h0": 0.08640188306441722
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -1752,10 +1752,10 @@
       "time_prediction_metrics": {
         "labeled_cycle_count": 11,
         "sample_count": 422,
-        "heuristic_mae_hours": 24.058796937356018,
-        "heuristic_mae_h0": 0.08223188671787732,
-        "corrected_mae_hours": 17.144959220878498,
-        "corrected_mae_h0": 0.058600700114178145
+        "heuristic_mae_hours": 24.05879032013466,
+        "heuristic_mae_h0": 0.08223186410051207,
+        "corrected_mae_hours": 17.14525471528351,
+        "corrected_mae_h0": 0.0586017101007748
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -1984,8 +1984,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 57.28014309543597,
         "heuristic_mae_h0": 0.1957809549027828,
-        "corrected_mae_hours": 44.25339980417876,
-        "corrected_mae_h0": 0.15125613176142827
+        "corrected_mae_hours": 44.25339933642422,
+        "corrected_mae_h0": 0.1512561301626643
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -2218,10 +2218,10 @@
       "time_prediction_metrics": {
         "labeled_cycle_count": 11,
         "sample_count": 210,
-        "heuristic_mae_hours": 57.66576310155755,
-        "heuristic_mae_h0": 0.19709898675375623,
-        "corrected_mae_hours": 57.66576310155755,
-        "corrected_mae_h0": 0.19709898675375623
+        "heuristic_mae_hours": 57.66576310164994,
+        "heuristic_mae_h0": 0.197098986754072,
+        "corrected_mae_hours": 57.66576310164994,
+        "corrected_mae_h0": 0.197098986754072
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -2456,8 +2456,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 59.21840364170779,
         "heuristic_mae_h0": 0.20240584234357023,
-        "corrected_mae_hours": 25.04596535086496,
-        "corrected_mae_h0": 0.08560598399142358
+        "corrected_mae_hours": 25.045963979390468,
+        "corrected_mae_h0": 0.0856059793037854
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -3639,10 +3639,10 @@
       "cost_schema_version": "work3_trajectory_cost_v2",
       "metrics_unweighted": {
         "j_h": 0.0,
-        "d_t": 0.10253089000074701,
+        "d_t": 0.1025143343290755,
         "d_w": 0.18333333333333335,
         "g_postpone": 0.0,
-        "r_t": 0.10253089000074701,
+        "r_t": 0.1025143343290755,
         "r_w": 0.18333333333333335
       },
       "metric_coverage": {
@@ -3653,10 +3653,10 @@
       },
       "cost_components_weighted": {
         "j_takt": 0.0,
-        "d_time": 0.020506178000149405,
+        "d_time": 0.0205028668658151,
         "d_team": 0.009166666666666668,
         "j_postpone": 0.0,
-        "j_revision": 0.02967284466681607
+        "j_revision": 0.029669533532481772
       },
       "objective_weights": {
         "w_h": 1.0,
@@ -3683,17 +3683,17 @@
         }
       },
       "revision_weighted_components": {
-        "time": 0.020506178000149405,
+        "time": 0.0205028668658151,
         "team": 0.009166666666666668
       },
-      "objective_j_total": 0.05934568933363214,
+      "objective_j_total": 0.059339067064963544,
       "ledger_reconciliation": {
-        "environment_cumulative_cost": 0.05934568933363207,
-        "independent_j_total": 0.05934568933363214,
-        "difference": -6.938893903907228e-17,
+        "environment_cumulative_cost": 0.05933906706496346,
+        "independent_j_total": 0.059339067064963544,
+        "difference": -8.326672684688674e-17,
         "components_match": true,
-        "actual_reward_sum": -0.05934568933363207,
-        "expected_actual_reward_sum": -0.05934568933363214,
+        "actual_reward_sum": -0.05933906706496346,
+        "expected_actual_reward_sum": -0.059339067064963544,
         "reward_sum_matches": true,
         "consistent": true
       },
@@ -3709,18 +3709,18 @@
         "observed_started_ratio": 0.0
       },
       "j_takt": 0.0,
-      "d_time": 0.020506178000149415,
+      "d_time": 0.02050286686581512,
       "d_team": 0.009166666666666672,
       "j_postpone": 0.0,
-      "j_revision": 0.029672844666816092,
-      "j_total": 0.05934568933363214,
-      "environment_cumulative_cost": 0.05934568933363207,
+      "j_revision": 0.029669533532481796,
+      "j_total": 0.059339067064963544,
+      "environment_cumulative_cost": 0.05933906706496346,
       "raw_cost_components": {
         "j_takt": 0.0,
-        "d_time": 0.020506178000149415,
+        "d_time": 0.02050286686581512,
         "d_team": 0.009166666666666672,
         "j_postpone": 0.0,
-        "j_revision": 0.029672844666816092
+        "j_revision": 0.029669533532481796
       },
       "legacy_field_semantics": {
         "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
@@ -3780,10 +3780,10 @@
       "time_prediction_metrics": {
         "labeled_cycle_count": 11,
         "sample_count": 423,
-        "heuristic_mae_hours": 23.817640799634468,
-        "heuristic_mae_h0": 0.08140762587681886,
-        "corrected_mae_hours": 17.33343469501229,
-        "corrected_mae_h0": 0.05924490081458816
+        "heuristic_mae_hours": 23.820045491222583,
+        "heuristic_mae_h0": 0.08141584500459903,
+        "corrected_mae_hours": 17.335901280067883,
+        "corrected_mae_h0": 0.0592533314914586
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -4018,8 +4018,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 57.91666361622036,
         "heuristic_mae_h0": 0.19795655343728294,
-        "corrected_mae_hours": 44.60993113719946,
-        "corrected_mae_h0": 0.15247473983500182
+        "corrected_mae_hours": 44.609931950093284,
+        "corrected_mae_h0": 0.15247474261343624
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -4490,8 +4490,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 57.94265783941646,
         "heuristic_mae_h0": 0.19804540052397362,
-        "corrected_mae_hours": 24.744748910768624,
-        "corrected_mae_h0": 0.08457643973598722
+        "corrected_mae_hours": 24.744749414853622,
+        "corrected_mae_h0": 0.08457644145892708
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -5673,10 +5673,10 @@
       "cost_schema_version": "work3_trajectory_cost_v2",
       "metrics_unweighted": {
         "j_h": 0.0,
-        "d_t": 0.10258566113901914,
+        "d_t": 0.10256082763151192,
         "d_w": 0.18333333333333335,
         "g_postpone": 0.0,
-        "r_t": 0.10258566113901914,
+        "r_t": 0.10256082763151192,
         "r_w": 0.18333333333333335
       },
       "metric_coverage": {
@@ -5687,10 +5687,10 @@
       },
       "cost_components_weighted": {
         "j_takt": 0.0,
-        "d_time": 0.02051713222780383,
+        "d_time": 0.020512165526302386,
         "d_team": 0.009166666666666668,
         "j_postpone": 0.0,
-        "j_revision": 0.029683798894470495
+        "j_revision": 0.029678832192969053
       },
       "objective_weights": {
         "w_h": 1.0,
@@ -5717,17 +5717,17 @@
         }
       },
       "revision_weighted_components": {
-        "time": 0.02051713222780383,
+        "time": 0.020512165526302386,
         "team": 0.009166666666666668
       },
-      "objective_j_total": 0.05936759778894099,
+      "objective_j_total": 0.059357664385938105,
       "ledger_reconciliation": {
-        "environment_cumulative_cost": 0.05936759778894092,
-        "independent_j_total": 0.05936759778894099,
-        "difference": -6.938893903907228e-17,
+        "environment_cumulative_cost": 0.05935766438593802,
+        "independent_j_total": 0.059357664385938105,
+        "difference": -8.326672684688674e-17,
         "components_match": true,
-        "actual_reward_sum": -0.05936759778894092,
-        "expected_actual_reward_sum": -0.05936759778894099,
+        "actual_reward_sum": -0.05935766438593802,
+        "expected_actual_reward_sum": -0.059357664385938105,
         "reward_sum_matches": true,
         "consistent": true
       },
@@ -5743,18 +5743,18 @@
         "observed_started_ratio": 0.0
       },
       "j_takt": 0.0,
-      "d_time": 0.020517132227803842,
+      "d_time": 0.0205121655263024,
       "d_team": 0.009166666666666672,
       "j_postpone": 0.0,
-      "j_revision": 0.02968379889447052,
-      "j_total": 0.05936759778894099,
-      "environment_cumulative_cost": 0.05936759778894092,
+      "j_revision": 0.029678832192969077,
+      "j_total": 0.059357664385938105,
+      "environment_cumulative_cost": 0.05935766438593802,
       "raw_cost_components": {
         "j_takt": 0.0,
-        "d_time": 0.020517132227803842,
+        "d_time": 0.0205121655263024,
         "d_team": 0.009166666666666672,
         "j_postpone": 0.0,
-        "j_revision": 0.02968379889447052
+        "j_revision": 0.029678832192969077
       },
       "legacy_field_semantics": {
         "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
@@ -5814,10 +5814,10 @@
       "time_prediction_metrics": {
         "labeled_cycle_count": 11,
         "sample_count": 423,
-        "heuristic_mae_hours": 24.104133638838306,
-        "heuristic_mae_h0": 0.08238684552609044,
-        "corrected_mae_hours": 17.101871270621015,
-        "corrected_mae_h0": 0.05845342743659149
+        "heuristic_mae_hours": 24.10894302201454,
+        "heuristic_mae_h0": 0.08240328378165078,
+        "corrected_mae_hours": 17.10610675695145,
+        "corrected_mae_h0": 0.05846790413852411
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -6052,8 +6052,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 54.626116721991195,
         "heuristic_mae_h0": 0.18670961203158126,
-        "corrected_mae_hours": 41.73727641852233,
-        "corrected_mae_h0": 0.14265613510506012
+        "corrected_mae_hours": 41.73727648210061,
+        "corrected_mae_h0": 0.14265613532236782
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -6286,10 +6286,10 @@
       "time_prediction_metrics": {
         "labeled_cycle_count": 11,
         "sample_count": 210,
-        "heuristic_mae_hours": 56.37721252096179,
-        "heuristic_mae_h0": 0.19269477877736838,
-        "corrected_mae_hours": 56.37721252096179,
-        "corrected_mae_h0": 0.19269477877736838
+        "heuristic_mae_hours": 56.37721252105418,
+        "heuristic_mae_h0": 0.19269477877768415,
+        "corrected_mae_hours": 56.37721252105418,
+        "corrected_mae_h0": 0.19269477877768415
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -6524,8 +6524,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 58.58188312092339,
         "heuristic_mae_h0": 0.20023024380907015,
-        "corrected_mae_hours": 25.292920916921545,
-        "corrected_mae_h0": 0.08645006701790205
+        "corrected_mae_hours": 25.292920848801952,
+        "corrected_mae_h0": 0.0864500667850723
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -7756,11 +7756,11 @@
       },
       "objective_j_total": 0.05934237819929784,
       "ledger_reconciliation": {
-        "environment_cumulative_cost": 0.05934237819929776,
+        "environment_cumulative_cost": 0.059342378199297774,
         "independent_j_total": 0.05934237819929784,
-        "difference": -8.326672684688674e-17,
+        "difference": -6.938893903907228e-17,
         "components_match": true,
-        "actual_reward_sum": -0.05934237819929776,
+        "actual_reward_sum": -0.059342378199297774,
         "expected_actual_reward_sum": -0.05934237819929784,
         "reward_sum_matches": true,
         "consistent": true
@@ -7780,15 +7780,15 @@
       "d_time": 0.02050452243298227,
       "d_team": 0.009166666666666672,
       "j_postpone": 0.0,
-      "j_revision": 0.029671189099648942,
+      "j_revision": 0.029671189099648946,
       "j_total": 0.05934237819929784,
-      "environment_cumulative_cost": 0.05934237819929776,
+      "environment_cumulative_cost": 0.059342378199297774,
       "raw_cost_components": {
         "j_takt": 0.0,
         "d_time": 0.02050452243298227,
         "d_team": 0.009166666666666672,
         "j_postpone": 0.0,
-        "j_revision": 0.029671189099648942
+        "j_revision": 0.029671189099648946
       },
       "legacy_field_semantics": {
         "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
@@ -7848,10 +7848,10 @@
       "time_prediction_metrics": {
         "labeled_cycle_count": 11,
         "sample_count": 423,
-        "heuristic_mae_hours": 24.115457862174107,
-        "heuristic_mae_h0": 0.08242555121253609,
-        "corrected_mae_hours": 17.136799420011123,
-        "corrected_mae_h0": 0.05857281028151886
+        "heuristic_mae_hours": 24.11305317058599,
+        "heuristic_mae_h0": 0.08241733208475592,
+        "corrected_mae_hours": 17.13577023633253,
+        "corrected_mae_h0": 0.05856929257795743
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -8086,8 +8086,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 56.747837774243166,
         "heuristic_mae_h0": 0.1939615592370052,
-        "corrected_mae_hours": 43.72089436914342,
-        "corrected_mae_h0": 0.14943605211553007
+        "corrected_mae_hours": 43.72089390593018,
+        "corrected_mae_h0": 0.1494360505322881
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -8558,8 +8558,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 60.673157888510566,
         "heuristic_mae_h0": 0.2073781269817805,
-        "corrected_mae_hours": 27.39880947752254,
-        "corrected_mae_h0": 0.09364789947838262
+        "corrected_mae_hours": 27.398808814491826,
+        "corrected_mae_h0": 0.09364789721217343
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -9737,10 +9737,10 @@
       "cost_schema_version": "work3_trajectory_cost_v2",
       "metrics_unweighted": {
         "j_h": 0.0,
-        "d_t": 0.10251433432907553,
+        "d_t": 0.10252261216491125,
         "d_w": 0.18333333333333335,
         "g_postpone": 0.0,
-        "r_t": 0.10251433432907553,
+        "r_t": 0.10252261216491125,
         "r_w": 0.18333333333333335
       },
       "metric_coverage": {
@@ -9751,10 +9751,10 @@
       },
       "cost_components_weighted": {
         "j_takt": 0.0,
-        "d_time": 0.02050286686581511,
+        "d_time": 0.02050452243298225,
         "d_team": 0.009166666666666668,
         "j_postpone": 0.0,
-        "j_revision": 0.02966953353248178
+        "j_revision": 0.02967118909964892
       },
       "objective_weights": {
         "w_h": 1.0,
@@ -9781,17 +9781,17 @@
         }
       },
       "revision_weighted_components": {
-        "time": 0.02050286686581511,
+        "time": 0.02050452243298225,
         "team": 0.009166666666666668
       },
-      "objective_j_total": 0.05933906706496356,
+      "objective_j_total": 0.05934237819929784,
       "ledger_reconciliation": {
-        "environment_cumulative_cost": 0.05933906706496346,
-        "independent_j_total": 0.05933906706496356,
-        "difference": -9.71445146547012e-17,
+        "environment_cumulative_cost": 0.05934237819929776,
+        "independent_j_total": 0.05934237819929784,
+        "difference": -8.326672684688674e-17,
         "components_match": true,
-        "actual_reward_sum": -0.05933906706496346,
-        "expected_actual_reward_sum": -0.05933906706496356,
+        "actual_reward_sum": -0.05934237819929776,
+        "expected_actual_reward_sum": -0.05934237819929784,
         "reward_sum_matches": true,
         "consistent": true
       },
@@ -9807,18 +9807,18 @@
         "observed_started_ratio": 0.0
       },
       "j_takt": 0.0,
-      "d_time": 0.02050286686581512,
+      "d_time": 0.020504522432982265,
       "d_team": 0.009166666666666672,
       "j_postpone": 0.0,
-      "j_revision": 0.029669533532481793,
-      "j_total": 0.05933906706496356,
-      "environment_cumulative_cost": 0.05933906706496346,
+      "j_revision": 0.029671189099648942,
+      "j_total": 0.05934237819929784,
+      "environment_cumulative_cost": 0.05934237819929776,
       "raw_cost_components": {
         "j_takt": 0.0,
-        "d_time": 0.02050286686581512,
+        "d_time": 0.020504522432982265,
         "d_team": 0.009166666666666672,
         "j_postpone": 0.0,
-        "j_revision": 0.029669533532481793
+        "j_revision": 0.029671189099648942
       },
       "legacy_field_semantics": {
         "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
@@ -9878,10 +9878,10 @@
       "time_prediction_metrics": {
         "labeled_cycle_count": 11,
         "sample_count": 422,
-        "heuristic_mae_hours": 23.938034562180633,
-        "heuristic_mae_h0": 0.08181912634664756,
-        "corrected_mae_hours": 17.123449596590163,
-        "corrected_mae_h0": 0.058527181185013585
+        "heuristic_mae_hours": 23.935624172271222,
+        "heuristic_mae_h0": 0.08181088774226128,
+        "corrected_mae_hours": 17.121669877603544,
+        "corrected_mae_h0": 0.058521098185498735
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
@@ -10116,8 +10116,8 @@
         "sample_count": 210,
         "heuristic_mae_hours": 60.7945562808217,
         "heuristic_mae_h0": 0.20779306123099792,
-        "corrected_mae_hours": 47.780438341294555,
-        "corrected_mae_h0": 0.16331139097446723
+        "corrected_mae_hours": 47.78043862285555,
+        "corrected_mae_h0": 0.16331139193682997
       },
       "postponed_count": 0,
       "postponed_task_count": 0,
