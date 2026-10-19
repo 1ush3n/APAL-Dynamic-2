@@ -799,14 +799,21 @@ class ActorCriticWork3(nn.Module):
                     **sample_common,
                     "action_type": "forced_advance",
                     "advance_available": False,
+                    "prob_advance": 0.0,
+                    "prob_stay": 1.0,
                     "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
                 },
             )
 
         advance_log_prob = torch.zeros((), device=device)
         advance_choice = 0
+        prob_advance = 0.0
+        prob_stay = 1.0
         if snapshot.advance_available:
             advance_logits = self._advance_logits(e_fused)
+            adv_softmax = torch.softmax(advance_logits, dim=-1)
+            prob_stay = float(adv_softmax[0].item())
+            prob_advance = float(adv_softmax[1].item())
             dist_advance = Categorical(logits=advance_logits)
             advance_choice = (
                 int(torch.argmax(advance_logits).item())
@@ -826,6 +833,8 @@ class ActorCriticWork3(nn.Module):
                         "action_type": "advance_to_next_event",
                         "advance_available": True,
                         "advance_choice": 1,
+                        "prob_advance": prob_advance,
+                        "prob_stay": prob_stay,
                         "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
                     },
                 )
@@ -883,6 +892,8 @@ class ActorCriticWork3(nn.Module):
             "action_type": "schedule",
             "advance_available": snapshot.advance_available,
             "advance_choice": advance_choice,
+            "prob_advance": prob_advance,
+            "prob_stay": prob_stay,
             "task_idx": task_idx,
             "task_key": task_key,
             "branch": branch_act,

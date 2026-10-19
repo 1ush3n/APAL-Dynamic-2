@@ -392,10 +392,16 @@ def verify_shaping_trace(
         if any(bool(ev.get("terminated")) for ev in ep_evs)
     }
 
-    # 5. 边界与 Bootstrap 合同校验 (A4)
+    # 5. 边界与 Bootstrap 合同校验 (A4 & B1)
     boundary_status = "INCOMPLETE"
     boundary_failures = []
     boundary_details: dict[str, Any] = {}
+
+    # 按 (worker_id, episode_id, rollout_id) 索引单步转换
+    segment_transitions: dict[tuple[int, int, int], list[dict[str, Any]]] = {}
+    for ev in transition_events:
+        s_key = (int(ev["worker_id"]), int(ev["episode_id"]), int(ev.get("rollout_id", 0)))
+        segment_transitions.setdefault(s_key, []).append(ev)
 
     if segment_end_records:
         seen_segments = set()
@@ -408,6 +414,17 @@ def verify_shaping_trace(
 
             b_val = rec.get("bootstrap_value")
             b_type = rec.get("boundary_type")
+            term_reason = str(rec.get("termination_reason", ""))
+
+            # B1. 定位该 segment 最后一条 transition
+            seg_evs = segment_transitions.get(seg_key, [])
+            if seg_evs:
+                seg_evs.sort(key=lambda x: int(x.get("episode_step", 0)))
+                last_trans = seg_evs[-1]
+                is_last_terminated = bool(last_trans.get("terminated"))
+            else:
+                is_last_terminated = False
+
             if b_val is None:
                 boundary_failures.append({"record": rec, "error": "缺少 bootstrap_value 字段"})
             else:
@@ -415,19 +432,30 @@ def verify_shaping_trace(
                     f_val = float(b_val)
                     if not math.isfinite(f_val):
                         boundary_failures.append({"record": rec, "error": f"bootstrap_value 非有限数: {b_val}"})
-                    elif b_type == "natural_termination":
+                    elif is_last_terminated:
+                        # 自然终止必须对应 natural_termination 且 bootstrap 为 0
+                        if b_type != "natural_termination":
+                            boundary_failures.append({
+                                "record": rec,
+                                "error": f"段内最后一步已 terminated=True，但 boundary_type 为 '{b_type}' 而非 natural_termination",
+                            })
                         if abs(f_val) > 1e-6:
                             boundary_failures.append({
                                 "record": rec,
                                 "error": f"自然终止时 bootstrap_value ({b_val}) != 0.0",
                             })
-                    elif b_type in ("budget_truncation", "rollout_continuation"):
-                        pass
                     else:
-                        boundary_failures.append({
-                            "record": rec,
-                            "error": f"未知 boundary_type: {b_type}",
-                        })
+                        # 非终止段尾不可为 natural_termination，必须具备有限 bootstrap
+                        if b_type == "natural_termination":
+                            boundary_failures.append({
+                                "record": rec,
+                                "error": "段内最后一步 terminated=False，但 boundary_type 却被标为 natural_termination",
+                            })
+                        elif b_type not in ("budget_truncation", "rollout_continuation"):
+                            boundary_failures.append({
+                                "record": rec,
+                                "error": f"未知 boundary_type: {b_type}",
+                            })
                 except (ValueError, TypeError):
                     boundary_failures.append({"record": rec, "error": f"bootstrap_value 无法解析为浮点数: {b_val}"})
 
@@ -462,7 +490,7 @@ def verify_shaping_trace(
         boundary_details["observed_segments_count"] = 0
         boundary_details["missing_segments"] = [list(k) for k in sorted(list(expected_segments))]
 
-    # 6. 原始账本对账 (A3)
+    # 6. 原始账本对账 (A3 & B2)
     ledger_status = "INCOMPLETE"
     ledger_details: dict[str, Any] = {}
     if episode_cost_summaries:
@@ -524,7 +552,8 @@ def verify_shaping_trace(
                     })
 
         dangling_ledgers = seen_ledgers - expected_episodes
-        missing_completed_ledgers = expected_completed_episodes - seen_ledgers
+        # B2: 预期账本集合应覆盖 transition 中出现的全部 episode，包含截断 episode
+        missing_episodes = expected_episodes - seen_ledgers
 
         if duplicate_ledgers:
             ledger_failures.append({
@@ -535,16 +564,16 @@ def verify_shaping_trace(
                 "error": f"存在悬挂/未引用的 episode_cost_summary 记录: {sorted(list(dangling_ledgers))}"
             })
 
-        ledger_details["expected_completed_episodes_count"] = len(expected_completed_episodes)
+        ledger_details["expected_episodes_count"] = len(expected_episodes)
         ledger_details["observed_ledger_count"] = len(episode_cost_summaries)
-        ledger_details["missing_completed_episodes"] = [list(k) for k in sorted(list(missing_completed_ledgers))]
+        ledger_details["missing_episodes"] = [list(k) for k in sorted(list(missing_episodes))]
         ledger_details["dangling_episodes"] = [list(k) for k in sorted(list(dangling_ledgers))]
         ledger_details["duplicate_episodes"] = [list(k) for k in sorted(list(duplicate_ledgers))]
 
         if ledger_failures:
             ledger_status = "FAIL"
             ledger_details["failures"] = ledger_failures
-        elif missing_completed_ledgers:
+        elif missing_episodes:
             ledger_status = "INCOMPLETE"
         else:
             ledger_status = "PASS"

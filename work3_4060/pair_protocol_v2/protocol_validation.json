@@ -1,0 +1,69 @@
+{
+  "overall_protocol_pass": false,
+  "contracts": {
+    "decision_entry_unified": "PASS",
+    "prefix_reconciliation": "PASS",
+    "control_reproduction": "FAIL",
+    "intervention_immediate_execution": "PASS",
+    "trajectory_feasibility": "PASS",
+    "raw_reward_accounting": "PASS"
+  },
+  "control_reproductions": {
+    "step_2": {
+      "reproduced": false,
+      "first_divergence_step": 219,
+      "first_divergence_detail": "动作不匹配: ctrl={'task_key': '4_18', 'branch': <ActionBranch.STATION_EXECUTE: 0>, 'team': (65, 18), 'align': 1} vs ref={'task_key': '4_8', 'branch': <ActionBranch.STATION_EXECUTE: 0>, 'team': (65, 18), 'align': 1}",
+      "ctrl_j_total": 0.05933906706496346,
+      "ref_j_total": 0.059345689333441594,
+      "j_abs_error": 6.622268478133353e-06,
+      "m_abs_error": 0.0,
+      "feasible": true
+    },
+    "step_17": {
+      "reproduced": false,
+      "first_divergence_step": 280,
+      "first_divergence_detail": "动作不匹配: ctrl={'task_key': '5_18', 'branch': <ActionBranch.STATION_EXECUTE: 0>, 'team': (65, 18), 'align': 1} vs ref={'task_key': '5_8', 'branch': <ActionBranch.STATION_EXECUTE: 0>, 'team': (65, 18), 'align': 1}",
+      "ctrl_j_total": 0.05934237819929776,
+      "ref_j_total": 0.059345689333441594,
+      "j_abs_error": 3.311134143833827e-06,
+      "m_abs_error": 0.0,
+      "feasible": true
+    },
+    "step_20": {
+      "reproduced": false,
+      "first_divergence_step": 280,
+      "first_divergence_detail": "动作不匹配: ctrl={'task_key': '5_18', 'branch': <ActionBranch.STATION_EXECUTE: 0>, 'team': (65, 18), 'align': 1} vs ref={'task_key': '5_8', 'branch': <ActionBranch.STATION_EXECUTE: 0>, 'team': (65, 18), 'align': 1}",
+      "ctrl_j_total": 0.05934237819929776,
+      "ref_j_total": 0.059345689333441594,
+      "j_abs_error": 3.311134143833827e-06,
+      "m_abs_error": 0.0,
+      "feasible": true
+    }
+  },
+  "interventions": {
+    "step_2": {
+      "status": "PASS",
+      "is_truly_immediate": true,
+      "delta_j": 0.00010369664498764697,
+      "delta_m": 0.5457256030604185,
+      "control_feasible": true,
+      "intervention_feasible": true
+    },
+    "step_17": {
+      "status": "PASS",
+      "is_truly_immediate": true,
+      "delta_j": -0.00021364378468627376,
+      "delta_m": 0.0,
+      "control_feasible": true,
+      "intervention_feasible": true
+    },
+    "step_20": {
+      "status": "PASS",
+      "is_truly_immediate": true,
+      "delta_j": 0.00011331166973473084,
+      "delta_m": 0.5457256030604185,
+      "control_feasible": true,
+      "intervention_feasible": true
+    }
+  }
+}

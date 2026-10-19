@@ -1,0 +1,27 @@
+{
+  "preset_states_steps": [
+    2,
+    17,
+    20
+  ],
+  "prefix_comparisons": {
+    "step_2": {
+      "control_prefix_matched": true,
+      "control_prefix_diffs_count": 0,
+      "intervention_prefix_matched": true,
+      "intervention_prefix_diffs_count": 0
+    },
+    "step_17": {
+      "control_prefix_matched": true,
+      "control_prefix_diffs_count": 0,
+      "intervention_prefix_matched": true,
+      "intervention_prefix_diffs_count": 0
+    },
+    "step_20": {
+      "control_prefix_matched": true,
+      "control_prefix_diffs_count": 0,
+      "intervention_prefix_matched": true,
+      "intervention_prefix_diffs_count": 0
+    }
+  }
+}

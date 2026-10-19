@@ -89,7 +89,12 @@ class FormalEvaluationAgent:
         default=None, init=False, repr=False
     )
 
-    def select_action(self, env: AirLineEnvWork3) -> dict[str, Any] | None:
+    def select_action(
+        self,
+        env: AirLineEnvWork3,
+        *,
+        return_diagnostics: bool = False,
+    ) -> dict[str, Any] | tuple[dict[str, Any] | None, dict[str, Any]] | None:
         """使用启发式或学习修正时间输入调用同一图策略。"""
         device = next(self.actor_critic.parameters()).device
         cmax = compute_cycle_heuristic_cmax(env.state)
@@ -152,14 +157,29 @@ class FormalEvaluationAgent:
             float(corrected_cmax),
             float(env.state.h0),
         )
-        action, _, _, _ = self.actor_critic.select_action(
+        action, log_prob, state_value, sample_record = self.actor_critic.select_action(
             env=env,
             state_feat=state_feat,
             time_urgency=time_features,
             deterministic=True,
             allow_postpone=self.profile.allow_postpone,
         )
-        return action
+        if not return_diagnostics:
+            return action
+
+        diag_dict = {
+            "state_value": float(state_value),
+            "log_prob": float(log_prob),
+            "advance_available": bool(sample_record.get("advance_available", False)),
+            "prob_advance": float(sample_record.get("prob_advance", 0.0)),
+            "prob_stay": float(sample_record.get("prob_stay", 1.0)),
+            "candidate_task_keys": tuple(sample_record.get("candidate_task_keys", ())),
+            "candidate_branch_masks": tuple(sample_record.get("candidate_branch_masks", ())),
+            "time_features": time_features.detach().cpu().tolist(),
+            "last_time_prediction": self.last_time_prediction,
+            "sample_record": sample_record,
+        }
+        return action, diag_dict
 
 
 def _validate_state_dict_shapes(
