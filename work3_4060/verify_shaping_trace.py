@@ -47,21 +47,32 @@ def check_config_consistency(
     training_cfg = run_data.get("training_config", {})
     cfg_gamma = training_cfg.get("gamma")
     cfg_beta = training_cfg.get("beta_shaping")
+    failures: list[dict[str, Any]] = []
 
     # 交叉检查 resolved_runtime_config_yaml
     yaml_str = run_data.get("resolved_runtime_config_yaml")
     yaml_cfg = {}
+    yaml_parse_error = False
     if yaml_str and isinstance(yaml_str, str):
         try:
-            yaml_cfg = yaml.safe_load(yaml_str) or {}
+            parsed = yaml.safe_load(yaml_str)
+            if not isinstance(parsed, dict):
+                failures.append({
+                    "error": f"resolved_runtime_config_yaml 解析后不是字典: {type(parsed)}"
+                })
+                yaml_parse_error = True
+            else:
+                yaml_cfg = parsed
         except Exception as e:
-            logger.warning(f"解析 resolved_runtime_config_yaml 失败: {e}")
+            failures.append({
+                "error": f"解析 resolved_runtime_config_yaml 失败: {e}"
+            })
+            yaml_parse_error = True
 
     yaml_ppo = yaml_cfg.get("ppo", {})
     yaml_gamma = yaml_ppo.get("gamma")
     yaml_beta = yaml_ppo.get("shaping_coefficient")
 
-    failures = []
     if cfg_gamma is None or cfg_beta is None:
         failures.append({
             "error": f"training_config 中缺少参数: gamma={cfg_gamma}, beta_shaping={cfg_beta}"
@@ -105,8 +116,17 @@ def check_config_consistency(
         else:
             ep_params[ep_key] = (g, b)
 
-    has_mismatch = any("不一致" in f.get("error", "") or "发生变动" in f.get("error", "") for f in failures)
-    status = "FAIL" if has_mismatch else ("PASS" if not failures else "INCOMPLETE")
+    has_fail = (
+        yaml_parse_error
+        or any(
+            "不一致" in f.get("error", "")
+            or "发生变动" in f.get("error", "")
+            or "不是字典" in f.get("error", "")
+            or "失败" in f.get("error", "")
+            for f in failures
+        )
+    )
+    status = "FAIL" if has_fail else ("PASS" if not failures else "INCOMPLETE")
     resolved_params = {
         "cfg_gamma": float(cfg_gamma),
         "cfg_beta": float(cfg_beta),
@@ -365,65 +385,167 @@ def verify_shaping_trace(
         all_closed = all(ep["telescope_closed"] for ep in completed_episodes)
         telescope_status = "PASS" if all_closed else "FAIL"
 
+    expected_segments = {(int(ev["worker_id"]), int(ev["episode_id"]), int(ev.get("rollout_id", 0))) for ev in transition_events}
+    expected_episodes = {(int(ev["worker_id"]), int(ev["episode_id"])) for ev in transition_events}
+    expected_completed_episodes = {
+        ep_key for ep_key, ep_evs in episodes.items()
+        if any(bool(ev.get("terminated")) for ev in ep_evs)
+    }
+
     # 5. 边界与 Bootstrap 合同校验 (A4)
     boundary_status = "INCOMPLETE"
     boundary_failures = []
+    boundary_details: dict[str, Any] = {}
+
     if segment_end_records:
+        seen_segments = set()
+        duplicate_segments = set()
         for rec in segment_end_records:
+            seg_key = (int(rec["worker_id"]), int(rec["episode_id"]), int(rec["rollout_id"]))
+            if seg_key in seen_segments:
+                duplicate_segments.add(seg_key)
+            seen_segments.add(seg_key)
+
             b_val = rec.get("bootstrap_value")
             b_type = rec.get("boundary_type")
-            if b_val is not None and not math.isfinite(float(b_val)):
-                boundary_failures.append({"record": rec, "error": f"bootstrap_value 非有限数: {b_val}"})
-            if b_type == "natural_termination":
-                if b_val is not None and abs(float(b_val)) > 1e-6:
-                    boundary_failures.append({
-                        "record": rec,
-                        "error": f"自然终止时 bootstrap_value ({b_val}) != 0.0",
-                    })
-            elif b_type in ("budget_truncation", "rollout_continuation"):
-                if b_val is None:
-                    boundary_failures.append({
-                        "record": rec,
-                        "error": f"{b_type} 缺少 bootstrap_value",
-                    })
-        boundary_status = "FAIL" if boundary_failures else "PASS"
+            if b_val is None:
+                boundary_failures.append({"record": rec, "error": "缺少 bootstrap_value 字段"})
+            else:
+                try:
+                    f_val = float(b_val)
+                    if not math.isfinite(f_val):
+                        boundary_failures.append({"record": rec, "error": f"bootstrap_value 非有限数: {b_val}"})
+                    elif b_type == "natural_termination":
+                        if abs(f_val) > 1e-6:
+                            boundary_failures.append({
+                                "record": rec,
+                                "error": f"自然终止时 bootstrap_value ({b_val}) != 0.0",
+                            })
+                    elif b_type in ("budget_truncation", "rollout_continuation"):
+                        pass
+                    else:
+                        boundary_failures.append({
+                            "record": rec,
+                            "error": f"未知 boundary_type: {b_type}",
+                        })
+                except (ValueError, TypeError):
+                    boundary_failures.append({"record": rec, "error": f"bootstrap_value 无法解析为浮点数: {b_val}"})
+
+        dangling_segments = seen_segments - expected_segments
+        missing_segments = expected_segments - seen_segments
+
+        if duplicate_segments:
+            boundary_failures.append({
+                "error": f"存在重复的 segment_end 记录: {sorted(list(duplicate_segments))}"
+            })
+        if dangling_segments:
+            boundary_failures.append({
+                "error": f"存在悬挂/未引用的 segment_end 记录: {sorted(list(dangling_segments))}"
+            })
+
+        boundary_details["expected_segments_count"] = len(expected_segments)
+        boundary_details["observed_segments_count"] = len(segment_end_records)
+        boundary_details["missing_segments"] = [list(k) for k in sorted(list(missing_segments))]
+        boundary_details["dangling_segments"] = [list(k) for k in sorted(list(dangling_segments))]
+        boundary_details["duplicate_segments"] = [list(k) for k in sorted(list(duplicate_segments))]
+
+        if boundary_failures:
+            boundary_status = "FAIL"
+        elif missing_segments:
+            boundary_status = "INCOMPLETE"
+        else:
+            boundary_status = "PASS"
     else:
         boundary_status = "INCOMPLETE"
+        boundary_details["note"] = "未提供 segment_end 记录"
+        boundary_details["expected_segments_count"] = len(expected_segments)
+        boundary_details["observed_segments_count"] = 0
+        boundary_details["missing_segments"] = [list(k) for k in sorted(list(expected_segments))]
 
     # 6. 原始账本对账 (A3)
     ledger_status = "INCOMPLETE"
     ledger_details: dict[str, Any] = {}
     if episode_cost_summaries:
         ledger_failures = []
+        seen_ledgers = set()
+        duplicate_ledgers = set()
+        cost_fields = ["cost_takt", "cost_time", "cost_team", "cost_postpone", "cost_revision"]
+
         for ep_sum in episode_cost_summaries:
             ep_key = (int(ep_sum["worker_id"]), int(ep_sum["episode_id"]))
-            ep_evs = episodes.get(ep_key, [])
-            if not ep_evs:
-                continue
-            raw_sum = sum(float(ev["raw_reward"]) for ev in ep_evs)
-            j_tot = float(ep_sum["cumulative_cost"])
-            c_takt = float(ep_sum.get("cost_takt", 0.0))
-            c_time = float(ep_sum.get("cost_time", 0.0))
-            c_team = float(ep_sum.get("cost_team", 0.0))
-            c_post = float(ep_sum.get("cost_postpone", 0.0))
-            c_rev = float(ep_sum.get("cost_revision", 0.0))
+            if ep_key in seen_ledgers:
+                duplicate_ledgers.add(ep_key)
+            seen_ledgers.add(ep_key)
 
-            res_raw = abs(raw_sum + j_tot)
-            if res_raw > 1e-5:
-                ledger_failures.append({
-                    "episode": ep_key,
-                    "error": f"raw_sum + J_total 残差 {res_raw} > 1e-5 (raw_sum={raw_sum}, J_total={j_tot})",
-                })
-            comp_sum = c_takt + c_time + c_team + c_post + c_rev
-            res_comp = abs(comp_sum - j_tot)
-            if res_comp > 1e-5:
-                ledger_failures.append({
-                    "episode": ep_key,
-                    "error": f"五分项和 - J_total 残差 {res_comp} > 1e-5 (comp_sum={comp_sum}, J_total={j_tot})",
-                })
+            # 五分项字段必须完整且为有限数
+            for cf in cost_fields:
+                if cf not in ep_sum:
+                    ledger_failures.append({"episode": ep_key, "error": f"缺少五分项费用字段: {cf}"})
+                else:
+                    try:
+                        val = float(ep_sum[cf])
+                        if not math.isfinite(val):
+                            ledger_failures.append({"episode": ep_key, "error": f"五分项字段 {cf} 非有限数: {ep_sum[cf]}"})
+                    except (ValueError, TypeError):
+                        ledger_failures.append({"episode": ep_key, "error": f"五分项字段 {cf} 无法解析为浮点数: {ep_sum[cf]}"})
+
+            if "cumulative_cost" not in ep_sum:
+                ledger_failures.append({"episode": ep_key, "error": "缺少 cumulative_cost 字段"})
+            else:
+                try:
+                    val = float(ep_sum["cumulative_cost"])
+                    if not math.isfinite(val):
+                        ledger_failures.append({"episode": ep_key, "error": f"cumulative_cost 非有限数: {val}"})
+                except (ValueError, TypeError):
+                    ledger_failures.append({"episode": ep_key, "error": f"cumulative_cost 无法解析为浮点数: {ep_sum['cumulative_cost']}"})
+
+            ep_evs = episodes.get(ep_key, [])
+            if ep_evs:
+                raw_sum = sum(float(ev["raw_reward"]) for ev in ep_evs)
+                j_tot = float(ep_sum.get("cumulative_cost", 0.0))
+                c_takt = float(ep_sum.get("cost_takt", 0.0))
+                c_time = float(ep_sum.get("cost_time", 0.0))
+                c_team = float(ep_sum.get("cost_team", 0.0))
+                c_post = float(ep_sum.get("cost_postpone", 0.0))
+                c_rev = float(ep_sum.get("cost_revision", 0.0))
+
+                res_raw = abs(raw_sum + j_tot)
+                if res_raw > 1e-5:
+                    ledger_failures.append({
+                        "episode": ep_key,
+                        "error": f"raw_sum + J_total 残差 {res_raw} > 1e-5 (raw_sum={raw_sum}, J_total={j_tot})",
+                    })
+                comp_sum = c_takt + c_time + c_team + c_post + c_rev
+                res_comp = abs(comp_sum - j_tot)
+                if res_comp > 1e-5:
+                    ledger_failures.append({
+                        "episode": ep_key,
+                        "error": f"五分项和 - J_total 残差 {res_comp} > 1e-5 (comp_sum={comp_sum}, J_total={j_tot})",
+                    })
+
+        dangling_ledgers = seen_ledgers - expected_episodes
+        missing_completed_ledgers = expected_completed_episodes - seen_ledgers
+
+        if duplicate_ledgers:
+            ledger_failures.append({
+                "error": f"存在重复的 episode_cost_summary 记录: {sorted(list(duplicate_ledgers))}"
+            })
+        if dangling_ledgers:
+            ledger_failures.append({
+                "error": f"存在悬挂/未引用的 episode_cost_summary 记录: {sorted(list(dangling_ledgers))}"
+            })
+
+        ledger_details["expected_completed_episodes_count"] = len(expected_completed_episodes)
+        ledger_details["observed_ledger_count"] = len(episode_cost_summaries)
+        ledger_details["missing_completed_episodes"] = [list(k) for k in sorted(list(missing_completed_ledgers))]
+        ledger_details["dangling_episodes"] = [list(k) for k in sorted(list(dangling_ledgers))]
+        ledger_details["duplicate_episodes"] = [list(k) for k in sorted(list(duplicate_ledgers))]
+
         if ledger_failures:
             ledger_status = "FAIL"
             ledger_details["failures"] = ledger_failures
+        elif missing_completed_ledgers:
+            ledger_status = "INCOMPLETE"
         else:
             ledger_status = "PASS"
             ledger_details["reconciled_episodes"] = len(episode_cost_summaries)
@@ -453,6 +575,9 @@ def verify_shaping_trace(
                     "diff": diff,
                     "error": "尾部片段 raw_sum + J_total 残差超出容差！",
                 }
+        else:
+            ledger_status = "INCOMPLETE"
+            ledger_details["note"] = "trajectory_audit 中缺少有效 cumulative_cost"
     else:
         ledger_status = "INCOMPLETE"
         ledger_details["note"] = "未提供完工账本记录，且 run.json 中无有效 trajectory_audit"
@@ -512,6 +637,7 @@ def verify_shaping_trace(
             "config": config_failures[:5],
             "boundary": boundary_failures[:5],
         },
+        "boundary_details": boundary_details,
         "ledger_details": ledger_details,
         "episodes": episode_summaries,
     }

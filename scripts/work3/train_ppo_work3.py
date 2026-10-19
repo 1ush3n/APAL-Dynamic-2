@@ -1253,7 +1253,7 @@ def run_training(
                     break
 
     recorded_cost_summaries: set[tuple[int, int]] = set()
-    latest_worker_info: dict[int, dict[str, Any]] = {}
+    latest_worker_info: dict[tuple[int, int], dict[str, Any]] = {}
 
     def finalize_stopped_episodes(reason: str = "budget_truncated") -> None:
         """在段尾bootstrap计算完毕后，统一释放预测快照并丢弃缓存，保证Critic价值计算无损 (R6)。"""
@@ -1274,9 +1274,9 @@ def run_training(
                     state.predictor_version = None
                 if shaping_audit_file is not None:
                     ep_key = (int(state.worker_id), int(state.episode_id))
-                    if ep_key not in recorded_cost_summaries and state.worker_id in latest_worker_info:
+                    if ep_key not in recorded_cost_summaries and ep_key in latest_worker_info:
                         recorded_cost_summaries.add(ep_key)
-                        info_dict = latest_worker_info[state.worker_id]
+                        info_dict = latest_worker_info[ep_key]
                         cb = info_dict.get("cost_breakdown", {})
                         ep_summary_rec = {
                             "record_type": "episode_cost_summary",
@@ -1615,7 +1615,7 @@ def run_training(
                 result = step_batch.results[worker_id]
                 if result is None:
                     raise RuntimeError("向量环境worker未返回有效执行结果")
-                latest_worker_info[worker_id] = dict(result.info)
+                latest_worker_info[(int(worker_id), int(state.episode_id))] = dict(result.info)
                 state.snapshot = snapshot
                 state.scenario_status = dict(result.scenario_status)
                 update_scenario_effect_log(state)
@@ -1973,33 +1973,42 @@ def run_training(
             buffer.finish_trajectories(
                 last_values_by_segment=rollout_bootstraps,
             )
-            if shaping_audit_file is not None:
-                for key, last_transition in last_transitions.items():
-                    w_id, ep_id, seg_id = key
-                    b_val = 0.0 if last_transition.terminated else float(rollout_bootstraps.get(key, 0.0))
-                    b_type = (
-                        "natural_termination"
-                        if last_transition.terminated
-                        else ("budget_truncation" if last_transition.truncated else "rollout_continuation")
-                    )
-                    seg_end_rec = {
-                        "record_type": "segment_end",
-                        "run_id": report_path.parent.name,
-                        "worker_id": int(w_id),
-                        "episode_id": int(ep_id),
-                        "rollout_id": int(seg_id),
-                        "bootstrap_value": b_val,
-                        "boundary_type": b_type,
-                        "termination_reason": str(stop_reason if last_transition.truncated else ("completed" if last_transition.terminated else "none")),
-                    }
-                    shaping_audit_file.write(json.dumps(seg_end_rec, ensure_ascii=False) + "\n")
-                shaping_audit_file.flush()
 
         # 固化结算与清理顺序：在完成段尾bootstrap特征生成后，再执行预算截断与快照释放 (U30/R6)
         if stop_reason is None:
             budget_reason = current_budget_reason()
             if budget_reason is not None:
                 request_budget_truncation(budget_reason)
+
+        if len(buffer) > 0 and shaping_audit_file is not None:
+            for key, last_transition in last_transitions.items():
+                w_id, ep_id, seg_id = key
+                worker_st = worker_states[w_id]
+                is_term = bool(last_transition.terminated)
+                is_trunc = bool(last_transition.truncated or worker_st.done or (stop_reason is not None))
+                if is_term:
+                    b_val = 0.0
+                    b_type = "natural_termination"
+                    term_reason = getattr(worker_st, "termination_reason", None) or "completed"
+                elif key in rollout_bootstraps:
+                    b_val = float(rollout_bootstraps[key])
+                    b_type = "budget_truncation" if (is_trunc or stop_reason is not None) else "rollout_continuation"
+                    term_reason = getattr(worker_st, "termination_reason", None) or stop_reason or "none"
+                else:
+                    raise RuntimeError(f"非自然终止段尾缺少 bootstrap 值: key={key}")
+
+                seg_end_rec = {
+                    "record_type": "segment_end",
+                    "run_id": report_path.parent.name,
+                    "worker_id": int(w_id),
+                    "episode_id": int(ep_id),
+                    "rollout_id": int(seg_id),
+                    "bootstrap_value": b_val,
+                    "boundary_type": b_type,
+                    "termination_reason": str(term_reason),
+                }
+                shaping_audit_file.write(json.dumps(seg_end_rec, ensure_ascii=False) + "\n")
+            shaping_audit_file.flush()
 
         finalize_stopped_episodes(stop_reason or "budget_truncated")
 
