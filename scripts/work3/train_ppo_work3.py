@@ -1869,6 +1869,7 @@ def run_training(
                         "episode_step": int(context.get("episode_step", 0)),
                         "action_type": int(act_dict["branch"]) if "branch" in act_dict and act_dict["branch"] is not None else None,
                         "task_id": int(act_dict["task_id"]) if "task_id" in act_dict and act_dict["task_id"] is not None else None,
+                        "task_key": act_dict.get("task_key"),
                         "decision_time": float(context.get("decision_time", 0.0)),
                         "cycle_id": int(context.get("cycle_id", 1)),
                         "raw_reward": float(raw_reward),
