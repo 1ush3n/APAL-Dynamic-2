@@ -143,34 +143,31 @@ def evaluate_budget_scenarios(
             )
 
             pfx = label.lower()
-            actions = res.get("actions", [])
-            total_dec = len(actions)
-            explicit_adv_count = sum(
-                1 for a in actions if a.get("branch") == ActionBranch.ADVANCE_TO_NEXT_EVENT
-            )
+            total_dec = int(res.get("decisions", res.get("total_steps", 0)))
+            adv_counts = res.get("advance_cause_counts", {})
+            explicit_adv_count = int(adv_counts.get("explicit", 0))
             adv_pct = (explicit_adv_count / total_dec * 100.0) if total_dec > 0 else 0.0
 
-            # 提取显式推进时间
-            adv_durations = [
-                float(a.get("dt", 0.0))
-                for a in actions
-                if a.get("branch") == ActionBranch.ADVANCE_TO_NEXT_EVENT
-            ]
-            mean_adv_dt = (sum(adv_durations) / len(adv_durations)) if adv_durations else 0.0
+            j_tot = float(res["j_total"])
+            c_takt = float(res["j_takt"])
+            c_time = float(res["d_time"])
+            c_team = float(res["d_team"])
+            c_post = float(res["j_postpone"])
+            c_rev = float(res["j_revision"])
+            cost_sum_err = abs(j_tot - (c_takt + c_time + c_team + c_post + c_rev))
 
-            row[f"{pfx}_j_total"] = f"{res['j_total']:.8e}"
-            row[f"{pfx}_makespan"] = f"{res['makespan']:.4f}"
-            row[f"{pfx}_cost_sum_error"] = f"{res['cost_sum_error']:.8e}"
-            row[f"{pfx}_c_takt"] = f"{res['c_takt']:.8e}"
-            row[f"{pfx}_c_time"] = f"{res['c_time']:.8e}"
-            row[f"{pfx}_c_team"] = f"{res['c_team']:.8e}"
-            row[f"{pfx}_c_postpone"] = f"{res['c_postpone']:.8e}"
-            row[f"{pfx}_c_revision"] = f"{res['c_revision']:.8e}"
+            row[f"{pfx}_j_total"] = f"{j_tot:.8e}"
+            row[f"{pfx}_makespan"] = f"{float(res['makespan']):.4f}"
+            row[f"{pfx}_cost_sum_error"] = f"{cost_sum_err:.8e}"
+            row[f"{pfx}_c_takt"] = f"{c_takt:.8e}"
+            row[f"{pfx}_c_time"] = f"{c_time:.8e}"
+            row[f"{pfx}_c_team"] = f"{c_team:.8e}"
+            row[f"{pfx}_c_postpone"] = f"{c_post:.8e}"
+            row[f"{pfx}_c_revision"] = f"{c_rev:.8e}"
             row[f"{pfx}_total_decisions"] = total_dec
             row[f"{pfx}_explicit_advances"] = explicit_adv_count
             row[f"{pfx}_advance_pct"] = f"{adv_pct:.2f}%"
-            row[f"{pfx}_mean_adv_dt"] = f"{mean_adv_dt:.4f}"
-            row[f"{pfx}_feasible"] = res["is_feasible"]
+            row[f"{pfx}_feasible"] = res["feasible"]
 
             json_results.append({
                 "scenario_id": sc_id,
@@ -179,7 +176,6 @@ def evaluate_budget_scenarios(
                 "metrics": res,
                 "explicit_advance_count": explicit_adv_count,
                 "advance_percentage": adv_pct,
-                "mean_advance_dt": mean_adv_dt,
             })
 
         # 计算 D_b4096 相对 D_b2048 的 Delta
