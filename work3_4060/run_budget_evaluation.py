@@ -1,24 +1,18 @@
 """Work-3 等决策预算与机制消融评估驱动 (C4096 vs D4096 及 F4096 vs D4096)。
 
-模式支持：
-1. cd 模式 (等决策预算对照)：
-   - 目标：C_b4096 (beta=1.0) vs D_b4096 (beta=0.1)
-   - 历史参照：C_b2048, D_b2048, F_b2048
-   - 默认输出目录：work3_4060/budget_v1/equal_budget_evaluation
-2. fd 模式 (机制消融)：
-   - 目标：F_b4096 (启发式Phi, beta=0.1) vs D_b4096 (学习Phi, beta=0.1)
-   - 背景参照：C_b4096 (beta=1.0)
-   - 历史参照：F_b2048, D_b2048
-   - 默认输出目录：work3_4060/mechanism_v2/seed42/evaluation
-
-评估场景：
-- Nominal (mini210.json)
-- 4个 Validation 场景 (COMPARE_VAL_S0_EARLY_M, S2_MID_M, S3_MID_L, S4_LATE_H)
+支持特性 (Section 9.3, 9.5, 10.3, 10.5)：
+1. 显式变体清单 (--variants-json) 支持动态种子 (如 seed 45) 与灵活变体组合；
+2. 严格核验有效训练超参 (lr, rollout, batch, epochs, gamma, gae, beta, amp_dtype)；
+3. 绑定塑形审计事件覆盖数、episode数与 resolved_config；
+4. 目标模型缺失 run/audit 或审计合同失败时强拦截；
+5. 正确区分总优化步数、PPO 更新与辅助头更新；
+6. 动态胜负平统计与历史配置对照说明。
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import hashlib
 import json
@@ -48,7 +42,7 @@ logger = logging.getLogger("BudgetEvaluation")
 
 
 def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
-    """根据评估模式获取参与变体配置 (Section 9.3, 9.5)。"""
+    """根据评估模式获取默认 seed 42 变体配置 (Section 9.3, 9.5)。"""
     if mode == "fd":
         return [
             {
@@ -59,6 +53,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": REPO_ROOT / "work3_4060/mechanism_v2/seed42/F_beta01_b4096/shaping_audit_summary.json",
                 "expected_beta": 0.1,
                 "expected_decisions": 4096,
+                "expected_seed": 42,
                 "is_target": True,
             },
             {
@@ -69,6 +64,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": REPO_ROOT / "work3_4060/budget_v1/seed42/D_beta01_b4096/shaping_audit_summary.json",
                 "expected_beta": 0.1,
                 "expected_decisions": 4096,
+                "expected_seed": 42,
                 "is_target": True,
             },
             {
@@ -79,6 +75,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": REPO_ROOT / "work3_4060/budget_v1/seed42/C_b4096/shaping_audit_summary.json",
                 "expected_beta": 1.0,
                 "expected_decisions": 4096,
+                "expected_seed": 42,
                 "is_target": True,
             },
             {
@@ -89,6 +86,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": None,
                 "expected_beta": None,
                 "expected_decisions": 2048,
+                "expected_seed": 42,
                 "is_target": False,
             },
             {
@@ -99,6 +97,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": None,
                 "expected_beta": 0.1,
                 "expected_decisions": 2048,
+                "expected_seed": 42,
                 "is_target": False,
             },
         ]
@@ -112,6 +111,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": REPO_ROOT / "work3_4060/budget_v1/seed42/C_b4096/shaping_audit_summary.json",
                 "expected_beta": 1.0,
                 "expected_decisions": 4096,
+                "expected_seed": 42,
                 "is_target": True,
             },
             {
@@ -122,6 +122,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": REPO_ROOT / "work3_4060/budget_v1/seed42/D_beta01_b4096/shaping_audit_summary.json",
                 "expected_beta": 0.1,
                 "expected_decisions": 4096,
+                "expected_seed": 42,
                 "is_target": True,
             },
             {
@@ -132,6 +133,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": None,
                 "expected_beta": 1.0,
                 "expected_decisions": 2048,
+                "expected_seed": 42,
                 "is_target": False,
             },
             {
@@ -142,6 +144,7 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": None,
                 "expected_beta": 0.1,
                 "expected_decisions": 2048,
+                "expected_seed": 42,
                 "is_target": False,
             },
             {
@@ -152,9 +155,43 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "audit_json": None,
                 "expected_beta": None,
                 "expected_decisions": 2048,
+                "expected_seed": 42,
                 "is_target": False,
             },
         ]
+
+
+def load_variants_from_json(json_path: Path) -> tuple[list[dict[str, Any]], str | None, int | None]:
+    """从外部 JSON 文件加载显式变体清单 (Section 10.5)。"""
+    with json_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if isinstance(data, dict):
+        variants_raw = data.get("variants", [])
+        comparison_mode = data.get("comparison_mode")
+        expected_seed = data.get("expected_seed")
+    elif isinstance(data, list):
+        variants_raw = data
+        comparison_mode = None
+        expected_seed = None
+    else:
+        raise ValueError(f"variants-json 格式非法: {json_path}")
+
+    variants: list[dict[str, Any]] = []
+    for item in variants_raw:
+        v = dict(item)
+        if expected_seed is not None and "expected_seed" not in v:
+            v["expected_seed"] = expected_seed
+
+        # 路径转换为 Path 对象 (支持相对路径)
+        for p_key in ["checkpoint", "run_json", "audit_json"]:
+            if v.get(p_key):
+                raw_p = Path(v[p_key])
+                v[p_key] = (REPO_ROOT / raw_p) if not raw_p.is_absolute() else raw_p
+
+        variants.append(v)
+
+    return variants, comparison_mode, expected_seed
 
 
 def compute_file_sha256(path: Path) -> str:
@@ -165,11 +202,150 @@ def compute_file_sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def cross_verify_training_config(
+    label: str,
+    ckpt_meta: dict[str, Any],
+    run_data: dict[str, Any],
+    expected_seed: int | None = None,
+    expected_beta: float | None = None,
+) -> None:
+    """严格核验 checkpoint.run_metadata 与 run_data 的有效训练超参一致性 (Section 10.3)。"""
+    ckpt_seed = ckpt_meta.get("seed")
+    run_seed = run_data.get("seed")
+    if ckpt_seed is None or run_seed is None:
+        raise ValueError(f"{label} seed 字段缺失 (ckpt={ckpt_seed}, run={run_seed})")
+    if int(ckpt_seed) != int(run_seed):
+        raise AssertionError(f"{label} seed 不匹配: ckpt={ckpt_seed} vs run={run_seed}")
+    if expected_seed is not None and int(ckpt_seed) != int(expected_seed):
+        raise AssertionError(f"{label} seed ({ckpt_seed}) 不等于期望种子 ({expected_seed})")
+
+    actual_method = run_data.get("method_variant") or run_data.get("method_profile", {}).get("name")
+    ckpt_method = ckpt_meta.get("method_variant")
+    if not ckpt_method or not actual_method:
+        raise ValueError(f"{label} method_variant 字段缺失 (ckpt={ckpt_method}, run={actual_method})")
+    if ckpt_method != actual_method:
+        raise AssertionError(f"{label} method 不匹配: ckpt={ckpt_method} vs run={actual_method}")
+
+    # 数据指纹交叉比对
+    ckpt_dfp = ckpt_meta.get("data_fingerprint", {})
+    run_dfp = run_data.get("data_fingerprint", {})
+    if not ckpt_dfp or not run_dfp:
+        raise ValueError(f"{label} data_fingerprint 缺失")
+    for dfp_key in ["scenario_pool_sha256", "scenario_split_sha256", "baseline_sha256"]:
+        c_val = ckpt_dfp.get(dfp_key)
+        r_val = run_dfp.get(dfp_key)
+        if not c_val or not r_val:
+            raise ValueError(f"{label} 数据指纹 {dfp_key} 缺失 (ckpt={c_val}, run={r_val})")
+        if c_val != r_val:
+            raise AssertionError(f"{label} 数据指纹 {dfp_key} 不匹配！")
+
+    # 有效超参数交叉比对
+    ckpt_cfg = ckpt_meta.get("training_config", {})
+    run_cfg = run_data.get("training_config", {})
+    if not ckpt_cfg or not run_cfg:
+        raise ValueError(f"{label} training_config 缺失")
+
+    # 1. beta_shaping
+    c_beta = ckpt_cfg.get("beta_shaping", ckpt_cfg.get("ppo", {}).get("shaping_coefficient"))
+    r_beta = run_cfg.get("beta_shaping", run_cfg.get("ppo", {}).get("shaping_coefficient"))
+    if c_beta is None or r_beta is None:
+        raise ValueError(f"{label} beta_shaping 缺失")
+    if abs(float(c_beta) - float(r_beta)) > 1e-6:
+        raise AssertionError(f"{label} beta 不一致: ckpt={c_beta} vs run={r_beta}")
+    if expected_beta is not None and abs(float(c_beta) - expected_beta) > 1e-6:
+        raise AssertionError(f"{label} beta ({c_beta}) 不匹配期望 ({expected_beta})")
+
+    # 2. gamma
+    c_gamma = ckpt_cfg.get("gamma", ckpt_cfg.get("ppo", {}).get("gamma"))
+    r_gamma = run_cfg.get("gamma", run_cfg.get("ppo", {}).get("gamma"))
+    if c_gamma is None or r_gamma is None or abs(float(c_gamma) - float(r_gamma)) > 1e-6:
+        raise AssertionError(f"{label} gamma 不一致: ckpt={c_gamma} vs run={r_gamma}")
+
+    # 3. lr
+    c_lr = ckpt_cfg.get("lr", ckpt_cfg.get("ppo", {}).get("learning_rate"))
+    r_lr = run_cfg.get("lr", run_cfg.get("ppo", {}).get("learning_rate"))
+    if c_lr is None or r_lr is None:
+        raise ValueError(f"{label} 学习率 lr 缺失 (ckpt={c_lr}, run={r_lr})")
+    if abs(float(c_lr) - float(r_lr)) > 1e-7:
+        raise AssertionError(f"{label} 学习率 lr 不一致: ckpt={c_lr} vs run={r_lr}")
+
+    # 4. gae_lambda
+    c_gae = ckpt_cfg.get("gae_lambda", ckpt_cfg.get("ppo", {}).get("gae_lambda"))
+    r_gae = run_cfg.get("gae_lambda", run_cfg.get("ppo", {}).get("gae_lambda"))
+    if c_gae is None or r_gae is None or abs(float(c_gae) - float(r_gae)) > 1e-6:
+        raise AssertionError(f"{label} gae_lambda 不一致: ckpt={c_gae} vs run={r_gae}")
+
+    # 5. rollout & batch & epochs
+    for k in ["ppo_epochs", "batch_size"]:
+        c_v = ckpt_cfg.get(k, ckpt_cfg.get("ppo", {}).get(k))
+        r_v = run_cfg.get(k, run_cfg.get("ppo", {}).get(k))
+        if c_v is None or r_v is None or int(c_v) != int(r_v):
+            raise AssertionError(f"{label} {k} 不一致: ckpt={c_v} vs run={r_v}")
+
+
+def verify_shaping_audit_coverage(
+    label: str,
+    audit_data: dict[str, Any],
+    run_data: dict[str, Any],
+    expected_decisions: int,
+    expected_beta: float | None = None,
+    expected_gamma: float = 0.99,
+) -> None:
+    """严格核验塑形审计文件的覆盖范围与一致性 (Section 10.3)。"""
+    overall_status = audit_data.get("overall_status")
+    contracts = audit_data.get("contracts", {})
+    required_contracts = [
+        "single_step_formula",
+        "step_to_step_continuity",
+        "predictor_version_invariance",
+        "terminal_zero_potential",
+        "completed_episode_telescope",
+        "config_consistency",
+        "boundary_contract",
+        "ledger_reconciliation",
+    ]
+    failed_contracts = [c for c in required_contracts if contracts.get(c) != "PASS"]
+    if overall_status != "PASS" or len(failed_contracts) > 0:
+        raise ValueError(
+            f"目标模型 {label} 塑形审计未通过: overall={overall_status}, 失败合同={failed_contracts}"
+        )
+
+    # 覆盖事件数核验
+    tot_events = audit_data.get("total_events_checked")
+    if tot_events is None or int(tot_events) != expected_decisions:
+        raise AssertionError(
+            f"{label} 审计覆盖事件数 ({tot_events}) 不等于期望决策数 ({expected_decisions})"
+        )
+
+    # episode 覆盖量核验
+    tot_episodes = audit_data.get("total_episodes_checked")
+    run_episodes = run_data.get("independent_episode_count")
+    if tot_episodes is not None and run_episodes is not None:
+        if int(tot_episodes) != int(run_episodes):
+            raise AssertionError(
+                f"{label} 审计覆盖 episode 数 ({tot_episodes}) 与 run.json ({run_episodes}) 不匹配"
+            )
+
+    # resolved_config 校验
+    res_cfg = audit_data.get("resolved_config", {})
+    audit_gamma = res_cfg.get("cfg_gamma")
+    audit_beta = res_cfg.get("cfg_beta")
+    if audit_gamma is not None and abs(float(audit_gamma) - expected_gamma) > 1e-5:
+        raise AssertionError(
+            f"{label} 审计 resolved_config gamma ({audit_gamma}) 不匹配期望 ({expected_gamma})"
+        )
+    if expected_beta is not None and audit_beta is not None:
+        if abs(float(audit_beta) - expected_beta) > 1e-5:
+            raise AssertionError(
+                f"{label} 审计 resolved_config beta ({audit_beta}) 不匹配期望 ({expected_beta})"
+            )
+
+
 def verify_checkpoint_and_run_contracts(
     variants: list[dict[str, Any]],
     device: str = "cuda:0",
 ) -> dict[str, Any]:
-    """校验各变体检查点契约，并对目标预算模型关联run.json与shaping_audit严格核验 (Section 9.3)。"""
+    """校验各变体检查点契约，并对目标预算模型关联run.json与shaping_audit严格核验 (Section 9.3, 10.3)。"""
     logger.info("开始校验各变体检查点契约与训练/审计记录...")
     metadata_summary: dict[str, Any] = {}
 
@@ -177,6 +353,9 @@ def verify_checkpoint_and_run_contracts(
         label = v["label"]
         ckpt_path = Path(v["checkpoint"])
         is_target = v.get("is_target", False)
+        expected_seed = v.get("expected_seed")
+        expected_beta = v.get("expected_beta")
+        expected_decisions = v.get("expected_decisions")
 
         if not ckpt_path.is_file():
             raise FileNotFoundError(f"未找到检查点: {ckpt_path}")
@@ -192,46 +371,45 @@ def verify_checkpoint_and_run_contracts(
         if beta_val is None:
             beta_val = cfg.get("ppo", {}).get("shaping_coefficient")
 
-        expected_beta = v.get("expected_beta")
         if expected_beta is not None:
             assert beta_val is not None and abs(float(beta_val) - expected_beta) < 1e-5, (
                 f"{label} 的 shaping_coefficient ({beta_val}) 不等于 {expected_beta}！"
             )
 
+        if expected_seed is not None and meta.get("seed") is not None:
+            assert int(meta["seed"]) == int(expected_seed), (
+                f"{label} 检查点 seed ({meta['seed']}) 不等于期望种子 ({expected_seed})！"
+            )
+
         ckpt_sha = compute_file_sha256(ckpt_path)
         logger.info(f"检查点 {label} 契约校验通过: {ckpt_path.name} (SHA256: {ckpt_sha[:12]}...)")
 
-        # 校验 run.json 运行记录 (Section 9.3)
+        # 校验 run.json 运行记录 (Section 9.3, 10.3)
         run_info: dict[str, Any] = {}
         run_json_path = v.get("run_json")
         if is_target:
             if run_json_path is None or not Path(run_json_path).is_file():
                 raise FileNotFoundError(f"目标模型 {label} 缺少必需的运行记录: {run_json_path}")
 
+        run_data: dict[str, Any] = {}
         if run_json_path and Path(run_json_path).is_file():
             with Path(run_json_path).open("r", encoding="utf-8") as f:
                 run_data = json.load(f)
 
             total_steps = int(run_data.get("total_decisions", run_data.get("completed_transition_count", 0)))
-            expected_steps = v["expected_decisions"]
-            assert total_steps == expected_steps, (
-                f"{label} 实际总决策数 ({total_steps}) 不等于期望预算 ({expected_steps})！"
-            )
-
-            actual_method = run_data.get("method_variant") or run_data.get("method_profile", {}).get("name")
-            assert actual_method == v["method"], (
-                f"{label} run.json 中的方法 ({actual_method}) 不等于期望 ({v['method']})！"
-            )
-
-            training_cfg = run_data.get("training_config", {})
-            run_beta = training_cfg.get("beta_shaping", training_cfg.get("ppo", {}).get("shaping_coefficient"))
-            if expected_beta is not None:
-                assert abs(float(run_beta) - expected_beta) < 1e-5, (
-                    f"{label} run.json 中的 beta ({run_beta}) 不匹配！"
+            if expected_decisions is not None:
+                assert total_steps == expected_decisions, (
+                    f"{label} 实际总决策数 ({total_steps}) 不等于期望预算 ({expected_decisions})！"
                 )
 
-            run_gamma = training_cfg.get("gamma", training_cfg.get("ppo", {}).get("gamma"))
-            assert abs(float(run_gamma) - 0.99) < 1e-5, f"{label} gamma 不等于 0.99！"
+            # 跨配置交叉深度核验 (Section 10.3)
+            cross_verify_training_config(
+                label=label,
+                ckpt_meta=meta,
+                run_data=run_data,
+                expected_seed=expected_seed,
+                expected_beta=expected_beta,
+            )
 
             # 严格区分总优化更新、辅助头更新与 PPO 更新 (Section 9.3)
             total_updates = int(run_data.get("lightning_optimization_steps", 0))
@@ -247,27 +425,8 @@ def verify_checkpoint_and_run_contracts(
             episodes_cnt = run_data.get("independent_episode_count")
             succ_episodes = run_data.get("successful_batch_count")
             wall_seconds = float(run_data.get("elapsed_seconds", 0.0))
-            peak_vram = (
-                float(run_data.get("gpu_memory_peak_bytes", 0)) / (1024 * 1024)
-                if run_data.get("gpu_memory_peak_bytes")
-                else 0.0
-            )
-
-            # 交叉核验 checkpoint.run_metadata 与 run_data (Section 9.3)
-            if meta:
-                assert meta.get("seed") == run_data.get("seed"), (
-                    f"{label} seed 不匹配: ckpt={meta.get('seed')} vs run={run_data.get('seed')}"
-                )
-                assert meta.get("method_variant") == actual_method, (
-                    f"{label} method 不匹配: ckpt={meta.get('method_variant')} vs run={actual_method}"
-                )
-                ckpt_dfp = meta.get("data_fingerprint", {})
-                run_dfp = run_data.get("data_fingerprint", {})
-                if ckpt_dfp and run_dfp:
-                    for dfp_key in ["scenario_pool_sha256", "scenario_split_sha256", "baseline_sha256"]:
-                        assert ckpt_dfp.get(dfp_key) == run_dfp.get(dfp_key), (
-                            f"{label} 数据指纹 {dfp_key} 不匹配！"
-                        )
+            peak_vram_bytes = int(run_data.get("gpu_memory_peak_bytes", 0))
+            peak_vram_mib = float(peak_vram_bytes) / (1024 * 1024)
 
             run_info = {
                 "total_steps": total_steps,
@@ -277,7 +436,8 @@ def verify_checkpoint_and_run_contracts(
                 "total_updates": total_updates,
                 "ppo_updates": ppo_updates,
                 "auxiliary_updates": aux_updates,
-                "peak_vram_mb": peak_vram,
+                "peak_vram_bytes": peak_vram_bytes,
+                "peak_vram_mib": peak_vram_mib,
                 "data_fingerprint": run_data.get("data_fingerprint"),
                 "source_sha": run_data.get("source_sha"),
                 "initial_actor_fingerprint": run_data.get("initial_actor_fingerprint"),
@@ -286,10 +446,10 @@ def verify_checkpoint_and_run_contracts(
             logger.info(
                 f"{label} 运行记录深度校验通过: 步数={total_steps}, 完工={succ_episodes}, "
                 f"总更新={total_updates} (PPO={ppo_updates}, 辅助={aux_updates}), "
-                f"耗时={wall_seconds:.1f}s"
+                f"耗时={wall_seconds:.1f}s, 显存分配峰值={peak_vram_mib:.2f}MiB"
             )
 
-        # 校验塑形审计文件 (Section 9.3)
+        # 校验塑形审计文件 (Section 9.3, 10.3)
         audit_info: dict[str, Any] = {}
         audit_json_path = v.get("audit_json")
         if is_target:
@@ -300,31 +460,22 @@ def verify_checkpoint_and_run_contracts(
             with Path(audit_json_path).open("r", encoding="utf-8") as f:
                 audit_data = json.load(f)
 
-            overall_status = audit_data.get("overall_status")
-            contracts = audit_data.get("contracts", {})
-            required_contracts = [
-                "single_step_formula",
-                "step_to_step_continuity",
-                "predictor_version_invariance",
-                "terminal_zero_potential",
-                "completed_episode_telescope",
-                "config_consistency",
-                "boundary_contract",
-                "ledger_reconciliation",
-            ]
-            failed_contracts = [c for c in required_contracts if contracts.get(c) != "PASS"]
-            audit_pass = (overall_status == "PASS" and len(failed_contracts) == 0)
-            if is_target and not audit_pass:
-                raise ValueError(
-                    f"目标模型 {label} 塑形审计未通过: overall={overall_status}, 失败合同={failed_contracts}"
+            if expected_decisions is not None:
+                verify_shaping_audit_coverage(
+                    label=label,
+                    audit_data=audit_data,
+                    run_data=run_data,
+                    expected_decisions=expected_decisions,
+                    expected_beta=expected_beta,
+                    expected_gamma=0.99,
                 )
 
             audit_info = {
-                "overall_status": overall_status,
-                "audit_pass": audit_pass,
-                "contracts": contracts,
-                "failed_contracts": failed_contracts,
+                "overall_status": audit_data.get("overall_status"),
+                "audit_pass": True,
+                "contracts": audit_data.get("contracts", {}),
                 "total_events_checked": audit_data.get("total_events_checked"),
+                "total_episodes_checked": audit_data.get("total_episodes_checked"),
             }
             logger.info(
                 f"{label} 塑形审计文件校验通过: 8项合同均 PASS (总事件={audit_data.get('total_events_checked')})"
@@ -338,7 +489,23 @@ def verify_checkpoint_and_run_contracts(
             "run_info": run_info,
             "audit_info": audit_info,
             "is_target": is_target,
+            "expected_seed": expected_seed,
         }
+
+    # F/D 机制消融目标间额外单变量核验 (Section 9.4, 10.3)
+    if "F_b4096" in metadata_summary and "D_b4096" in metadata_summary:
+        f_info = metadata_summary["F_b4096"]["run_info"]
+        d_info = metadata_summary["D_b4096"]["run_info"]
+        if f_info and d_info:
+            f_act_fp = f_info.get("initial_actor_fingerprint")
+            d_act_fp = d_info.get("initial_actor_fingerprint")
+            if f_act_fp and d_act_fp:
+                assert f_act_fp == d_act_fp, f"F4096与D4096初始Actor指纹不匹配: {f_act_fp} vs {d_act_fp}"
+            f_par_fp = f_info.get("initial_parameter_fingerprint")
+            d_par_fp = d_info.get("initial_parameter_fingerprint")
+            if f_par_fp and d_par_fp:
+                assert f_par_fp == d_par_fp, f"F4096与D4096初始全参数指纹不匹配: {f_par_fp} vs {d_par_fp}"
+            logger.info("F4096 与 D4096 初始参数指纹单变量严格匹配校验通过！")
 
     return metadata_summary
 
@@ -349,11 +516,12 @@ def evaluate_scenarios(
     device: str = "cuda:0",
     output_dir: Path | None = None,
     metadata_summary: dict[str, Any] | None = None,
+    eval_seed: int = 42,
 ) -> tuple[Path, Path]:
     default_dir = (
-        REPO_ROOT / "work3_4060/mechanism_v2/seed42/evaluation"
+        REPO_ROOT / f"work3_4060/mechanism_v2/seed{eval_seed}/evaluation"
         if mode == "fd"
-        else REPO_ROOT / "work3_4060/budget_v1/equal_budget_evaluation"
+        else REPO_ROOT / f"work3_4060/budget_v1/equal_budget_evaluation"
     )
     out_dir = output_dir or default_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -438,25 +606,26 @@ def evaluate_scenarios(
             # 机制消融主比较：J_F4096 - J_D4096 (正值表示学习势函数 D 更优，负值表示启发式 F 更优)
             j_f4096 = float(row["f_b4096_j_total"])
             j_d4096 = float(row["d_b4096_j_total"])
-            j_c4096 = float(row["c_b4096_j_total"])
             m_f4096 = float(row["f_b4096_makespan"])
             m_d4096 = float(row["d_b4096_makespan"])
             delta_f_minus_d = j_f4096 - j_d4096
             row["delta_j_f4096_minus_d4096"] = f"{delta_f_minus_d:+.8e}"
             row["delta_makespan_f4096_minus_d4096"] = f"{m_f4096 - m_d4096:+.4f}"
-            row["d4096_better_than_f4096"] = (delta_f_minus_d > 0)
+            row["d4096_better_than_f4096"] = (delta_f_minus_d > 1e-12)
 
-            # 背景参照：C_b4096 vs F_b4096 (J_C4096 - J_F4096，正值表示 F 优于 C)
-            delta_c_minus_f = j_c4096 - j_f4096
-            row["delta_j_c4096_minus_f4096"] = f"{delta_c_minus_f:+.8e}"
+            # 背景参照：C_b4096 vs F_b4096 / D_b4096
+            if "c_b4096_j_total" in row:
+                j_c4096 = float(row["c_b4096_j_total"])
+                row["delta_j_c4096_minus_f4096"] = f"{j_c4096 - j_f4096:+.8e}"
+                row["delta_j_c4096_minus_d4096"] = f"{j_c4096 - j_d4096:+.8e}"
 
-            # 预算灵敏度比较：F 自身 2048 vs 4096
-            j_f2048 = float(row["f_b2048_j_total"])
-            row["delta_j_f4096_minus_f2048"] = f"{j_f4096 - j_f2048:+.8e}"
-
-            # 预算灵敏度比较：D 自身 2048 vs 4096
-            j_d2048 = float(row["d_b2048_j_total"])
-            row["delta_j_d4096_minus_d2048"] = f"{j_d4096 - j_d2048:+.8e}"
+            # 预算灵敏度比较 (仅在历史模型存在时记录)
+            if "f_b2048_j_total" in row:
+                j_f2048 = float(row["f_b2048_j_total"])
+                row["delta_j_f4096_minus_f2048"] = f"{j_f4096 - j_f2048:+.8e}"
+            if "d_b2048_j_total" in row:
+                j_d2048 = float(row["d_b2048_j_total"])
+                row["delta_j_d4096_minus_d2048"] = f"{j_d4096 - j_d2048:+.8e}"
         else:
             # 等决策预算主比较：J_C4096 - J_D4096 (正值表示 D 费用更优)
             j_c4096 = float(row["c_b4096_j_total"])
@@ -466,15 +635,17 @@ def evaluate_scenarios(
             delta_c_minus_d = j_c4096 - j_d4096
             row["delta_j_c4096_minus_d4096"] = f"{delta_c_minus_d:+.8e}"
             row["delta_makespan_c4096_minus_d4096"] = f"{m_c4096 - m_d4096:+.4f}"
-            row["d4096_better_than_c4096"] = (delta_c_minus_d > 0)
+            row["d4096_better_than_c4096"] = (delta_c_minus_d > 1e-12)
 
             # 辅助比较：D 自身 2048 vs 4096
-            j_d2048 = float(row["d_b2048_j_total"])
-            row["delta_j_d4096_minus_d2048"] = f"{j_d4096 - j_d2048:+.8e}"
+            if "d_b2048_j_total" in row:
+                j_d2048 = float(row["d_b2048_j_total"])
+                row["delta_j_d4096_minus_d2048"] = f"{j_d4096 - j_d2048:+.8e}"
 
             # 辅助比较：C 自身 2048 vs 4096
-            j_c2048 = float(row["c_b2048_j_total"])
-            row["delta_j_c4096_minus_c2048"] = f"{j_c4096 - j_c2048:+.8e}"
+            if "c_b2048_j_total" in row:
+                j_c2048 = float(row["c_b2048_j_total"])
+                row["delta_j_c4096_minus_c2048"] = f"{j_c4096 - j_c2048:+.8e}"
 
         csv_rows.append(row)
 
@@ -513,20 +684,28 @@ def evaluate_scenarios(
         all_target_audits_pass and all_target_feasible and (max_target_ledger_err <= 1e-12)
     )
 
+    has_history = any(not v.get("is_target", False) for v in variants)
+
     if mode == "fd":
-        # 机制消融 summary
-        d_wins_val = sum(1 for r in val_rows if r["d4096_better_than_f4096"])
-        f_wins_val = val_count - d_wins_val
+        # 机制消融 summary: 严格区分胜、负、平
+        d_wins_val = sum(1 for r in val_rows if float(r["delta_j_f4096_minus_d4096"]) > 1e-12)
+        f_wins_val = sum(1 for r in val_rows if float(r["delta_j_f4096_minus_d4096"]) < -1e-12)
+        ties_val = val_count - d_wins_val - f_wins_val
+
         mean_j_f4k_val = sum(float(r["f_b4096_j_total"]) for r in val_rows) / val_count
         mean_j_d4k_val = sum(float(r["d_b4096_j_total"]) for r in val_rows) / val_count
-        mean_j_c4k_val = sum(float(r["c_b4096_j_total"]) for r in val_rows) / val_count
+        mean_j_c4k_val = (
+            sum(float(r["c_b4096_j_total"]) for r in val_rows) / val_count
+            if "c_b4096_j_total" in val_rows[0]
+            else None
+        )
         mean_m_f4k_val = sum(float(r["f_b4096_makespan"]) for r in val_rows) / val_count
         mean_m_d4k_val = sum(float(r["d_b4096_makespan"]) for r in val_rows) / val_count
         mean_delta_fd_val = mean_j_f4k_val - mean_j_d4k_val
 
         nom_j_f4k = float(nom_row["f_b4096_j_total"])
         nom_j_d4k = float(nom_row["d_b4096_j_total"])
-        nom_j_c4k = float(nom_row["c_b4096_j_total"])
+        nom_j_c4k = float(nom_row["c_b4096_j_total"]) if "c_b4096_j_total" in nom_row else None
         nom_m_f4k = float(nom_row["f_b4096_makespan"])
         nom_m_d4k = float(nom_row["d_b4096_makespan"])
         nom_delta_fd = nom_j_f4k - nom_j_d4k
@@ -535,44 +714,70 @@ def evaluate_scenarios(
         d_meta = (metadata_summary or {}).get("D_b4096", {}).get("run_info", {})
         c_meta = (metadata_summary or {}).get("C_b4096", {}).get("run_info", {})
 
-        winner_str = "D(学习势函数)更优" if mean_delta_fd_val > 0 else "F(启发式势函数)更优"
+        if mean_delta_fd_val > 1e-12:
+            winner_str = "D(学习势函数)更优"
+        elif mean_delta_fd_val < -1e-12:
+            winner_str = "F(启发式势函数)更优"
+        else:
+            winner_str = "持平"
+
+        c_ref_str = f" (背景参照 C4096 = `{mean_j_c4k_val:.8e}`)" if mean_j_c4k_val is not None else ""
+        c_nom_ref_str = f" (背景参照 C4096 = `{nom_j_c4k:.8e}`)" if nom_j_c4k is not None else ""
 
         lines = [
-            "# Work-3 机制消融评估报告 (F_beta01_b4096 vs D_b4096)",
-            f"评估设备：`{device}` | 种子：42 | 决策预算：严格 4096 决策步 | 主聚合：4个 Validation 场景 (Nominal 单列)",
+            f"# Work-3 机制消融评估报告 (F_beta01_b4096 vs D_b4096, Seed {eval_seed})",
+            f"评估设备：`{device}` | 种子：`{eval_seed}` | 决策预算：严格 4096 决策步 | 主聚合：4个 Validation 场景 (Nominal 单列)",
             "",
-            "## 1. 机制消融核心结论与判定 (Section 9.5)",
+            "## 1. 机制消融核心结论与判定 (Section 9.5, 10.3)",
             f"- **正确性前提检验**: 目标模型塑形审计动态核验 `{all_target_audits_pass}` (8/8项合同均PASS), 独立物理可行 100% (`{all_target_feasible}`), 账本加权分项和最大误差 `{max_target_ledger_err:.2e}` (守恒), 综合放行状态: `{'PASS' if correctness_gate_pass else 'FAIL'}`。",
             f"- **4个 Validation 场景主口径聚合**: ",
-            f"  - **平均综合费用 J_total**: F(4096步) = `{mean_j_f4k_val:.8e}`, D(4096步) = `{mean_j_d4k_val:.8e}` (背景参照 C4096 = `{mean_j_c4k_val:.8e}`)",
+            f"  - **平均综合费用 J_total**: F(4096步) = `{mean_j_f4k_val:.8e}`, D(4096步) = `{mean_j_d4k_val:.8e}`{c_ref_str}",
             f"  - **平均净优势 Delta J (J_F4096 - J_D4096)**: `{winner_str}` (`{mean_delta_fd_val:+.8e}`)",
-            f"  - **D(4096步) 胜出场景数**: **{d_wins_val} / {val_count}** (F 胜出: **{f_wins_val} / {val_count}**)",
+            f"  - **逐场景胜出对比**: **D 胜 {d_wins_val} / {val_count}** | **F 胜 {f_wins_val} / {val_count}** | **平局 {ties_val} / {val_count}**",
             f"  - **平均工期 Makespan**: F(4096步) = `{mean_m_f4k_val:.2f}h`, D(4096步) = `{mean_m_d4k_val:.2f}h` (差异: `{mean_m_f4k_val - mean_m_d4k_val:+.2f}h`)",
             f"- **Nominal 场景单列**: ",
-            f"  - J_total: F(4096步) = `{nom_j_f4k:.8e}`, D(4096步) = `{nom_j_d4k:.8e}` (Delta J: `{nom_delta_fd:+.8e}`) (背景参照 C4096 = `{nom_j_c4k:.8e}`)",
+            f"  - J_total: F(4096步) = `{nom_j_f4k:.8e}`, D(4096步) = `{nom_j_d4k:.8e}` (Delta J: `{nom_delta_fd:+.8e}`){c_nom_ref_str}",
             f"  - 工期: F = `{nom_m_f4k:.2f}h`, D = `{nom_m_d4k:.2f}h`",
             "",
             "> [!IMPORTANT]",
-            "> **机制消融配置对齐说明 (Section 9.4-9.5 必读约定)**：",
-            "> 1. **严格单变量势函数对照**：F4096（启发式 $\\Phi, \\beta=0.1$）与 D4096（学习 $\\Phi, \\beta=0.1$）共享相同初始 Actor/Head 指纹、训练数据 mini210、种子 42、4096 决策预算、修正时间输入、时间辅助监督以及 episode 冻结预测器生命周期；唯一的机制差异是势函数来源（启发式 $\\Phi$ vs 学习 $\\Phi$）。",
-            "> 2. **优化步数与更新分解核查 (Section 9.3 纠偏)**：",
+            "> **机制消融配置对齐说明 (Section 9.4, 10.2, 10.3)**：",
+            "> 1. **严格单变量势函数对照**：F4096（启发式 $\\Phi, \\beta=0.1$）与 D4096（学习 $\\Phi, \\beta=0.1$）共享相同初始 Actor/Head 指纹、训练数据 mini210、种子、4096 决策预算、修正时间输入、时间辅助监督以及 episode 冻结预测器生命周期；唯一的机制差异是势函数来源（启发式 $\\Phi$ vs 学习 $\\Phi$）。",
+            "> 2. **优化步数与更新分解核查 (精确分解)**：",
             f">    - **F(4096步)**: 墙钟耗时 `{f_meta.get('wall_clock_seconds', 'N/A')}s`, 总优化更新 `{f_meta.get('total_updates', 'N/A')}` 次 (其中 PPO更新 `{f_meta.get('ppo_updates', 'N/A')}` 次, 辅助头更新 `{f_meta.get('auxiliary_updates', 'N/A')}` 次), 成功批次 `{f_meta.get('successful_episodes', 'N/A')}`",
             f">    - **D(4096步)**: 墙钟耗时 `{d_meta.get('wall_clock_seconds', 'N/A')}s`, 总优化更新 `{d_meta.get('total_updates', 'N/A')}` 次 (其中 PPO更新 `{d_meta.get('ppo_updates', 'N/A')}` 次, 辅助头更新 `{d_meta.get('auxiliary_updates', 'N/A')}` 次), 成功批次 `{d_meta.get('successful_episodes', 'N/A')}`",
-            f">    - **C(4096步, 背景参照)**: 墙钟耗时 `{c_meta.get('wall_clock_seconds', 'N/A')}s`, 总优化更新 `{c_meta.get('total_updates', 'N/A')}` 次 (其中 PPO更新 `{c_meta.get('ppo_updates', 'N/A')}` 次, 辅助头更新 `{c_meta.get('auxiliary_updates', 'N/A')}` 次), 成功批次 `{c_meta.get('successful_episodes', 'N/A')}`",
+        ]
+        if c_meta:
+            lines.append(
+                f">    - **C(4096步, 背景参照)**: 墙钟耗时 `{c_meta.get('wall_clock_seconds', 'N/A')}s`, 总优化更新 `{c_meta.get('total_updates', 'N/A')}` 次 (其中 PPO更新 `{c_meta.get('ppo_updates', 'N/A')}` 次, 辅助头更新 `{c_meta.get('auxiliary_updates', 'N/A')}` 次), 成功批次 `{c_meta.get('successful_episodes', 'N/A')}`"
+            )
+
+        lines.extend([
             "",
             "## 2. 逐场景机制消融对比主表 (F_beta01_b4096 vs D_b4096)",
             "| 场景 ID | F_4096 J | D_4096 J | Delta J (F-D, 正=D优) | D优? | C_4096 J (参照) | F_4096 工期 | D_4096 工期 | Delta 工期 | F 显式推进 | D 显式推进 | 各方可行? |",
             "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
-        ]
+        ])
 
         for r in csv_rows:
-            better_str = "**是 (D优)**" if r["d4096_better_than_f4096"] else "否 (F优)"
+            delta_val = float(r["delta_j_f4096_minus_d4096"])
+            if delta_val > 1e-12:
+                better_str = "**是 (D优)**"
+            elif delta_val < -1e-12:
+                better_str = "否 (F优)"
+            else:
+                better_str = "持平"
+
             is_nom = (r["scenario_id"] == "NOMINAL")
             sc_label = f"**`{r['scenario_id']}` (单列)**" if is_nom else f"`{r['scenario_id']}`"
-            all_feas = (r["f_b4096_feasible"] and r["d_b4096_feasible"] and r["c_b4096_feasible"])
+            c_val_str = r.get("c_b4096_j_total", "N/A")
+            all_feas = (
+                r["f_b4096_feasible"]
+                and r["d_b4096_feasible"]
+                and (r.get("c_b4096_feasible", True))
+            )
             lines.append(
                 f"| {sc_label} | {r['f_b4096_j_total']} | {r['d_b4096_j_total']} | "
-                f"**{r['delta_j_f4096_minus_d4096']}** | {better_str} | {r['c_b4096_j_total']} | "
+                f"**{r['delta_j_f4096_minus_d4096']}** | {better_str} | {c_val_str} | "
                 f"{round(float(r['f_b4096_makespan']), 2)}h | {round(float(r['d_b4096_makespan']), 2)}h | "
                 f"{float(r['delta_makespan_f4096_minus_d4096']):+.2f}h | "
                 f"{r['f_b4096_advance_pct']} ({r['f_b4096_explicit_advances']}/{r['f_b4096_total_decisions']}) | "
@@ -580,18 +785,26 @@ def evaluate_scenarios(
                 f"{'PASS' if all_feas else 'FAIL'} |"
             )
 
-        lines.extend([
-            "",
-            "## 3. 各方法自身预算敏感性 (2048步 vs 4096步)",
-            "| 场景 ID | F_2048 J | F_4096 J | Delta J (F4k-F2k) | D_2048 J | D_4096 J | Delta J (D4k-D2k) |",
-            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
-        ])
-        for r in csv_rows:
-            lines.append(
-                f"| `{r['scenario_id']}` | {r['f_b2048_j_total']} | {r['f_b4096_j_total']} | "
-                f"**{r['delta_j_f4096_minus_f2048']}** | {r['d_b2048_j_total']} | {r['d_b4096_j_total']} | "
-                f"**{r['delta_j_d4096_minus_d2048']}** |"
-            )
+        if has_history:
+            lines.extend([
+                "",
+                "## 3. 各方法自身历史配置对照",
+                "> [!NOTE]",
+                "> **配置差异说明 (Section 10.2)**：历史 F_b2048 配置使用 beta=1.0，而 F_b4096 使用 beta=0.1；两者同时改变了决策预算与塑形系数，属历史配置对照，不可解释为纯预算敏感性。C 与 D 在相同 beta 下的前后比较保留。",
+                "",
+                "| 场景 ID | F_beta1_2048 J | F_beta01_4096 J | Delta J (F4k-F2k, 非单变量) | D_2048 J | D_4096 J | Delta J (D4k-D2k, 纯预算) |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+            ])
+            for r in csv_rows:
+                f_2k = r.get("f_b2048_j_total", "N/A")
+                d_2k = r.get("d_b2048_j_total", "N/A")
+                delta_f = r.get("delta_j_f4096_minus_f2048", "N/A")
+                delta_d = r.get("delta_j_d4096_minus_d2048", "N/A")
+                lines.append(
+                    f"| `{r['scenario_id']}` | {f_2k} | {r['f_b4096_j_total']} | "
+                    f"**{delta_f}** | {d_2k} | {r['d_b4096_j_total']} | "
+                    f"**{delta_d}** |"
+                )
 
         lines.extend([
             "",
@@ -612,15 +825,18 @@ def evaluate_scenarios(
 
         lines.extend([
             "",
-            "## 5. 机制判定与后续决策依据 (Section 9.5 预设规则)",
-            "- **若 F 的 J 低于 D**: 当前 seed 与预算下，启发式势函数配置优于学习势函数配置。应查看具体费用项与已有塑形/优势诊断；保留 F 作为候选，不立即修改 beta 或认定时间头预测失败。",
-            "- **若 D 的 J 低于 F**: 在共同时间输入/辅助设置下，学习 Phi 有相对收益。仍不能称完整 D 优于 C；先看能否在预先固定的新 seed 重复。",
-            "- **若两者近似持平或场景混合**: 这轮不足以分离势函数来源效果，不扩大结论；先看分项与暴露，必要时再预先安排一个重复 seed。",
+            "## 5. 机制判定与后续决策依据 (Section 9.5, 10.6 预设规则)",
+            "- **若 F/D 方向与 seed 42 一致且 C 费用依然最低**: 保留当前“F费用优于D、C完整配置更优”的探索性结论；暂不继续扩大预算或调学习Phi。若后续研究辅助表征贡献，另设计消除 C/F beta 差异的控制试验。",
+            "- **若 F/D 方向发生反转**: 报告种子敏感性，不按某一个 seed 淘汰方法；先看既有费用分解/暴露/训练诊断，再决定是否需要更多预先固定重复。",
+            "- **若 D 在新 seed 超过 F 或 C**: 仅报告新 seed 结果与跨 seed 差异；不能用它抹去 seed 42 或直接恢复“方法普遍优越”的表述。",
             "- **若仅效果变好但可行性/账本/来源合同失败**: 不具备有效效果比较条件，只修具体失败，不新增机制结论。",
         ])
     else:
         # cd 模式 summary
-        d_wins_val = sum(1 for r in val_rows if r["d4096_better_than_c4096"])
+        d_wins_val = sum(1 for r in val_rows if float(r["delta_j_c4096_minus_d4096"]) > 1e-12)
+        c_wins_val = sum(1 for r in val_rows if float(r["delta_j_c4096_minus_d4096"]) < -1e-12)
+        ties_val = val_count - d_wins_val - c_wins_val
+
         mean_j_c4k_val = sum(float(r["c_b4096_j_total"]) for r in val_rows) / val_count
         mean_j_d4k_val = sum(float(r["d_b4096_j_total"]) for r in val_rows) / val_count
         mean_m_c4k_val = sum(float(r["c_b4096_makespan"]) for r in val_rows) / val_count
@@ -636,16 +852,23 @@ def evaluate_scenarios(
         c_meta = (metadata_summary or {}).get("C_b4096", {}).get("run_info", {})
         d_meta = (metadata_summary or {}).get("D_b4096", {}).get("run_info", {})
 
+        if mean_delta_val > 1e-12:
+            winner_str = "D费用更优"
+        elif mean_delta_val < -1e-12:
+            winner_str = "C费用更优"
+        else:
+            winner_str = "持平"
+
         lines = [
-            "# Work-3 等决策预算对照评估报告 (C_b4096 vs D_b4096)",
-            f"评估设备：`{device}` | 种子：42 | 决策预算：严格 4096 决策步 | 主聚合：4个 Validation 场景 (Nominal 单列)",
+            f"# Work-3 等决策预算对照评估报告 (C_b4096 vs D_b4096, Seed {eval_seed})",
+            f"评估设备：`{device}` | 种子：`{eval_seed}` | 决策预算：严格 4096 决策步 | 主聚合：4个 Validation 场景 (Nominal 单列)",
             "",
-            "## 1. 等决策预算核心结论与判定 (Section 8.5 - 8.6, 9.3 纠偏)",
+            "## 1. 等决策预算核心结论与判定 (Section 8.5 - 8.6, 9.3 纠偏, 10.3)",
             f"- **正确性前提检验**: 目标模型塑形审计动态核验 `{all_target_audits_pass}` (8/8项合同均PASS), 独立物理可行 100% (`{all_target_feasible}`), 账本加权分项和最大误差 `{max_target_ledger_err:.2e}` (守恒), 综合放行状态: `{'PASS' if correctness_gate_pass else 'FAIL'}`。",
             f"- **4个 Validation 场景主口径聚合**: ",
             f"  - **平均综合费用 J_total**: C(4096步) = `{mean_j_c4k_val:.8e}`, D(4096步) = `{mean_j_d4k_val:.8e}`",
-            f"  - **平均净优势 Delta J (J_C4096 - J_D4096)**: `{'D费用更优' if mean_delta_val > 0 else 'C费用更优'}` (`{mean_delta_val:+.8e}`)",
-            f"  - **D(4096步) 胜出场景数**: **{d_wins_val} / {val_count}**",
+            f"  - **平均净优势 Delta J (J_C4096 - J_D4096)**: `{winner_str}` (`{mean_delta_val:+.8e}`)",
+            f"  - **逐场景胜出对比**: **D 胜 {d_wins_val} / {val_count}** | **C 胜 {c_wins_val} / {val_count}** | **平局 {ties_val} / {val_count}**",
             f"  - **平均工期 Makespan**: C(4096步) = `{mean_m_c4k_val:.2f}h`, D(4096步) = `{mean_m_d4k_val:.2f}h` (差异: `{mean_m_c4k_val - mean_m_d4k_val:+.2f}h`)",
             f"- **Nominal 场景单列**: ",
             f"  - J_total: C(4096步) = `{nom_j_c4k:.8e}`, D(4096步) = `{nom_j_d4k:.8e}` (Delta J: `{nom_delta:+.8e}`)",
@@ -664,7 +887,14 @@ def evaluate_scenarios(
         ]
 
         for r in csv_rows:
-            better_str = "**是 (D优)**" if r["d4096_better_than_c4096"] else "否 (C优)"
+            delta_val = float(r["delta_j_c4096_minus_d4096"])
+            if delta_val > 1e-12:
+                better_str = "**是 (D优)**"
+            elif delta_val < -1e-12:
+                better_str = "否 (C优)"
+            else:
+                better_str = "持平"
+
             is_nom = (r["scenario_id"] == "NOMINAL")
             sc_label = f"**`{r['scenario_id']}` (单列)**" if is_nom else f"`{r['scenario_id']}`"
             lines.append(
@@ -677,18 +907,19 @@ def evaluate_scenarios(
                 f"{'PASS' if (r['c_b4096_feasible'] and r['d_b4096_feasible']) else 'FAIL'} |"
             )
 
-        lines.extend([
-            "",
-            "## 3. 各方法自身预算敏感性 (2048步 vs 4096步)",
-            "| 场景 ID | C_2048 J | C_4096 J | Delta J (C4k-C2k) | D_2048 J | D_4096 J | Delta J (D4k-D2k) |",
-            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
-        ])
-        for r in csv_rows:
-            lines.append(
-                f"| `{r['scenario_id']}` | {r['c_b2048_j_total']} | {r['c_b4096_j_total']} | "
-                f"{r['delta_j_c4096_minus_c2048']} | {r['d_b2048_j_total']} | {r['d_b4096_j_total']} | "
-                f"**{r['delta_j_d4096_minus_d2048']}** |"
-            )
+        if has_history:
+            lines.extend([
+                "",
+                "## 3. 各方法自身预算敏感性 (2048步 vs 4096步)",
+                "| 场景 ID | C_2048 J | C_4096 J | Delta J (C4k-C2k) | D_2048 J | D_4096 J | Delta J (D4k-D2k) |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+            ])
+            for r in csv_rows:
+                lines.append(
+                    f"| `{r['scenario_id']}` | {r.get('c_b2048_j_total', 'N/A')} | {r['c_b4096_j_total']} | "
+                    f"{r.get('delta_j_c4096_minus_c2048', 'N/A')} | {r.get('d_b2048_j_total', 'N/A')} | {r['d_b4096_j_total']} | "
+                    f"**{r.get('delta_j_d4096_minus_d2048', 'N/A')}** |"
+                )
 
         lines.extend([
             "",
@@ -734,25 +965,40 @@ def main():
         type=str,
         choices=["auto", "cd", "fd"],
         default="auto",
-        help="评估比较模式: cd (等决策预算), fd (机制消融), auto (根据 output-dir 自动推断)",
+        help="评估比较模式: cd (等决策预算), fd (机制消融), auto (根据 output-dir 或 variants-json 自动推断)",
+    )
+    p.add_argument(
+        "--variants-json",
+        type=Path,
+        default=None,
+        help="显式变体清单 JSON 路径 (Section 10.5)",
     )
     args = p.parse_args()
 
-    # 确定模式与默认输出目录
-    mode = args.comparison
-    if mode == "auto":
-        if args.output_dir is not None and "mechanism_v2" in str(args.output_dir):
-            mode = "fd"
-        else:
-            mode = "cd"
+    # 确定变体清单、模式与默认输出目录
+    eval_seed = 42
+    if args.variants_json is not None:
+        if not args.variants_json.is_file():
+            raise FileNotFoundError(f"未找到变体清单文件: {args.variants_json}")
+        variants, json_mode, json_seed = load_variants_from_json(args.variants_json)
+        if json_seed is not None:
+            eval_seed = json_seed
+        mode = args.comparison if args.comparison != "auto" else (json_mode or "fd")
+    else:
+        mode = args.comparison
+        if mode == "auto":
+            if args.output_dir is not None and "mechanism_v2" in str(args.output_dir):
+                mode = "fd"
+            else:
+                mode = "cd"
+        variants = get_variants_for_mode(mode)
 
     output_dir = args.output_dir or (
-        REPO_ROOT / "work3_4060/mechanism_v2/seed42/evaluation"
+        REPO_ROOT / f"work3_4060/mechanism_v2/seed{eval_seed}/evaluation"
         if mode == "fd"
-        else REPO_ROOT / "work3_4060/budget_v1/equal_budget_evaluation"
+        else REPO_ROOT / f"work3_4060/budget_v1/equal_budget_evaluation"
     )
 
-    variants = get_variants_for_mode(mode)
     meta = verify_checkpoint_and_run_contracts(variants=variants, device=args.device)
     evaluate_scenarios(
         variants=variants,
@@ -760,6 +1006,7 @@ def main():
         device=args.device,
         output_dir=output_dir,
         metadata_summary=meta,
+        eval_seed=eval_seed,
     )
 
 

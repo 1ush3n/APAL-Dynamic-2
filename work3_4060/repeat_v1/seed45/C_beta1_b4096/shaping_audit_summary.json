@@ -1,0 +1,1444 @@
+{
+  "overall_status": "PASS",
+  "total_events_checked": 4096,
+  "total_episodes_checked": 15,
+  "completed_episodes_count": 14,
+  "contracts": {
+    "single_step_formula": "PASS",
+    "step_to_step_continuity": "PASS",
+    "predictor_version_invariance": "PASS",
+    "terminal_zero_potential": "PASS",
+    "completed_episode_telescope": "PASS",
+    "config_consistency": "PASS",
+    "boundary_contract": "PASS",
+    "ledger_reconciliation": "PASS"
+  },
+  "resolved_config": {
+    "cfg_gamma": 0.99,
+    "cfg_beta": 1.0,
+    "yaml_gamma": 0.99,
+    "yaml_beta": 1.0
+  },
+  "contract_counts": {
+    "single_step_failures": 0,
+    "continuity_failures": 0,
+    "version_failures": 0,
+    "terminal_failures": 0,
+    "boundary_failures": 0
+  },
+  "failures_sample": {
+    "step_formula": [],
+    "continuity": [],
+    "version": [],
+    "terminal": [],
+    "config": [],
+    "boundary": []
+  },
+  "boundary_details": {
+    "expected_segments_count": 522,
+    "observed_segments_count": 522,
+    "missing_segments": [],
+    "dangling_segments": [],
+    "duplicate_segments": []
+  },
+  "ledger_details": {
+    "expected_episodes_count": 15,
+    "observed_ledger_count": 15,
+    "missing_episodes": [],
+    "dangling_episodes": [],
+    "duplicate_episodes": [],
+    "reconciled_episodes": 15
+  },
+  "episodes": [
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "steps": 336,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682159,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": -1.5612511283791264e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.701743231762735,
+      "discounted_shaped_return": -0.6895862814350522,
+      "undiscounted_raw_sum": -1.7426352609760194,
+      "postpone_count": 17,
+      "postpone_actions": [
+        {
+          "step": 6,
+          "time": 10.588991733770271,
+          "cycle": 1,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.02806897509615348,
+          "phi_next": -0.02696454150593903,
+          "shaping_delta": 0.0013740790052738372
+        },
+        {
+          "step": 16,
+          "time": 24.18426116845411,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.016263807094759816,
+          "phi_next": -0.015159373504545364,
+          "shaping_delta": 0.0012560273252599091
+        },
+        {
+          "step": 19,
+          "time": 29.545776047799883,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.024322081997817484,
+          "phi_next": -0.024322081997817484,
+          "shaping_delta": 0.00024322081997817102
+        },
+        {
+          "step": 30,
+          "time": 41.921205628967876,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.016990666713545318,
+          "phi_next": -0.016990666713545318,
+          "shaping_delta": 0.00016990666713545544
+        },
+        {
+          "step": 55,
+          "time": 46.430622547845076,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.02398054306722737,
+          "phi_next": -0.02350942223689085,
+          "shaping_delta": 0.0007062150527054334
+        },
+        {
+          "step": 58,
+          "time": 101.57463466938916,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.01661458233840435,
+          "phi_next": -0.01661458233840435,
+          "shaping_delta": 0.00016614582338404793
+        },
+        {
+          "step": 88,
+          "time": 118.13788563666266,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.1024477851093184,
+          "phi_curr": -0.04431827148768119,
+          "phi_next": -0.018943996396145617,
+          "shaping_delta": 0.025563715055497038
+        },
+        {
+          "step": 89,
+          "time": 174.35412307478768,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.018943996396145617,
+          "phi_next": -0.018943996396145617,
+          "shaping_delta": 0.0001894399639614519
+        },
+        {
+          "step": 93,
+          "time": 174.89984867784807,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.019876629189189157,
+          "phi_next": -0.019876629189189157,
+          "shaping_delta": 0.00019876629189188866
+        },
+        {
+          "step": 126,
+          "time": 178.93784160736752,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.0263466386145313,
+          "phi_next": -0.02587551778419478,
+          "shaping_delta": 0.0007298760081784761
+        },
+        {
+          "step": 142,
+          "time": 254.62836971744537,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.022488291641765624,
+          "phi_next": -0.022488291641765624,
+          "shaping_delta": 0.00022488291641765967
+        },
+        {
+          "step": 149,
+          "time": 256.4666033962336,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.025629791693258096,
+          "phi_next": -0.025629791693258096,
+          "shaping_delta": 0.0002562979169325741
+        },
+        {
+          "step": 192,
+          "time": 328.95324156878905,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.016990666713545356,
+          "phi_next": -0.016990666713545356,
+          "shaping_delta": 0.00016990666713545544
+        },
+        {
+          "step": 215,
+          "time": 339.54223330255934,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.034710931274205055,
+          "phi_next": -0.034710931274205055,
+          "shaping_delta": 0.0003471093127420527
+        },
+        {
+          "step": 254,
+          "time": 407.0525176371386,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01801771070461276,
+          "phi_next": -0.01801771070461276,
+          "shaping_delta": 0.00018017710704612555
+        },
+        {
+          "step": 282,
+          "time": 485.0244993961889,
+          "cycle": 9,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01830916447580103,
+          "phi_next": -0.01830916447580103,
+          "shaping_delta": 0.0001830916447580072
+        },
+        {
+          "step": 296,
+          "time": 487.61190680204356,
+          "cycle": 9,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.022473608993882985,
+          "phi_next": -0.022002488163546465,
+          "shaping_delta": 0.0006911457119719855
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "steps": 408,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682147,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": -2.7755575615628914e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.630530803677024,
+      "discounted_shaped_return": -0.6183738533493406,
+      "undiscounted_raw_sum": -1.5480128568851077,
+      "postpone_count": 15,
+      "postpone_actions": [
+        {
+          "step": 6,
+          "time": 5.801924948952012,
+          "cycle": 1,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.020681541416607635,
+          "phi_next": -0.01957710782639318,
+          "shaping_delta": 0.001300204668478383
+        },
+        {
+          "step": 11,
+          "time": 14.227162329533499,
+          "cycle": 1,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.02849438636421545,
+          "phi_next": -0.02774991628670265,
+          "shaping_delta": 0.0010219692403798247
+        },
+        {
+          "step": 20,
+          "time": 18.372762079267115,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.013089583081715718,
+          "phi_next": -0.011985149491501266,
+          "shaping_delta": 0.0012242850851294645
+        },
+        {
+          "step": 47,
+          "time": 52.8320311106088,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.03471093127420507,
+          "phi_next": -0.03471093127420507,
+          "shaping_delta": 0.0003471093127420527
+        },
+        {
+          "step": 52,
+          "time": 54.15241489079508,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.03696743748519961,
+          "phi_next": -0.03696743748519961,
+          "shaping_delta": 0.00036967437485199706
+        },
+        {
+          "step": 59,
+          "time": 57.62431493646078,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.04298708428842784,
+          "phi_next": -0.04251596345809132,
+          "shaping_delta": 0.0008962804649174372
+        },
+        {
+          "step": 79,
+          "time": 113.19848388361063,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.024697158861204514,
+          "phi_next": -0.024697158861204514,
+          "shaping_delta": 0.0002469715886120466
+        },
+        {
+          "step": 113,
+          "time": 162.64085048256146,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.09465466505868081,
+          "phi_next": -0.0946010529082271,
+          "shaping_delta": 0.0009996226795359886
+        },
+        {
+          "step": 116,
+          "time": 169.3259958129628,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.01661458233840435,
+          "phi_next": -0.01661458233840435,
+          "shaping_delta": 0.00016614582338404793
+        },
+        {
+          "step": 117,
+          "time": 169.3259958129628,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01661458233840435,
+          "phi_next": -0.01661458233840435,
+          "shaping_delta": 0.00016614582338404793
+        },
+        {
+          "step": 175,
+          "time": 246.86777650745583,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01661458233840435,
+          "phi_next": -0.01661458233840435,
+          "shaping_delta": 0.00016614582338404793
+        },
+        {
+          "step": 240,
+          "time": 325.60051893551054,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01933067086631932,
+          "phi_next": -0.01933067086631932,
+          "shaping_delta": 0.0001933067086631879
+        },
+        {
+          "step": 263,
+          "time": 341.0706578385471,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.04576879063383532,
+          "phi_next": -0.04576879063383532,
+          "shaping_delta": 0.0004576879063383499
+        },
+        {
+          "step": 324,
+          "time": 417.5713726394911,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.03694366778409602,
+          "phi_next": -0.03694366778409602,
+          "shaping_delta": 0.0003694366778409508
+        },
+        {
+          "step": 331,
+          "time": 420.714799187187,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.04231571312055137,
+          "phi_next": -0.04184459229021485,
+          "shaping_delta": 0.0008895667532386742
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "steps": 404,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682181,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 6.938893903907228e-18,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.20189023325944244,
+      "discounted_shaped_return": -0.18973328293176026,
+      "undiscounted_raw_sum": -0.5514936137991436,
+      "postpone_count": 5,
+      "postpone_actions": [
+        {
+          "step": 17,
+          "time": 20.929055725559756,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.01487303881658717,
+          "phi_next": -0.013768605226372717,
+          "shaping_delta": 0.0012421196424781816
+        },
+        {
+          "step": 33,
+          "time": 30.064974705496113,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.10000000000000002,
+          "phi_curr": -0.024313900733384346,
+          "phi_next": -0.024313900733384346,
+          "shaping_delta": 0.0002431390073338452
+        },
+        {
+          "step": 189,
+          "time": 302.77907275478947,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.02610401041902266,
+          "phi_next": -0.02610401041902266,
+          "shaping_delta": 0.00026104010419022994
+        },
+        {
+          "step": 214,
+          "time": 313.51198055308816,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.04444630867527359,
+          "phi_next": -0.04444630867527359,
+          "shaping_delta": 0.00044446308675273605
+        },
+        {
+          "step": 223,
+          "time": 317.15015124015747,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.050521421409298675,
+          "phi_next": -0.050050300578962155,
+          "shaping_delta": 0.0009716238361261453
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "steps": 275,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682176,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 1.734723475976807e-18,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.36266550770400163,
+      "discounted_shaped_return": -0.3505085573763197,
+      "undiscounted_raw_sum": -0.9399827818382985,
+      "postpone_count": 9,
+      "postpone_actions": [
+        {
+          "step": 18,
+          "time": 30.09840862982096,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.028535291498526752,
+          "phi_next": -0.027430857908312293,
+          "shaping_delta": 0.0013787421692975782
+        },
+        {
+          "step": 29,
+          "time": 39.72998672586147,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.03957671889725992,
+          "phi_next": -0.03901259233454845,
+          "shaping_delta": 0.0009542524860569612
+        },
+        {
+          "step": 45,
+          "time": 51.82720235300407,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.019706755241460313,
+          "phi_next": -0.019706755241460313,
+          "shaping_delta": 0.00019706755241460927
+        },
+        {
+          "step": 70,
+          "time": 112.98719711674703,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.020756095987027226,
+          "phi_next": -0.020756095987027226,
+          "shaping_delta": 0.000207560959870276
+        },
+        {
+          "step": 146,
+          "time": 249.776165330643,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.01642977798358547,
+          "phi_next": -0.01642977798358547,
+          "shaping_delta": 0.00016429777983585636
+        },
+        {
+          "step": 158,
+          "time": 250.86990609423168,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.017916084109941933,
+          "phi_next": -0.017916084109941933,
+          "shaping_delta": 0.00017916084109942387
+        },
+        {
+          "step": 191,
+          "time": 328.0133423549312,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.018560748082766487,
+          "phi_next": -0.018560748082766487,
+          "shaping_delta": 0.00018560748082765977
+        },
+        {
+          "step": 206,
+          "time": 405.1567786156307,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.018483760726757135,
+          "phi_next": -0.018483760726757135,
+          "shaping_delta": 0.0001848376072675767
+        },
+        {
+          "step": 223,
+          "time": 407.27994674084437,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.0218436704023492,
+          "phi_next": -0.02137254957201268,
+          "shaping_delta": 0.0006848463260566429
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "steps": 262,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682178,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 3.469446951953614e-18,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.5526064644938943,
+      "discounted_shaped_return": -0.5404495141662115,
+      "undiscounted_raw_sum": -1.439735582717074,
+      "postpone_count": 14,
+      "postpone_actions": [
+        {
+          "step": 0,
+          "time": 0.0,
+          "cycle": 1,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.012156950327682174,
+          "phi_next": -0.011052516737467719,
+          "shaping_delta": 0.0012149587575891324
+        },
+        {
+          "step": 41,
+          "time": 31.30953868670337,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.09999999999999999,
+          "phi_curr": -0.019453309538388742,
+          "phi_next": -0.01898218870805222,
+          "shaping_delta": 0.0006609427174170401
+        },
+        {
+          "step": 48,
+          "time": 87.10435287021909,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.01748413992077902,
+          "phi_next": -0.01748413992077902,
+          "shaping_delta": 0.00017484139920778685
+        },
+        {
+          "step": 66,
+          "time": 88.6936590375743,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.01933067086631932,
+          "phi_next": -0.0188595500359828,
+          "shaping_delta": 0.0006597163306963499
+        },
+        {
+          "step": 75,
+          "time": 144.48847322109003,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.01661458233840435,
+          "phi_next": -0.01661458233840435,
+          "shaping_delta": 0.00016614582338404793
+        },
+        {
+          "step": 87,
+          "time": 145.03419882415042,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.017547215131447885,
+          "phi_next": -0.017547215131447885,
+          "shaping_delta": 0.0001754721513144708
+        },
+        {
+          "step": 94,
+          "time": 145.5822139846787,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.018483760726757135,
+          "phi_next": -0.018483760726757135,
+          "shaping_delta": 0.0001848376072675767
+        },
+        {
+          "step": 105,
+          "time": 146.15931138982918,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.01932756800504202,
+          "phi_next": -0.0188564471747055,
+          "shaping_delta": 0.0006596853020835736
+        },
+        {
+          "step": 144,
+          "time": 226.1413264006667,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.02468887498419727,
+          "phi_next": -0.024217754153860748,
+          "shaping_delta": 0.000713298371875129
+        },
+        {
+          "step": 167,
+          "time": 299.76304218090274,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.018302533357874882,
+          "phi_next": -0.018302533357874882,
+          "shaping_delta": 0.00018302533357875128
+        },
+        {
+          "step": 173,
+          "time": 300.3646519098442,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01933067086631932,
+          "phi_next": -0.01933067086631932,
+          "shaping_delta": 0.0001933067086631879
+        },
+        {
+          "step": 191,
+          "time": 377.0125227667772,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01885984510189819,
+          "phi_next": -0.01885984510189819,
+          "shaping_delta": 0.0001885984510189842
+        },
+        {
+          "step": 198,
+          "time": 377.1334005736553,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01906642255769927,
+          "phi_next": -0.01906642255769927,
+          "shaping_delta": 0.0001906642255769947
+        },
+        {
+          "step": 208,
+          "time": 379.2589722462899,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.02272267027980146,
+          "phi_next": -0.02225154944946494,
+          "shaping_delta": 0.0006936363248311733
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 5,
+      "steps": 253,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682173,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": -1.734723475976807e-18,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.7121659272734527,
+      "discounted_shaped_return": -0.7000089769457701,
+      "undiscounted_raw_sum": -1.4423574984062717,
+      "postpone_count": 14,
+      "postpone_actions": [
+        {
+          "step": 0,
+          "time": 0.0,
+          "cycle": 1,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.012156950327682174,
+          "phi_next": -0.011052516737467719,
+          "shaping_delta": 0.0012149587575891324
+        },
+        {
+          "step": 10,
+          "time": 15.519670336781795,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.012156950327682174,
+          "phi_next": -0.011052516737467715,
+          "shaping_delta": 0.0012149587575891324
+        },
+        {
+          "step": 21,
+          "time": 21.07266779484466,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.019650736729156647,
+          "phi_next": -0.019650736729156647,
+          "shaping_delta": 0.0001965073672915707
+        },
+        {
+          "step": 29,
+          "time": 33.81583935580067,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.016990666713545318,
+          "phi_next": -0.016990666713545318,
+          "shaping_delta": 0.00016990666713545544
+        },
+        {
+          "step": 43,
+          "time": 34.938662364011535,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.01893323950015318,
+          "phi_next": -0.018462118669816646,
+          "shaping_delta": 0.0006557420170346939
+        },
+        {
+          "step": 49,
+          "time": 92.72104750819031,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.01661458233840435,
+          "phi_next": -0.01661458233840435,
+          "shaping_delta": 0.00016614582338404793
+        },
+        {
+          "step": 55,
+          "time": 101.29947123068546,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.03127491572088675,
+          "phi_next": -0.03127491572088675,
+          "shaping_delta": 0.000312749157208872
+        },
+        {
+          "step": 73,
+          "time": 103.65397734910512,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.0350263333901895,
+          "phi_next": -0.03455521255985298,
+          "shaping_delta": 0.0008166729559350439
+        },
+        {
+          "step": 100,
+          "time": 162.32176231427866,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.02211220734464461,
+          "phi_next": -0.02211220734464461,
+          "shaping_delta": 0.00022112207344644752
+        },
+        {
+          "step": 158,
+          "time": 315.5940409919843,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.020378289263942438,
+          "phi_next": -0.020378289263942438,
+          "shaping_delta": 0.0002037828926394203
+        },
+        {
+          "step": 170,
+          "time": 315.5950487884465,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.020380011565450915,
+          "phi_next": -0.020380011565450915,
+          "shaping_delta": 0.00020380011565451772
+        },
+        {
+          "step": 174,
+          "time": 316.63762153116994,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.022019305736304312,
+          "phi_next": -0.021548184905967792,
+          "shaping_delta": 0.0006866026793962005
+        },
+        {
+          "step": 186,
+          "time": 390.53516220757473,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.016990666713545356,
+          "phi_next": -0.016990666713545356,
+          "shaping_delta": 0.00016990666713545544
+        },
+        {
+          "step": 193,
+          "time": 390.53516220757473,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.01687192098962753,
+          "phi_next": -0.01687192098962753,
+          "shaping_delta": 0.00016871920989627864
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 6,
+      "steps": 297,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682206,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 3.122502256758253e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.5721504158226323,
+      "discounted_shaped_return": -0.5599934654949494,
+      "undiscounted_raw_sum": -1.4441007910452448,
+      "postpone_count": 14,
+      "postpone_actions": [
+        {
+          "step": 1,
+          "time": 0.0,
+          "cycle": 1,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.01215695040570217,
+          "phi_next": -0.011052516815487714,
+          "shaping_delta": 0.0012149587583693278
+        },
+        {
+          "step": 15,
+          "time": 14.77288793259389,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.01262326663253045,
+          "phi_next": -0.011518833042315997,
+          "shaping_delta": 0.0012196219206376119
+        },
+        {
+          "step": 37,
+          "time": 36.53045472624269,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.026656921493744944,
+          "phi_next": -0.026656921493744944,
+          "shaping_delta": 0.000266569214937451
+        },
+        {
+          "step": 53,
+          "time": 96.43103468484647,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.016990666713545308,
+          "phi_next": -0.016990666713545308,
+          "shaping_delta": 0.00016990666713545544
+        },
+        {
+          "step": 55,
+          "time": 96.43103468484647,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.016990666713545308,
+          "phi_next": -0.016990666713545308,
+          "shaping_delta": 0.00016990666713545544
+        },
+        {
+          "step": 86,
+          "time": 159.9576524069828,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.018483760726757135,
+          "phi_next": -0.018483760726757135,
+          "shaping_delta": 0.0001848376072675767
+        },
+        {
+          "step": 89,
+          "time": 159.9576524069828,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.018483760726757135,
+          "phi_next": -0.018483760726757135,
+          "shaping_delta": 0.0001848376072675767
+        },
+        {
+          "step": 152,
+          "time": 243.14934734709078,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.028820098904026738,
+          "phi_next": -0.028820098904026738,
+          "shaping_delta": 0.0002882009890402687
+        },
+        {
+          "step": 155,
+          "time": 243.14934734709078,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.028820098904026738,
+          "phi_next": -0.028348978073690217,
+          "shaping_delta": 0.0007546106110734307
+        },
+        {
+          "step": 185,
+          "time": 323.57313616385017,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.03480223208715658,
+          "phi_next": -0.03480223208715658,
+          "shaping_delta": 0.0003480223208715688
+        },
+        {
+          "step": 188,
+          "time": 323.57313616385017,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.03480223208715658,
+          "phi_next": -0.03480223208715658,
+          "shaping_delta": 0.0003480223208715688
+        },
+        {
+          "step": 197,
+          "time": 324.87745509975963,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.03689060291962991,
+          "phi_next": -0.03689060291962991,
+          "shaping_delta": 0.00036890602919630033
+        },
+        {
+          "step": 199,
+          "time": 324.87745509975963,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.03689060291962991,
+          "phi_next": -0.03641948208929339,
+          "shaping_delta": 0.0008353156512294624
+        },
+        {
+          "step": 263,
+          "time": 469.7470238801095,
+          "cycle": 9,
+          "task_id": null,
+          "raw_reward": -0.10000000000000009,
+          "phi_curr": -0.020529261569070416,
+          "phi_next": -0.020058140738733896,
+          "shaping_delta": 0.0006717022377238646
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 7,
+      "steps": 263,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682178,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 3.469446951953614e-18,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.09045185411353215,
+      "discounted_shaped_return": -0.07829490378584991,
+      "undiscounted_raw_sum": -0.4285629494708979,
+      "postpone_count": 4,
+      "postpone_actions": [
+        {
+          "step": 84,
+          "time": 144.67180118047352,
+          "cycle": 5,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.018483760726757135,
+          "phi_next": -0.018483760726757135,
+          "shaping_delta": 0.0001848376072675767
+        },
+        {
+          "step": 174,
+          "time": 299.4778959425442,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.09999999999999999,
+          "phi_curr": -0.08657164937979099,
+          "phi_next": -0.08657164937979099,
+          "shaping_delta": 0.0008657164937979078
+        },
+        {
+          "step": 187,
+          "time": 300.46660024082,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.08657164937979099,
+          "phi_next": -0.08657164937979099,
+          "shaping_delta": 0.0008657164937979078
+        },
+        {
+          "step": 246,
+          "time": 536.8966257170097,
+          "cycle": 10,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.01735382238348992,
+          "phi_next": -0.015308804742675736,
+          "shaping_delta": 0.002198105688240942
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 8,
+      "steps": 256,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682213,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 3.8163916471489756e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.03905157182958154,
+      "discounted_shaped_return": -0.026894621501899335,
+      "undiscounted_raw_sum": -0.22753108910510245,
+      "postpone_count": 2,
+      "postpone_actions": [
+        {
+          "step": 165,
+          "time": 305.5260378079742,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.01933067086631932,
+          "phi_next": -0.01933067086631932,
+          "shaping_delta": 0.0001933067086631879
+        },
+        {
+          "step": 199,
+          "time": 387.0571893670073,
+          "cycle": 8,
+          "task_id": null,
+          "raw_reward": -0.10000000000000002,
+          "phi_curr": -0.018483760726757135,
+          "phi_next": -0.018483760726757135,
+          "shaping_delta": 0.0001848376072675767
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 9,
+      "steps": 249,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682232,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 5.724587470723463e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.08533813651887345,
+      "discounted_shaped_return": -0.07318118619119118,
+      "undiscounted_raw_sum": -0.42638322431116676,
+      "postpone_count": 4,
+      "postpone_actions": [
+        {
+          "step": 125,
+          "time": 210.17255802547814,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.06302141111256503,
+          "phi_next": -0.06302141111256503,
+          "shaping_delta": 0.0006302141111256543
+        },
+        {
+          "step": 151,
+          "time": 286.3784580359384,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.01885984510189819,
+          "phi_next": -0.01885984510189819,
+          "shaping_delta": 0.0001885984510189842
+        },
+        {
+          "step": 163,
+          "time": 286.87402343970496,
+          "cycle": 7,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.019706755241460375,
+          "phi_next": -0.019706755241460375,
+          "shaping_delta": 0.00019706755241460927
+        },
+        {
+          "step": 233,
+          "time": 517.8087668180368,
+          "cycle": 10,
+          "task_id": null,
+          "raw_reward": -0.10000000000000003,
+          "phi_curr": -0.00746863137877969,
+          "phi_next": -0.0054236137379657014,
+          "shaping_delta": 0.0020992537781936438
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 10,
+      "steps": 244,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682168,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": -6.938893903907228e-18,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.2035639754710731,
+      "discounted_shaped_return": -0.1914070251433908,
+      "undiscounted_raw_sum": -0.32610900249503105,
+      "postpone_count": 3,
+      "postpone_actions": [
+        {
+          "step": 21,
+          "time": 14.227162329533499,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.01215695026721668,
+          "phi_next": -0.01215695026721668,
+          "shaping_delta": 0.0001215695026721697
+        },
+        {
+          "step": 50,
+          "time": 80.5079707406817,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.018302533357874882,
+          "phi_next": -0.018302533357874882,
+          "shaping_delta": 0.00018302533357875128
+        },
+        {
+          "step": 58,
+          "time": 81.05369634374209,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.09999999999999998,
+          "phi_curr": -0.019235166150918418,
+          "phi_next": -0.019235166150918418,
+          "shaping_delta": 0.00019235166150918803
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 11,
+      "steps": 241,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682197,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 2.2551405187698492e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.1659725336417443,
+      "discounted_shaped_return": -0.15381558331406234,
+      "undiscounted_raw_sum": -0.2254823031935503,
+      "postpone_count": 2,
+      "postpone_actions": [
+        {
+          "step": 3,
+          "time": 0.0,
+          "cycle": 1,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.012156950216503681,
+          "phi_next": -0.011052516626289227,
+          "shaping_delta": 0.0012149587564773412
+        },
+        {
+          "step": 47,
+          "time": 86.09503687603343,
+          "cycle": 4,
+          "task_id": null,
+          "raw_reward": -0.10000000000000002,
+          "phi_curr": -0.016614582338404325,
+          "phi_next": -0.016614582338404325,
+          "shaping_delta": 0.00016614582338404793
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 12,
+      "steps": 280,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682195,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 2.0816681711721685e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.032326300352354446,
+      "discounted_shaped_return": -0.02016935002467227,
+      "undiscounted_raw_sum": -0.12913422666999302,
+      "postpone_count": 1,
+      "postpone_actions": [
+        {
+          "step": 135,
+          "time": 232.58181397547344,
+          "cycle": 6,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.028924415097241297,
+          "phi_next": -0.028924415097241297,
+          "shaping_delta": 0.0002892441509724092
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 13,
+      "steps": 261,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.012156950327682204,
+      "rhs_telescope_endpoint": 0.012156950327682174,
+      "telescope_residual": 2.949029909160572e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.09387627148250441,
+      "discounted_shaped_return": -0.08171932115482217,
+      "undiscounted_raw_sum": -0.12818150206084097,
+      "postpone_count": 1,
+      "postpone_actions": [
+        {
+          "step": 14,
+          "time": 16.81217834403009,
+          "cycle": 2,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.012156950249662178,
+          "phi_next": -0.011052516659447726,
+          "shaping_delta": 0.001214958756808937
+        }
+      ]
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 14,
+      "steps": 67,
+      "terminated": false,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.012156950327682174,
+      "phi_end": -0.036759858701958636,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": -0.006590053644464767,
+      "rhs_telescope_endpoint": -0.006590053644464777,
+      "telescope_residual": 9.540979117872439e-18,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.06945897269963018,
+      "discounted_shaped_return": -0.076049026344095,
+      "undiscounted_raw_sum": -0.10197508710069647,
+      "postpone_count": 1,
+      "postpone_actions": [
+        {
+          "step": 38,
+          "time": 31.336138833670514,
+          "cycle": 3,
+          "task_id": null,
+          "raw_reward": -0.1,
+          "phi_curr": -0.019330670866319323,
+          "phi_next": -0.018859550035982803,
+          "shaping_delta": 0.0006597163306963499
+        }
+      ]
+    }
+  ]
+}

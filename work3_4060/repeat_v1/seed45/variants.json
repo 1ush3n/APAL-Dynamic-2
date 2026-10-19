@@ -1,0 +1,39 @@
+{
+  "expected_seed": 45,
+  "comparison_mode": "fd",
+  "variants": [
+    {
+      "label": "F_b4096",
+      "method": "F",
+      "checkpoint": "work3_4060/repeat_v1/seed45/F_beta01_b4096/weights.pt",
+      "run_json": "work3_4060/repeat_v1/seed45/F_beta01_b4096/run.json",
+      "audit_json": "work3_4060/repeat_v1/seed45/F_beta01_b4096/shaping_audit_summary.json",
+      "expected_beta": 0.1,
+      "expected_decisions": 4096,
+      "expected_seed": 45,
+      "is_target": true
+    },
+    {
+      "label": "D_b4096",
+      "method": "D",
+      "checkpoint": "work3_4060/repeat_v1/seed45/D_beta01_b4096/weights.pt",
+      "run_json": "work3_4060/repeat_v1/seed45/D_beta01_b4096/run.json",
+      "audit_json": "work3_4060/repeat_v1/seed45/D_beta01_b4096/shaping_audit_summary.json",
+      "expected_beta": 0.1,
+      "expected_decisions": 4096,
+      "expected_seed": 45,
+      "is_target": true
+    },
+    {
+      "label": "C_b4096",
+      "method": "C",
+      "checkpoint": "work3_4060/repeat_v1/seed45/C_beta1_b4096/weights.pt",
+      "run_json": "work3_4060/repeat_v1/seed45/C_beta1_b4096/run.json",
+      "audit_json": "work3_4060/repeat_v1/seed45/C_beta1_b4096/shaping_audit_summary.json",
+      "expected_beta": 1.0,
+      "expected_decisions": 4096,
+      "expected_seed": 45,
+      "is_target": true
+    }
+  ]
+}
