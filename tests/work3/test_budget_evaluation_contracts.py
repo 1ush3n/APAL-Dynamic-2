@@ -242,3 +242,85 @@ def test_load_variants_from_json(tmp_path: Path):
     assert variants[0]["label"] == "C_b4096"
     assert variants[0]["expected_seed"] == 45
     assert variants[0]["checkpoint"] == REPO_ROOT / "work3_4060/repeat_v1/seed45/C_beta1_b4096/weights.pt"
+
+
+def test_cf_mode_variants_configuration(tmp_path: Path):
+    """(Section 12.5) 验证 cf 比较模式的默认配置与 manifest 加载。"""
+    variants = get_variants_for_mode("cf")
+    assert len(variants) == 2
+    assert variants[0]["label"] == "C_b4096"
+    assert variants[0]["method"] == "C"
+    assert variants[0]["expected_beta"] == 1.0
+    assert variants[0]["is_target"] is True
+    assert variants[1]["label"] == "F_b4096"
+    assert variants[1]["method"] == "F"
+    assert variants[1]["expected_beta"] == 1.0
+    assert variants[1]["is_target"] is True
+
+    # 测试通过 variants.json 加载 cf 模式
+    manifest_data = {
+        "expected_seed": 42,
+        "comparison_mode": "cf",
+        "variants": [
+            {
+                "label": "C_b4096",
+                "method": "C",
+                "checkpoint": "work3_4060/budget_v1/seed42/C_b4096/weights.pt",
+                "run_json": "work3_4060/budget_v1/seed42/C_b4096/run.json",
+                "audit_json": "work3_4060/budget_v1/seed42/C_b4096/shaping_audit_summary.json",
+                "expected_beta": 1.0,
+                "expected_decisions": 4096,
+                "is_target": True,
+            },
+            {
+                "label": "F_b4096",
+                "method": "F",
+                "checkpoint": "work3_4060/representation_v2/seed42/F_beta1_b4096/weights.pt",
+                "run_json": "work3_4060/representation_v2/seed42/F_beta1_b4096/run.json",
+                "audit_json": "work3_4060/representation_v2/seed42/F_beta1_b4096/shaping_audit_summary.json",
+                "expected_beta": 1.0,
+                "expected_decisions": 4096,
+                "is_target": True,
+            },
+        ],
+    }
+    manifest_path = tmp_path / "variants_cf.json"
+    manifest_path.write_text(json.dumps(manifest_data), encoding="utf-8")
+    loaded_variants, mode, seed = load_variants_from_json(manifest_path)
+    assert mode == "cf"
+    assert seed == 42
+    assert len(loaded_variants) == 2
+    assert loaded_variants[0]["label"] == "C_b4096"
+    assert loaded_variants[1]["label"] == "F_b4096"
+
+
+def test_cf_actor_fingerprint_mismatch_fails(tmp_path: Path):
+    """(Section 12.5) 验证 C 与 F 初始 Actor 指纹不匹配时拦截并抛出 AssertionError。"""
+    # 构造两个已存在模型的变体清单 (例如 C_b4096 与篡改了初始 Actor 指纹的副本)
+    real_variants = get_variants_for_mode("cd")
+    c_run_path = real_variants[0]["run_json"]
+    with Path(c_run_path).open("r", encoding="utf-8") as f:
+        c_run = json.load(f)
+
+    tampered_run_data = copy.deepcopy(c_run)
+    tampered_run_data["initial_actor_fingerprint"] = "0000000000000000000000000000000000000000000000000000000000000000"
+    tampered_run_path = tmp_path / "tampered_f_run.json"
+    tampered_run_path.write_text(json.dumps(tampered_run_data), encoding="utf-8")
+
+    test_variants = [
+        copy.deepcopy(real_variants[0]),  # C_b4096
+        {
+            "label": "F_b4096",
+            "method": "C",  # 用已有 C 检查点模拟
+            "checkpoint": real_variants[0]["checkpoint"],
+            "run_json": tampered_run_path,
+            "audit_json": real_variants[0]["audit_json"],
+            "expected_beta": 1.0,
+            "expected_decisions": 4096,
+            "expected_seed": 42,
+            "is_target": True,
+        },
+    ]
+
+    with pytest.raises(AssertionError, match="初始Actor指纹不匹配"):
+        verify_checkpoint_and_run_contracts(test_variants, device="cpu")

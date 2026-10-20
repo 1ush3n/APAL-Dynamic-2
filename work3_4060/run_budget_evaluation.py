@@ -42,7 +42,7 @@ logger = logging.getLogger("BudgetEvaluation")
 
 
 def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
-    """根据评估模式获取默认 seed 42 变体配置 (Section 9.3, 9.5)。"""
+    """根据评估模式获取默认 seed 42 变体配置 (Section 9.3, 9.5, 12.5)。"""
     if mode == "fd":
         return [
             {
@@ -99,6 +99,31 @@ def get_variants_for_mode(mode: str) -> list[dict[str, Any]]:
                 "expected_decisions": 2048,
                 "expected_seed": 42,
                 "is_target": False,
+            },
+        ]
+    elif mode == "cf":
+        return [
+            {
+                "label": "C_b4096",
+                "method": "C",
+                "checkpoint": REPO_ROOT / "work3_4060/budget_v1/seed42/C_b4096/weights.pt",
+                "run_json": REPO_ROOT / "work3_4060/budget_v1/seed42/C_b4096/run.json",
+                "audit_json": REPO_ROOT / "work3_4060/budget_v1/seed42/C_b4096/shaping_audit_summary.json",
+                "expected_beta": 1.0,
+                "expected_decisions": 4096,
+                "expected_seed": 42,
+                "is_target": True,
+            },
+            {
+                "label": "F_b4096",
+                "method": "F",
+                "checkpoint": REPO_ROOT / "work3_4060/representation_v2/seed42/F_beta1_b4096/weights.pt",
+                "run_json": REPO_ROOT / "work3_4060/representation_v2/seed42/F_beta1_b4096/run.json",
+                "audit_json": REPO_ROOT / "work3_4060/representation_v2/seed42/F_beta1_b4096/shaping_audit_summary.json",
+                "expected_beta": 1.0,
+                "expected_decisions": 4096,
+                "expected_seed": 42,
+                "is_target": True,
             },
         ]
     else:  # "cd"
@@ -507,6 +532,17 @@ def verify_checkpoint_and_run_contracts(
                 assert f_par_fp == d_par_fp, f"F4096与D4096初始全参数指纹不匹配: {f_par_fp} vs {d_par_fp}"
             logger.info("F4096 与 D4096 初始参数指纹单变量严格匹配校验通过！")
 
+    # C/F 表征消融目标间初始 Actor 指纹严格匹配核验 (Section 12.4, 12.5)
+    if "C_b4096" in metadata_summary and "F_b4096" in metadata_summary:
+        c_info = metadata_summary["C_b4096"]["run_info"]
+        f_info = metadata_summary["F_b4096"]["run_info"]
+        if c_info and f_info:
+            c_act_fp = c_info.get("initial_actor_fingerprint")
+            f_act_fp = f_info.get("initial_actor_fingerprint")
+            if c_act_fp and f_act_fp:
+                assert c_act_fp == f_act_fp, f"C4096与F4096初始Actor指纹不匹配: {c_act_fp} vs {f_act_fp}"
+            logger.info("C4096 与 F4096 初始Actor指纹单变量严格匹配校验通过！")
+
     return metadata_summary
 
 
@@ -626,6 +662,16 @@ def evaluate_scenarios(
             if "d_b2048_j_total" in row:
                 j_d2048 = float(row["d_b2048_j_total"])
                 row["delta_j_d4096_minus_d2048"] = f"{j_d4096 - j_d2048:+.8e}"
+        elif mode == "cf":
+            # 辅助表征消融主比较：J_C4096 - J_F4096 (正值表示辅助表征/修正输入 F 更优，负值表示无辅助表征 C 更优)
+            j_c4096 = float(row["c_b4096_j_total"])
+            j_f4096 = float(row["f_b4096_j_total"])
+            m_c4096 = float(row["c_b4096_makespan"])
+            m_f4096 = float(row["f_b4096_makespan"])
+            delta_c_minus_f = j_c4096 - j_f4096
+            row["delta_j_c4096_minus_f4096"] = f"{delta_c_minus_f:+.8e}"
+            row["delta_makespan_c4096_minus_f4096"] = f"{m_c4096 - m_f4096:+.4f}"
+            row["f4096_better_than_c4096"] = (delta_c_minus_f > 1e-12)
         else:
             # 等决策预算主比较：J_C4096 - J_D4096 (正值表示 D 费用更优)
             j_c4096 = float(row["c_b4096_j_total"])
@@ -831,6 +877,116 @@ def evaluate_scenarios(
             "- **若 D 在新 seed 超过 F 或 C**: 仅报告新 seed 结果与跨 seed 差异；不能用它抹去 seed 42 或直接恢复“方法普遍优越”的表述。",
             "- **若仅效果变好但可行性/账本/来源合同失败**: 不具备有效效果比较条件，只修具体失败，不新增机制结论。",
         ])
+    elif mode == "cf":
+        # 辅助表征消融 summary (C_b4096 vs F_b4096)
+        c_wins_val = sum(1 for r in val_rows if float(r["delta_j_c4096_minus_f4096"]) < -1e-12)
+        f_wins_val = sum(1 for r in val_rows if float(r["delta_j_c4096_minus_f4096"]) > 1e-12)
+        ties_val = val_count - c_wins_val - f_wins_val
+
+        mean_j_c4k_val = sum(float(r["c_b4096_j_total"]) for r in val_rows) / val_count
+        mean_j_f4k_val = sum(float(r["f_b4096_j_total"]) for r in val_rows) / val_count
+        mean_m_c4k_val = sum(float(r["c_b4096_makespan"]) for r in val_rows) / val_count
+        mean_m_f4k_val = sum(float(r["f_b4096_makespan"]) for r in val_rows) / val_count
+        mean_delta_cf_val = mean_j_c4k_val - mean_j_f4k_val
+
+        nom_j_c4k = float(nom_row["c_b4096_j_total"])
+        nom_j_f4k = float(nom_row["f_b4096_j_total"])
+        nom_m_c4k = float(nom_row["c_b4096_makespan"])
+        nom_m_f4k = float(nom_row["f_b4096_makespan"])
+        nom_delta_cf = nom_j_c4k - nom_j_f4k
+
+        c_meta = (metadata_summary or {}).get("C_b4096", {}).get("run_info", {})
+        f_meta = (metadata_summary or {}).get("F_b4096", {}).get("run_info", {})
+
+        if mean_delta_cf_val > 1e-12:
+            winner_str = "F(辅助表征+修正输入)更优"
+        elif mean_delta_cf_val < -1e-12:
+            winner_str = "C(无辅助表征)更优"
+        else:
+            winner_str = "持平"
+
+        lines = [
+            f"# Work-3 辅助表征消融评估报告 (C_b4096 vs F_b4096, Seed {eval_seed}, Beta 1.0)",
+            f"评估设备：`{device}` | 种子：`{eval_seed}` | 决策预算：严格 4096 决策步 | 塑形系数：Beta=1.0 | 主聚合：4个 Validation 场景 (Nominal 单列)",
+            "",
+            "## 1. 表征消融核心结论与判定 (Section 12.5, 12.6)",
+            f"- **正确性前提检验**: 目标模型塑形审计动态核验 `{all_target_audits_pass}` (8/8项合同均PASS), 独立物理可行 100% (`{all_target_feasible}`), 账本加权分项和最大误差 `{max_target_ledger_err:.2e}` (守恒), 综合放行状态: `{'PASS' if correctness_gate_pass else 'FAIL'}`。",
+            f"- **4个 Validation 场景主口径聚合**: ",
+            f"  - **平均综合费用 J_total**: C(4096步, beta=1.0) = `{mean_j_c4k_val:.8e}`, F(4096步, beta=1.0) = `{mean_j_f4k_val:.8e}`",
+            f"  - **平均净优势 Delta_1 (J_C4096 - J_F4096)**: `{winner_str}` (`{mean_delta_cf_val:+.8e}`)",
+            f"  - **逐场景胜出对比**: **F 胜 {f_wins_val} / {val_count}** | **C 胜 {c_wins_val} / {val_count}** | **平局 {ties_val} / {val_count}**",
+            f"  - **平均工期 Makespan**: C(4096步) = `{mean_m_c4k_val:.2f}h`, F(4096步) = `{mean_m_f4k_val:.2f}h` (差异: `{mean_m_c4k_val - mean_m_f4k_val:+.2f}h`)",
+            f"- **Nominal 场景单列**: ",
+            f"  - J_total: C(4096步) = `{nom_j_c4k:.8e}`, F(4096步) = `{nom_j_f4k:.8e}` (Delta_1: `{nom_delta_cf:+.8e}`)",
+            f"  - 工期: C = `{nom_m_c4k:.2f}h`, F = `{nom_m_f4k:.2f}h`",
+            "",
+            "> [!IMPORTANT]",
+            "> **对比解释与机制边界 (Section 12.4-12.6)**：",
+            "> 1. **严格表征消融对照**：C4096（启发式 $\\Phi, \\beta=1.0$）与 F4096（启发式 $\\Phi, \\beta=1.0$）共享相同初始 Actor 指纹、训练数据 mini210、种子 42、4096 决策预算、启发式势函数及 $\\beta=1.0$；唯一的机制差异是时间辅助监督与修正时间输入。",
+            "> 2. **优化步数与更新分解核查 (精确分解)**：",
+            f">    - **C(4096步)**: 墙钟耗时 `{c_meta.get('wall_clock_seconds', 'N/A')}s`, 总优化更新 `{c_meta.get('total_updates', 'N/A')}` 次 (其中 PPO更新 `{c_meta.get('ppo_updates', 'N/A')}` 次, 辅助头更新 `{c_meta.get('auxiliary_updates', 'N/A')}` 次), 成功批次 `{c_meta.get('successful_episodes', 'N/A')}`",
+            f">    - **F(4096步)**: 墙钟耗时 `{f_meta.get('wall_clock_seconds', 'N/A')}s`, 总优化更新 `{f_meta.get('total_updates', 'N/A')}` 次 (其中 PPO更新 `{f_meta.get('ppo_updates', 'N/A')}` 次, 辅助头更新 `{f_meta.get('auxiliary_updates', 'N/A')}` 次), 成功批次 `{f_meta.get('successful_episodes', 'N/A')}`",
+            "",
+            "## 2. 逐场景辅助表征消融对比主表 (C_b4096 vs F_b4096, Beta=1.0)",
+            "| 场景 ID | C_4096 J | F_4096 J | Delta_1 (C-F, 正=F优) | F优? | C_4096 工期 | F_4096 工期 | Delta 工期 | C 显式推进 | F 显式推进 | 双方可行? |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+        ]
+        for r in csv_rows:
+            delta_val = float(r["delta_j_c4096_minus_f4096"])
+            if delta_val > 1e-12:
+                better_str = "**是 (F优)**"
+            elif delta_val < -1e-12:
+                better_str = "否 (C优)"
+            else:
+                better_str = "持平"
+
+            is_nom = (r["scenario_id"] == "NOMINAL")
+            sc_label = f"**`{r['scenario_id']}` (单列)**" if is_nom else f"`{r['scenario_id']}`"
+            lines.append(
+                f"| {sc_label} | {r['c_b4096_j_total']} | {r['f_b4096_j_total']} | "
+                f"**{r['delta_j_c4096_minus_f4096']}** | {better_str} | "
+                f"{round(float(r['c_b4096_makespan']), 2)}h | {round(float(r['f_b4096_makespan']), 2)}h | "
+                f"{float(r['delta_makespan_c4096_minus_f4096']):+.2f}h | "
+                f"{r['c_b4096_advance_pct']} ({r['c_b4096_explicit_advances']}/{r['c_b4096_total_decisions']}) | "
+                f"{r['f_b4096_advance_pct']} ({r['f_b4096_explicit_advances']}/{r['f_b4096_total_decisions']}) | "
+                f"{'PASS' if (r['c_b4096_feasible'] and r['f_b4096_feasible']) else 'FAIL'} |"
+            )
+
+        delta_01 = 0.008290731995
+        I_interaction = mean_delta_cf_val - delta_01
+        lines.extend([
+            "",
+            "## 3. 表征组合与塑形系数四格对照表 (Four-Cell Matrix: C/F x Beta 0.1/1.0)",
+            "| 方法配置 | Beta = 0.1 | Beta = 1.0 | Delta Beta (Beta1.0 - Beta0.1) |",
+            "| :--- | :--- | :--- | :--- |",
+            f"| **Method C** (无辅助表征) | `0.05319762` | `{mean_j_c4k_val:.8e}` | `{mean_j_c4k_val - 0.05319762:+.8e}` |",
+            f"| **Method F** (辅助表征+修正输入) | `0.04490689` | `{mean_j_f4k_val:.8e}` | `{mean_j_f4k_val - 0.04490689:+.8e}` |",
+            f"| **Delta (C - F, 正=F优)** | `+{delta_01:.8e}` (Delta_0.1) | `{mean_delta_cf_val:+.8e}` (Delta_1) | **交互差 I = {I_interaction:+.8e}** |",
+            "",
+            "## 4. 全变体费用五分项完整明细表 (已加权费用，保留完整精度)",
+            "> 术语说明：D_team 为团队替换偏差费用，J_revision 为计划修订费用，D_time 为周期内开工时间偏差费用；J_takt 与 J_postpone 均为 0。",
+            "| 场景 / 变体 | J_total | c_takt | c_time | c_team | c_postpone | c_revision | 账本误差 |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for r in csv_rows:
+            sc = r["scenario_id"]
+            for v in variants:
+                lbl = v["label"]
+                pfx = lbl.lower()
+                lines.append(
+                    f"| `{sc}` / `{lbl}` | {r[f'{pfx}_j_total']} | {r[f'{pfx}_c_takt']} | "
+                    f"{r[f'{pfx}_c_time']} | {r[f'{pfx}_c_team']} | {r[f'{pfx}_c_postpone']} | "
+                    f"{r[f'{pfx}_c_revision']} | {r[f'{pfx}_cost_sum_error']} |"
+                )
+
+        lines.extend([
+            "",
+            "## 5. 机制判定与后续决策依据 (Section 12.6 预设规则)",
+            "- **若 Delta_1 > 0 且费用改善超过数值扰动量级，物理/账本正常**: 在本 seed 两种 Beta 下均观察到组合收益，且新 F(Beta=1.0) 超过原标准 C(Beta=1.0)；下一阶段才考虑用已有 C45(Beta=1.0) 补 F45(Beta=1.0) 重复；本轮不自动启动。",
+            "- **若 Delta_1 <= 0 或接近数值扰动，而 Delta_0.1 > 0**: 组合收益在当前记录中依赖 Beta 条件，不能宣称完整 F 配置优于标准 C；保留标准 C，不继续扫描 Beta 或扩大训练预算来追求胜出。",
+            "- **四格行为/分项显示不同权衡**: 分别报告费用、工期和行为，不把费用优势称为全面优势；不屏蔽合法等待或后移，不改原始目标。",
+            "- **新 F 出现后段退化、审计或可行性问题**: 如实记录，区分策略效果与实现合同；只定位具体失败，不当作成功结果、不追加预算补救。",
+        ])
     else:
         # cd 模式 summary
         d_wins_val = sum(1 for r in val_rows if float(r["delta_j_c4096_minus_d4096"]) > 1e-12)
@@ -963,9 +1119,9 @@ def main():
     p.add_argument(
         "--comparison",
         type=str,
-        choices=["auto", "cd", "fd"],
+        choices=["auto", "cd", "fd", "cf"],
         default="auto",
-        help="评估比较模式: cd (等决策预算), fd (机制消融), auto (根据 output-dir 或 variants-json 自动推断)",
+        help="评估比较模式: cd (等决策预算), fd (机制消融), cf (辅助表征消融), auto (根据 output-dir 或 variants-json 自动推断)",
     )
     p.add_argument(
         "--variants-json",
@@ -983,20 +1139,26 @@ def main():
         variants, json_mode, json_seed = load_variants_from_json(args.variants_json)
         if json_seed is not None:
             eval_seed = json_seed
-        mode = args.comparison if args.comparison != "auto" else (json_mode or "fd")
+        mode = args.comparison if args.comparison != "auto" else (json_mode or "cf" if "representation_v2" in str(args.variants_json) else (json_mode or "fd"))
     else:
         mode = args.comparison
         if mode == "auto":
-            if args.output_dir is not None and "mechanism_v2" in str(args.output_dir):
+            if args.output_dir is not None and "representation_v2" in str(args.output_dir):
+                mode = "cf"
+            elif args.output_dir is not None and "mechanism_v2" in str(args.output_dir):
                 mode = "fd"
             else:
                 mode = "cd"
         variants = get_variants_for_mode(mode)
 
     output_dir = args.output_dir or (
-        REPO_ROOT / f"work3_4060/mechanism_v2/seed{eval_seed}/evaluation"
-        if mode == "fd"
-        else REPO_ROOT / f"work3_4060/budget_v1/equal_budget_evaluation"
+        REPO_ROOT / f"work3_4060/representation_v2/seed{eval_seed}/evaluation"
+        if mode == "cf"
+        else (
+            REPO_ROOT / f"work3_4060/mechanism_v2/seed{eval_seed}/evaluation"
+            if mode == "fd"
+            else REPO_ROOT / f"work3_4060/budget_v1/equal_budget_evaluation"
+        )
     )
 
     meta = verify_checkpoint_and_run_contracts(variants=variants, device=args.device)

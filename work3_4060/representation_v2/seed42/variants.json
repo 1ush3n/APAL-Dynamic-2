@@ -1,0 +1,26 @@
+{
+  "comparison_mode": "cf",
+  "expected_seed": 42,
+  "variants": [
+    {
+      "label": "C_b4096",
+      "method": "C",
+      "checkpoint": "work3_4060/budget_v1/seed42/C_b4096/weights.pt",
+      "run_json": "work3_4060/budget_v1/seed42/C_b4096/run.json",
+      "audit_json": "work3_4060/budget_v1/seed42/C_b4096/shaping_audit_summary.json",
+      "expected_beta": 1.0,
+      "expected_decisions": 4096,
+      "is_target": true
+    },
+    {
+      "label": "F_b4096",
+      "method": "F",
+      "checkpoint": "work3_4060/representation_v2/seed42/F_beta1_b4096/weights.pt",
+      "run_json": "work3_4060/representation_v2/seed42/F_beta1_b4096/run.json",
+      "audit_json": "work3_4060/representation_v2/seed42/F_beta1_b4096/shaping_audit_summary.json",
+      "expected_beta": 1.0,
+      "expected_decisions": 4096,
+      "is_target": true
+    }
+  ]
+}
