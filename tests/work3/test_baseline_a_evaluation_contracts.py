@@ -40,8 +40,20 @@ from work3_4060.run_baseline_a_evaluation import (
     compute_comparison_metrics,
     compute_file_sha256,
     compute_lf_normalized_sha256,
+    generate_markdown_report,
+    run_baseline_a_scenario,
     verify_and_load_learning_results,
 )
+from work3_4060.run_baseline_a_reachability_diagnostic import (
+    evaluate_action_reachability_and_probs,
+)
+from models.work3.actor_critic import ActorCriticWork3
+from scripts.work3.evaluate_c_vs_d import (
+    compute_cycle_heuristic_cmax,
+    compute_time_urgency_vector,
+    extract_compact_state_features,
+)
+import torch
 
 
 def test_baseline_a_identity_and_type_check():
@@ -278,3 +290,260 @@ def test_sha256_helpers(tmp_path: Path):
     assert compute_file_sha256(crlf_file) != compute_file_sha256(lf_file)
     # 规范化后哈希严格相同
     assert compute_lf_normalized_sha256(crlf_file) == compute_lf_normalized_sha256(lf_file)
+
+
+def test_baseline_a_advance_cause_counts_export():
+    """验证 R-A1 修复：明确区分 explicit (0) 与 auto_after_action (11)，保留完整 advance_cause_counts。"""
+    baseline_path = REPO_ROOT / "work3_4060/data/mini210.json"
+    a_res, facts = run_baseline_a_scenario(
+        baseline_path=baseline_path,
+        scenario=None,
+        scenario_id="NOMINAL",
+        max_decisions=500,
+        device="cpu",
+    )
+    # A 策略绝不调用显式推进 (explicit=0)
+    assert a_res["explicit_advances"] == 0
+    # A 策略的推进全部来自于完成车站作业后的自动周期推移 (auto_after_action=11)
+    assert a_res["automatic_advances"] == 11
+    assert a_res["advance_cause_counts"]["explicit"] == 0
+    assert a_res["advance_cause_counts"]["auto_after_action"] == 11
+    assert a_res["advance_cause_counts"]["none"] == 199
+
+    # facts 中的 production_outcome 也应同步记录
+    prod = facts["production_outcome"]
+    assert prod["explicit_advances"] == 0
+    assert prod["automatic_advances"] == 11
+    assert prod["advance_cause_counts"]["explicit"] == 0
+    assert prod["advance_cause_counts"]["auto_after_action"] == 11
+    assert prod["advance_cause_counts"]["none"] == 199
+
+
+def test_generate_markdown_report_dynamic_win_tallies_and_components(tmp_path: Path):
+    """验证 R-A2 修复：去除报告中写死文字与固定常数，动态展示各方法独立分项与战绩。"""
+    # 模拟 comparison_data
+    comparison_data = {
+        "aggregates": {
+            "val_scenarios_count": 4,
+            "a_rule": {
+                "mean_j_total": 1.304e-4,
+                "mean_makespan": 680.43,
+                "success_feasible_count": "4/4",
+            },
+            "methods": {
+                "C_beta1_seed42_b4096": {
+                    "mean_j_total": 0.0265,
+                    "mean_makespan": 680.97,
+                    "success_feasible_count": "4/4",
+                    "valid_pair_count": "4/4",
+                    "mean_delta_j_a_minus_m": -0.0264,
+                    "mean_delta_makespan_a_minus_m": -0.54,
+                    "overall_relative_cost_reduction": -202.7,
+                    "win_tally": {"a_wins": 4, "m_wins": 0, "ties": 0},
+                },
+                "F_beta1_seed42_b4096": {
+                    "mean_j_total": 0.0430,
+                    "mean_makespan": 680.33,
+                    "success_feasible_count": "4/4",
+                    "valid_pair_count": "4/4",
+                    "mean_delta_j_a_minus_m": -0.0429,
+                    "mean_delta_makespan_a_minus_m": 0.10,
+                    "overall_relative_cost_reduction": -329.3,
+                    "win_tally": {"a_wins": 0, "m_wins": 4, "ties": 0},  # 反转测试：M全胜
+                },
+                "D_beta01_seed42_b4096": {
+                    "mean_j_total": 0.0480,
+                    "mean_makespan": 692.88,
+                    "success_feasible_count": "4/4",
+                    "valid_pair_count": "4/4",
+                    "mean_delta_j_a_minus_m": -0.0479,
+                    "mean_delta_makespan_a_minus_m": -12.45,
+                    "overall_relative_cost_reduction": -367.3,
+                    "win_tally": {"a_wins": 0, "m_wins": 0, "ties": 4},  # 测试全平
+                },
+                "C_beta01_seed42_b4096": {
+                    "mean_j_total": 0.0531,
+                    "mean_makespan": 690.35,
+                    "success_feasible_count": "4/4",
+                    "valid_pair_count": "4/4",
+                    "mean_delta_j_a_minus_m": -0.0530,
+                    "mean_delta_makespan_a_minus_m": -9.92,
+                    "overall_relative_cost_reduction": -406.8,
+                    "win_tally": {"a_wins": 3, "m_wins": 1, "ties": 0},  # 测试 A胜3
+                },
+                "F_beta01_seed42_b4096": {
+                    "mean_j_total": 0.0449,
+                    "mean_makespan": 824.08,
+                    "success_feasible_count": "4/4",
+                    "valid_pair_count": "4/4",
+                    "mean_delta_j_a_minus_m": -0.0447,
+                    "mean_delta_makespan_a_minus_m": -143.65,
+                    "overall_relative_cost_reduction": -343.3,
+                    "win_tally": {"a_wins": 1, "m_wins": 3, "ties": 0},  # 测试 学习方法胜3
+                },
+            },
+        },
+        "nominal": {
+            "is_nominal": True,
+            "scenario_id": "NOMINAL",
+            "a_rule": {
+                "j_total": 8.155e-13,
+                "makespan": 669.11,
+                "j_takt": 0.0,
+                "d_time": 8.155e-13,
+                "d_team": 0.0,
+                "j_revision": 0.0,
+                "j_postpone": 0.0,
+            },
+            "comparisons": {
+                "C_beta1_seed42_b4096": {
+                    "j_total": 0.02646,
+                    "makespan": 669.71,
+                    "j_takt": 0.0,
+                    "d_time": 7.31e-4,
+                    "d_team": 0.0125,
+                    "j_revision": 0.0132,
+                    "j_postpone": 0.0,
+                    "winner": "A_BETTER",
+                    "delta_makespan_a_minus_m": -0.6,
+                    "delta_j_a_minus_m": -0.02646,
+                    "hit_stratum": "N.A.",
+                },
+                "F_beta1_seed42_b4096": {
+                    "j_total": 0.04298,
+                    "makespan": 669.00,
+                    "j_takt": 0.0,
+                    "d_time": 1.49e-3,
+                    "d_team": 0.0200,
+                    "j_revision": 0.0215,
+                    "j_postpone": 0.0,
+                    "delta_j_a_minus_m": -0.04298,
+                },
+                "D_beta01_seed42_b4096": {
+                    "j_total": 0.04801,
+                    "makespan": 685.32,
+                    "j_takt": 0.0,
+                    "d_time": 4.84e-3,
+                    "d_team": 0.01917,
+                    "j_revision": 0.0240,
+                    "j_postpone": 0.0,
+                    "delta_j_a_minus_m": -0.04801,
+                },
+            },
+        },
+        "scenario_comparisons": [
+            {
+                "is_nominal": True,
+                "scenario_id": "NOMINAL",
+                "a_rule": {"j_total": 8.155e-13},
+                "comparisons": {
+                    "C_beta1_seed42_b4096": {"j_total": 0.02646, "delta_j_a_minus_m": -0.02646, "winner": "A_BETTER", "delta_makespan_a_minus_m": -0.6, "hit_stratum": "N.A."},
+                    "F_beta1_seed42_b4096": {"j_total": 0.04298, "delta_j_a_minus_m": -0.04298},
+                    "D_beta01_seed42_b4096": {"j_total": 0.04801, "delta_j_a_minus_m": -0.04801},
+                },
+            }
+        ],
+    }
+
+    a_results = {
+        "NOMINAL": {"j_revision": 0.0, "d_time": 8.155e-13},
+        "COMPARE_VAL_S2_MID_M": {"j_revision": 8.138e-05, "d_time": 8.138e-05},
+        "COMPARE_VAL_S3_MID_L": {"j_revision": 8.997e-05, "d_time": 8.997e-05},
+    }
+
+    out_file = tmp_path / "test_summary.md"
+    content = generate_markdown_report(comparison_data, a_results, out_file)
+
+    # 1. 验证动态战绩格式化：
+    assert "4/0/0 (A全胜)" in content
+    assert "0/0/4 (学习方法全胜)" in content
+    assert "0/4/0 (全平)" in content
+    assert "3/0/1 (A胜3)" in content
+    assert "1/0/3 (学习方法胜3)" in content
+    assert "(A 胜 4/0/0)" not in content  # 不得再有硬编码的 (A 胜 4/0/0)
+
+    # 2. 验证非零修订费用被如实展示，而非断言全为0
+    assert "8.138" in content
+    assert "8.997" in content
+    assert "连带开工推移" in content or "3_23" in content
+
+    # 3. 验证各方法的独立分项被动态引用 (C: 0.0125, F: 0.0200, D: 0.01917)
+    assert "1.25000000e-02" in content
+    assert "2.00000000e-02" in content
+    assert "1.91700000e-02" in content
+
+
+def test_reachability_diagnostic_contract():
+    """验证 Unit D1 可达性诊断契约：A 在单步派工决策下对标准 C 模型的候选集、分支、团队、对齐均完全可达。"""
+    weights_path = REPO_ROOT / "work3_4060/budget_v1/seed42/C_b4096/weights.pt"
+    assert weights_path.is_file(), f"未找到检查点: {weights_path}"
+
+    baseline_path = REPO_ROOT / "work3_4060/data/mini210.json"
+    env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
+    agent = BaselinePlanRepairAgent()
+
+    # 加载模型
+    ckpt = torch.load(weights_path, map_location="cpu", weights_only=False)
+    actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64).to("cpu")
+    actor.load_state_dict(ckpt["actor_critic_state"])
+    actor.eval()
+
+    # 记录模型权重初始参数指纹
+    param_clone = [p.clone() for p in actor.parameters()]
+
+    # 产生第 0 步决策
+    env.reset()
+    action_a = agent.select_action(env)
+    assert action_a is not None
+
+    cmax = compute_cycle_heuristic_cmax(env.state)
+    state_feat = extract_compact_state_features(env.state, cmax)
+    time_urgency = compute_time_urgency_vector(
+        estimated_r=max(0.0, cmax - float(env.state.current_time)),
+        current_time=env.state.current_time,
+        last_transfer_time=env.state.last_transfer_time,
+        h0=env.state.h0,
+        device="cpu",
+    )
+    next_residuals = torch.zeros(5, dtype=torch.float32, device="cpu")
+    next_mask = env.state.get_next_cycle_station_mask()
+    occupancy = torch.tensor(
+        [1.0 if m else 0.0 for m in next_mask],
+        dtype=torch.float32,
+        device="cpu",
+    )
+    time_features = torch.cat([time_urgency, next_residuals, occupancy], dim=-1)
+
+    snapshot = actor.make_decision_snapshot(
+        env=env,
+        state_feat=state_feat,
+        time_urgency=time_features,
+        allow_postpone=False,
+    )
+
+    diag = evaluate_action_reachability_and_probs(
+        actor=actor,
+        snapshot=snapshot,
+        action_a=action_a,
+        device="cpu",
+    )
+
+    # 检验可达性契约
+    assert diag["task_reachable"] is True
+    assert diag["branch_reachable"] is True
+    assert diag["team_reachable"] is True
+    assert diag["align_reachable"] is True
+    assert diag["overall_reachable"] is True
+    assert diag["joint_prob_a"] > 0.0
+    assert diag["greedy_divergence"] in [
+        "EXACT_MATCH",
+        "C_GREEDY_TASK_MISMATCH",
+        "C_GREEDY_TEAM_MISMATCH",
+        "C_GREEDY_ADVANCE",
+        "C_GREEDY_BRANCH_MISMATCH",
+        "C_GREEDY_ALIGN_MISMATCH",
+    ]
+
+    # 检验参数守恒 (只读评估，绝对无梯度更新)
+    for p_orig, p_after in zip(param_clone, actor.parameters()):
+        assert torch.equal(p_orig, p_after)

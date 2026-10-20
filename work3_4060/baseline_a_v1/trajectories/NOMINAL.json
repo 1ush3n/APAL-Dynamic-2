@@ -13,6 +13,15 @@
     "failure_reason": null,
     "transfers": 11,
     "decisions": 210,
+    "explicit_advances": 0,
+    "automatic_advances": 11,
+    "advance_cause_counts": {
+      "explicit": 0,
+      "identical_resubmission": 0,
+      "forced_no_candidate": 0,
+      "auto_after_action": 11,
+      "none": 199
+    },
     "postponed_count": 0
   },
   "objectives": {

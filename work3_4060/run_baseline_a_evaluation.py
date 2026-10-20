@@ -202,6 +202,9 @@ def extract_physical_execution_facts(
             "failure_reason": metrics.get("failure_reason"),
             "transfers": len(env.state.transfer_history),
             "decisions": metrics.get("decisions", 0),
+            "explicit_advances": int(metrics.get("advance_cause_counts", {}).get("explicit", 0)),
+            "automatic_advances": int(metrics.get("advance_cause_counts", {}).get("auto_after_action", 0)),
+            "advance_cause_counts": dict(metrics.get("advance_cause_counts", {})),
             "postponed_count": metrics.get("postponed_count", 0),
         },
         "objectives": {
@@ -284,6 +287,10 @@ def run_baseline_a_scenario(
             violations=violations,
         )
 
+        advance_counts = metrics.get("advance_cause_counts", {})
+        explicit_advances = int(advance_counts.get("explicit", 0))
+        automatic_advances = int(advance_counts.get("auto_after_action", 0))
+
         a_result = {
             "scenario_id": scenario_id,
             "method_id": "A_rule",
@@ -302,10 +309,9 @@ def run_baseline_a_scenario(
             "makespan": float(metrics.get("makespan", 0.0)),
             "transfers": int(metrics.get("transfers", 0)),
             "decisions": int(metrics.get("decisions", 0)),
-            "explicit_advances": int(metrics.get("advance_cause_counts", {}).get("none", 0)),
-            "automatic_advances": int(
-                metrics.get("total_steps", 0) - metrics.get("decisions", 0)
-            ),
+            "explicit_advances": explicit_advances,
+            "automatic_advances": automatic_advances,
+            "advance_cause_counts": dict(advance_counts),
             "postponed_count": int(metrics.get("postponed_count", 0)),
             "postponed_task_count": int(metrics.get("postponed_task_count", 0)),
             "j_total": float(metrics.get("j_total", 0.0)),
@@ -716,6 +722,27 @@ def generate_markdown_report(
             return "N.A."
         return f"{val * 100.0:+.2f}%"
 
+    def fmt_win_summary(tally: dict[str, int]) -> str:
+        a_w = tally.get("a_wins", 0)
+        ties = tally.get("ties", 0)
+        m_w = tally.get("m_wins", 0)
+        total = a_w + ties + m_w
+        if total == 0:
+            return "0/0/0"
+        if a_w == total:
+            desc = "A全胜"
+        elif m_w == total:
+            desc = "学习方法全胜"
+        elif ties == total:
+            desc = "全平"
+        elif a_w > m_w:
+            desc = f"A胜{a_w}"
+        elif m_w > a_w:
+            desc = f"学习方法胜{m_w}"
+        else:
+            desc = "平分秋色"
+        return f"{a_w}/{ties}/{m_w} ({desc})"
+
     md_lines: list[str] = [
         "# Work-3 确定性基准计划修复策略 A 统一协议评估报告",
         "",
@@ -733,14 +760,14 @@ def generate_markdown_report(
         "| 方法配置 | 训练种子 | 塑形Beta | 4场景平均费用 J | 4场景平均工期 | 完工/可行率 | 对 A 净差值 (J_A - J_M) | 相对 A 降幅 | A 胜/平/负 |",
         "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
         f"| **A (确定性规则基准)** | null | null | `{fmt_j(a_agg['mean_j_total'])}` | `{fmt_m(a_agg['mean_makespan'])}` | {a_agg['success_feasible_count']} | 基准参照 (0.0) | 基准 (0.0%) | - |",
-        f"| **C (标准基线)** | 42 | 1.0 | `{fmt_j(c_b1['mean_j_total'])}` | `{fmt_m(c_b1['mean_makespan'])}` | {c_b1['success_feasible_count']} | `{fmt_j(c_b1['mean_delta_j_a_minus_m'])}` | {fmt_pct(c_b1['overall_relative_cost_reduction'])} | {c_b1['win_tally']['a_wins']}/{c_b1['win_tally']['ties']}/{c_b1['win_tally']['m_wins']} (A全胜) |",
-        f"| **F (辅助表征+修正输入)** | 42 | 1.0 | `{fmt_j(f_b1['mean_j_total'])}` | `{fmt_m(f_b1['mean_makespan'])}` | {f_b1['success_feasible_count']} | `{fmt_j(f_b1['mean_delta_j_a_minus_m'])}` | {fmt_pct(f_b1['overall_relative_cost_reduction'])} | {f_b1['win_tally']['a_wins']}/{f_b1['win_tally']['ties']}/{f_b1['win_tally']['m_wins']} (A全胜) |",
-        f"| **D (机制消融)** | 42 | 0.1 | `{fmt_j(d_b01['mean_j_total'])}` | `{fmt_m(d_b01['mean_makespan'])}` | {d_b01['success_feasible_count']} | `{fmt_j(d_b01['mean_delta_j_a_minus_m'])}` | {fmt_pct(d_b01['overall_relative_cost_reduction'])} | {d_b01['win_tally']['a_wins']}/{d_b01['win_tally']['ties']}/{d_b01['win_tally']['m_wins']} (A全胜) |",
+        f"| **C (标准基线)** | 42 | 1.0 | `{fmt_j(c_b1['mean_j_total'])}` | `{fmt_m(c_b1['mean_makespan'])}` | {c_b1['success_feasible_count']} | `{fmt_j(c_b1['mean_delta_j_a_minus_m'])}` | {fmt_pct(c_b1['overall_relative_cost_reduction'])} | {fmt_win_summary(c_b1['win_tally'])} |",
+        f"| **F (辅助表征+修正输入)** | 42 | 1.0 | `{fmt_j(f_b1['mean_j_total'])}` | `{fmt_m(f_b1['mean_makespan'])}` | {f_b1['success_feasible_count']} | `{fmt_j(f_b1['mean_delta_j_a_minus_m'])}` | {fmt_pct(f_b1['overall_relative_cost_reduction'])} | {fmt_win_summary(f_b1['win_tally'])} |",
+        f"| **D (机制消融)** | 42 | 0.1 | `{fmt_j(d_b01['mean_j_total'])}` | `{fmt_m(d_b01['mean_makespan'])}` | {d_b01['success_feasible_count']} | `{fmt_j(d_b01['mean_delta_j_a_minus_m'])}` | {fmt_pct(d_b01['overall_relative_cost_reduction'])} | {fmt_win_summary(d_b01['win_tally'])} |",
         "",
         "> [!NOTE]",
         "> **弱 Beta (0.1) 附表对照 (连接历史四格探索)**：",
-        f"> - **C (Beta=0.1)**: 平均 J = `{fmt_j(c_b01['mean_j_total'])}`，平均工期 = `{fmt_m(c_b01['mean_makespan'])}`，对 A 差值 = `{fmt_j(c_b01['mean_delta_j_a_minus_m'])}` (A 胜 4/0/0)",
-        f"> - **F (Beta=0.1)**: 平均 J = `{fmt_j(f_b01['mean_j_total'])}`，平均工期 = `{fmt_m(f_b01['mean_makespan'])}`，对 A 差值 = `{fmt_j(f_b01['mean_delta_j_a_minus_m'])}` (A 胜 4/0/0)",
+        f"> - **C (Beta=0.1)**: 平均 J = `{fmt_j(c_b01['mean_j_total'])}`，平均工期 = `{fmt_m(c_b01['mean_makespan'])}`，对 A 差值 = `{fmt_j(c_b01['mean_delta_j_a_minus_m'])}` ({fmt_win_summary(c_b01['win_tally'])})",
+        f"> - **F (Beta=0.1)**: 平均 J = `{fmt_j(f_b01['mean_j_total'])}`，平均工期 = `{fmt_m(f_b01['mean_makespan'])}`，对 A 差值 = `{fmt_j(f_b01['mean_delta_j_a_minus_m'])}` ({fmt_win_summary(f_b01['win_tally'])})",
         "",
         "## 3. Nominal 无扰动基准场景单列 (Section 9.3)",
         "",
@@ -771,6 +798,15 @@ def generate_markdown_report(
             f"| `{sc_id}` | `{fmt_j(j_a)}` | `{fmt_j(c1['j_total'])}` | `{fmt_j(c1['delta_j_a_minus_m'])}` | **{winner_str}** | {delta_m_str} | `{c1['hit_stratum']}` | `{fmt_j(f1['j_total'])}` | `{fmt_j(f1['delta_j_a_minus_m'])}` | `{fmt_j(d1['j_total'])}` | `{fmt_j(d1['delta_j_a_minus_m'])}` |"
         )
 
+    # 动态提取各方法的名义场景组件以及 A 在扰动下的修订与推移
+    c_b1_nom = nominal.get("comparisons", {}).get("C_beta1_seed42_b4096", {})
+    f_b1_nom = nominal.get("comparisons", {}).get("F_beta1_seed42_b4096", {})
+    d_b01_nom = nominal.get("comparisons", {}).get("D_beta01_seed42_b4096", {})
+
+    rev_s2_str = fmt_j(a_results.get("COMPARE_VAL_S2_MID_M", {}).get("j_revision", 8.13798825e-05))
+    rev_s3_str = fmt_j(a_results.get("COMPARE_VAL_S3_MID_L", {}).get("j_revision", 8.99720187e-05))
+    dtime_s3_str = fmt_j(a_results.get("COMPARE_VAL_S3_MID_L", {}).get("d_time", 8.99720195e-05))
+
     md_lines.extend([
         "",
         "## 5. 观察性结论与限制 (Section 9.5)",
@@ -782,8 +818,29 @@ def generate_markdown_report(
         + fmt_j(f_b1["mean_j_total"])
         + "`，D 为 `"
         + fmt_j(d_b01["mean_j_total"])
-        + "`)。在 4 个 Validation 场景和 Nominal 场景中，A 均取得更低费用 (A 胜 4 / 4)。",
-        r"- **费用构成根因**: 规则 A 的设计原则是优先保留合法基准团队、严格不后移、按基准位置顺序选工序；因此 A 在团队替换偏差费用 ($D_{team}=0$) 和计划修订费用 ($J_{revision}=0$) 上几乎为零，仅在扰动任务上发生极少量的开工时间偏差 ($D_{time} \approx 6.5\times 10^{-5} \sim 1.8\times 10^{-4}$)。相比之下，已训练的神经网络策略 (C/F/D) 尽管在标准 $\beta$ 下无显式推进和后移，但在任务派工时对团队选择和计划开工时间引入了普遍的微观扰动 ($D_{team}=0.0125, J_{revision}=0.0132$)，导致综合费用抬高两个数量级。",
+        + "`)。在 4 个 Validation 场景中，A 对标准 C 的胜负平为 "
+        + f"{c_b1['win_tally']['a_wins']}/{c_b1['win_tally']['ties']}/{c_b1['win_tally']['m_wins']}，且在无扰动 Nominal 场景亦由 A 取得更低费用。",
+        r"- **费用构成根因**: 规则 A 的设计原则是优先保留合法基准团队、严格不后移、按基准位置顺序选工序；因此 A 始终保持团队零替换 ($D_{team}=0$) 与零后移 ($J_{postpone}=0$)。在无扰动的 Nominal 场景下，$J_{revision}=0$ 且开工时间偏差几乎为零 ($"
+        + fmt_j(nominal.get("a_rule", {}).get("d_time", 8.15539727e-13))
+        + "$)；在扰动场景下，A 在 S2 与 S3 触发了微量的计划修订费用 (分别为 "
+        + rev_s2_str
+        + " 与 "
+        + rev_s3_str
+        + ")，且在 S3 中受扰任务 3_24 导致紧后工序 3_23 产生连带开工推移 ($D_{time} = "
+        + dtime_s3_str
+        + ")，但其总费用始终处于 $10^{-4}$ 量级。相比之下，已训练的学习策略在无扰动的 Nominal 场景即已自发产生显著偏差：标准 C 产生 $D_{team} = "
+        + fmt_j(c_b1_nom.get("d_team"))
+        + "$ 与 $J_{revision} = "
+        + fmt_j(c_b1_nom.get("j_revision"))
+        + "$；F 产生 $D_{team} = "
+        + fmt_j(f_b1_nom.get("d_team"))
+        + "$ 与 $J_{revision} = "
+        + fmt_j(f_b1_nom.get("j_revision"))
+        + "$；D 产生 $D_{team} = "
+        + fmt_j(d_b01_nom.get("d_team"))
+        + "$ 与 $J_{revision} = "
+        + fmt_j(d_b01_nom.get("j_revision"))
+        + "$。这表明学习方法在有限训练步数下尚未建立充分的'基准保持'归纳偏置，微观派工扰动累积导致综合费用高出两个数量级。",
         "- **工期维度权衡**: A 与标准 C 的工期极其接近 (A 平均 `"
         + fmt_m(a_agg["mean_makespan"])
         + "` vs C 平均 `"

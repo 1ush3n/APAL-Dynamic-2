@@ -1,0 +1,6946 @@
+{
+  "summary": {
+    "model": "C_beta1_seed42_b4096",
+    "total_dispatches_checked": 210,
+    "reachability": {
+      "task_reachable": "210/210 (100.0%)",
+      "branch_reachable": "210/210 (100.0%)",
+      "team_reachable": "210/210 (100.0%)",
+      "align_reachable": "210/210 (100.0%)",
+      "overall_reachable": "210/210 (100.0%)",
+      "is_100_percent_reachable": true
+    },
+    "average_probabilities_of_a_action_under_c": {
+      "avg_prob_stay": 0.9467070659001668,
+      "avg_prob_task": 0.1943215978010183,
+      "avg_prob_branch": 1.0,
+      "avg_prob_team": 0.6825360333539615,
+      "avg_prob_align": 0.9999999994323368,
+      "avg_joint_prob_a": 0.10610532200755143
+    },
+    "greedy_divergence_breakdown": {
+      "EXACT_MATCH": 35,
+      "C_GREEDY_TASK_MISMATCH": 156,
+      "C_GREEDY_TEAM_MISMATCH": 19
+    },
+    "exact_matches_with_a": 35
+  },
+  "step_records": [
+    {
+      "dispatch_index": 1,
+      "step_count": 1,
+      "current_time": 0.0,
+      "task_key": "0_15",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.245234876871109,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001436598,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.24523487690633938,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "0_15",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 2,
+      "step_count": 2,
+      "current_time": 0.0,
+      "task_key": "0_6",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.32522255182266235,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001788227,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.32522255188081955,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "0_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 3,
+      "step_count": 3,
+      "current_time": 0.0,
+      "task_key": "0_2",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9297606945037842,
+      "prob_task": 0.4816041886806488,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001893854,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.4477766450284539,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "0_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 4,
+      "step_count": 4,
+      "current_time": 0.0,
+      "task_key": "0_16",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9292568564414978,
+      "prob_task": 0.00012021207658108324,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002807445,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0001117078964214034,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "0_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 5,
+      "step_count": 5,
+      "current_time": 0.0,
+      "task_key": "0_7",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9281167984008789,
+      "prob_task": 0.0005854181945323944,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002673615,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0005433364605802961,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "0_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 6,
+      "step_count": 6,
+      "current_time": 0.0,
+      "task_key": "0_3",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9278501868247986,
+      "prob_task": 0.9255498051643372,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000198459,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.8587715598078172,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "0_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 7,
+      "step_count": 7,
+      "current_time": 0.0,
+      "task_key": "0_4",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9273742437362671,
+      "prob_task": 0.2869679033756256,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000231852,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.266126642431255,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "0_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 8,
+      "step_count": 8,
+      "current_time": 0.0,
+      "task_key": "0_5",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9266874194145203,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002425604,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.9266874196392979,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "0_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 9,
+      "step_count": 9,
+      "current_time": 14.227162329533499,
+      "task_key": "1_15",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.24524344503879547,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001051998,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.24524344506459506,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "1_15",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 10,
+      "step_count": 10,
+      "current_time": 14.227162329533499,
+      "task_key": "0_18",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 11,
+      "step_count": 11,
+      "current_time": 14.227162329533499,
+      "task_key": "1_6",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.32540684938430786,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001133151,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.32540684942118137,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "1_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 12,
+      "step_count": 12,
+      "current_time": 14.227162329533499,
+      "task_key": "0_8",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9231367111206055,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 13,
+      "step_count": 13,
+      "current_time": 14.227162329533499,
+      "task_key": "0_26",
+      "base_team": [
+        22,
+        10
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9267776012420654,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999535248207,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 14,
+      "step_count": 14,
+      "current_time": 14.227162329533499,
+      "task_key": "1_2",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.925496518611908,
+      "prob_task": 0.4819346070289612,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001199716,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.4460288010574123,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "1_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 15,
+      "step_count": 15,
+      "current_time": 14.227162329533499,
+      "task_key": "0_25",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9215019941329956,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 16,
+      "step_count": 16,
+      "current_time": 14.227162329533499,
+      "task_key": "0_9",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9241014122962952,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 17,
+      "step_count": 17,
+      "current_time": 14.227162329533499,
+      "task_key": "1_16",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9238666892051697,
+      "prob_task": 0.00011965302837779745,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001770364,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.00011054344720033816,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 18,
+      "step_count": 18,
+      "current_time": 14.227162329533499,
+      "task_key": "1_7",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9194857478141785,
+      "prob_task": 0.000582197739277035,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001680704,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0005353225237648405,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 19,
+      "step_count": 19,
+      "current_time": 14.227162329533499,
+      "task_key": "1_3",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9193742871284485,
+      "prob_task": 0.9268279075622559,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001246063,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.8521017469119778,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "1_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 20,
+      "step_count": 20,
+      "current_time": 14.227162329533499,
+      "task_key": "1_4",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9191251397132874,
+      "prob_task": 0.2800499498844147,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000145793,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.257400949351739,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 21,
+      "step_count": 21,
+      "current_time": 14.227162329533499,
+      "task_key": "1_5",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.918827474117279,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000152194,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.9188274742571191,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "1_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 22,
+      "step_count": 22,
+      "current_time": 28.454324659066998,
+      "task_key": "2_15",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.24523060023784637,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001165523,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.24523060026642857,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "2_15",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 23,
+      "step_count": 23,
+      "current_time": 28.454324659066998,
+      "task_key": "1_18",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 24,
+      "step_count": 24,
+      "current_time": 28.454324659066998,
+      "task_key": "0_12",
+      "base_team": [
+        50,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.2798423814908718e-18,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 25,
+      "step_count": 25,
+      "current_time": 28.454324659066998,
+      "task_key": "0_29",
+      "base_team": [
+        76,
+        47
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 3.0269464168496058e-28,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 26,
+      "step_count": 26,
+      "current_time": 28.454324659066998,
+      "task_key": "2_6",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.3255700170993805,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001024405,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.32557001713273204,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "2_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 27,
+      "step_count": 27,
+      "current_time": 28.454324659066998,
+      "task_key": "1_8",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9243068695068359,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 28,
+      "step_count": 28,
+      "current_time": 28.454324659066998,
+      "task_key": "1_26",
+      "base_team": [
+        22,
+        10
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9274958372116089,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999885235411,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 29,
+      "step_count": 29,
+      "current_time": 28.454324659066998,
+      "task_key": "0_27",
+      "base_team": [
+        0,
+        66
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9261699318885803,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000573036232,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 30,
+      "step_count": 30,
+      "current_time": 28.454324659066998,
+      "task_key": "2_2",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9289827942848206,
+      "prob_task": 0.48229384422302246,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000108174,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.4480426831211379,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "2_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 31,
+      "step_count": 31,
+      "current_time": 28.454324659066998,
+      "task_key": "0_13",
+      "base_team": [
+        47,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9223225116729736,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000003723009,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 32,
+      "step_count": 32,
+      "current_time": 28.454324659066998,
+      "task_key": "0_28",
+      "base_team": [
+        50,
+        76
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9280301928520203,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 2.4037657391136158e-48,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 33,
+      "step_count": 33,
+      "current_time": 28.454324659066998,
+      "task_key": "1_25",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9271773099899292,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 34,
+      "step_count": 34,
+      "current_time": 28.454324659066998,
+      "task_key": "1_9",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9235749840736389,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 35,
+      "step_count": 35,
+      "current_time": 28.454324659066998,
+      "task_key": "2_16",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9235902428627014,
+      "prob_task": 0.00011879141675308347,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001589948,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.00010971459346642879,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 36,
+      "step_count": 36,
+      "current_time": 28.454324659066998,
+      "task_key": "2_7",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9204399585723877,
+      "prob_task": 0.0005771965370513499,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001506988,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0005312747567317326,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 37,
+      "step_count": 37,
+      "current_time": 28.454324659066998,
+      "task_key": "2_3",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9205098152160645,
+      "prob_task": 0.9281627535820007,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001117457,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.8543829248856747,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "2_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 38,
+      "step_count": 38,
+      "current_time": 28.454324659066998,
+      "task_key": "2_4",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9204798340797424,
+      "prob_task": 0.2745337188243866,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001310174,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.2527027519858745,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 39,
+      "step_count": 39,
+      "current_time": 28.454324659066998,
+      "task_key": "2_5",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.920358419418335,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001366383,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.9203584195440911,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "2_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 40,
+      "step_count": 40,
+      "current_time": 79.07983070138474,
+      "task_key": "3_15",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.24521809816360474,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001707512,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.24521809820547602,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 41,
+      "step_count": 41,
+      "current_time": 79.07983070138474,
+      "task_key": "2_18",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 42,
+      "step_count": 42,
+      "current_time": 79.07983070138474,
+      "task_key": "1_12",
+      "base_team": [
+        50,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 4.941974026120761e-19,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 43,
+      "step_count": 43,
+      "current_time": 79.07983070138474,
+      "task_key": "1_29",
+      "base_team": [
+        76,
+        47
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 4.761961958485473e-29,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 44,
+      "step_count": 44,
+      "current_time": 79.07983070138474,
+      "task_key": "0_20",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000303247134,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 45,
+      "step_count": 45,
+      "current_time": 79.07983070138474,
+      "task_key": "3_6",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.3258046507835388,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001362137,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.3258046508279179,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "3_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 46,
+      "step_count": 46,
+      "current_time": 79.07983070138474,
+      "task_key": "2_8",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.922805666923523,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 47,
+      "step_count": 47,
+      "current_time": 79.07983070138474,
+      "task_key": "2_26",
+      "base_team": [
+        22,
+        10
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9259483814239502,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999870653937,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 48,
+      "step_count": 48,
+      "current_time": 79.07983070138474,
+      "task_key": "0_10",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9247431755065918,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999479617543,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 49,
+      "step_count": 49,
+      "current_time": 79.07983070138474,
+      "task_key": "1_27",
+      "base_team": [
+        0,
+        66
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9307438135147095,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000148647814,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 50,
+      "step_count": 50,
+      "current_time": 79.07983070138474,
+      "task_key": "3_2",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9270269274711609,
+      "prob_task": 0.4828552305698395,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001437803,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.44761980087289616,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "3_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 51,
+      "step_count": 51,
+      "current_time": 79.07983070138474,
+      "task_key": "1_13",
+      "base_team": [
+        47,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9207407236099243,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000201855,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 52,
+      "step_count": 52,
+      "current_time": 79.07983070138474,
+      "task_key": "1_28",
+      "base_team": [
+        50,
+        76
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9262812733650208,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.4121304475007025e-49,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 53,
+      "step_count": 53,
+      "current_time": 79.07983070138474,
+      "task_key": "2_25",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9255918264389038,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 54,
+      "step_count": 54,
+      "current_time": 79.07983070138474,
+      "task_key": "0_17",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9223514199256897,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999694399833,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 55,
+      "step_count": 55,
+      "current_time": 79.07983070138474,
+      "task_key": "2_9",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9274882078170776,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 56,
+      "step_count": 56,
+      "current_time": 79.07983070138474,
+      "task_key": "3_16",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9221615791320801,
+      "prob_task": 0.0001187323359772563,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000210724,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.00010949039846189962,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 57,
+      "step_count": 57,
+      "current_time": 79.07983070138474,
+      "task_key": "0_21",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9196768403053284,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000097234079,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 58,
+      "step_count": 58,
+      "current_time": 79.07983070138474,
+      "task_key": "3_7",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9263232946395874,
+      "prob_task": 0.0005764470552094281,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002013782,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0005339763354744167,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 59,
+      "step_count": 59,
+      "current_time": 79.07983070138474,
+      "task_key": "3_3",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9196583032608032,
+      "prob_task": 0.9302497506141663,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001481746,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.8555119073853746,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "3_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 60,
+      "step_count": 60,
+      "current_time": 79.07983070138474,
+      "task_key": "3_4",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9196361899375916,
+      "prob_task": 0.28404197096824646,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001737128,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.2612152760089786,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 61,
+      "step_count": 61,
+      "current_time": 79.07983070138474,
+      "task_key": "3_5",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9195409417152405,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000181822,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.9195409418824332,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "3_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 62,
+      "step_count": 62,
+      "current_time": 129.70533674370247,
+      "task_key": "4_15",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.24523714184761047,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000003215805,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.24523714192647397,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "4_15",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 63,
+      "step_count": 63,
+      "current_time": 129.70533674370247,
+      "task_key": "3_18",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 64,
+      "step_count": 64,
+      "current_time": 129.70533674370247,
+      "task_key": "2_12",
+      "base_team": [
+        50,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 3.8035377567620683e-19,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 65,
+      "step_count": 65,
+      "current_time": 129.70533674370247,
+      "task_key": "2_29",
+      "base_team": [
+        76,
+        47
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 2.995505465895316e-29,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 66,
+      "step_count": 66,
+      "current_time": 129.70533674370247,
+      "task_key": "1_20",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999961462862,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 67,
+      "step_count": 67,
+      "current_time": 129.70533674370247,
+      "task_key": "0_24",
+      "base_team": [
+        28,
+        1
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 68,
+      "step_count": 68,
+      "current_time": 129.70533674370247,
+      "task_key": "0_30",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000003274032,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 69,
+      "step_count": 69,
+      "current_time": 129.70533674370247,
+      "task_key": "4_6",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.3258114457130432,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002259877,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.3258114457866726,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "4_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 70,
+      "step_count": 70,
+      "current_time": 129.70533674370247,
+      "task_key": "3_8",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9226940870285034,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 71,
+      "step_count": 71,
+      "current_time": 129.70533674370247,
+      "task_key": "3_26",
+      "base_team": [
+        22,
+        10
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9254496693611145,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999498531906,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 72,
+      "step_count": 72,
+      "current_time": 129.70533674370247,
+      "task_key": "1_10",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.924471378326416,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000141791645,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 73,
+      "step_count": 73,
+      "current_time": 129.70533674370247,
+      "task_key": "2_27",
+      "base_team": [
+        0,
+        66
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9303070902824402,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000565023583,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 74,
+      "step_count": 74,
+      "current_time": 129.70533674370247,
+      "task_key": "0_14",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9268239736557007,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 75,
+      "step_count": 75,
+      "current_time": 129.70533674370247,
+      "task_key": "4_2",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9314786791801453,
+      "prob_task": 0.48288312554359436,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002387233,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.44979533608710415,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "4_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 76,
+      "step_count": 76,
+      "current_time": 129.70533674370247,
+      "task_key": "2_13",
+      "base_team": [
+        47,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9208971858024597,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000001717153,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 77,
+      "step_count": 77,
+      "current_time": 129.70533674370247,
+      "task_key": "2_28",
+      "base_team": [
+        50,
+        76
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9258689880371094,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 5.629465389354726e-50,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 78,
+      "step_count": 78,
+      "current_time": 129.70533674370247,
+      "task_key": "3_25",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9252180457115173,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 79,
+      "step_count": 79,
+      "current_time": 129.70533674370247,
+      "task_key": "1_17",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9225088357925415,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000031858633,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 80,
+      "step_count": 80,
+      "current_time": 129.70533674370247,
+      "task_key": "0_11",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9270398020744324,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.8062550438016519,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 81,
+      "step_count": 81,
+      "current_time": 129.70533674370247,
+      "task_key": "3_9",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9287773966789246,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 82,
+      "step_count": 82,
+      "current_time": 129.70533674370247,
+      "task_key": "4_16",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9222781658172607,
+      "prob_task": 0.00011868055298691615,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000003484817,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.00010945648276509483,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 83,
+      "step_count": 83,
+      "current_time": 129.70533674370247,
+      "task_key": "0_23",
+      "base_team": [
+        1,
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9201037287712097,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 4.0413574819768322e-53,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 84,
+      "step_count": 84,
+      "current_time": 129.70533674370247,
+      "task_key": "1_21",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9275903105735779,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000485739236,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 85,
+      "step_count": 85,
+      "current_time": 129.70533674370247,
+      "task_key": "0_19",
+      "base_team": [
+        28,
+        77
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9254150390625,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 2.9177469924003546e-31,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 86,
+      "step_count": 86,
+      "current_time": 129.70533674370247,
+      "task_key": "4_7",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9269210696220398,
+      "prob_task": 0.0005753834266215563,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000003330212,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0005333350214244592,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 87,
+      "step_count": 87,
+      "current_time": 129.70533674370247,
+      "task_key": "4_3",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9199655055999756,
+      "prob_task": 0.9303460121154785,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002449108,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.855886239628353,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "4_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 88,
+      "step_count": 88,
+      "current_time": 129.70533674370247,
+      "task_key": "0_22",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9199504852294922,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 89,
+      "step_count": 89,
+      "current_time": 129.70533674370247,
+      "task_key": "4_4",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9261279106140137,
+      "prob_task": 0.2762753963470459,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002903022,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.2558663556472267,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 90,
+      "step_count": 90,
+      "current_time": 129.70533674370247,
+      "task_key": "4_5",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9198285937309265,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000003005476,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.9198285940073788,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "4_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 91,
+      "step_count": 91,
+      "current_time": 129.70533674370247,
+      "task_key": "0_125",
+      "base_team": [
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9197689890861511,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.259575627316019e-23,
+      "prob_align": 1.0,
+      "joint_prob_a": 1.1585186014140094e-23,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "0_125",
+        "branch": "0",
+        "team": [
+          77
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 92,
+      "step_count": 92,
+      "current_time": 206.7626745432108,
+      "task_key": "5_15",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.2452390044927597,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000007024503,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.24523900466502793,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "5_15",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 93,
+      "step_count": 93,
+      "current_time": 206.7626745432108,
+      "task_key": "4_18",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 94,
+      "step_count": 94,
+      "current_time": 206.7626745432108,
+      "task_key": "3_12",
+      "base_team": [
+        50,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 4.829206044179774e-19,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 95,
+      "step_count": 95,
+      "current_time": 206.7626745432108,
+      "task_key": "3_29",
+      "base_team": [
+        76,
+        47
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 5.626587704886507e-29,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 96,
+      "step_count": 96,
+      "current_time": 206.7626745432108,
+      "task_key": "2_20",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000373408113,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 97,
+      "step_count": 97,
+      "current_time": 206.7626745432108,
+      "task_key": "1_24",
+      "base_team": [
+        28,
+        1
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 98,
+      "step_count": 98,
+      "current_time": 206.7626745432108,
+      "task_key": "1_30",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002687317,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 99,
+      "step_count": 99,
+      "current_time": 206.7626745432108,
+      "task_key": "5_6",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.3258358836174011,
+      "prob_branch": 1.0,
+      "prob_team": 1.00000000050244,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.3258358837811141,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "5_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 100,
+      "step_count": 100,
+      "current_time": 206.7626745432108,
+      "task_key": "4_8",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9224746227264404,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 101,
+      "step_count": 101,
+      "current_time": 206.7626745432108,
+      "task_key": "4_26",
+      "base_team": [
+        22,
+        10
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9252488613128662,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000522253458,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 102,
+      "step_count": 102,
+      "current_time": 206.7626745432108,
+      "task_key": "2_10",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9242729544639587,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000058989599,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 103,
+      "step_count": 103,
+      "current_time": 206.7626745432108,
+      "task_key": "3_27",
+      "base_team": [
+        0,
+        66
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9301264882087708,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999858282536,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 104,
+      "step_count": 104,
+      "current_time": 206.7626745432108,
+      "task_key": "1_14",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9266324639320374,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 105,
+      "step_count": 105,
+      "current_time": 206.7626745432108,
+      "task_key": "5_2",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9312618970870972,
+      "prob_task": 0.48288044333457947,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000005298006,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.4496881579642641,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "5_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 106,
+      "step_count": 106,
+      "current_time": 206.7626745432108,
+      "task_key": "3_13",
+      "base_team": [
+        47,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9207157492637634,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002274423,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 107,
+      "step_count": 107,
+      "current_time": 206.7626745432108,
+      "task_key": "3_28",
+      "base_team": [
+        50,
+        76
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9257042407989502,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.5076729138941706e-49,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 108,
+      "step_count": 108,
+      "current_time": 206.7626745432108,
+      "task_key": "4_25",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.925052285194397,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 109,
+      "step_count": 109,
+      "current_time": 206.7626745432108,
+      "task_key": "2_17",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9223341345787048,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999608024837,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 110,
+      "step_count": 110,
+      "current_time": 206.7626745432108,
+      "task_key": "1_11",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9268760085105896,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.7682499299539748,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 111,
+      "step_count": 111,
+      "current_time": 206.7626745432108,
+      "task_key": "4_9",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9285830855369568,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 112,
+      "step_count": 112,
+      "current_time": 206.7626745432108,
+      "task_key": "5_16",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9220966100692749,
+      "prob_task": 0.00011833106691483408,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000767885,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.00010911267575183503,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 113,
+      "step_count": 113,
+      "current_time": 206.7626745432108,
+      "task_key": "1_23",
+      "base_team": [
+        1,
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9199152588844299,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 2.1732764811615426e-53,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 114,
+      "step_count": 114,
+      "current_time": 206.7626745432108,
+      "task_key": "2_21",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.927423357963562,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000017818138,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 115,
+      "step_count": 115,
+      "current_time": 206.7626745432108,
+      "task_key": "1_19",
+      "base_team": [
+        28,
+        77
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9252419471740723,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.995142132025525e-31,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 116,
+      "step_count": 116,
+      "current_time": 206.7626745432108,
+      "task_key": "5_7",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.926750898361206,
+      "prob_task": 0.0005735587328672409,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000007338063,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0005315460713376824,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 117,
+      "step_count": 117,
+      "current_time": 206.7626745432108,
+      "task_key": "5_3",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9197725653648376,
+      "prob_task": 0.9303323030471802,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000005403242,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.8556941294778347,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "5_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 118,
+      "step_count": 118,
+      "current_time": 206.7626745432108,
+      "task_key": "1_22",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9197584390640259,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 119,
+      "step_count": 119,
+      "current_time": 206.7626745432108,
+      "task_key": "5_4",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.925958514213562,
+      "prob_task": 0.2756900489330292,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000633363,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.25527754825517524,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 120,
+      "step_count": 120,
+      "current_time": 206.7626745432108,
+      "task_key": "5_5",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9196404814720154,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000006541665,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.9196404820736134,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "5_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 121,
+      "step_count": 121,
+      "current_time": 206.7626745432108,
+      "task_key": "1_125",
+      "base_team": [
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9195833206176758,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 8.797981082478123e-24,
+      "prob_align": 1.0,
+      "joint_prob_a": 8.090476658556726e-24,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "1_125",
+        "branch": "0",
+        "team": [
+          77
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 122,
+      "step_count": 122,
+      "current_time": 283.8200123427191,
+      "task_key": "6_15",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.24525107443332672,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000001614341,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.2452510748292456,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "6_15",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 123,
+      "step_count": 123,
+      "current_time": 283.8200123427191,
+      "task_key": "5_18",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 124,
+      "step_count": 124,
+      "current_time": 283.8200123427191,
+      "task_key": "4_12",
+      "base_team": [
+        50,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 7.604163320829733e-19,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 125,
+      "step_count": 125,
+      "current_time": 283.8200123427191,
+      "task_key": "4_29",
+      "base_team": [
+        76,
+        47
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.5100622025615956e-28,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 126,
+      "step_count": 126,
+      "current_time": 283.8200123427191,
+      "task_key": "3_20",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999754026305,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 127,
+      "step_count": 127,
+      "current_time": 283.8200123427191,
+      "task_key": "2_24",
+      "base_team": [
+        28,
+        1
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 128,
+      "step_count": 128,
+      "current_time": 283.8200123427191,
+      "task_key": "2_30",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000233026,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 129,
+      "step_count": 129,
+      "current_time": 283.8200123427191,
+      "task_key": "6_6",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.32584404945373535,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000011444772,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.32584404982665643,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "6_6",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 130,
+      "step_count": 130,
+      "current_time": 283.8200123427191,
+      "task_key": "5_8",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9210544228553772,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 131,
+      "step_count": 131,
+      "current_time": 283.8200123427191,
+      "task_key": "5_26",
+      "base_team": [
+        22,
+        10
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9239516854286194,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999426681825,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 132,
+      "step_count": 132,
+      "current_time": 283.8200123427191,
+      "task_key": "3_10",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9229508638381958,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000002266205,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 133,
+      "step_count": 133,
+      "current_time": 283.8200123427191,
+      "task_key": "4_27",
+      "base_team": [
+        0,
+        66
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9290139079093933,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999805386324,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 134,
+      "step_count": 134,
+      "current_time": 283.8200123427191,
+      "task_key": "2_14",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9253970980644226,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 135,
+      "step_count": 135,
+      "current_time": 283.8200123427191,
+      "task_key": "6_2",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9301890730857849,
+      "prob_task": 0.482884019613266,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000012068553,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.4491734391540892,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "6_2",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 136,
+      "step_count": 136,
+      "current_time": 283.8200123427191,
+      "task_key": "4_13",
+      "base_team": [
+        47,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9193516969680786,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000000323621,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 137,
+      "step_count": 137,
+      "current_time": 283.8200123427191,
+      "task_key": "4_28",
+      "base_team": [
+        50,
+        76
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9244614243507385,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 5.805718437458176e-49,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 138,
+      "step_count": 138,
+      "current_time": 283.8200123427191,
+      "task_key": "5_25",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9238513112068176,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 139,
+      "step_count": 139,
+      "current_time": 283.8200123427191,
+      "task_key": "3_17",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9210963845252991,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000027840457,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 140,
+      "step_count": 140,
+      "current_time": 283.8200123427191,
+      "task_key": "2_11",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9257048964500427,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.7222424157944111,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 141,
+      "step_count": 141,
+      "current_time": 283.8200123427191,
+      "task_key": "5_9",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9274303913116455,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 142,
+      "step_count": 142,
+      "current_time": 283.8200123427191,
+      "task_key": "6_16",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9208982586860657,
+      "prob_task": 0.00011813869059551507,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000017492785,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.00010879371464317222,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 143,
+      "step_count": 143,
+      "current_time": 283.8200123427191,
+      "task_key": "2_23",
+      "base_team": [
+        1,
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9186934232711792,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.542088497395576e-53,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 144,
+      "step_count": 144,
+      "current_time": 283.8200123427191,
+      "task_key": "3_21",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9262932538986206,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999834935238,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 145,
+      "step_count": 145,
+      "current_time": 283.8200123427191,
+      "task_key": "2_19",
+      "base_team": [
+        28,
+        77
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9241460561752319,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.671754226095528e-31,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 146,
+      "step_count": 146,
+      "current_time": 283.8200123427191,
+      "task_key": "6_7",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9256567358970642,
+      "prob_task": 0.0005723386420868337,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000016723853,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0005297891201478681,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 147,
+      "step_count": 147,
+      "current_time": 283.8200123427191,
+      "task_key": "6_3",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9185674786567688,
+      "prob_task": 0.9304066896438599,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000012314285,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.8546413280839809,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "6_3",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 148,
+      "step_count": 148,
+      "current_time": 283.8200123427191,
+      "task_key": "2_22",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9185580015182495,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 149,
+      "step_count": 149,
+      "current_time": 283.8200123427191,
+      "task_key": "6_4",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9249053001403809,
+      "prob_task": 0.2747890055179596,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000001443183,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.2541538079906556,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 150,
+      "step_count": 150,
+      "current_time": 283.8200123427191,
+      "task_key": "6_5",
+      "base_team": [
+        72,
+        12
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9184474945068359,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000014903128,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.9184474958756099,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "6_5",
+        "branch": "0",
+        "team": [
+          72,
+          12
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 151,
+      "step_count": 151,
+      "current_time": 283.8200123427191,
+      "task_key": "2_125",
+      "base_team": [
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9183924794197083,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 6.811656144402393e-24,
+      "prob_align": 1.0,
+      "joint_prob_a": 6.255773775412204e-24,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "2_125",
+        "branch": "0",
+        "team": [
+          77
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 152,
+      "step_count": 152,
+      "current_time": 360.87735014222744,
+      "task_key": "6_18",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 9.007546528679924e-42,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 9.007546528679924e-42,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 153,
+      "step_count": 153,
+      "current_time": 360.87735014222744,
+      "task_key": "5_12",
+      "base_team": [
+        50,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 2.535066834047595e-18,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 154,
+      "step_count": 154,
+      "current_time": 360.87735014222744,
+      "task_key": "5_29",
+      "base_team": [
+        76,
+        47
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 3.266919509238958e-27,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 155,
+      "step_count": 155,
+      "current_time": 360.87735014222744,
+      "task_key": "4_20",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 2.8055481493538537e-07,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999760603941,
+      "prob_align": 1.0,
+      "joint_prob_a": 2.805548082190137e-07,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 156,
+      "step_count": 156,
+      "current_time": 360.87735014222744,
+      "task_key": "3_24",
+      "base_team": [
+        28,
+        1
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.49964654445648193,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 157,
+      "step_count": 157,
+      "current_time": 360.87735014222744,
+      "task_key": "3_30",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002155698,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 158,
+      "step_count": 158,
+      "current_time": 360.87735014222744,
+      "task_key": "6_8",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 6.479666428793647e-37,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 6.479666428793647e-37,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 159,
+      "step_count": 159,
+      "current_time": 360.87735014222744,
+      "task_key": "6_26",
+      "base_team": [
+        22,
+        10
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9234604835510254,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000592708602,
+      "prob_align": 0.9999998807907104,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 160,
+      "step_count": 160,
+      "current_time": 360.87735014222744,
+      "task_key": "4_10",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9222167730331421,
+      "prob_task": 0.02336074598133564,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000054865268,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.02154367189275423,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 161,
+      "step_count": 161,
+      "current_time": 360.87735014222744,
+      "task_key": "5_27",
+      "base_team": [
+        0,
+        66
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.928626298904419,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000010972144,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 162,
+      "step_count": 162,
+      "current_time": 360.87735014222744,
+      "task_key": "3_14",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9246941208839417,
+      "prob_task": 0.9917199611663818,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 163,
+      "step_count": 163,
+      "current_time": 360.87735014222744,
+      "task_key": "5_13",
+      "base_team": [
+        47,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9297637939453125,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000001085965,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_17",
+        "branch": "0",
+        "team": [
+          55,
+          6
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 164,
+      "step_count": 164,
+      "current_time": 360.87735014222744,
+      "task_key": "5_28",
+      "base_team": [
+        50,
+        76
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9238728284835815,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 4.26189903402188e-47,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_17",
+        "branch": "0",
+        "team": [
+          55,
+          6
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 165,
+      "step_count": 165,
+      "current_time": 360.87735014222744,
+      "task_key": "6_25",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.923133373260498,
+      "prob_task": 4.730219975202913e-35,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 4.3666239219732543e-35,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_17",
+        "branch": "0",
+        "team": [
+          55,
+          6
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 166,
+      "step_count": 166,
+      "current_time": 360.87735014222744,
+      "task_key": "4_17",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9196755290031433,
+      "prob_task": 0.93797367811203,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000493288326,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.8626314811613071,
+      "greedy_divergence": "EXACT_MATCH",
+      "c_greedy_action": {
+        "task_key": "4_17",
+        "branch": "0",
+        "team": [
+          55,
+          6
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 167,
+      "step_count": 167,
+      "current_time": 360.87735014222744,
+      "task_key": "3_11",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9251189827919006,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.5206772096665929,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 168,
+      "step_count": 168,
+      "current_time": 360.87735014222744,
+      "task_key": "6_9",
+      "base_team": [
+        18,
+        65
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9269357323646545,
+      "prob_task": 1.17563134176016e-37,
+      "prob_branch": 1.0,
+      "prob_team": 1.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 1.0897346987652953e-37,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 169,
+      "step_count": 169,
+      "current_time": 360.87735014222744,
+      "task_key": "3_23",
+      "base_team": [
+        1,
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9192789793014526,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 7.2988937377344885e-53,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 170,
+      "step_count": 170,
+      "current_time": 360.87735014222744,
+      "task_key": "4_21",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9260051250457764,
+      "prob_task": 0.0013918702024966478,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000168352017,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0012888789626089353,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 171,
+      "step_count": 171,
+      "current_time": 360.87735014222744,
+      "task_key": "3_19",
+      "base_team": [
+        28,
+        77
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9234790802001953,
+      "prob_task": 2.0510414350625417e-26,
+      "prob_branch": 1.0,
+      "prob_team": 6.409809465839803e-31,
+      "prob_align": 1.0,
+      "joint_prob_a": 1.2140780739582377e-56,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 172,
+      "step_count": 172,
+      "current_time": 360.87735014222744,
+      "task_key": "3_22",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9252368211746216,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 173,
+      "step_count": 173,
+      "current_time": 360.87735014222744,
+      "task_key": "3_125",
+      "base_team": [
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9248483180999756,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 8.216344470727808e-24,
+      "prob_align": 1.0,
+      "joint_prob_a": 7.598872364682648e-24,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "3_125",
+        "branch": "0",
+        "team": [
+          77
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 174,
+      "step_count": 174,
+      "current_time": 437.9346879417358,
+      "task_key": "6_12",
+      "base_team": [
+        50,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 8.107573551762219e-18,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 175,
+      "step_count": 175,
+      "current_time": 437.9346879417358,
+      "task_key": "6_29",
+      "base_team": [
+        76,
+        47
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 3.797726956175536e-26,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 176,
+      "step_count": 176,
+      "current_time": 437.9346879417358,
+      "task_key": "5_20",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 4.1338005241087217e-10,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999408624944,
+      "prob_align": 1.0,
+      "joint_prob_a": 4.13380027964607e-10,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 177,
+      "step_count": 177,
+      "current_time": 437.9346879417358,
+      "task_key": "4_24",
+      "base_team": [
+        28,
+        1
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.49965375661849976,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 178,
+      "step_count": 178,
+      "current_time": 437.9346879417358,
+      "task_key": "4_30",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002206348,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 179,
+      "step_count": 179,
+      "current_time": 437.9346879417358,
+      "task_key": "5_10",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 4.3472253310028464e-05,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999790924221,
+      "prob_align": 1.0,
+      "joint_prob_a": 4.347225240112894e-05,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 180,
+      "step_count": 180,
+      "current_time": 437.9346879417358,
+      "task_key": "6_27",
+      "base_team": [
+        0,
+        66
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9325456619262695,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000111904228,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 181,
+      "step_count": 181,
+      "current_time": 437.9346879417358,
+      "task_key": "4_14",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9288139939308167,
+      "prob_task": 0.998375415802002,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 182,
+      "step_count": 182,
+      "current_time": 437.9346879417358,
+      "task_key": "6_13",
+      "base_team": [
+        47,
+        51
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9335945248603821,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000027431133,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 183,
+      "step_count": 183,
+      "current_time": 437.9346879417358,
+      "task_key": "6_28",
+      "base_team": [
+        50,
+        76
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9277198314666748,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.2733864345710725e-45,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 184,
+      "step_count": 184,
+      "current_time": 437.9346879417358,
+      "task_key": "5_17",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9268611669540405,
+      "prob_task": 0.02640378288924694,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000053562644,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.02447264233154791,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 185,
+      "step_count": 185,
+      "current_time": 437.9346879417358,
+      "task_key": "4_11",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9293779134750366,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.2960910208669846,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 186,
+      "step_count": 186,
+      "current_time": 437.9346879417358,
+      "task_key": "4_23",
+      "base_team": [
+        1,
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9311620593070984,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 5.479292935189676e-52,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 187,
+      "step_count": 187,
+      "current_time": 437.9346879417358,
+      "task_key": "5_21",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9305269122123718,
+      "prob_task": 2.496382876415737e-06,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000196156407,
+      "prob_align": 1.0,
+      "joint_prob_a": 2.3229514952571558e-06,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 188,
+      "step_count": 188,
+      "current_time": 437.9346879417358,
+      "task_key": "4_19",
+      "base_team": [
+        28,
+        77
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9276174902915955,
+      "prob_task": 6.344314606329253e-26,
+      "prob_branch": 1.0,
+      "prob_team": 2.882490844270796e-30,
+      "prob_align": 1.0,
+      "joint_prob_a": 1.6963738775726768e-55,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 189,
+      "step_count": 189,
+      "current_time": 437.9346879417358,
+      "task_key": "4_22",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9293971061706543,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 190,
+      "step_count": 190,
+      "current_time": 437.9346879417358,
+      "task_key": "4_125",
+      "base_team": [
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.928908109664917,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.1267338174595162e-23,
+      "prob_align": 1.0,
+      "joint_prob_a": 1.0466321804718549e-23,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "4_125",
+        "branch": "0",
+        "team": [
+          77
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 191,
+      "step_count": 191,
+      "current_time": 514.9920257412441,
+      "task_key": "6_20",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 5.322524539164153e-12,
+      "prob_branch": 1.0,
+      "prob_team": 0.9999999962101356,
+      "prob_align": 1.0,
+      "joint_prob_a": 5.322524518992506e-12,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 192,
+      "step_count": 192,
+      "current_time": 514.9920257412441,
+      "task_key": "5_24",
+      "base_team": [
+        28,
+        1
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.4996446371078491,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 193,
+      "step_count": 193,
+      "current_time": 514.9920257412441,
+      "task_key": "5_30",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002236344,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 194,
+      "step_count": 194,
+      "current_time": 514.9920257412441,
+      "task_key": "6_10",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 4.947609113514773e-07,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000048430593,
+      "prob_align": 1.0,
+      "joint_prob_a": 4.947609137476337e-07,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 195,
+      "step_count": 195,
+      "current_time": 514.9920257412441,
+      "task_key": "5_14",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.933851420879364,
+      "prob_task": 0.9983891248703003,
+      "prob_branch": 1.0,
+      "prob_team": 6.785829197675265e-65,
+      "prob_align": 1.0,
+      "joint_prob_a": 6.32674819289178e-65,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 196,
+      "step_count": 196,
+      "current_time": 514.9920257412441,
+      "task_key": "6_17",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9354928135871887,
+      "prob_task": 0.00030828805756755173,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000021295591,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0002884012685108735,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 197,
+      "step_count": 197,
+      "current_time": 514.9920257412441,
+      "task_key": "5_11",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9327704310417175,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.13946046009076285,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 198,
+      "step_count": 198,
+      "current_time": 514.9920257412441,
+      "task_key": "5_23",
+      "base_team": [
+        1,
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.934508204460144,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 5.185807341556203e-51,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 199,
+      "step_count": 199,
+      "current_time": 514.9920257412441,
+      "task_key": "6_21",
+      "base_team": [
+        55,
+        6
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9338353872299194,
+      "prob_task": 2.8479409053261406e-08,
+      "prob_branch": 1.0,
+      "prob_team": 1.000000019516392,
+      "prob_align": 1.0,
+      "joint_prob_a": 2.6595080500371647e-08,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 200,
+      "step_count": 200,
+      "current_time": 514.9920257412441,
+      "task_key": "5_19",
+      "base_team": [
+        28,
+        77
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9310024976730347,
+      "prob_task": 2.459040911540431e-25,
+      "prob_branch": 1.0,
+      "prob_team": 1.6519265481176982e-29,
+      "prob_align": 1.0,
+      "joint_prob_a": 3.781876418053099e-54,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 201,
+      "step_count": 201,
+      "current_time": 514.9920257412441,
+      "task_key": "5_22",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9327298998832703,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 7.461241361970131e-65,
+      "prob_align": 1.0,
+      "joint_prob_a": 6.959322908555315e-65,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 202,
+      "step_count": 202,
+      "current_time": 514.9920257412441,
+      "task_key": "5_125",
+      "base_team": [
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9321600198745728,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.6514321845649697e-23,
+      "prob_align": 1.0,
+      "joint_prob_a": 1.5393990579855913e-23,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "5_125",
+        "branch": "0",
+        "team": [
+          77
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 203,
+      "step_count": 203,
+      "current_time": 592.0493635407524,
+      "task_key": "6_24",
+      "base_team": [
+        28,
+        1
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.4996514916419983,
+      "prob_branch": 1.0,
+      "prob_team": 0.0,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_24",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 204,
+      "step_count": 204,
+      "current_time": 592.0493635407524,
+      "task_key": "6_30",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 1.0000000002385268,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 205,
+      "step_count": 205,
+      "current_time": 592.0493635407524,
+      "task_key": "6_14",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 1.0,
+      "prob_task": 0.998386025428772,
+      "prob_branch": 1.0,
+      "prob_team": 8.814729192168923e-64,
+      "prob_align": 1.0,
+      "joint_prob_a": 8.800502443400501e-64,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_14",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 206,
+      "step_count": 206,
+      "current_time": 592.0493635407524,
+      "task_key": "6_11",
+      "base_team": [
+        77,
+        33
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9366965889930725,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 0.0795906639958423,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 207,
+      "step_count": 207,
+      "current_time": 592.0493635407524,
+      "task_key": "6_23",
+      "base_team": [
+        1,
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9366095662117004,
+      "prob_task": 0.0,
+      "prob_branch": 1.0,
+      "prob_team": 2.0498636724995538e-50,
+      "prob_align": 1.0,
+      "joint_prob_a": 0.0,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 208,
+      "step_count": 208,
+      "current_time": 592.0493635407524,
+      "task_key": "6_19",
+      "base_team": [
+        28,
+        77
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9362161159515381,
+      "prob_task": 7.064408164511336e-25,
+      "prob_branch": 1.0,
+      "prob_team": 6.41059869076373e-29,
+      "prob_align": 1.0,
+      "joint_prob_a": 4.239849950531403e-53,
+      "greedy_divergence": "C_GREEDY_TASK_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 209,
+      "step_count": 209,
+      "current_time": 592.0493635407524,
+      "task_key": "6_22",
+      "base_team": [
+        1,
+        28
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.9357496500015259,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 9.957452657175355e-64,
+      "prob_align": 1.0,
+      "joint_prob_a": 9.317682838858602e-64,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_22",
+        "branch": "0",
+        "team": [
+          77,
+          33
+        ],
+        "align": 1
+      }
+    },
+    {
+      "dispatch_index": 210,
+      "step_count": 210,
+      "current_time": 592.0493635407524,
+      "task_key": "6_125",
+      "base_team": [
+        45
+      ],
+      "align": 1,
+      "task_reachable": true,
+      "branch_reachable": true,
+      "team_reachable": true,
+      "align_reachable": true,
+      "overall_reachable": true,
+      "unreachable_reason": null,
+      "prob_stay": 0.935172438621521,
+      "prob_task": 1.0,
+      "prob_branch": 1.0,
+      "prob_team": 2.0351827226962315e-23,
+      "prob_align": 1.0,
+      "joint_prob_a": 1.9032467898242215e-23,
+      "greedy_divergence": "C_GREEDY_TEAM_MISMATCH",
+      "c_greedy_action": {
+        "task_key": "6_125",
+        "branch": "0",
+        "team": [
+          77
+        ],
+        "align": 1
+      }
+    }
+  ]
+}
