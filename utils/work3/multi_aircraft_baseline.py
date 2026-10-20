@@ -122,6 +122,7 @@ class MultiAircraftBaseline:
         h0: float,
         tasks: dict[str, MultiAircraftTask],
         station_workers: dict[int, list[int]],
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         self.num_aircraft = int(num_aircraft)
         self.num_stations = int(num_stations)
@@ -129,6 +130,8 @@ class MultiAircraftBaseline:
         self.total_cycles = self.num_aircraft + self.num_stations - 1
         self.tasks = tasks
         self.station_workers = {int(k): list(v) for k, v in station_workers.items()}
+        self.metadata = dict(metadata) if metadata else {}
+        self.transfer_policy = self.metadata.get("transfer_policy", "actual_cleared_v0")
 
         # 快速索引缓存
         self._tasks_by_aircraft: dict[int, list[MultiAircraftTask]] = {}
@@ -237,6 +240,7 @@ class MultiAircraftBaseline:
             h0=float(meta["h0"]),
             tasks=tasks,
             station_workers=station_workers,
+            metadata=meta,
         )
 
 

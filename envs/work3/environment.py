@@ -61,6 +61,7 @@ class AirLineEnvWork3:
         tolerance: float = 1e-5,
         weights: ObjectiveWeights | None = None,
         max_steps_per_rollout: int | None = None,
+        transfer_policy: str | None = None,
     ) -> None:
         self.baseline_json_path = baseline_json_path
         self.raw_data_path = Path(raw_data_path)
@@ -70,8 +71,11 @@ class AirLineEnvWork3:
         self.weights: ObjectiveWeights = weights if weights is not None else ObjectiveWeights()
         self.max_steps_per_rollout: int | None = max_steps_per_rollout
         self.step_count: int = 0
+        self._configured_transfer_policy = str(transfer_policy) if transfer_policy is not None else None
 
         self.state: MultiAircraftState = initialize_multi_aircraft_state(self.baseline_json_path)
+        if self._configured_transfer_policy is not None:
+            self.state.transfer_policy = self._configured_transfer_policy
         self._raw_task_durations: np.ndarray = np.empty(0, dtype=float)
         self.worker_efficiencies: dict[int, float] = {}
         self.worker_skills: dict[int, frozenset[int]] = {}
@@ -107,9 +111,15 @@ class AirLineEnvWork3:
                 if pred_id in self._successors_map[task.aircraft_id]:
                     self._successors_map[task.aircraft_id][pred_id].append(task.task_id)
 
+    @property
+    def transfer_policy(self) -> str:
+        return getattr(self.state, "transfer_policy", "actual_cleared_v0")
+
     def reset(self) -> dict[str, Any]:
         """重置仿真环境到初始生产状态（0号飞机进驻0号站位）。"""
         self.state = initialize_multi_aircraft_state(self.baseline_json_path)
+        if self._configured_transfer_policy is not None:
+            self.state.transfer_policy = self._configured_transfer_policy
         self._attach_task_domain_metadata()
         self.event_queue.reset(start_time=0.0)
         self.disturbance_event_triggered = False
@@ -1183,6 +1193,12 @@ class AirLineEnvWork3:
             task = self.state.tasks[event.task_key]
             self._check_and_update_task_readiness(task)
         elif event.event_type == EventType.SYNCHRONOUS_TRANSFER:
+            # 安全守卫：在执行转站前再次确认所有占位站位确实已经放行清空且无在制作业 (Section 5.1)
+            if not self.state.is_all_stations_cleared_for_transfer() or any(
+                bool(keys) for keys in self._station_occupied_tasks.values()
+            ):
+                self._transfer_scheduled_for_cycle = 0
+                return
             self._execute_synchronous_transfer(event.timestamp)
         elif event.event_type == EventType.DISTURBANCE:
             self.disturbance_event_triggered = True
@@ -1424,14 +1440,20 @@ class AirLineEnvWork3:
                     if t.actual_end is not None and t.actual_end > latest_finish:
                         latest_finish = t.actual_end
 
-        # H0只用于超期费用和基准比较，不构成实际转站的等待下界。
-        transfer_time = max(latest_finish, self.state.current_time)
+        current_q = self.state.current_cycle
+        if getattr(self.state, "transfer_policy", "") == "nominal_anchored_v1":
+            nominal_boundary = float(current_q) * float(self.state.h0)
+            # P_q = max(P_q^0, P_{q-1}, F_q) (Section 5.1)
+            transfer_time = max(nominal_boundary, float(self.state.last_transfer_time), float(latest_finish))
+        else:
+            # H0只用于超期费用和基准比较，不构成实际转站的等待下界 (actual_cleared_v0)
+            transfer_time = max(latest_finish, self.state.current_time)
 
-        self._transfer_scheduled_for_cycle = self.state.current_cycle
+        self._transfer_scheduled_for_cycle = current_q
         self.event_queue.push(
             event_type=EventType.SYNCHRONOUS_TRANSFER,
             timestamp=transfer_time,
-            payload={"cycle": self.state.current_cycle},
+            payload={"cycle": current_q},
         )
 
     def _execute_synchronous_transfer(self, timestamp: float) -> None:
@@ -1460,6 +1482,9 @@ class AirLineEnvWork3:
                         f"脉动周期 {current_q} 转站校验失败：占位站位 {s} 的就绪时刻 {f_val} 超出周期区间 [{self.state.last_transfer_time}, {timestamp}]"
                     )
 
+        nominal_boundary = float(current_q) * float(self.state.h0)
+        delay_to_nom = max(0.0, float(timestamp) - nominal_boundary)
+
         cycle_rec = CycleExecutionRecord(
             cycle_id=current_q,
             cycle_start_time=float(self.state.last_transfer_time),
@@ -1467,6 +1492,8 @@ class AirLineEnvWork3:
             occupied_stations=occupied,
             aircraft_at_stations=aircraft_at_stations,
             station_first_cleared_times=dict(cleared_map),
+            nominal_transfer_time=nominal_boundary,
+            delay_relative_to_nominal=delay_to_nom,
         )
         validate_cycle_execution_record(cycle_rec, tolerance=self.tolerance)
 

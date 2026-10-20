@@ -406,6 +406,8 @@ class CycleExecutionRecord:
     occupied_stations: tuple[bool, ...]
     aircraft_at_stations: tuple[int | None, ...]
     station_first_cleared_times: Mapping[int, float] = field(default_factory=dict)
+    nominal_transfer_time: float | None = None
+    delay_relative_to_nominal: float = 0.0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "cycle_id", int(self.cycle_id))
@@ -422,6 +424,9 @@ class CycleExecutionRecord:
         else:
             cleared = {int(k): float(v) for k, v in dict(self.station_first_cleared_times).items()}
         object.__setattr__(self, "station_first_cleared_times", MappingProxyType(cleared))
+        if self.nominal_transfer_time is not None:
+            object.__setattr__(self, "nominal_transfer_time", float(self.nominal_transfer_time))
+        object.__setattr__(self, "delay_relative_to_nominal", float(self.delay_relative_to_nominal))
 
     def __deepcopy__(self, memo: dict[int, Any]) -> CycleExecutionRecord:
         memo[id(self)] = self
@@ -437,6 +442,8 @@ class CycleExecutionRecord:
                 self.occupied_stations,
                 self.aircraft_at_stations,
                 dict(self.station_first_cleared_times),
+                self.nominal_transfer_time,
+                self.delay_relative_to_nominal,
             ),
         )
 
@@ -448,6 +455,8 @@ class CycleExecutionRecord:
             "occupied_stations": tuple(self.occupied_stations),
             "aircraft_at_stations": tuple(self.aircraft_at_stations),
             "station_first_cleared_times": {int(k): float(v) for k, v in self.station_first_cleared_times.items()},
+            "nominal_transfer_time": float(self.nominal_transfer_time) if self.nominal_transfer_time is not None else None,
+            "delay_relative_to_nominal": float(self.delay_relative_to_nominal),
         }
 
     @classmethod
@@ -462,6 +471,8 @@ class CycleExecutionRecord:
                 int(x) if x is not None else None for x in data["aircraft_at_stations"]
             ),
             station_first_cleared_times={int(k): float(v) for k, v in cleared.items()},
+            nominal_transfer_time=float(data["nominal_transfer_time"]) if data.get("nominal_transfer_time") is not None else None,
+            delay_relative_to_nominal=float(data.get("delay_relative_to_nominal", 0.0)),
         )
 
 
@@ -621,6 +632,7 @@ class MultiAircraftState:
     tasks: dict[str, TaskRuntimeState] = field(default_factory=dict)
     workers: dict[int, WorkerCalendar] = field(default_factory=dict)
     station_worker_bindings: dict[int, list[int]] = field(default_factory=dict)
+    transfer_policy: str = "actual_cleared_v0"
     normalization_task_count: int = field(init=False)
     _ac_station_tasks: dict[tuple[int, int], list[TaskRuntimeState]] = field(
         default_factory=dict, init=False, repr=False, compare=False
@@ -823,6 +835,8 @@ def initialize_multi_aircraft_state(
         for w in w_list:
             workers_map[w] = WorkerCalendar(worker_id=w, station_id=s_0based)
 
+    transfer_policy = getattr(baseline, "transfer_policy", "actual_cleared_v0")
+
     state = MultiAircraftState(
         num_aircraft=baseline.num_aircraft,
         num_stations=baseline.num_stations,
@@ -835,6 +849,7 @@ def initialize_multi_aircraft_state(
         tasks=tasks_map,
         workers=workers_map,
         station_worker_bindings=bindings_0,
+        transfer_policy=str(transfer_policy),
     )
 
     return state

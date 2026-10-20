@@ -1,0 +1,116 @@
+[
+  {
+    "scenario_id": "RULE_TRAIN_S1_RHO10",
+    "valid": true,
+    "split": "train",
+    "aircraft_id": 1,
+    "station_id": 1,
+    "target_task_key": "1_3",
+    "rho": 0.1,
+    "tau": 47.037844126999545,
+    "delta": 10.203784412699953,
+    "recovery_time": 57.2416285396995,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_3"
+    ],
+    "description": "Station 1 early task material delay rho=0.10",
+    "timing_reference": "nominal_anchored_v1_relative"
+  },
+  {
+    "scenario_id": "RULE_TRAIN_S2_RHO25",
+    "valid": true,
+    "split": "train",
+    "aircraft_id": 2,
+    "station_id": 2,
+    "target_task_key": "2_8",
+    "rho": 0.25,
+    "tau": 151.11353238099863,
+    "delta": 18.00946103174988,
+    "recovery_time": 169.1229934127485,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_8"
+    ],
+    "description": "Station 2 task material delay rho=0.25",
+    "timing_reference": "nominal_anchored_v1_relative"
+  },
+  {
+    "scenario_id": "RULE_TRAIN_S3_RHO50",
+    "valid": true,
+    "split": "train",
+    "aircraft_id": 2,
+    "station_id": 3,
+    "target_task_key": "2_27",
+    "rho": 0.5,
+    "tau": 203.15137650799818,
+    "delta": 31.01892206349976,
+    "recovery_time": 234.17029857149794,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_27"
+    ],
+    "description": "Station 3 bottleneck task material delay rho=0.50",
+    "timing_reference": "nominal_anchored_v1_relative"
+  },
+  {
+    "scenario_id": "RULE_TRAIN_S4_RHO75",
+    "valid": true,
+    "split": "train",
+    "aircraft_id": 3,
+    "station_id": 4,
+    "target_task_key": "3_10",
+    "rho": 0.75,
+    "tau": 307.22706476199727,
+    "delta": 44.02838309524964,
+    "recovery_time": 351.2554478572469,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_10"
+    ],
+    "description": "Station 4 task material delay rho=0.75",
+    "timing_reference": "nominal_anchored_v1_relative"
+  },
+  {
+    "scenario_id": "RULE_VAL_S1_MODERATE",
+    "valid": true,
+    "split": "val",
+    "aircraft_id": 1,
+    "station_id": 1,
+    "target_task_key": "1_4",
+    "rho": 0.2,
+    "tau": 47.037844126999545,
+    "delta": 15.407568825399906,
+    "recovery_time": 62.44541295239945,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_4"
+    ],
+    "description": "Validation 1: Station 1 moderate critical path delay rho=0.20",
+    "timing_reference": "nominal_anchored_v1_relative"
+  },
+  {
+    "scenario_id": "RULE_VAL_S2_STRONG",
+    "valid": true,
+    "split": "val",
+    "aircraft_id": 1,
+    "station_id": 3,
+    "target_task_key": "1_27",
+    "rho": 0.6,
+    "tau": 151.11353238099863,
+    "delta": 36.22270647619973,
+    "recovery_time": 187.33623885719837,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_27"
+    ],
+    "description": "Validation 2: Station 3 strong bottleneck delay rho=0.60",
+    "timing_reference": "nominal_anchored_v1_relative"
+  }
+]
