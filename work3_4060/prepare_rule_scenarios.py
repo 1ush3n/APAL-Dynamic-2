@@ -62,6 +62,8 @@ def generate_and_calibrate_scenarios() -> None:
             "station_id": 1,
             "task_key": "1_3",
             "rho": 0.10,
+            "timing": "EARLY",
+            "intensity": "LOW",
             "description": "Station 1 early task material delay rho=0.10",
         },
         {
@@ -71,6 +73,8 @@ def generate_and_calibrate_scenarios() -> None:
             "station_id": 2,
             "task_key": "2_8",
             "rho": 0.25,
+            "timing": "MID",
+            "intensity": "MED",
             "description": "Station 2 task material delay rho=0.25",
         },
         {
@@ -80,6 +84,8 @@ def generate_and_calibrate_scenarios() -> None:
             "station_id": 3,
             "task_key": "2_27",
             "rho": 0.50,
+            "timing": "MID",
+            "intensity": "HIGH",
             "description": "Station 3 bottleneck task material delay rho=0.50",
         },
         {
@@ -89,6 +95,8 @@ def generate_and_calibrate_scenarios() -> None:
             "station_id": 4,
             "task_key": "3_10",
             "rho": 0.75,
+            "timing": "LATE",
+            "intensity": "HIGH",
             "description": "Station 4 task material delay rho=0.75",
         },
         {
@@ -98,6 +106,8 @@ def generate_and_calibrate_scenarios() -> None:
             "station_id": 1,
             "task_key": "1_4",
             "rho": 0.20,
+            "timing": "EARLY",
+            "intensity": "MED",
             "description": "Validation 1: Station 1 moderate critical path delay rho=0.20",
         },
         {
@@ -107,6 +117,8 @@ def generate_and_calibrate_scenarios() -> None:
             "station_id": 3,
             "task_key": "1_27",
             "rho": 0.60,
+            "timing": "MID",
+            "intensity": "HIGH",
             "description": "Validation 2: Station 3 strong bottleneck delay rho=0.60",
         },
     ]
@@ -142,6 +154,8 @@ def generate_and_calibrate_scenarios() -> None:
             "scenario_id": s_id,
             "valid": True,
             "split": spec["split"],
+            "timing": spec["timing"],
+            "intensity": spec["intensity"],
             "aircraft_id": plane,
             "station_id": station,
             "target_task_key": task_key,

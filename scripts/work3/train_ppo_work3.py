@@ -15,6 +15,7 @@ from contextvars import ContextVar
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from functools import wraps
+import gc
 import hashlib
 import inspect
 import json
@@ -2098,6 +2099,9 @@ def run_training(
             metrics = lightning_module.last_metrics
         else:
             metrics = {}
+
+        if iter_idx % 10 == 0:
+            gc.collect()
 
         iter_elapsed = time.monotonic() - iter_start
         mean_raw_r = float(np.mean(step_raw_rewards)) if step_raw_rewards else 0.0

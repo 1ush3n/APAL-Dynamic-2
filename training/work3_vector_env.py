@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import math
+import gc
 import time
 import traceback
 from collections.abc import Sequence
@@ -424,6 +425,9 @@ def _worker_main(
                 else:
                     raise ValueError(f"未知worker命令: {command}")
                 connection.send({"request_id": request_id, "ok": True, "result": result})
+                del result
+                if request_id % 20 == 0:
+                    gc.collect()
             except Exception as exc:
                 connection.send(
                     {
