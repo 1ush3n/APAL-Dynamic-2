@@ -1,6 +1,9 @@
 {
   "comparison_mode": "cf",
   "expected_seed": 42,
+  "matrix_historical_json": "work3_4060/representation_v1/seed42/evaluation/equal_budget_validation_results.json",
+  "matrix_historical_manifest": "work3_4060/representation_v1/seed42/variants.json",
+  "matrix_historical_sha256": "5284d9c104f0ab6f64214ee4fbad7eb6e56671f511b855bcdf7907872ad07f64",
   "variants": [
     {
       "label": "C_b4096",

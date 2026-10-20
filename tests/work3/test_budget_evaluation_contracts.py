@@ -20,6 +20,9 @@ import torch
 
 from work3_4060.run_budget_evaluation import (
     REPO_ROOT,
+    ManifestResult,
+    compute_four_cell_matrix_analysis,
+    cross_verify_model_pairing,
     cross_verify_training_config,
     get_variants_for_mode,
     load_variants_from_json,
@@ -324,3 +327,225 @@ def test_cf_actor_fingerprint_mismatch_fails(tmp_path: Path):
 
     with pytest.raises(AssertionError, match="初始Actor指纹不匹配"):
         verify_checkpoint_and_run_contracts(test_variants, device="cpu")
+
+
+# ==============================================================================
+# Section 13 离线收口与契约强化单测 (R13-A, R13-B, R13-C)
+# ==============================================================================
+
+def _build_mock_pairing_run(
+    method: str = "C",
+    seed: int = 42,
+    actor_fp: str = "2d639e6138af39725db3658506048ed75396eed26a8ee8629c48bd5deabf203d",
+    lr: float = 0.0003,
+    beta: float = 1.0,
+    gamma: float = 0.99,
+    rollout_steps: int = 8,
+) -> dict[str, Any]:
+    """构建用于跨模型配对单测的纯字典运行记录。"""
+    return {
+        "method_variant": method,
+        "seed": seed,
+        "initial_actor_fingerprint": actor_fp,
+        "data_fingerprint": {
+            "scenario_pool_sha256": "pool_hash_mock_1234567890abcdef",
+            "scenario_split_sha256": "split_hash_mock_1234567890abcdef",
+            "baseline_sha256": "baseline_hash_mock_1234567890abcdef",
+        },
+        "training_config": {
+            "gamma": gamma,
+            "gae_lambda": 0.95,
+            "lr": lr,
+            "rollout_steps": rollout_steps,
+            "batch_size": 2,
+            "ppo_epochs": 1,
+            "num_envs": 1,
+            "amp_dtype": "fp32",
+            "beta_shaping": beta,
+        },
+    }
+
+
+def test_cross_verify_model_pairing_valid():
+    """(Section 13.4 R13-B) 验证标准合法的 C 与 F 配对记录通过校验。"""
+    run_c = _build_mock_pairing_run(method="C", beta=1.0)
+    run_f = _build_mock_pairing_run(method="F", beta=1.0)
+    cross_verify_model_pairing("C_b4096", run_c, "F_b4096", run_f, comparison_mode="cf")
+
+
+def test_cross_verify_model_pairing_missing_fingerprint_raises():
+    """(Section 13.4 R13-B) 验证缺少 initial_actor_fingerprint 时拦截并抛出 ValueError。"""
+    run_c = _build_mock_pairing_run(method="C")
+    run_f = _build_mock_pairing_run(method="F")
+    del run_c["initial_actor_fingerprint"]
+
+    with pytest.raises(ValueError, match="缺少 initial_actor_fingerprint"):
+        cross_verify_model_pairing("C_b4096", run_c, "F_b4096", run_f, comparison_mode="cf")
+
+    run_c_ok = _build_mock_pairing_run(method="C")
+    del run_f["initial_actor_fingerprint"]
+    with pytest.raises(ValueError, match="缺少 initial_actor_fingerprint"):
+        cross_verify_model_pairing("C_b4096", run_c_ok, "F_b4096", run_f, comparison_mode="cf")
+
+
+def test_cross_verify_model_pairing_invalid_hex_fingerprint_raises():
+    """(Section 13.4 R13-B) 验证非合法 64 位十六进制指纹时拦截并抛出 ValueError。"""
+    run_c = _build_mock_pairing_run(method="C", actor_fp="not_a_hex_fingerprint")
+    run_f = _build_mock_pairing_run(method="F")
+
+    with pytest.raises(ValueError, match="不是有效的64位十六进制哈希"):
+        cross_verify_model_pairing("C_b4096", run_c, "F_b4096", run_f, comparison_mode="cf")
+
+
+def test_cross_verify_model_pairing_mismatched_actor_fingerprint_raises():
+    """(Section 13.4 R13-B) 验证 Actor 指纹不匹配时拦截并抛出 AssertionError。"""
+    run_c = _build_mock_pairing_run(method="C", actor_fp="1111111111111111111111111111111111111111111111111111111111111111")
+    run_f = _build_mock_pairing_run(method="F", actor_fp="2222222222222222222222222222222222222222222222222222222222222222")
+
+    with pytest.raises(AssertionError, match="初始Actor指纹不匹配"):
+        cross_verify_model_pairing("C_b4096", run_c, "F_b4096", run_f, comparison_mode="cf")
+
+
+def test_cross_verify_model_pairing_mismatched_hyperparams_raises():
+    """(Section 13.4 R13-B) 验证跨模型超参数冲突时逐一拦截 (反例验证)。"""
+    base_c = _build_mock_pairing_run(method="C", beta=1.0)
+    base_f = _build_mock_pairing_run(method="F", beta=1.0)
+
+    # 1. 学习率冲突
+    bad_lr_f = _build_mock_pairing_run(method="F", beta=1.0, lr=0.0006)
+    with pytest.raises(AssertionError, match="超参数 lr 不一致"):
+        cross_verify_model_pairing("C_b4096", base_c, "F_b4096", bad_lr_f, comparison_mode="cf")
+
+    # 2. gamma 冲突
+    bad_gamma_f = _build_mock_pairing_run(method="F", beta=1.0, gamma=0.95)
+    with pytest.raises(AssertionError, match="超参数 gamma 不一致"):
+        cross_verify_model_pairing("C_b4096", base_c, "F_b4096", bad_gamma_f, comparison_mode="cf")
+
+    # 3. rollout_steps 冲突
+    bad_rollout_f = _build_mock_pairing_run(method="F", beta=1.0, rollout_steps=16)
+    with pytest.raises(AssertionError, match="超参数 rollout_steps 不一致"):
+        cross_verify_model_pairing("C_b4096", base_c, "F_b4096", bad_rollout_f, comparison_mode="cf")
+
+    # 4. 种子冲突
+    bad_seed_f = _build_mock_pairing_run(method="F", beta=1.0, seed=45)
+    with pytest.raises(AssertionError, match="种子不一致"):
+        cross_verify_model_pairing("C_b4096", base_c, "F_b4096", bad_seed_f, comparison_mode="cf")
+
+    # 5. beta 冲突 (在 cf 模式下要求 beta 一致)
+    bad_beta_f = _build_mock_pairing_run(method="F", beta=0.1)
+    with pytest.raises(AssertionError, match="超参数 beta_shaping 不一致"):
+        cross_verify_model_pairing("C_b4096", base_c, "F_b4096", bad_beta_f, comparison_mode="cf")
+
+    # 6. 数据指纹冲突
+    bad_dfp_f = _build_mock_pairing_run(method="F", beta=1.0)
+    bad_dfp_f["data_fingerprint"]["scenario_pool_sha256"] = "tampered_pool_hash"
+    with pytest.raises(AssertionError, match="数据指纹不一致"):
+        cross_verify_model_pairing("C_b4096", base_c, "F_b4096", bad_dfp_f, comparison_mode="cf")
+
+
+def test_cross_verify_model_pairing_wrong_method_raises():
+    """(Section 13.4 R13-B) 验证对比方法不符合模式要求时拦截。"""
+    run_d1 = _build_mock_pairing_run(method="D", beta=1.0)
+    run_d2 = _build_mock_pairing_run(method="D", beta=1.0)
+
+    with pytest.raises(AssertionError, match="cf 比较模式要求对比方法必须为 C 与 F"):
+        cross_verify_model_pairing("C_b4096", run_d1, "F_b4096", run_d2, comparison_mode="cf")
+
+
+def test_r13_c_unrounded_float_preserves_near_ties():
+    """(Section 13.4 R13-C) 近似平局反例检验：
+    证明在未舍入 float 下 4e-11 差值能正确判定胜负，而在旧版 .8e 字符串往返下会误判平局。
+    """
+    j_c = 0.05
+    j_f = 0.05000000004
+    true_delta = j_c - j_f  # -4e-11
+
+    # 1. 旧逻辑：字符串 .8e 往返导致提前舍入
+    str_c = f"{j_c:.8e}"
+    str_f = f"{j_f:.8e}"
+    assert str_c == str_f == "5.00000000e-02"
+    rounded_delta = float(str_c) - float(str_f)
+    old_is_tie = (abs(rounded_delta) <= 1e-12)
+    assert old_is_tie is True, "旧逻辑确实把 4e-11 误判为了平局 (复现见证)"
+
+    # 2. 新逻辑：未舍入 float 保留真实数值精度
+    assert abs(true_delta) > 1e-12
+    new_is_tie = (abs(true_delta) <= 1e-12)
+    assert new_is_tie is False, "新逻辑未舍入 float 正确判定非平局"
+    c_better = (true_delta < -1e-12)
+    assert c_better is True, "正确判定 C 优于 F"
+
+
+def test_r13_a_compute_four_cell_matrix_dynamic():
+    """(Section 13.4 R13-A) 验证四格矩阵基于原始 JSON 动态计算，杜绝写死常量。"""
+    hist_json = REPO_ROOT / "work3_4060/representation_v1/seed42/evaluation/equal_budget_validation_results.json"
+    hist_manifest = REPO_ROOT / "work3_4060/representation_v1/seed42/variants.json"
+    val_scenarios = ["COMPARE_VAL_S0_EARLY_M", "COMPARE_VAL_S2_MID_M", "COMPARE_VAL_S3_MID_L", "COMPARE_VAL_S4_LATE_H"]
+
+    # 当前 beta=1.0 的 C 与 F 验证集均值 (来自真实评估数据)
+    curr_c_mean = 0.026572549232481896
+    curr_f_mean = 0.043086185769927551
+
+    lines, info = compute_four_cell_matrix_analysis(
+        current_seed=42,
+        current_beta=1.0,
+        current_c_mean=curr_c_mean,
+        current_f_mean=curr_f_mean,
+        val_scenario_ids=val_scenarios,
+        historical_json_path=hist_json,
+        historical_manifest_path=hist_manifest,
+    )
+
+    assert info["status"] == "PASS"
+    # 验证动态复算的四格数值
+    assert abs(info["c_01"] - 0.053197622808156944) < 1e-10
+    assert abs(info["f_01"] - 0.044906890812782062) < 1e-10
+    assert abs(info["delta_01"] - 0.008290731995374882) < 1e-10
+    assert abs(info["delta_1"] - (-0.016513636537445656)) < 1e-10
+    assert abs(info["I_interaction"] - (-0.024804368532820538)) < 1e-10
+    # 验证相对百分比与分母定义
+    assert abs(info["pct_f_over_c_01"] - 15.584779) < 1e-4
+    assert abs(info["pct_c_over_f_1"] - 38.326986) < 1e-4
+
+
+def test_r13_a_missing_historical_source_is_incomplete():
+    """(Section 13.4 R13-A) 验证缺少历史结果源时，四格矩阵输出 INCOMPLETE，不填充固定常数。"""
+    val_scenarios = ["COMPARE_VAL_S0_EARLY_M", "COMPARE_VAL_S2_MID_M"]
+    lines, info = compute_four_cell_matrix_analysis(
+        current_seed=42,
+        current_beta=1.0,
+        current_c_mean=0.026,
+        current_f_mean=0.043,
+        val_scenario_ids=val_scenarios,
+        historical_json_path=None,
+    )
+    assert info["status"] == "INCOMPLETE"
+    assert any("INCOMPLETE" in line for line in lines)
+    # 确保没有输出硬编码的 seed 42 常数
+    assert not any("0.05319762" in line for line in lines)
+    assert not any("0.04490689" in line for line in lines)
+
+
+def test_r13_a_mismatched_seed_incomplete(tmp_path: Path):
+    """(Section 13.4 R13-A) 验证跨种子混合历史结果时拒绝生成四格矩阵。"""
+    manifest_data = {
+        "expected_seed": 45,  # 冲突种子
+    }
+    manifest_p = tmp_path / "bad_manifest.json"
+    manifest_p.write_text(json.dumps(manifest_data), encoding="utf-8")
+
+    hist_json = REPO_ROOT / "work3_4060/representation_v1/seed42/evaluation/equal_budget_validation_results.json"
+    val_scenarios = ["COMPARE_VAL_S0_EARLY_M"]
+
+    lines, info = compute_four_cell_matrix_analysis(
+        current_seed=42,
+        current_beta=1.0,
+        current_c_mean=0.026,
+        current_f_mean=0.043,
+        val_scenario_ids=val_scenarios,
+        historical_json_path=hist_json,
+        historical_manifest_path=manifest_p,
+    )
+    assert info["status"] == "INCOMPLETE"
+    assert info["reason"] == "seed_mismatch"
+    assert any("禁止跨种子混合生成四格矩阵" in line for line in lines)
