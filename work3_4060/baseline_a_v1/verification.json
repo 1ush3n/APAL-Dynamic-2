@@ -1,0 +1,48 @@
+{
+  "protocol_status": "PASS",
+  "production_outcomes": {
+    "NOMINAL": {
+      "success": true,
+      "feasible": true,
+      "completed_tasks": 210,
+      "total_tasks": 210,
+      "termination_reason": "completed"
+    },
+    "COMPARE_VAL_S0_EARLY_M": {
+      "success": true,
+      "feasible": true,
+      "completed_tasks": 210,
+      "total_tasks": 210,
+      "termination_reason": "completed"
+    },
+    "COMPARE_VAL_S2_MID_M": {
+      "success": true,
+      "feasible": true,
+      "completed_tasks": 210,
+      "total_tasks": 210,
+      "termination_reason": "completed"
+    },
+    "COMPARE_VAL_S3_MID_L": {
+      "success": true,
+      "feasible": true,
+      "completed_tasks": 210,
+      "total_tasks": 210,
+      "termination_reason": "completed"
+    },
+    "COMPARE_VAL_S4_LATE_H": {
+      "success": true,
+      "feasible": true,
+      "completed_tasks": 210,
+      "total_tasks": 210,
+      "termination_reason": "completed"
+    }
+  },
+  "verification_summary": {
+    "all_scenarios_covered": true,
+    "all_tasks_completed_210": true,
+    "all_trajectories_physically_feasible": true,
+    "all_ledgers_balanced": true,
+    "zero_postpone_observed_for_a": true,
+    "learning_baselines_verified": true
+  }
+}

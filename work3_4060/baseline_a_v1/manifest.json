@@ -1,0 +1,59 @@
+{
+  "execution_timestamp": "2026-10-20T19:41:18+0800",
+  "git_commit": "3057b6cb381fe0f6db652dee33579c0ee60ea226",
+  "git_dirty": true,
+  "environment": {
+    "python_version": "3.11.15 | packaged by Anaconda, Inc. | (main, Mar 11 2026, 17:12:15) [MSC v.1942 64 bit (AMD64)]",
+    "torch_version": "2.12.0+cu132",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "device": "cpu",
+    "threads": 1
+  },
+  "benchmark_inputs": {
+    "baseline": {
+      "path": "work3_4060/data/mini210.json",
+      "raw_sha256": "b3f4285a37b1141ad6745fd69905ea41000b11922648af671c7976a5835eeb3b",
+      "lf_sha256": "b3f4285a37b1141ad6745fd69905ea41000b11922648af671c7976a5835eeb3b"
+    },
+    "scenarios": {
+      "path": "work3_4060/compare_v1/scenarios.json",
+      "raw_sha256": "7cdc1d09edbc3b4a972a08f41fe42913c90dbc659e7738d50734d21ec9294975",
+      "lf_sha256": "3c5507a678f5586710a8f337fe96e678427b725a4d84d00ca2f4e4cad9b7e3fe"
+    },
+    "split": {
+      "path": "work3_4060/compare_v1/validation.json",
+      "raw_sha256": "8d0b89e0fa62034be5e0923e68e8d2544693c669521130c82fcfc1157799347f",
+      "lf_sha256": "b32d7a3cb65f737024d1af20712f7925c211ef1243b3493389574d739be28681"
+    }
+  },
+  "method_a_protocol": {
+    "agent_class": "BaselinePlanRepairAgent",
+    "agent_type": "Baseline-Repair-A",
+    "max_decisions": 4096,
+    "warmup_mode": "none",
+    "cost_schema": "work3_trajectory_cost_v2"
+  },
+  "learning_baselines_sources": {
+    "beta_1_0": {
+      "path": "work3_4060/representation_v2/seed42/evaluation/equal_budget_validation_results.json",
+      "raw_sha256": "9fea14d8f31bf2871f12093be6e0fca24b687b587953847d6d6cde1fce4f2a50",
+      "lf_sha256": "6d44f69d3e9d60000eed364e1119d6767f7fec25b4bc96ac71b72a4d3a4cf6af",
+      "variants_manifest": "work3_4060/representation_v2/seed42/variants.json",
+      "methods": [
+        "C_beta1_seed42_b4096",
+        "F_beta1_seed42_b4096"
+      ]
+    },
+    "beta_0_1": {
+      "path": "work3_4060/representation_v1/seed42/evaluation/equal_budget_validation_results.json",
+      "raw_sha256": "5284d9c104f0ab6f64214ee4fbad7eb6e56671f511b855bcdf7907872ad07f64",
+      "lf_sha256": "3f01c0d1620c9fc89a23dd39c4e420a45560a32136ea438dfd2af73bb781971e",
+      "variants_manifest": "work3_4060/representation_v1/seed42/variants.json",
+      "methods": [
+        "C_beta01_seed42_b4096",
+        "F_beta01_seed42_b4096",
+        "D_beta01_seed42_b4096"
+      ]
+    }
+  }
+}

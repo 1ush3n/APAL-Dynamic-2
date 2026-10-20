@@ -1,0 +1,82 @@
+{
+  "NOMINAL": {
+    "scenario_id": "NOMINAL",
+    "candidate_source": null,
+    "conditions_satisfied": [
+      "same_mini210_instance",
+      "same_scenario_definition"
+    ],
+    "conditions_missing": [
+      "full_end_to_end_trajectory",
+      "complete_metrics",
+      "independent_feasibility_check",
+      "physical_execution_facts"
+    ],
+    "reused": false,
+    "reason": "仓库历史归档中仅有接管诊断的前缀运行（在扰动命中点终止），缺乏端到端完整执行事实、独立物理校验与账本对账，不满足复用条件。"
+  },
+  "COMPARE_VAL_S0_EARLY_M": {
+    "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+    "candidate_source": null,
+    "conditions_satisfied": [
+      "same_mini210_instance",
+      "same_scenario_definition"
+    ],
+    "conditions_missing": [
+      "full_end_to_end_trajectory",
+      "complete_metrics",
+      "independent_feasibility_check",
+      "physical_execution_facts"
+    ],
+    "reused": false,
+    "reason": "仓库历史归档中仅有接管诊断的前缀运行（在扰动命中点终止），缺乏端到端完整执行事实、独立物理校验与账本对账，不满足复用条件。"
+  },
+  "COMPARE_VAL_S2_MID_M": {
+    "scenario_id": "COMPARE_VAL_S2_MID_M",
+    "candidate_source": null,
+    "conditions_satisfied": [
+      "same_mini210_instance",
+      "same_scenario_definition"
+    ],
+    "conditions_missing": [
+      "full_end_to_end_trajectory",
+      "complete_metrics",
+      "independent_feasibility_check",
+      "physical_execution_facts"
+    ],
+    "reused": false,
+    "reason": "仓库历史归档中仅有接管诊断的前缀运行（在扰动命中点终止），缺乏端到端完整执行事实、独立物理校验与账本对账，不满足复用条件。"
+  },
+  "COMPARE_VAL_S3_MID_L": {
+    "scenario_id": "COMPARE_VAL_S3_MID_L",
+    "candidate_source": null,
+    "conditions_satisfied": [
+      "same_mini210_instance",
+      "same_scenario_definition"
+    ],
+    "conditions_missing": [
+      "full_end_to_end_trajectory",
+      "complete_metrics",
+      "independent_feasibility_check",
+      "physical_execution_facts"
+    ],
+    "reused": false,
+    "reason": "仓库历史归档中仅有接管诊断的前缀运行（在扰动命中点终止），缺乏端到端完整执行事实、独立物理校验与账本对账，不满足复用条件。"
+  },
+  "COMPARE_VAL_S4_LATE_H": {
+    "scenario_id": "COMPARE_VAL_S4_LATE_H",
+    "candidate_source": null,
+    "conditions_satisfied": [
+      "same_mini210_instance",
+      "same_scenario_definition"
+    ],
+    "conditions_missing": [
+      "full_end_to_end_trajectory",
+      "complete_metrics",
+      "independent_feasibility_check",
+      "physical_execution_facts"
+    ],
+    "reused": false,
+    "reason": "仓库历史归档中仅有接管诊断的前缀运行（在扰动命中点终止），缺乏端到端完整执行事实、独立物理校验与账本对账，不满足复用条件。"
+  }
+}
