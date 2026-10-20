@@ -1,0 +1,11 @@
+{
+  "feasible": true,
+  "violations": {},
+  "total_tasks_checked": 210,
+  "total_aircraft": 7,
+  "total_stations": 5,
+  "h0": 52.037844126999545,
+  "makespan_nominal": 572.416285396995,
+  "earliest_start": 0.0,
+  "latest_finish": 525.8821726420796
+}
