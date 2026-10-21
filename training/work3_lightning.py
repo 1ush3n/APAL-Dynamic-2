@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
+import time
 from typing import Any
 
 import torch
@@ -120,6 +121,7 @@ class Work3LightningModule(LightningModule):
         self.time_supervision_optimizer_updates = 0
         self.environment_steps = 0
         self.last_metrics: dict[str, float | None] = {}
+        self.minibatch_records: list[dict[str, Any]] = []
         self._optimizer_parameter_ids: tuple[int, ...] = ()
         self._optimizer: torch.optim.Optimizer | None = None
         self._step_grad_norm: float | None = None
@@ -274,7 +276,39 @@ class Work3LightningModule(LightningModule):
         )
         for _ in range(self.ppo_epochs):
             for minibatch in batch.buffer.get_batches(batch_size=self.batch_size, shuffle=True):
+                optimizer_step_started = time.perf_counter()
                 losses = self.objective.compute_ppo_minibatch_loss(minibatch)
+                ratio = losses["ratio"].detach().float()
+                log_ratio = losses["log_ratio"].detach().float()
+                self.minibatch_records.append(
+                    {
+                        "rollout_id": int(batch.rollout_id),
+                        "minibatch_index": int(ppo_update_count),
+                        "sample_count": int(ratio.numel()),
+                        "total_loss": float(losses["total_loss"].detach().float().item()),
+                        "policy_loss": float(losses["policy_loss"].detach().float().item()),
+                        "value_loss": float(losses["value_loss"].detach().float().item()),
+                        "entropy": float(losses["entropy"].detach().float().item()),
+                        "value_coefficient": float(self.objective.vf_coef),
+                        "entropy_coefficient": float(self.objective.ent_coef),
+                        "weighted_value_loss": float((self.objective.vf_coef * losses["value_loss"]).detach().float().item()),
+                        "weighted_entropy_loss": float((-self.objective.ent_coef * losses["entropy"]).detach().float().item()),
+                        "approx_kl": float(losses["approx_kl"].detach().float().item()),
+                        "clip_fraction": float(losses["clip_fraction"].detach().float().item()),
+                        "ratio_stats": {
+                            "mean": float(ratio.mean().item()),
+                            "std": float(ratio.std(unbiased=False).item()),
+                            "min": float(ratio.min().item()),
+                            "max": float(ratio.max().item()),
+                        },
+                        "log_ratio_stats": {
+                            "mean": float(log_ratio.mean().item()),
+                            "std": float(log_ratio.std(unbiased=False).item()),
+                            "min": float(log_ratio.min().item()),
+                            "max": float(log_ratio.max().item()),
+                        },
+                    }
+                )
                 if sampling_replay_max_abs_error is None:
                     with torch.no_grad():
                         replay_reference = minibatch["old_log_probs"].to(
@@ -291,6 +325,7 @@ class Work3LightningModule(LightningModule):
                         minibatch["old_log_probs"].numel()
                     )
                 grad_norm = self._manual_update(losses["total_loss"], optimizer)
+                self.minibatch_records[-1]["optimizer_step_seconds"] = time.perf_counter() - optimizer_step_started
                 for key in (
                     "total_loss",
                     "policy_loss",

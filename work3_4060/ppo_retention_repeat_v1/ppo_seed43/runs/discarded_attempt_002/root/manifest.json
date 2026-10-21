@@ -1,0 +1,147 @@
+{
+  "schema_version": "work3_ppo_retention_repeat_seed43_v1",
+  "ppo_sampling_seed": 43,
+  "bc_source_seed": 42,
+  "calibration_source_seed": 42,
+  "source_model_sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+  "source_full_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+  "arms": [
+    "REF",
+    "R1",
+    "R4"
+  ],
+  "points": [
+    0,
+    8,
+    128,
+    256,
+    512
+  ],
+  "expected_evaluations": 13,
+  "expected_training_interactions_per_arm": 512,
+  "expected_total_training_interactions": 1536,
+  "prior_discarded_runs": "runs/discarded_runs.json",
+  "serial": true,
+  "precision": "fp32",
+  "vector_environment": {
+    "count": 1,
+    "start_method": "spawn"
+  },
+  "scenario": "NOMINAL",
+  "disturbance": "none",
+  "warmup": "none",
+  "shared_step0000": "shared_step0000_NOMINAL.json",
+  "evaluation_decision_limit": 4096,
+  "evaluation_matrix": [
+    {
+      "arm": "REF",
+      "point": 0,
+      "trajectory_path": "shared_step0000_NOMINAL.json",
+      "evaluation_id": "shared_step0000",
+      "shared_trajectory": true
+    },
+    {
+      "arm": "REF",
+      "point": 8,
+      "trajectory_path": "REF/trajectories/step0008_NOMINAL.json",
+      "evaluation_id": "REF_step0008",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "REF",
+      "point": 128,
+      "trajectory_path": "REF/trajectories/step0128_NOMINAL.json",
+      "evaluation_id": "REF_step0128",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "REF",
+      "point": 256,
+      "trajectory_path": "REF/trajectories/step0256_NOMINAL.json",
+      "evaluation_id": "REF_step0256",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "REF",
+      "point": 512,
+      "trajectory_path": "REF/trajectories/step0512_NOMINAL.json",
+      "evaluation_id": "REF_step0512",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R1",
+      "point": 0,
+      "trajectory_path": "shared_step0000_NOMINAL.json",
+      "evaluation_id": "shared_step0000",
+      "shared_trajectory": true
+    },
+    {
+      "arm": "R1",
+      "point": 8,
+      "trajectory_path": "R1/trajectories/step0008_NOMINAL.json",
+      "evaluation_id": "R1_step0008",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R1",
+      "point": 128,
+      "trajectory_path": "R1/trajectories/step0128_NOMINAL.json",
+      "evaluation_id": "R1_step0128",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R1",
+      "point": 256,
+      "trajectory_path": "R1/trajectories/step0256_NOMINAL.json",
+      "evaluation_id": "R1_step0256",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R1",
+      "point": 512,
+      "trajectory_path": "R1/trajectories/step0512_NOMINAL.json",
+      "evaluation_id": "R1_step0512",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R4",
+      "point": 0,
+      "trajectory_path": "shared_step0000_NOMINAL.json",
+      "evaluation_id": "shared_step0000",
+      "shared_trajectory": true
+    },
+    {
+      "arm": "R4",
+      "point": 8,
+      "trajectory_path": "R4/trajectories/step0008_NOMINAL.json",
+      "evaluation_id": "R4_step0008",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R4",
+      "point": 128,
+      "trajectory_path": "R4/trajectories/step0128_NOMINAL.json",
+      "evaluation_id": "R4_step0128",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R4",
+      "point": 256,
+      "trajectory_path": "R4/trajectories/step0256_NOMINAL.json",
+      "evaluation_id": "R4_step0256",
+      "shared_trajectory": false
+    },
+    {
+      "arm": "R4",
+      "point": 512,
+      "trajectory_path": "R4/trajectories/step0512_NOMINAL.json",
+      "evaluation_id": "R4_step0512",
+      "shared_trajectory": false
+    }
+  ],
+  "checks": [
+    "protocol_status",
+    "production_status",
+    "retention_status"
+  ]
+}

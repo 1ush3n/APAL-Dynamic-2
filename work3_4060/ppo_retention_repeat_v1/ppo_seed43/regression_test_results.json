@@ -1,0 +1,42 @@
+{
+  "interpreter": "D:\\Conda\\envs\\rag_env\\python.exe",
+  "passing_runs": [
+    {
+      "command": "D:\\Conda\\envs\\rag_env\\python.exe -m pytest tests/test_ppo_retention_repeat.py tests/work3/test_actor_critic.py tests/work3/test_train_ppo.py -q",
+      "passed": 24,
+      "failed": 0,
+      "status": "PASS"
+    },
+    {
+      "command": "D:\\Conda\\envs\\rag_env\\python.exe -m pytest tests/work3/test_work3_training_runtime.py -q -k \"training_entry_uses_configured_amp_for_rollout_and_lightning or lightning_ppo_loss_computation_is_pure_and_datamodule_uses_no_loader_workers\"",
+      "passed": 3,
+      "failed": 0,
+      "deselected": 59,
+      "status": "PASS"
+    },
+    {
+      "command": "D:\\Conda\\envs\\rag_env\\python.exe -m pytest tests/test_ppo_retention_repeat.py -q",
+      "passed": 8,
+      "failed": 0,
+      "status": "PASS"
+    }
+  ],
+  "unresolved_existing_contracts": [
+    {
+      "test": "tests/work3/test_work3_training_runtime.py::test_single_env_worker_matches_direct_environment_for_frozen_actions",
+      "failure": "前置规则轨迹未产生 ADVANCE_TO_NEXT_EVENT；失败发生在创建本轮向量环境之前。"
+    },
+    {
+      "test": "tests/work3/test_work3_training_runtime.py::test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget",
+      "failure": "32 次规则动作内未出现 ADVANCE_TO_NEXT_EVENT；失败发生在创建 worker 之前。"
+    },
+    {
+      "test": "tests/work3/test_work3_training_runtime.py::test_lightning_ppo_update_mixes_stay_and_postpone_samples",
+      "failure": "当前环境状态掩码为 (False, False)，而测试夹具预期 (True, False)；在构造 Lightning 模块之前失败。"
+    }
+  ],
+  "unresolved_test_command": "D:\\Conda\\envs\\rag_env\\python.exe -m pytest tests/work3/test_work3_training_runtime.py -q --tb=short -k \"single_env_worker_matches_direct_environment_for_frozen_actions or two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget or lightning_ppo_update_mixes_stay_and_postpone_samples\"",
+  "unresolved_count": 3,
+  "baseline_before_change_run": false,
+  "note": "这三项失败在触及本轮新增参数或 Hook 前；没有在修改前基线执行，故不宣称它们是历史既有失败。"
+}

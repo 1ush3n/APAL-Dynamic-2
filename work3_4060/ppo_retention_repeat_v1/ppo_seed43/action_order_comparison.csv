@@ -1,0 +1,16 @@
+﻿arm,point,base_action_count,arm_action_count,branch_task_sequence_equal,first_branch_task_difference_index,team_order_difference_count,team_order_note
+REF,0,210,210,True,,0,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+REF,8,210,210,False,1,3,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+REF,128,210,210,False,1,9,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+REF,256,210,210,False,9,8,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+REF,512,210,210,False,9,5,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R1,0,210,210,True,,0,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R1,8,210,210,True,,0,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R1,128,210,210,False,54,43,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R1,256,210,210,False,61,45,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R1,512,210,210,False,11,57,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R4,0,210,210,True,,0,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R4,8,210,210,False,1,1,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R4,128,210,210,False,8,66,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R4,256,210,210,False,5,55,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。
+R4,512,210,210,False,5,69,对齐到相同动作序列位置的 task_key 后比较；与 team 集合/排程差异分列。

@@ -1,0 +1,215 @@
+{
+  "files": [
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+      "purpose": "mini210 确定性规则基准",
+      "exists": true,
+      "size_bytes": 123120,
+      "sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\calibrated_model.pt",
+      "purpose": "价值头校准后的共享起点权重",
+      "exists": true,
+      "size_bytes": 1286955,
+      "sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\manifest.json",
+      "purpose": "校准阶段清单",
+      "exists": true,
+      "size_bytes": 2297,
+      "sha256": "db65c300ade4b10ea06f6983a50723023b47fed5484d59877e2386a39454efbf"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\weight_integrity.json",
+      "purpose": "校准权重完整性记录",
+      "exists": true,
+      "size_bytes": 3215,
+      "sha256": "96e11df88a90ab9c0f310832da1006025bc76fe8a1b19e9eabbb39a127a56ec9"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\fit_metrics.json",
+      "purpose": "价值校准拟合指标",
+      "exists": true,
+      "size_bytes": 10572,
+      "sha256": "01f718d5c8c319e22a738cb33fa9477411b976745330a8d9e7b52a5496644ff1"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\policy_invariance.json",
+      "purpose": "策略不变性及指纹",
+      "exists": true,
+      "size_bytes": 8809,
+      "sha256": "9bac5e99af1e6629ce3675360ee208a04f4befa00c084b53182963bdb984e006"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\snapshots_and_mc_targets.pt",
+      "purpose": "校准样本及MC目标",
+      "exists": true,
+      "size_bytes": 22414919,
+      "sha256": "5962f2c2d14dc4a4cb9448ccaf1025d9831d754b4f8ecb00f8634ce5b652d859"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\training_summary.json",
+      "purpose": "校准后 PPO 实际超参与训练摘要",
+      "exists": true,
+      "size_bytes": 3216,
+      "sha256": "bd0ef31c8ba86274656ba5ce05d13563c8ebeeacfb22bc7b92cacf017b1c2437"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\resolved_config.yaml",
+      "purpose": "校准后 PPO 有效配置",
+      "exists": true,
+      "size_bytes": 940,
+      "sha256": "2b2705b68023def232f8d358da26e3b7f9eb1bf91a8bbb68a375e5933548c466"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\first_rollout.pt",
+      "purpose": "历史 PPO 首段事实格式参考",
+      "exists": true,
+      "size_bytes": 823783,
+      "sha256": "9f3a69369b2660517853c88056b68b2f6b6c07e48e94071e5f700352cf006114"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\first_rollout_pairing.json",
+      "purpose": "校准后 PPO 配对记录",
+      "exists": true,
+      "size_bytes": 387,
+      "sha256": "929c4d1d21902ef3fec57091c3d14a5ab7436648bd8aa58637f08367bfe1161f"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\trajectories\\step0000_NOMINAL.json",
+      "purpose": "校准后 PPO step0 轨迹",
+      "exists": true,
+      "size_bytes": 119559,
+      "sha256": "d7dd248dcd7bc05ae72660f151a9b79f90c359296de4e937dbc8fb18097c852a"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\arm_registry.json",
+      "purpose": "seed42 臂配置注册表",
+      "exists": true,
+      "size_bytes": 2784,
+      "sha256": "78073445d9a1dec0a1c7481eb351b2042430b8b2a3221c54144e3952823d44ed"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\comparison_by_point.csv",
+      "purpose": "seed42 原始逐点费用",
+      "exists": true,
+      "size_bytes": 3812,
+      "sha256": "3380b56e02290a20a6332fb00128f720d1a6ce2016bd3f17f8952d75a3ac2a5f"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\r0_frozen_sampling.json",
+      "purpose": "seed42 R0 实际采样预算",
+      "exists": true,
+      "size_bytes": 970,
+      "sha256": "91059f2309320e69805314ddc5cce7dc8056dd21f625e7ccf1565f29f81a1fb7"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\manifest.json",
+      "purpose": "BC 来源与实例清单",
+      "exists": true,
+      "size_bytes": 11226,
+      "sha256": "75911bb2528249a5601c494261f170073f0230b3c111204131146069f77d0748"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+      "purpose": "BC 模型来源权重",
+      "exists": true,
+      "size_bytes": 1289195,
+      "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\teacher_snapshots.pt",
+      "purpose": "固定 BC 教师状态与动作 probe",
+      "exists": true,
+      "size_bytes": 22437191,
+      "sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\trajectories\\C_BC_DIAGNOSTIC_NOMINAL.json",
+      "purpose": "BC 名义轨迹",
+      "exists": true,
+      "size_bytes": 118867,
+      "sha256": "c7ae4fd35debeaa8e6fe8543852343f918c4e2e31529183c925e30ddef283726"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_ppo_ablation_arms.py",
+      "purpose": "正式 PPO 臂驱动",
+      "exists": true,
+      "size_bytes": 81999,
+      "sha256": "d54e38e802a89ce635bd3b3f0472f6c23a9cc90a613717d981af68b7e5bfd96d"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_bc_ppo_retention.py",
+      "purpose": "保持性采样、环境及评估驱动",
+      "exists": true,
+      "size_bytes": 113324,
+      "sha256": "93b99f9b559b03efd7b51ffb5d3d23cdbc60895cd652c64250a4753d6dfe7991"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_critic_calibration_retention.py",
+      "purpose": "严格校准副本加载器",
+      "exists": true,
+      "size_bytes": 108256,
+      "sha256": "fc9ab1c62c3d43dc7caa201e6aae53ff6c4c91bffc112e88ce91d60cffc8c78a"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_protocol.py",
+      "purpose": "事实、probe 与指纹合同",
+      "exists": true,
+      "size_bytes": 45793,
+      "sha256": "7c8a8c91a0b49ab90234f797de987ae0b7413a094c0ee7e8ce66579358e289b6"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\verify_trajectory_facts.py",
+      "purpose": "独立物理轨迹事实核验器",
+      "exists": true,
+      "size_bytes": 32534,
+      "sha256": "6b1a7c8d9fc04203f472a27891dd16f72dc603f129acb26a1eb7008eff2d22b0"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\verify_shaping_trace.py",
+      "purpose": "塑形及边界独立核验器",
+      "exists": true,
+      "size_bytes": 31230,
+      "sha256": "8c7f167d32d3e369635ad9761bc1eb6bbce1401a1df0d2e7b82babb0dc45ba6e"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\training\\work3_lightning.py",
+      "purpose": "正式 PPO 更新与损失",
+      "exists": true,
+      "size_bytes": 20712,
+      "sha256": "86c0afddd0717f92b253f746dc85eb32a000f6d05bde5a85f4d0e9b9486bd7a3"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\training\\work3_vector_env.py",
+      "purpose": "单环境 spawn 实现",
+      "exists": true,
+      "size_bytes": 46971,
+      "sha256": "c632351b43ddc71044de968148e1503c8832af1464f6c0f7d347f5e747513eb8"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\models\\work3\\actor_critic.py",
+      "purpose": "图策略及条件动作实现",
+      "exists": true,
+      "size_bytes": 59595,
+      "sha256": "8d569427a84df65e64b445717c5abbb7de61362f5a19f73162daa6d4b5141aa5"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_ppo_retention_repeat.py",
+      "purpose": "本轮复核入口",
+      "exists": true,
+      "size_bytes": 64745,
+      "sha256": "0e3ad3873cc5ba9f563441c53d2cc041102686d2f07b646c94025117a98ccdb6"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\tests\\test_ppo_retention_repeat.py",
+      "purpose": "本轮新增合同测试",
+      "exists": true,
+      "size_bytes": 7029,
+      "sha256": "2e69f7ce645b93db2258ea84f72964235b4821f3582e7f7f7e80d075dcaf6e8b"
+    }
+  ],
+  "missing": []
+}

@@ -1,0 +1,4 @@
+﻿arm,point,decisions,advance_actions,postpone_actions,completed_tasks,completed_aircraft,objective_j_total,j_takt,d_time,d_team,j_postpone,j_revision,makespan,maximum_cycle_delay_hours,cumulative_cycle_delay_hours,delayed_cycle_count,postponed_count,violations,verification_status,retention_pass,delta_j_ref_minus_arm
+REF,0,210,0,0,210,7,2.751822145979913e-15,2.7308692267343145e-15,2.0952919245598408e-17,0.0,0.0,0.0,572.416285396995,0.0,0.0,0,0,0,PASS,True,0.0
+R1,0,210,0,0,210,7,2.751822145979913e-15,2.7308692267343145e-15,2.0952919245598408e-17,0.0,0.0,0.0,572.416285396995,0.0,0.0,0,0,0,PASS,True,0.0
+R4,0,210,0,0,210,7,2.751822145979913e-15,2.7308692267343145e-15,2.0952919245598408e-17,0.0,0.0,0.0,572.416285396995,0.0,0.0,0,0,0,PASS,True,0.0

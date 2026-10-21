@@ -1,0 +1,130 @@
+{
+  "shared_step0000": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_0.log (9.9s)"
+  },
+  "probe_REF_0": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_0.log (15.3s)"
+  },
+  "probe_R1_0": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_0.log (15.5s)"
+  },
+  "probe_R4_0": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_0.log (15.5s)"
+  },
+  "r4_gradient_preflight": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\r4-preflight_main.log (13.9s)"
+  },
+  "train_REF": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\train_REF.log (92.3s)"
+  },
+  "train_R1": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\train_R1.log (93.2s)"
+  },
+  "train_R4": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\train_R4.log (92.6s)"
+  },
+  "evaluate_REF_8": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_8.log (10.2s)"
+  },
+  "probe_REF_8": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_8.log (15.7s)"
+  },
+  "evaluate_REF_128": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_128.log (10.0s)"
+  },
+  "probe_REF_128": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_128.log (15.1s)"
+  },
+  "evaluate_REF_256": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_256.log (9.7s)"
+  },
+  "probe_REF_256": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_256.log (15.1s)"
+  },
+  "evaluate_REF_512": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_512.log (9.7s)"
+  },
+  "probe_REF_512": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_512.log (14.9s)"
+  },
+  "evaluate_R1_8": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_8.log (9.7s)"
+  },
+  "probe_R1_8": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_8.log (15.4s)"
+  },
+  "evaluate_R1_128": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_128.log (9.8s)"
+  },
+  "probe_R1_128": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_128.log (14.9s)"
+  },
+  "evaluate_R1_256": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_256.log (9.6s)"
+  },
+  "probe_R1_256": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_256.log (15.2s)"
+  },
+  "evaluate_R1_512": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_512.log (9.7s)"
+  },
+  "probe_R1_512": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_512.log (14.9s)"
+  },
+  "evaluate_R4_8": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_8.log (9.8s)"
+  },
+  "probe_R4_8": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_8.log (15.3s)"
+  },
+  "evaluate_R4_128": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_128.log (9.5s)"
+  },
+  "probe_R4_128": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_128.log (14.9s)"
+  },
+  "evaluate_R4_256": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_256.log (9.7s)"
+  },
+  "probe_R4_256": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_256.log (15.1s)"
+  },
+  "evaluate_R4_512": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_512.log (9.9s)"
+  },
+  "probe_R4_512": {
+    "exit_code": 0,
+    "log": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_512.log (15.2s)"
+  }
+}

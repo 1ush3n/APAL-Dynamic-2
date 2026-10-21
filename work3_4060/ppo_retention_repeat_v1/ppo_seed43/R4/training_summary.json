@@ -1,0 +1,129 @@
+{
+  "arm": "R4",
+  "change": "value_loss_detached_at_shared_features",
+  "stop_reason": "budget_exhausted",
+  "training_decisions": 512,
+  "optimizer_steps": 256,
+  "segments": 66,
+  "episodes_started": 3,
+  "episodes_completed": 2,
+  "elapsed_seconds": 78.98921300000075,
+  "seeds": {
+    "python": [
+      2147483648,
+      3625268051,
+      1202335661
+    ],
+    "numpy": 43,
+    "torch": 43,
+    "cuda": 43
+  },
+  "learning_rate": 0.0003,
+  "entropy_coefficient": 0.01,
+  "initial_fingerprints": {
+    "full_model": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+    "policy_subset": "0989e9bf8e2fed71ee630bc1d2d9da251d7d9cae5dec6c0e502ec54b8bcd1aee",
+    "critic_subset": "d600297254a057d96cea7fc57d2859e9d1965abaa1ac8bcc3748ff7e8081c95f"
+  },
+  "advantage_mode": "standard",
+  "detach_value": true,
+  "device": "cuda:0",
+  "optimizer_name": "AdamW",
+  "optimizer_param_group_lrs": [
+    0.0003
+  ],
+  "optimizer_schedulers": [],
+  "optimized_parameter_count": 138,
+  "parameter_group_counts": {
+    "shared": 102,
+    "policy": 32,
+    "value": 4
+  },
+  "detach_hook": {
+    "installed": true,
+    "target": "model.critic.forward_pre_hook",
+    "install_count": 1,
+    "removed": true,
+    "hooks_after_cleanup": 0
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "peak_allocated_mib": 76.36376953125,
+    "peak_reserved_mib": 78.0,
+    "budget_mib": 6144.0,
+    "budget_exceeded": false
+  },
+  "checkpoints": [
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0000.pt",
+      "sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f",
+      "actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+      "training_decisions": 0,
+      "optimizer_steps": 0,
+      "step_index": 0,
+      "tag": "step0000"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0008.pt",
+      "sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336",
+      "actor_fingerprint": "87cea4ed7c7d83643eae4d4a746cbf0b5780471db174b7245b32c4555e1d5fa0",
+      "training_decisions": 8,
+      "optimizer_steps": 4,
+      "step_index": 1,
+      "tag": "step0008"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0128.pt",
+      "sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889",
+      "actor_fingerprint": "7a9467e0862a1b56ce6009b195215b640c99edb4029e699f8e8ef9d2d47bbce2",
+      "training_decisions": 128,
+      "optimizer_steps": 64,
+      "step_index": 2,
+      "tag": "step0128"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0256.pt",
+      "sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c",
+      "actor_fingerprint": "b8bf82d901d223ae525ac3f0a4cd3027e47e1f531e6e76eb691ea84581a46851",
+      "training_decisions": 256,
+      "optimizer_steps": 128,
+      "step_index": 3,
+      "tag": "step0256"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0512.pt",
+      "sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140",
+      "actor_fingerprint": "7b5f3c772f98a05e6900b97141ae621246fde0fd12637cfd6b6ff0d73a858d72",
+      "training_decisions": 512,
+      "optimizer_steps": 256,
+      "step_index": 4,
+      "tag": "step0512"
+    }
+  ],
+  "hyperparameters": {
+    "method_variant": "C",
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "beta_shaping": 1.0,
+    "learning_rate": 0.0003,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "ppo_epochs": 1,
+    "batch_size": 2,
+    "rollout_steps": 8,
+    "num_envs": 1,
+    "max_grad_norm": 0.5,
+    "optimizer": "AdamW",
+    "optimizer_eps": 1e-05,
+    "weight_decay": 0.0001,
+    "normalize_advantages": true,
+    "amp_dtype": "fp32",
+    "disturbance_enabled": false,
+    "scenario": "NOMINAL",
+    "warmup_mode": "none",
+    "seed": 43,
+    "total_env_steps": 512,
+    "max_decisions": 512
+  }
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "attempt": 1,
+    "reason": "入口导入失败，发生于 step0000 之前；training_interactions = 0",
+    "source_seed": 42,
+    "ppo_sampling_seed": 43
+  },
+  {
+    "attempt": 2,
+    "reason": "sample_records 中 HeteroData 自拷贝被对象身份比较误判；报告还缺 trajectory path 字段；已修复结构比较与报告投影",
+    "training_interactions": 8,
+    "optimizer_steps": 0,
+    "source_seed": 42,
+    "ppo_sampling_seed": 43
+  }
+]

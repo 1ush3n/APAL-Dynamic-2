@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import hashlib
 import json
 import math
+import random
 from pathlib import Path
 import subprocess
 import sys
@@ -26,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+import numpy as np
 import torch
 
 from envs.work3.environment import AirLineEnvWork3
@@ -72,6 +75,7 @@ ARMS: tuple[str, ...] = ("R0", "R1", "R2", "R3", "R4")
 POINTS: tuple[int, ...] = (0, 8, 128, 256, 512)
 BUDGET = 512
 LR_SCALE = 0.1
+RUN_SEED: int | None = None
 # 配对判据：状态与动作必须逐项一致；“采样事件相同”由这两项定义。
 # log-prob 是 float32 在 GPU 上非确定性归约的产物，容差与仓库既有重放容差一致取 1e-4。
 PAIRING_LOG_PROB_TOLERANCE = 1e-4
@@ -128,6 +132,8 @@ def arm_paths(arm: str) -> dict[str, Path]:
         "shaping_audit": base / "shaping_audit_summary.json",
         "run_json": base / "runs" / "ppo_run.json",
         "rng": base / "pre_update_rng.pt",
+        "pre_sampling_rng": base / "pre_sampling_rng.pt",
+        "first_update_pre": base / "checkpoints" / "first_update_pre.pt",
         "minibatches": base / "minibatch_indices.jsonl",
     }
 
@@ -152,6 +158,16 @@ def write_run_json(arm: str, history: Sequence[Mapping[str, Any]], hyper: Mappin
         "gae_lambda": float(hyper["gae_lambda"]),
         "shaping_coefficient": float(hyper["beta_shaping"]),
     }
+    if RUN_SEED is not None:
+        ppo_block.update(
+            {
+                "optimizer": str(hyper["optimizer"]),
+                "optimizer_eps": float(hyper["optimizer_eps"]),
+                "weight_decay": float(hyper["weight_decay"]),
+                "max_grad_norm": float(hyper["max_grad_norm"]),
+                "normalize_advantages": bool(hyper["normalize_advantages"]),
+            }
+        )
     dump_json(
         path,
         {
@@ -166,6 +182,18 @@ def write_run_json(arm: str, history: Sequence[Mapping[str, Any]], hyper: Mappin
                 "batch_size": int(hyper["batch_size"]),
                 "rollout_steps": int(hyper["rollout_steps"]),
                 "disturbance_enabled": False,
+                **(
+                    {
+                        "seed": int(RUN_SEED),
+                        "optimizer": str(hyper["optimizer"]),
+                        "optimizer_eps": float(hyper["optimizer_eps"]),
+                        "weight_decay": float(hyper["weight_decay"]),
+                        "max_grad_norm": float(hyper["max_grad_norm"]),
+                        "normalize_advantages": bool(hyper["normalize_advantages"]),
+                    }
+                    if RUN_SEED is not None
+                    else {}
+                ),
             },
             "resolved_runtime_config_yaml": "ppo:\n"
             + "".join(f"  {key}: {value}\n" for key, value in ppo_block.items()),
@@ -202,8 +230,79 @@ def capture_randperm(sink: list[dict[str, Any]]):
 
 def apply_detach_value_hook(model: torch.nn.Module) -> Any:
     """价值分支在 critic 输入处 detach：共享编码器不再接收 value loss 的梯度。"""
+    if model.critic._forward_pre_hooks:
+        raise RuntimeError("critic已存在forward pre-hook，拒绝重复安装R4梯度隔离")
     handle = model.critic.register_forward_pre_hook(lambda module, inputs: (inputs[0].detach(),))
     return handle
+
+
+def capture_rng_state(env: Any | None = None, generator: torch.Generator | None = None) -> dict[str, Any]:
+    """保存主进程及可选环境worker的完整随机状态。"""
+    return {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch_cpu": torch.get_rng_state().clone(),
+        "torch_cuda": [state.clone() for state in torch.cuda.get_rng_state_all()]
+        if torch.cuda.is_available()
+        else [],
+        "explicit_action_generator": None if generator is None else generator.get_state().clone(),
+        "environment_workers": [] if env is None else list(env.rng_states()),
+    }
+
+
+def _snapshot_facts(snapshot: Any) -> dict[str, Any]:
+    """保留首段状态、候选掩码、图映射和工人资格的可比较摘要。"""
+    digest = hashlib.sha256()
+    for kind in sorted(snapshot.graph_snapshot.node_types):
+        store = snapshot.graph_snapshot[kind]
+        digest.update(kind.encode("utf-8"))
+        tensor = store.x.detach().to(device="cpu").contiguous()
+        digest.update(str(tuple(tensor.shape)).encode("utf-8"))
+        digest.update(tensor.numpy().tobytes())
+    for edge_type in sorted(snapshot.graph_snapshot.edge_types):
+        store = snapshot.graph_snapshot[edge_type]
+        digest.update(str(edge_type).encode("utf-8"))
+        tensor = store.edge_index.detach().to(device="cpu").contiguous()
+        digest.update(str(tuple(tensor.shape)).encode("utf-8"))
+        digest.update(tensor.numpy().tobytes())
+    return {
+        "worker_id": int(snapshot.worker_id),
+        "episode_id": int(snapshot.episode_id),
+        "episode_index": int(snapshot.episode_index),
+        "candidate_task_keys": list(snapshot.candidate_task_keys),
+        "branch_masks": [list(mask) for mask in snapshot.branch_masks],
+        "candidate_task_node_indices": list(snapshot.candidate_task_node_indices),
+        "worker_node_indices": [list(indices) for indices in snapshot.worker_node_indices],
+        "reserved_flags": list(snapshot.reserved_flags),
+        "team_contexts": [
+            {
+                "task_key": context.task_key,
+                "station_id": int(context.station_id),
+                "required_skill": int(context.required_skill),
+                "demand": int(context.demand),
+                "workers": [
+                    {
+                        "worker_id": int(worker.worker_id),
+                        "skills": list(worker.skills),
+                        "efficiency": worker.efficiency,
+                        "calendar_intervals": [list(interval) for interval in worker.calendar_intervals],
+                    }
+                    for worker in context.workers
+                ],
+            }
+            for context in snapshot.team_contexts
+        ],
+        "advance_available": bool(snapshot.advance_available),
+        "current_time": float(snapshot.current_time),
+        "cycle_id": int(snapshot.cycle_id),
+        "h0": float(snapshot.h0),
+        "last_transfer_time": float(snapshot.last_transfer_time),
+        "graph_version": snapshot.graph_version,
+        "graph_sha256": digest.hexdigest(),
+        "candidate_task_features": snapshot.candidate_task_features.detach().cpu().clone(),
+        "state_features": snapshot.state_features.detach().cpu().clone(),
+        "time_features": snapshot.time_features.detach().cpu().clone(),
+    }
 
 
 def build_arm_model(arm: str) -> tuple[torch.nn.Module, dict[str, Any], dict[str, Any]]:
@@ -303,24 +402,38 @@ def stage_arm(arm: str) -> int:
     paths = arm_paths(arm)
 
     payload = torch.load(CAL_MODEL, map_location="cpu", weights_only=False)
-    hyper = load_json(REFERENCE_SUMMARY)["hyperparameters"]
+    hyper = dict(load_json(REFERENCE_SUMMARY)["hyperparameters"])
+    if RUN_SEED is not None:
+        hyper["seed"] = int(RUN_SEED)
     seeds = prev.seed_everything(int(hyper["seed"]))
     model, _ = cal.load_calibrated_actor(CAL_MODEL)
     for parameter in model.parameters():
         parameter.requires_grad = True
     model.to(device)
     model.train()
-    if spec.get("detach_value"):
-        apply_detach_value_hook(model)
+    action_generator = torch.Generator(device=device)
+    action_generator.manual_seed(int(hyper["seed"]))
+    hook_count_before = len(model.critic._forward_pre_hooks)
+    if not spec.get("detach_value") and hook_count_before:
+        raise RuntimeError(f"{arm}训练模型带有未授权critic hook")
+    value_hook_handle = None
     init_fingerprint = actor_fingerprint(model)
     if init_fingerprint != payload["actor_fingerprint"]:
         raise ValueError("臂起点指纹与校准副本不一致")
+    init_state = model.state_dict()
+    init_groups = prev.parameter_groups(model)["groups"]
+    init_fingerprints = {
+        "full_model": init_fingerprint,
+        "policy_subset": cal.subset_fingerprint(init_state, init_groups["shared"] + init_groups["policy"]),
+        "critic_subset": cal.subset_fingerprint(init_state, init_groups["value"]),
+    }
 
     checkpoints: list[dict[str, Any]] = [
         prev.save_checkpoint(
             paths["checkpoints"] / "step0000.pt", model, step_index=0, decisions=0,
             optimizer_steps=0, episode_id=0, tag="step0000",
-            extra={"arm": arm, "change": spec["change"]},
+            extra={"arm": arm, "change": spec["change"], "initial_fingerprints": init_fingerprints,
+                   "calibrated_model_path": str(CAL_MODEL), "calibrated_model_sha256": sha256_file(CAL_MODEL)},
         )
     ]
     lr = float(hyper["learning_rate"]) * float(spec.get("lr_scale", 1.0))
@@ -335,15 +448,29 @@ def stage_arm(arm: str) -> int:
         ppo_epochs=int(hyper["ppo_epochs"]),
         batch_size=int(hyper["batch_size"]),
     )
-    lightning.parameter_group_names = prev.parameter_groups(model)["groups"]
+    parameter_group_info = prev.parameter_groups(model)
+    lightning.parameter_group_names = parameter_group_info["groups"]
     optimizer = lightning.configure_optimizers()
-    if abs(float(optimizer.param_groups[0]["lr"]) - lr) > 1e-15:
-        raise ValueError("优化器学习率与臂设置不一致")
+    optimizer_parameters = [parameter for group in optimizer.param_groups for parameter in group["params"]]
+    trainable_parameters = [parameter for parameter in model.parameters() if parameter.requires_grad]
+    if len(optimizer_parameters) != len({id(parameter) for parameter in optimizer_parameters}):
+        raise ValueError("PPO优化器参数组包含重复参数")
+    if {id(parameter) for parameter in optimizer_parameters} != {id(parameter) for parameter in trainable_parameters}:
+        raise ValueError("PPO优化器参数组未完整覆盖可训练模型参数")
+    if any(
+        abs(float(group["lr"]) - lr) > 1e-15
+        or abs(float(group["eps"]) - float(hyper["optimizer_eps"])) > 1e-15
+        or abs(float(group["weight_decay"]) - float(hyper["weight_decay"])) > 1e-15
+        for group in optimizer.param_groups
+    ):
+        raise ValueError("实际AdamW参数组与复核臂配置不一致")
     if any(state for state in optimizer.state.values()):
         raise ValueError("新建优化器不得携带历史状态")
 
-    env = prev.build_env()
+    env = prev.build_env(seed=int(hyper["seed"]) if RUN_SEED is not None else None)
     shaping = prev.ShapingWriter(paths["shaping"])
+    if spec.get("detach_value"):
+        value_hook_handle = apply_detach_value_hook(model)
     history: list[dict[str, Any]] = []
     minibatches: list[dict[str, Any]] = []
     decisions = 0
@@ -360,14 +487,20 @@ def stage_arm(arm: str) -> int:
     first_update_state_saved = False
     pre_update_rng: dict[str, Any] | None = None
     pending_snapshot = None
-    memory_peak = 0
+    memory_peak_allocated = 0
+    memory_peak_reserved = 0
+    first_rollout_payload: dict[str, Any] | None = None
+    pre_sampling_rng: dict[str, Any] | None = None
     terminated = False
     started = time.perf_counter()
 
     try:
         env.reset(scenario=None, episode_id=episode_id, episode_index=episode_id)
         pending_snapshot = env.snapshot()
+        pre_sampling_rng = capture_rng_state(env, action_generator)
+        torch.save(pre_sampling_rng, paths["pre_sampling_rng"])
         while decisions < BUDGET:
+            segment_started = time.perf_counter()
             next_point = next((p for p in POINTS if p > decisions), BUDGET)
             segment_limit = min(prev.ROLLOUT_STEPS, next_point - decisions)
             if segment_limit <= 0:
@@ -382,12 +515,14 @@ def stage_arm(arm: str) -> int:
             )
             transitions = []
             segment_records = []
+            snapshot_records = []
             terminated = False
             for _ in range(segment_limit):
                 snapshot = pending_snapshot
-                with torch.no_grad():
+                snapshot_records.append(_snapshot_facts(snapshot))
+                with torch.no_grad(), torch.amp.autocast(device_type=device.type, enabled=False):
                     action, log_prob, value, sample_record = model.select_snapshot(
-                        snapshot, deterministic=False
+                        snapshot, deterministic=False, generator=action_generator
                     )
                 phi_current = compute_heuristic_potential(
                     float(snapshot.estimated_cmax), float(snapshot.last_transfer_time), float(snapshot.h0)
@@ -481,6 +616,13 @@ def stage_arm(arm: str) -> int:
             shaped_rewards = [t.reward for t in transitions]
             raw_rewards = [t.raw_reward for t in transitions]
             values = [t.value for t in transitions]
+            td_residuals = [
+                float(shaped_rewards[index])
+                + float(hyper["gamma"]) * (0.0 if transition.terminated else
+                    (float(values[index + 1]) if index + 1 < len(values) else float(last_value)))
+                - float(values[index])
+                for index, transition in enumerate(transitions)
+            ]
 
             with torch.no_grad():
                 state_batch = torch.stack([t.state_feat for t in transitions])
@@ -516,39 +658,85 @@ def stage_arm(arm: str) -> int:
                 episode_closed.add(episode_id)
 
             if pre_update_rng is None:
-                pre_update_rng = {
-                    "torch_cpu": torch.get_rng_state().clone(),
-                    "torch_cuda": [s.clone() for s in torch.cuda.get_rng_state_all()],
-                    "decisions": decisions,
-                }
+                pre_update_rng = capture_rng_state(env, action_generator)
+                pre_update_rng["decisions"] = decisions
+                saved_cpu_rng = torch.get_rng_state().clone()
+                predicted_permutation = torch.randperm(len(transitions)).tolist()
+                torch.set_rng_state(saved_cpu_rng)
                 torch.save(pre_update_rng, paths["rng"])
-                torch.save(
-                    {
-                        "state_feats": torch.stack([t.state_feat for t in transitions]),
-                        "time_urgencies": torch.stack([t.time_urgency for t in transitions]),
-                        "actions": [t.action_dict for t in transitions],
-                        "old_log_probs": old_lp,
-                        "old_values": torch.tensor(values, dtype=torch.float),
-                        "raw_rewards": torch.tensor(raw_rewards, dtype=torch.float),
-                        "shaped_rewards": torch.tensor(shaped_rewards, dtype=torch.float),
-                        "sample_records": [t.sample_record for t in transitions],
-                    },
-                    paths["dir"] / "first_rollout.pt",
-                )
+                # 输入 [D] × B 个状态 -> [B, D]。
+                state_batch_cpu = torch.stack([t.state_feat for t in transitions])
+                # 输入 [T] × B 个时间特征 -> [B, T]。
+                time_batch_cpu = torch.stack([t.time_urgency for t in transitions])
+                first_rollout_payload = {
+                    "state_feats": state_batch_cpu,
+                    "time_urgencies": time_batch_cpu,
+                    "snapshot_facts": snapshot_records,
+                    "actions": [t.action_dict for t in transitions],
+                    "old_log_probs": old_lp,
+                    "old_values": torch.tensor(values, dtype=torch.float),
+                    "raw_rewards": torch.tensor(raw_rewards, dtype=torch.float),
+                    "shaped_rewards": torch.tensor(shaped_rewards, dtype=torch.float),
+                    "bootstrap_value": float(last_value),
+                    "bootstrap_input": None if pending_snapshot is None else _snapshot_facts(pending_snapshot),
+                    "td_residuals": torch.tensor(td_residuals, dtype=torch.float),
+                    "raw_advantages": raw_advantages.detach().cpu().clone(),
+                    "advantages": buffer.advantages.detach().cpu().clone(),
+                    "return_targets": buffer.target_values.detach().cpu().clone(),
+                    "sample_records": [t.sample_record for t in transitions],
+                    "pre_sampling_rng": pre_sampling_rng,
+                    "pre_update_rng": pre_update_rng,
+                    "predicted_minibatch_permutation": predicted_permutation,
+                }
+                torch.save(first_rollout_payload, paths["dir"] / "first_rollout.pt")
+                if RUN_SEED is not None:
+                    pairing = verify_pairing(arm)
+                    prev.dump_json_safe(paths["pairing"], pairing)
+                    if not pairing["paired"]:
+                        stop_reason = "first_rollout_pairing_failed"
+                        break
+                    if arm != "REF":
+                        reference_update = load_json(arm_paths("REF")["first_update"])
+                        if predicted_permutation != reference_update["minibatch_permutation"]:
+                            stop_reason = "first_minibatch_identity_failed"
+                            dump_json(paths["dir"] / "first_minibatch_failure.json", {
+                                "predicted": predicted_permutation,
+                                "reference": reference_update["minibatch_permutation"],
+                            })
+                            break
+                    prev.save_checkpoint_state(
+                        paths["first_update_pre"], prev.clone_actor_state(model), model,
+                        step_index=0, decisions=decisions, optimizer_steps=optimizer_steps,
+                        episode_id=episode_id, tag="first_update_pre",
+                        extra={"arm": arm, "note": "首次optimizer.step之前"},
+                    )
 
             update = Work3TrainingUpdate(
                 buffer=buffer, environment_steps=len(transitions),
                 time_auxiliary_batch=None, rollout_id=rollout_id,
             )
             updates_before = lightning.optimization_steps
+            minibatch_records_before = len(lightning.minibatch_records)
             captured: list[dict[str, Any]] = []
             with capture_randperm(captured):
                 loss = lightning.training_step(update, 0)
+            if RUN_SEED is not None and rollout_id == 0:
+                actual_permutation = captured[0]["indices"] if captured else None
+                if actual_permutation != predicted_permutation:
+                    stop_reason = "first_minibatch_replay_failed"
+                    dump_json(paths["dir"] / "first_minibatch_failure.json", {
+                        "predicted": predicted_permutation,
+                        "actual": actual_permutation,
+                    })
+                    break
+                first_rollout_payload["actual_minibatch_permutation"] = actual_permutation
+                torch.save(first_rollout_payload, paths["dir"] / "first_rollout.pt")
             if not bool(torch.isfinite(loss).item()):
                 stop_reason = "non_finite_loss"
                 break
             updates_this_segment = lightning.optimization_steps - updates_before
             optimizer_steps = lightning.optimization_steps
+            segment_loss_records = lightning.minibatch_records[minibatch_records_before:]
             for position, record in enumerate(captured):
                 minibatches.append(
                     {
@@ -560,6 +748,9 @@ def stage_arm(arm: str) -> int:
                         "minibatch_samples": record["indices"][
                             position * int(hyper["batch_size"]):(position + 1) * int(hyper["batch_size"])
                         ],
+                        "loss_metrics": segment_loss_records[position]
+                        if position < len(segment_loss_records)
+                        else None,
                     }
                 )
             if first_update_record is None and updates_this_segment > 0:
@@ -571,12 +762,22 @@ def stage_arm(arm: str) -> int:
                     "first_minibatch_samples": minibatches[-len(captured)]["minibatch_samples"] if captured else None,
                     "optimizer_step": first_record["optimizer_step"],
                     "total_loss": first_record["total_loss"],
+                    "policy_loss": segment_loss_records[0]["policy_loss"] if segment_loss_records else None,
+                    "value_loss": segment_loss_records[0]["value_loss"] if segment_loss_records else None,
+                    "entropy": segment_loss_records[0]["entropy"] if segment_loss_records else None,
+                    "approx_kl": segment_loss_records[0]["approx_kl"] if segment_loss_records else None,
+                    "clip_fraction": segment_loss_records[0]["clip_fraction"] if segment_loss_records else None,
+                    "ratio_stats": segment_loss_records[0]["ratio_stats"] if segment_loss_records else None,
                     "clipped_grad_norm": first_record["clipped_grad_norm"],
                     "pre_clip_group_grad_norm": first_record["pre_clip_group_grad_norm"],
+                    "post_clip_group_grad_norm": first_record["post_clip_group_grad_norm"],
                     "parameter_delta_norm": first_record["parameter_delta_norm"],
                     "lr": first_record["lr"],
+                    "learning_rates": first_record["learning_rates"],
                     "updates_in_first_segment": updates_this_segment,
                     "pre_update_rng_saved": True,
+                    "optimizer_steps_before": updates_before,
+                    "optimizer_steps_after": optimizer_steps,
                 }
                 if lightning.first_step_state is not None and not first_update_state_saved:
                     prev.save_checkpoint_state(
@@ -588,15 +789,28 @@ def stage_arm(arm: str) -> int:
                     first_update_state_saved = True
 
             memory = prev.gpu_snapshot()
-            memory_peak = max(memory_peak, memory["peak_reserved_bytes"])
             history.append(
                 {
                     "arm": arm, "rollout_id": rollout_id, "training_decisions": decisions,
                     "segment_steps": len(transitions), "episode_id": episode_id,
+                    "worker_id": 0, "segment_id": rollout_id,
                     "terminated": terminated, "boundary_type": boundary_type,
                     "bootstrap_value": float(last_value), "replay_max_abs_error": replay_error,
+                    "bootstrap_input": None if pending_snapshot is None else {
+                        "state_features": pending_snapshot.state_features,
+                        "time_features": pending_snapshot.time_features,
+                        "graph_version": pending_snapshot.graph_version,
+                        "cycle_id": int(pending_snapshot.cycle_id),
+                        "current_time": float(pending_snapshot.current_time),
+                    },
+                    "value_predictions": values, "td_residuals": td_residuals,
+                    "raw_rewards": raw_rewards, "shaped_rewards": shaped_rewards,
+                    "raw_advantages": raw_advantages.tolist(),
+                    "advantages": buffer.advantages.tolist(),
+                    "return_targets": buffer.target_values.tolist(),
                     "advantage_raw_stats": prev.stats(raw_advantages.tolist()),
                     "advantage_used_stats": prev.stats(buffer.advantages.tolist()),
+                    "advantage_std_definition": "population_std(ddof=0)，在完整 rollout 段内计算",
                     "advantage_mode": spec.get("advantage_mode", "standard"),
                     "value_stats": prev.stats(values),
                     "return_target_stats": prev.stats(buffer.target_values.tolist()),
@@ -604,13 +818,29 @@ def stage_arm(arm: str) -> int:
                     "shaped_reward_stats": prev.stats(shaped_rewards),
                     "action_counts": prev.action_counts(segment_records),
                     "update_records": (
-                        lightning.update_records[-updates_this_segment:] if updates_this_segment > 0 else []
+                        [
+                            {**loss_record, **grad_record}
+                            for loss_record, grad_record in zip(
+                                segment_loss_records,
+                                lightning.update_records[-updates_this_segment:],
+                                strict=True,
+                            )
+                        ] if updates_this_segment > 0 else []
                     ),
+                    "segment_elapsed_seconds": time.perf_counter() - segment_started,
                     "elapsed_seconds": time.perf_counter() - started,
+                    "cuda_allocated_bytes": memory["allocated_bytes"],
+                    "cuda_reserved_bytes": memory["reserved_bytes"],
+                    "cuda_peak_allocated_bytes": memory["peak_allocated_bytes"],
+                    "cuda_peak_reserved_bytes": memory["peak_reserved_bytes"],
+                    "worker_pids": list(env.worker_pids),
+                    "worker_alive": list(env.workers_alive),
                     "cuda_peak_reserved_mib": memory["peak_reserved_bytes"] / 2**20,
                 }
             )
-            if memory["peak_reserved_bytes"] >= prev.GPU_BUDGET_BYTES:
+            memory_peak_allocated = max(memory_peak_allocated, memory["peak_allocated_bytes"])
+            memory_peak_reserved = max(memory_peak_reserved, memory["peak_reserved_bytes"])
+            if max(memory_peak_allocated, memory_peak_reserved) >= prev.GPU_BUDGET_BYTES:
                 stop_reason = "gpu_budget_exceeded"
                 break
             if terminated:
@@ -625,7 +855,8 @@ def stage_arm(arm: str) -> int:
                         paths["checkpoints"] / f"step{decisions:04d}.pt", model,
                         step_index=list(POINTS).index(decisions), decisions=decisions,
                         optimizer_steps=optimizer_steps, episode_id=episode_id,
-                        tag=f"step{decisions:04d}", extra={"arm": arm},
+                        tag=f"step{decisions:04d}", extra={"arm": arm, "initial_fingerprints": init_fingerprints,
+                            "calibrated_model_path": str(CAL_MODEL), "calibrated_model_sha256": sha256_file(CAL_MODEL)},
                     )
                 )
                 log(f"{arm}: 已保存 step{decisions:04d}（优化步 {optimizer_steps}）")
@@ -652,6 +883,13 @@ def stage_arm(arm: str) -> int:
             env.close()
         except Exception:
             pass
+        if value_hook_handle is not None:
+            value_hook_handle.remove()
+        hook_count_after = len(model.critic._forward_pre_hooks)
+        if hook_count_after != hook_count_before:
+            raise RuntimeError(
+                f"{arm}训练退出后critic hook数量{hook_count_after}与起始{hook_count_before}不一致"
+            )
         prev.dump_jsonl_safe(paths["history"], history)
         prev.dump_jsonl_safe(paths["minibatches"], minibatches)
         if first_update_record is not None:
@@ -665,14 +903,28 @@ def stage_arm(arm: str) -> int:
                 "episodes_completed": len(episode_closed),
                 "elapsed_seconds": time.perf_counter() - started, "seeds": seeds,
                 "learning_rate": lr, "entropy_coefficient": ent_coef,
+                "initial_fingerprints": init_fingerprints,
                 "advantage_mode": spec.get("advantage_mode", "standard"),
                 "detach_value": bool(spec.get("detach_value")),
                 "device": str(device),
+                "optimizer_name": type(optimizer).__name__,
+                "optimizer_param_group_lrs": [float(group["lr"]) for group in optimizer.param_groups],
+                "optimizer_schedulers": [],
+                "optimized_parameter_count": len(optimizer_parameters),
+                "parameter_group_counts": parameter_group_info["counts"],
+                "detach_hook": {
+                    "installed": value_hook_handle is not None,
+                    "target": "model.critic.forward_pre_hook" if spec.get("detach_value") else None,
+                    "install_count": int(value_hook_handle is not None),
+                    "removed": value_hook_handle is not None,
+                    "hooks_after_cleanup": hook_count_after,
+                },
                 "gpu": {
                     "name": torch.cuda.get_device_name(0),
-                    "peak_reserved_mib": memory_peak / 2**20,
+                    "peak_allocated_mib": memory_peak_allocated / 2**20,
+                    "peak_reserved_mib": memory_peak_reserved / 2**20,
                     "budget_mib": prev.GPU_BUDGET_BYTES / 2**20,
-                    "budget_exceeded": memory_peak >= prev.GPU_BUDGET_BYTES,
+                    "budget_exceeded": max(memory_peak_allocated, memory_peak_reserved) >= prev.GPU_BUDGET_BYTES,
                 },
                 "checkpoints": checkpoints, "hyperparameters": dict(hyper),
             },
@@ -691,6 +943,10 @@ def verify_pairing(arm: str) -> dict[str, Any]:
         return {"paired": False, "reason": "first_rollout 缺失"}
     ours = torch.load(ours_path, map_location="cpu", weights_only=False)
     reference = torch.load(REFERENCE_FIRST_ROLLOUT, map_location="cpu", weights_only=False)
+    if RUN_SEED is not None:
+        from work3_4060.run_ppo_retention_repeat import verify_first_rollout
+
+        return verify_first_rollout(reference, ours, arm=arm, compared_to=str(REFERENCE_FIRST_ROLLOUT))
     same_states = bool(torch.equal(ours["state_feats"], reference["state_feats"]))
     ours_actions = [cal._action_signature(a) for a in ours["actions"]]
     ref_actions = [cal._action_signature(a) for a in reference["actions"]]
@@ -876,7 +1132,7 @@ def stage_evaluate() -> int:
 
 def stage_evaluate_one(arm: str, checkpoint: Path, label: str) -> int:
     threads = prev.enforce_single_thread_cpu()
-    if arm == "R0":
+    if arm == "R0" or (RUN_SEED is not None and label == "step0000"):
         model, payload = cal.load_calibrated_actor(checkpoint)
     else:
         model, payload = prev.load_checkpoint_actor(checkpoint)
@@ -884,13 +1140,36 @@ def stage_evaluate_one(arm: str, checkpoint: Path, label: str) -> int:
     model.eval()
     agent = FormalEvaluationAgent(profile=build_method_profile("C"), actor_critic=model, time_head=None)
     env = AirLineEnvWork3(baseline_json_path=BASELINE_PATH)
+    action_trace: list[dict[str, Any]] = []
+    if RUN_SEED is not None:
+        original_step = env.step
+
+        def traced_step(action: Mapping[str, Any]):
+            cycle_before = int(env.state.current_cycle)
+            result = original_step(action)
+            action_trace.append({
+                "sequence": len(action_trace),
+                "cycle_id_before": cycle_before,
+                "branch": int(action.get("branch", 0)),
+                "task_key": action.get("task_key"),
+                "team_order": [int(worker) for worker in action.get("team", ())],
+                "align": int(action.get("align", 0)),
+                "advance_cause": result[4].get("advance_cause") if len(result) > 4 else None,
+            })
+            return result
+
+        env.step = traced_step
     result = evaluate_single_trajectory(
         env, "Method-C", agent, scenario=None, max_decisions=4096, device="cpu"
     )
+    trajectory_path = (OUTPUT_DIR / "shared_step0000_NOMINAL.json"
+                       if RUN_SEED is not None and label == "step0000"
+                       else arm_paths(arm)["trajectories"] / f"{label}_NOMINAL.json")
     dump_json(
-        arm_paths(arm)["trajectories"] / f"{label}_NOMINAL.json",
+        trajectory_path,
         {
             **result,
+            **({"action_trace": action_trace} if RUN_SEED is not None else {}),
             "agent": f"{arm}_{label}",
             "wrapped_agent_type": "Method-C",
             "checkpoint": {

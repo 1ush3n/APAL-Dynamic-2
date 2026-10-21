@@ -1,0 +1,13 @@
+{
+  "hook_target": "model.critic.forward_pre_hook",
+  "installed_count": 1,
+  "forward_unchanged": true,
+  "value_shared_grad_norm": 0.0,
+  "value_critic_grad_norm": 9.163560729993307,
+  "policy_shared_grad_norm": 4.987557845633006,
+  "value_gradient_blocked": true,
+  "critic_gradient_present": true,
+  "policy_shared_gradient_present": true,
+  "hook_cleared": true,
+  "passed": true
+}

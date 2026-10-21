@@ -1,0 +1,19 @@
+{
+  "matches_bc_nominal": true,
+  "objective_j_total": 2.751822145979913e-15,
+  "comparison": {
+    "compared_task_count": 210,
+    "start_deviation_count": 0,
+    "end_deviation_count": 0,
+    "team_deviation_count": 0,
+    "transfer_deviation_count": 0,
+    "first_start_deviation": null,
+    "first_team_deviation": null,
+    "first_transfer_deviation": null,
+    "task_start_deviations": [],
+    "team_deviations": [],
+    "transfer_deviations": [],
+    "schedule_identical": true
+  },
+  "trajectory_sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577"
+}

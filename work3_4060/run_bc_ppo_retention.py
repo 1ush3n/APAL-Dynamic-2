@@ -282,10 +282,16 @@ def stats(values: Sequence[float]) -> dict[str, Any]:
 
 def gpu_snapshot() -> dict[str, int]:
     if not torch.cuda.is_available():
-        return {"allocated_bytes": 0, "reserved_bytes": 0, "peak_reserved_bytes": 0}
+        return {
+            "allocated_bytes": 0,
+            "reserved_bytes": 0,
+            "peak_allocated_bytes": 0,
+            "peak_reserved_bytes": 0,
+        }
     return {
         "allocated_bytes": int(torch.cuda.memory_allocated()),
         "reserved_bytes": int(torch.cuda.memory_reserved()),
+        "peak_allocated_bytes": int(torch.cuda.max_memory_allocated()),
         "peak_reserved_bytes": int(torch.cuda.max_memory_reserved()),
     }
 
@@ -440,13 +446,18 @@ class DiagnosticsLightningModule(Work3LightningModule):
             # 首次真实 optimizer.step 之后的模型状态
             self.first_step_state = clone_actor_state(self.actor_critic)
         deltas = group_parameter_delta(self._pre_update_state, self.actor_critic, self.parameter_group_names)
+        post_clip_group_norms = group_grad_norms(
+            self.actor_critic, self.parameter_group_names
+        )
         self.update_records.append(
             {
                 "optimizer_step": int(self.optimization_steps),
                 "total_loss": self._current_loss,
                 "clipped_grad_norm": None if grad_norm is None else float(grad_norm),
                 "pre_clip_group_grad_norm": dict(self._pre_clip_group_norms or {}),
+                "post_clip_group_grad_norm": post_clip_group_norms,
                 "parameter_delta_norm": deltas,
+                "learning_rates": [float(group["lr"]) for group in optimizer.param_groups],
                 "lr": float(optimizer.param_groups[0]["lr"]),
             }
         )
@@ -808,12 +819,13 @@ def seed_everything(seed: int) -> dict[str, Any]:
     }
 
 
-def build_env() -> Work3VectorEnv:
+def build_env(seed: int | None = None) -> Work3VectorEnv:
     return Work3VectorEnv(
         env_kwargs={"baseline_json_path": str(BASELINE_PATH)},
         num_envs=1,
         worker_torch_num_threads=1,
         start_method="spawn",
+        seed=seed,
     )
 
 

@@ -748,6 +748,7 @@ class ActorCriticWork3(nn.Module):
         deterministic: bool = False,
         *,
         time_features_override: torch.Tensor | None = None,
+        generator: torch.Generator | None = None,
     ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
         """只依据独立CPU快照采样动作；不读取环境对象或可变现场状态。"""
         if snapshot.graph_version != GRAPH_FEATURE_VERSION:
@@ -818,7 +819,7 @@ class ActorCriticWork3(nn.Module):
             advance_choice = (
                 int(torch.argmax(advance_logits).item())
                 if deterministic
-                else int(dist_advance.sample().item())
+                else int(self._sample_categorical(dist_advance, generator).item())
             )
             advance_log_prob = dist_advance.log_prob(
                 torch.tensor(advance_choice, device=device)
@@ -865,7 +866,7 @@ class ActorCriticWork3(nn.Module):
         task_idx = (
             int(torch.argmax(task_logits).item())
             if deterministic
-            else int(dist_task.sample().item())
+            else int(self._sample_categorical(dist_task, generator).item())
         )
         task_key = snapshot.candidate_task_keys[task_idx]
         log_prob_task = dist_task.log_prob(torch.tensor(task_idx, device=device))
@@ -882,7 +883,7 @@ class ActorCriticWork3(nn.Module):
         branch_act = (
             int(torch.argmax(branch_logits).item())
             if deterministic
-            else int(dist_branch.sample().item())
+            else int(self._sample_categorical(dist_branch, generator).item())
         )
         log_prob_branch = dist_branch.log_prob(torch.tensor(branch_act, device=device))
         context = snapshot.team_contexts[task_idx]
@@ -960,7 +961,7 @@ class ActorCriticWork3(nn.Module):
             worker_index = (
                 int(torch.argmax(worker_logits).item())
                 if deterministic
-                else int(dist_worker.sample().item())
+                else int(self._sample_categorical(dist_worker, generator).item())
             )
             chosen_worker_indices.append(worker_index)
             chosen_worker_ids.append(context.workers[worker_index].worker_id)
@@ -975,7 +976,7 @@ class ActorCriticWork3(nn.Module):
         align_act = (
             int(torch.argmax(align_logits).item())
             if deterministic
-            else int(dist_align.sample().item())
+            else int(self._sample_categorical(dist_align, generator).item())
         )
         log_prob_align = dist_align.log_prob(torch.tensor(align_act, device=device))
         total_log_prob = (
@@ -992,6 +993,17 @@ class ActorCriticWork3(nn.Module):
             "align": align_act,
         }
         return action, float(total_log_prob.item()), state_value, sample_record
+
+    @staticmethod
+    def _sample_categorical(
+        distribution: Categorical,
+        generator: torch.Generator | None,
+    ) -> torch.Tensor:
+        assert distribution.probs.ndim == 1, f"分类概率应为[K]，实际为{tuple(distribution.probs.shape)}"
+        if generator is None:
+            return distribution.sample()
+        # 输入概率 [K] -> 采样索引标量 []，并使用显式的设备内 RNG。
+        return torch.multinomial(distribution.probs, 1, generator=generator).squeeze(0)
 
     def evaluate_action_log_probs(
         self,

@@ -1,0 +1,55 @@
+{
+  "arm": "R1",
+  "decisions_at_first_update": 8,
+  "minibatch_permutation": [
+    4,
+    1,
+    3,
+    5,
+    2,
+    0,
+    6,
+    7
+  ],
+  "first_minibatch_samples": [
+    4,
+    1
+  ],
+  "optimizer_step": 1,
+  "total_loss": -0.00099240243434906,
+  "policy_loss": 0.00464293360710144,
+  "value_loss": 0.00029027447453700006,
+  "entropy": 0.5780473351478577,
+  "approx_kl": 0.0,
+  "clip_fraction": 0.0,
+  "ratio_stats": {
+    "mean": 1.0,
+    "std": 0.0,
+    "min": 1.0,
+    "max": 1.0
+  },
+  "clipped_grad_norm": 3.328907012939453,
+  "pre_clip_group_grad_norm": {
+    "shared": 3.1795403046292026,
+    "policy": 0.9809814857231406,
+    "value": 0.09909501317666565
+  },
+  "post_clip_group_grad_norm": {
+    "shared": 0.4775650663417913,
+    "policy": 0.14734284579125903,
+    "value": 0.014884013361072363
+  },
+  "parameter_delta_norm": {
+    "shared": 0.004191983526238532,
+    "policy": 0.002554982300293947,
+    "value": 0.0013750611683554016
+  },
+  "lr": 2.9999999999999997e-05,
+  "learning_rates": [
+    2.9999999999999997e-05
+  ],
+  "updates_in_first_segment": 4,
+  "pre_update_rng_saved": true,
+  "optimizer_steps_before": 0,
+  "optimizer_steps_after": 4
+}

@@ -1,0 +1,93 @@
+{
+  "arm": "REF",
+  "change": "original_ppo_configuration",
+  "stop_reason": "first_rollout_pairing_failed",
+  "training_decisions": 8,
+  "optimizer_steps": 0,
+  "segments": 0,
+  "episodes_started": 1,
+  "episodes_completed": 0,
+  "elapsed_seconds": 1.4197915000004286,
+  "seeds": {
+    "python": [
+      2147483648,
+      3625268051,
+      1202335661
+    ],
+    "numpy": 43,
+    "torch": 43,
+    "cuda": 43
+  },
+  "learning_rate": 0.0003,
+  "entropy_coefficient": 0.01,
+  "initial_fingerprints": {
+    "full_model": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+    "policy_subset": "0989e9bf8e2fed71ee630bc1d2d9da251d7d9cae5dec6c0e502ec54b8bcd1aee",
+    "critic_subset": "d600297254a057d96cea7fc57d2859e9d1965abaa1ac8bcc3748ff7e8081c95f"
+  },
+  "advantage_mode": "standard",
+  "detach_value": false,
+  "device": "cuda:0",
+  "optimizer_name": "AdamW",
+  "optimizer_param_group_lrs": [
+    0.0003
+  ],
+  "optimizer_schedulers": [],
+  "optimized_parameter_count": 138,
+  "parameter_group_counts": {
+    "shared": 102,
+    "policy": 32,
+    "value": 4
+  },
+  "detach_hook": {
+    "installed": false,
+    "target": null,
+    "install_count": 0,
+    "removed": false,
+    "hooks_after_cleanup": 0
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "peak_allocated_mib": 0.0,
+    "peak_reserved_mib": 0.0,
+    "budget_mib": 6144.0,
+    "budget_exceeded": false
+  },
+  "checkpoints": [
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0000.pt",
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+      "training_decisions": 0,
+      "optimizer_steps": 0,
+      "step_index": 0,
+      "tag": "step0000"
+    }
+  ],
+  "hyperparameters": {
+    "method_variant": "C",
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "beta_shaping": 1.0,
+    "learning_rate": 0.0003,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "ppo_epochs": 1,
+    "batch_size": 2,
+    "rollout_steps": 8,
+    "num_envs": 1,
+    "max_grad_norm": 0.5,
+    "optimizer": "AdamW",
+    "optimizer_eps": 1e-05,
+    "weight_decay": 0.0001,
+    "normalize_advantages": true,
+    "amp_dtype": "fp32",
+    "disturbance_enabled": false,
+    "scenario": "NOMINAL",
+    "warmup_mode": "none",
+    "seed": 43,
+    "total_env_steps": 512,
+    "max_decisions": 512
+  }
+}

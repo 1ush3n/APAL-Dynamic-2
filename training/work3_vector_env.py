@@ -5,6 +5,7 @@ from __future__ import annotations
 import multiprocessing as mp
 import math
 import gc
+import random
 import time
 import traceback
 from collections.abc import Sequence
@@ -13,6 +14,7 @@ from multiprocessing.connection import Connection, wait
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 
 from envs.work3.decision_snapshot import DecisionSnapshot, build_decision_snapshot
@@ -234,11 +236,16 @@ def _worker_main(
     connection: Connection,
     env_kwargs: dict[str, Any],
     torch_num_threads: int,
+    seed: int | None,
 ) -> None:
     """spawn入口：只初始化CPU环境与图构造器，不构造Actor或载入权重。"""
     env: AirLineEnvWork3 | None = None
     try:
         torch.set_num_threads(torch_num_threads)
+        if seed is not None:
+            random.seed(seed)
+            np.random.seed(seed % (2**32))
+            torch.manual_seed(seed)
         normalized_kwargs = {
             key: Path(value) if key.endswith("_path") else value
             for key, value in env_kwargs.items()
@@ -281,6 +288,7 @@ def _worker_main(
                     "pid": mp.current_process().pid,
                     "cuda_initialized": torch.cuda.is_initialized(),
                     "torch_num_threads": torch.get_num_threads(),
+                    "seed": seed,
                 },
             }
         )
@@ -353,6 +361,12 @@ def _worker_main(
                         warmup_result=warmup_result,
                         scenario_error=scenario_error,
                     )
+                elif command == "rng_state":
+                    result = {
+                        "python": random.getstate(),
+                        "numpy": np.random.get_state(),
+                        "torch_cpu": torch.get_rng_state(),
+                    }
                 elif command == "snapshot":
                     estimated_cmax = compute_cycle_heuristic_cmax(env.state)
                     state_features = extract_compact_state_features(
@@ -468,6 +482,7 @@ class Work3VectorEnv:
         start_method: str = "spawn",
         startup_timeout_seconds: float = 60.0,
         request_timeout_seconds: float = 300.0,
+        seed: int | None = None,
     ) -> None:
         if type(num_envs) is not int or num_envs < 1:
             raise ValueError("num_envs必须为正整数")
@@ -475,6 +490,8 @@ class Work3VectorEnv:
             raise ValueError("worker_torch_num_threads必须为正整数")
         if start_method != "spawn":
             raise ValueError("工作三环境worker必须使用spawn启动")
+        if seed is not None and (type(seed) is not int or seed < 0):
+            raise ValueError("环境worker seed必须为非负整数或None")
         if startup_timeout_seconds <= 0 or request_timeout_seconds <= 0:
             raise ValueError("worker超时必须为正数")
         self._num_envs = num_envs
@@ -501,6 +518,7 @@ class Work3VectorEnv:
                         child_connection,
                         dict(env_kwargs or {}),
                         worker_torch_num_threads,
+                        None if seed is None else seed + worker_id,
                     ),
                     name=f"work3-env-{worker_id}",
                 )
@@ -929,6 +947,13 @@ class Work3VectorEnv:
         if not all(isinstance(snapshot, DecisionSnapshot) for snapshot in snapshots):
             raise TypeError("环境worker返回了非DecisionSnapshot结果")
         return snapshots
+
+    def rng_states(self) -> tuple[dict[str, Any], ...]:
+        """只读读取每个spawn worker的Python、NumPy和Torch CPU RNG状态。"""
+        results = self._request_many(
+            {worker_id: ("rng_state", {}) for worker_id in range(self._num_envs)}
+        )
+        return tuple(results[worker_id] for worker_id in range(self._num_envs))
 
     def step(self, action: dict[str, Any], *, worker_id: int = 0) -> Work3StepResult:
         result = self._request_many(

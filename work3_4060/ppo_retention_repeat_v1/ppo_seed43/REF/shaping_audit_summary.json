@@ -1,0 +1,117 @@
+{
+  "overall_status": "PASS",
+  "total_events_checked": 512,
+  "total_episodes_checked": 3,
+  "completed_episodes_count": 2,
+  "contracts": {
+    "single_step_formula": "PASS",
+    "step_to_step_continuity": "PASS",
+    "predictor_version_invariance": "PASS",
+    "terminal_zero_potential": "PASS",
+    "completed_episode_telescope": "PASS",
+    "config_consistency": "PASS",
+    "boundary_contract": "PASS",
+    "ledger_reconciliation": "PASS"
+  },
+  "resolved_config": {
+    "cfg_gamma": 0.99,
+    "cfg_beta": 1.0,
+    "yaml_gamma": 0.99,
+    "yaml_beta": 1.0
+  },
+  "contract_counts": {
+    "single_step_failures": 0,
+    "continuity_failures": 0,
+    "version_failures": 0,
+    "terminal_failures": 0,
+    "boundary_failures": 0
+  },
+  "failures_sample": {
+    "step_formula": [],
+    "continuity": [],
+    "version": [],
+    "terminal": [],
+    "config": [],
+    "boundary": []
+  },
+  "boundary_details": {
+    "expected_segments_count": 66,
+    "observed_segments_count": 66,
+    "missing_segments": [],
+    "dangling_segments": [],
+    "duplicate_segments": []
+  },
+  "ledger_details": {
+    "expected_episodes_count": 3,
+    "observed_ledger_count": 3,
+    "missing_episodes": [],
+    "dangling_episodes": [],
+    "duplicate_episodes": [],
+    "reconciled_episodes": 3
+  },
+  "episodes": [
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "steps": 210,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.5,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.4999999999999999,
+      "rhs_telescope_endpoint": 0.5,
+      "telescope_residual": -1.1102230246251565e-16,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.05653360438972411,
+      "discounted_shaped_return": 0.4434663956102757,
+      "undiscounted_raw_sum": -0.10885664208762799,
+      "postpone_count": 0,
+      "postpone_actions": []
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "steps": 210,
+      "terminated": true,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.5,
+      "phi_end": 0.0,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.49999999999999994,
+      "rhs_telescope_endpoint": 0.5,
+      "telescope_residual": -5.551115123125783e-17,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.02877940153412682,
+      "discounted_shaped_return": 0.4712205984658732,
+      "undiscounted_raw_sum": -0.14827504889003987,
+      "postpone_count": 0,
+      "postpone_actions": []
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "steps": 92,
+      "terminated": false,
+      "truncated": false,
+      "predictor_version": null,
+      "phi_start": -0.5,
+      "phi_end": -0.4975016649903882,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "lhs_discounted_shaping_sum": 0.30265213084030773,
+      "rhs_telescope_endpoint": 0.3026521308403076,
+      "telescope_residual": 1.1102230246251565e-16,
+      "telescope_closed": true,
+      "discounted_raw_return": -0.006292532142912745,
+      "discounted_shaped_return": 0.29635959869739487,
+      "undiscounted_raw_sum": -0.012832621024018538,
+      "postpone_count": 0,
+      "postpone_actions": []
+    }
+  ]
+}
