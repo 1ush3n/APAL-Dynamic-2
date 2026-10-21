@@ -1,0 +1,266 @@
+{
+  "task": "Work-3 C 基准复现能力诊断（同实例可学习性诊断）",
+  "created_at": "2026-10-21T13:28:42+0800",
+  "output_dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42",
+  "instance": {
+    "baseline_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+    "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+    "dataset": "mini210",
+    "tasks_per_aircraft": 30,
+    "aircraft": 7,
+    "stations": 5,
+    "h0": 52.037844126999545,
+    "clock_model": "nominal_anchored_v1",
+    "scenario": "Nominal",
+    "disturbance": "none",
+    "warmup": "none"
+  },
+  "original_checkpoint": {
+    "weights_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\seed42\\C\\weights.pt",
+    "weights_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "run_json_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\seed42\\C\\run.json",
+    "run_json_sha256": "97e111e9387dcd4adefa94820687a1bb933cea115af8e781681fdf0359a8b2b4",
+    "actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "checkpoint_version": "work3_actor_time_v3",
+    "checkpoint_role": "model_weights",
+    "method_variant": "C",
+    "method_profile": {
+      "name": "C",
+      "graph_policy": true,
+      "allow_postpone": true,
+      "use_time_auxiliary": false,
+      "use_corrected_time_input": false,
+      "use_learned_time_shaping": false
+    },
+    "seed": 42,
+    "source_sha": "f5e7ff4b5f5d61e22140db12177aed98f941f1d9",
+    "source_tree_dirty": true,
+    "initial_actor_fingerprint": "2d639e6138af39725db3658506048ed75396eed26a8ee8629c48bd5deabf203d",
+    "successful_batch_count": 14,
+    "lightning_optimization_steps": 2048,
+    "total_decisions": 4096,
+    "resolved_runtime_config_sha256": "acb009867a3637192b9725691332bebf6c8c1d6cadd69f71ccda9bb0aae24b64",
+    "data_fingerprint": {
+      "scenario_pool_sha256": "3ab465cb84c454dbd15073171ececa9b8e4f57590160addb608a45b6d18eafbd",
+      "scenario_split_sha256": "4b9229de740a78d8b2d3e3f343670484007e082d1f551677f0919db3693b0fa0",
+      "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "time_head_checkpoint_sha256": null,
+      "event_plan_sha256": "0a05c948aad337430ae1d1b8c8b227f0304941e8a1915b680055dd9cf03b32f7",
+      "worker_event_plan_sha256": "0bb67bab5cdbb30a8e6b0e9813b3929daca4d23d45e66ccfc60ae2f02b671c01"
+    },
+    "data_fingerprint_drift": {
+      "baseline_sha256": {
+        "training_value": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+        "current_value": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+        "matches": true
+      },
+      "scenario_pool_sha256": {
+        "training_value": "3ab465cb84c454dbd15073171ececa9b8e4f57590160addb608a45b6d18eafbd",
+        "current_value": "18a5a90af0b087e147a0ccc9af1c7976e1ea828296ae385e649fee441fc5da60",
+        "matches": false
+      },
+      "scenario_split_sha256": {
+        "training_value": "4b9229de740a78d8b2d3e3f343670484007e082d1f551677f0919db3693b0fa0",
+        "current_value": "4b9229de740a78d8b2d3e3f343670484007e082d1f551677f0919db3693b0fa0",
+        "matches": true
+      }
+    },
+    "scenario_pool_drift": {
+      "training_snapshot_available": true,
+      "training_source_sha": "f5e7ff4b5f5d61e22140db12177aed98f941f1d9",
+      "changed_fields": {
+        "RULE_TRAIN_S1_RHO10": [
+          "intensity",
+          "timing",
+          "timing_reference"
+        ],
+        "RULE_TRAIN_S2_RHO25": [
+          "intensity",
+          "timing",
+          "timing_reference"
+        ],
+        "RULE_TRAIN_S3_RHO50": [
+          "intensity",
+          "timing",
+          "timing_reference"
+        ],
+        "RULE_TRAIN_S4_RHO75": [
+          "intensity",
+          "timing",
+          "timing_reference"
+        ],
+        "RULE_VAL_S1_MODERATE": [
+          "intensity",
+          "timing",
+          "timing_reference"
+        ],
+        "RULE_VAL_S2_STRONG": [
+          "intensity",
+          "timing",
+          "timing_reference"
+        ]
+      },
+      "only_label_or_reference_fields_changed": true,
+      "current_scenario_count": 6,
+      "used_by_this_diagnostic": false,
+      "note": "本轮只跑 Nominal（scenario=None），不加载任何扰动场景；差异仅出现在 timing/intensity/timing_reference 三个标签字段，事件物理定义未变。"
+    },
+    "loaded_by": "scripts.work3.evaluate_c_vs_d.build_formal_evaluation_agent('C', ..., device='cpu')",
+    "graph_feature_version": "work3_graph_v6",
+    "graph_feature_schema_hash": "23b1f82de3b2d11d"
+  },
+  "diagnostic_checkpoint": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+    "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "format": "diagnostic_behavior_clone",
+    "format_version": 1,
+    "actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "source_actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "training": {
+      "optimizer_steps": 1000,
+      "stop_reason": "max_optimizer_steps",
+      "training_seconds": 874.9419761000008,
+      "optimizer": "Adam",
+      "learning_rate": 0.0003,
+      "weight_decay": 0.0,
+      "gradient_clip_norm": 1.0,
+      "micro_batch": 1,
+      "effective_batch": 8,
+      "loss_normalization": "每个优化步按该组真实样本数 B 归一化（-1/B Σ logπ）；不足 8 时按实际数量归一化",
+      "seed": 42,
+      "sample_count": 210,
+      "shuffle": "固定种子逐轮 randperm 循环访问；不重复轨迹前缀",
+      "distribution": "全部教师示范（同实例拟合），非法定泛化测试",
+      "frozen_parameters": [
+        "critic.0.bias",
+        "critic.0.weight",
+        "critic.2.bias",
+        "critic.2.weight"
+      ],
+      "trainable_parameter_count": 134,
+      "initial_teacher_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+      "final_actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+      "gpu": {
+        "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+        "peak_allocated_mib": 25.0126953125,
+        "peak_reserved_mib": 30.0,
+        "budget_mib": 6144.0,
+        "budget_exceeded": false
+      },
+      "budget": {
+        "max_optimizer_steps": 1000,
+        "max_seconds": 1800.0,
+        "scan_interval": 50,
+        "early_stop": {
+          "consecutive_scans": 2,
+          "accuracy_threshold": 0.99,
+          "metric": "full_physical_action_accuracy",
+          "nll_requirement": "finite"
+        }
+      },
+      "scan_count": 22,
+      "initial_scan_nll": 101.89114511580695,
+      "final_scan_nll": 0.16468125272409626,
+      "started_at": "1970-01-01T10:08:09+0800"
+    }
+  },
+  "teacher": {
+    "snapshots": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\teacher_snapshots.pt",
+    "snapshots_sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62",
+    "actions": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\teacher_actions.jsonl",
+    "actions_sha256": "8c798a8d5720c12e525323593bb58c15ba2131c9c23dddda25af284af9066dda",
+    "manifest_sha256": "fa787d67ac13f65884a7d029da55f8298c73502c150c3674a2a77f191876709c",
+    "sample_count": 210,
+    "decision_kind_counts": {
+      "stay": 210
+    }
+  },
+  "teacher_states_scoring": {
+    "initial": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\initial_teacher_metrics.json",
+      "nll_mean": 101.89114439828056,
+      "full_physical_action_accuracy": 0.0
+    },
+    "final": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\final_teacher_metrics.json",
+      "nll_mean": 0.16468082732255337,
+      "full_physical_action_accuracy": 0.9809523809523809
+    }
+  },
+  "closure": {
+    "A": {
+      "j_total": 2.751822145979913e-15,
+      "makespan": 572.416285396995,
+      "decisions": 210
+    },
+    "C_ORIGINAL": {
+      "j_total": 3.82256809126947,
+      "makespan": 677.8154910577125,
+      "decisions": 395
+    },
+    "C_BC_DIAGNOSTIC": {
+      "j_total": 2.751822145979913e-15,
+      "makespan": 572.416285396995,
+      "decisions": 210
+    },
+    "relative_improvement_vs_original_c": 0.9999999999999993
+  },
+  "verification": {
+    "diagnostic_self_check": "PASS",
+    "trajectory_facts": "PASS",
+    "reportable": true
+  },
+  "outcome_tier": "NEAR_BASELINE_COST",
+  "run_context": {
+    "execution_head": "eaf32210e6c6445478bd4de257e73197fda1457c",
+    "execution_branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "execution_worktree_dirty": true,
+    "worktree_entries": [
+      "?? tests/test_c_reproduction_diagnostic.py",
+      "?? work3_4060/c_reproduction_diagnostic_v1/",
+      "?? work3_4060/c_reproduction_protocol.py",
+      "?? work3_4060/run_c_reproduction_diagnostic.py"
+    ],
+    "note": "执行时仓库 HEAD 与工作树状态；本轮诊断实现与产物均为该工作树上的新增内容，不包含任何历史提交回退。"
+  },
+  "artifacts": [
+    "bc_history.jsonl",
+    "collection_manifest.json",
+    "comparison.csv",
+    "diagnostic_actor.pt",
+    "diagnostic_closure.json",
+    "final_teacher_metrics.json",
+    "initial_teacher_metrics.json",
+    "input_visibility.json",
+    "manifest.json",
+    "original_c_provenance.json",
+    "original_c_reproduction.json",
+    "runs\\discarded_bc_history_20261021T1308.jsonl",
+    "runs\\discarded_runs.json",
+    "runs\\discarded_train_20261021T1308_artifact_write_bug.log",
+    "runs\\evaluate_console.log",
+    "runs\\train_console.log",
+    "runs\\verify_console.log",
+    "summary.md",
+    "teacher_actions.jsonl",
+    "teacher_scores_diagnostic_final_cpu.jsonl",
+    "teacher_scores_diagnostic_final_gpu.jsonl",
+    "teacher_scores_original.jsonl",
+    "teacher_snapshots.pt",
+    "teacher_validation.json",
+    "train_scan_metrics.json",
+    "train_scans.jsonl",
+    "trajectories\\A_NOMINAL.json",
+    "trajectories\\C_BC_DIAGNOSTIC_NOMINAL.json",
+    "trajectories\\C_ORIGINAL_NOMINAL.json",
+    "trajectory_comparison.json",
+    "trajectory_verification.json",
+    "verification.json"
+  ],
+  "boundaries": [
+    "训练与评估使用同一实例 Nominal；结论仅限同实例复现能力。",
+    "未开展 PPO 续训、未新增 D/E/F、未加入扰动、未改 H0/奖励权重/正式候选掩码。",
+    "A 示范不含后移与显式推进标签，不能据此判断扰动下等待/后移/执行的区分能力。",
+    "诊断副本不与正式 PPO 检查点混用，也不构成正式算法优越性证据。"
+  ]
+}

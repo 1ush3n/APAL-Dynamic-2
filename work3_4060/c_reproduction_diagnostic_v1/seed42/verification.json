@@ -1,0 +1,105 @@
+{
+  "overall_status": "PASS",
+  "scope": "本文件只判定诊断执行合同（接口/数值/权重身份/快照合同/教师轨迹）。闭环生产事实的覆盖与物理约束见 trajectory_verification.json，其状态属于诊断结果，不改变诊断合同的有效性。",
+  "checks": {
+    "original_weights_unchanged": true,
+    "original_actor_unchanged": true,
+    "diagnostic_copy_initial_matches_original": true,
+    "diagnostic_copy_weights_changed": true,
+    "diagnostic_role_marked": true,
+    "teacher_manifest_bound": true,
+    "teacher_trajectory_completed_and_verified": true,
+    "snapshots_cpu_only": true,
+    "snapshots_detached": true,
+    "no_future_labels_in_inputs": true,
+    "graph_version_consistent": true
+  },
+  "identity": {
+    "original_weights_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "original_weights_unchanged": true,
+    "original_actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "original_actor_unchanged": true,
+    "diagnostic_copy_initial_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "diagnostic_copy_initial_matches_original": true,
+    "diagnostic_copy_final_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "diagnostic_copy_final_matches_stored": true,
+    "diagnostic_copy_weights_changed": true,
+    "diagnostic_role_marked": true,
+    "initial_metrics_model_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "final_metrics_model_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "teacher_metrics_share_teacher_manifest": true
+  },
+  "snapshot_contract": {
+    "checks": {
+      "snapshots_cpu_only": true,
+      "snapshots_detached": true,
+      "no_future_labels_in_inputs": true,
+      "graph_version_consistent": true
+    },
+    "tensor_count": 630,
+    "problems": [],
+    "sample_count": 210
+  },
+  "trajectory_verification_status": "PASS",
+  "device_consistency": {
+    "available": true,
+    "metrics": {
+      "nll_mean": {
+        "gpu_final_scan": 0.16468125272409626,
+        "cpu_final_scan": 0.16468082732255337,
+        "abs_diff": 4.2540154288062126e-07
+      },
+      "task_accuracy_conditional": {
+        "gpu_final_scan": 0.9809523809523809,
+        "cpu_final_scan": 0.9809523809523809,
+        "abs_diff": 0.0
+      },
+      "branch_accuracy_conditional": {
+        "gpu_final_scan": 1.0,
+        "cpu_final_scan": 1.0,
+        "abs_diff": 0.0
+      },
+      "team_accuracy_unordered_conditional": {
+        "gpu_final_scan": 1.0,
+        "cpu_final_scan": 1.0,
+        "abs_diff": 0.0
+      },
+      "align_accuracy_conditional": {
+        "gpu_final_scan": 1.0,
+        "cpu_final_scan": 1.0,
+        "abs_diff": 0.0
+      },
+      "full_physical_action_accuracy": {
+        "gpu_final_scan": 0.9809523809523809,
+        "cpu_final_scan": 0.9809523809523809,
+        "abs_diff": 0.0
+      }
+    },
+    "max_accuracy_rate_difference": 0.0,
+    "max_per_sample_nll_difference": 3.0517578125e-05,
+    "agreement_scope": "同一组教师快照、同一份权重、贪心判读；GPU 与 CPU 的前向舍入差异，用于确认“结论不依赖设备”，不作为逐位一致证明。",
+    "conclusion_consistent": true
+  },
+  "trajectory_roles": {
+    "A_NOMINAL": {
+      "status": "PASS",
+      "total_violations": 0,
+      "max_reconciliation_difference": 6.162975822039155e-33
+    },
+    "C_ORIGINAL_NOMINAL": {
+      "status": "PASS",
+      "total_violations": 0,
+      "max_reconciliation_difference": 8.326672684688674e-17
+    },
+    "C_BC_DIAGNOSTIC_NOMINAL": {
+      "status": "PASS",
+      "total_violations": 0,
+      "max_reconciliation_difference": 6.162975822039155e-33
+    }
+  },
+  "pathological_marker_note": "路径标记由本文件给出；任何 FAIL 或 INCOMPLETE 都不得在报告中改写为 PASS。",
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}

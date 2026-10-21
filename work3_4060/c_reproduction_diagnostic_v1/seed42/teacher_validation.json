@@ -1,0 +1,60 @@
+{
+  "schema_version": "c_reproduction_teacher_validation_v1",
+  "sample_count": 210,
+  "decision_kind_counts": {
+    "stay": 210
+  },
+  "valid_permutation_count_distribution": {
+    "2": 203,
+    "1": 7
+  },
+  "team_order_ambiguous_samples": 203,
+  "teacher_task_demand_distribution": {
+    "2": 203,
+    "1": 7
+  },
+  "candidate_count": {
+    "min": 1,
+    "max": 28,
+    "mean": 10.823809523809524
+  },
+  "advance_available_when_teacher_schedules": 129,
+  "decision_time_coverage": {
+    "distinct_decision_times": 11,
+    "distinct_cycles": 11,
+    "all_decisions_at_cycle_boundary": true,
+    "min_sim_time": 0.0,
+    "max_sim_time": 520.3784412699954,
+    "note": "A 的决策全部发生在转站时刻（t == P_{q-1}），教师状态只覆盖周期起始切片，不覆盖周期中段的中间决策状态；这是示范分布的结构性限制，不是编码缺陷。"
+  },
+  "trajectory": {
+    "decisions": 210,
+    "objective_j_total": 2.751822145979913e-15,
+    "makespan": 572.416285396995,
+    "completed_tasks": 210,
+    "transfers": 11,
+    "success": true,
+    "feasible": true,
+    "constraint_violation_count": 0,
+    "actual_disturbance_hits": 0,
+    "nominal_makespan_expected": 572.416285396995
+  },
+  "cross_pass_consistency": null,
+  "expression": {
+    "task_in_candidate_set": "210/210",
+    "branch_mask_allows_teacher": "210/210",
+    "teacher_team_reachable_via_masks": "210/210",
+    "advance_action_expressible": "本轨迹 A 无显式推进动作，未触发该分支核对",
+    "blocked_interface": false,
+    "scope": "逐决策按正式 C profile 重建快照后逐级核对；任一失败即写 BLOCKED_INTERFACE 并停机。"
+  },
+  "label_coverage_limits": [
+    "A 在 Nominal 下的示范全部是留站预约（STATION_EXECUTE + align=1），不含后移与显式推进标签；因此本轮不能评估模型是否学会区分等待、后移与执行。",
+    "多数样本的合法选人排列为 2，说明团队顺序存在观测别名；团队概率必须按排列 logsumexp 处理，不能当作顺序标签学习。"
+  ],
+  "collection_seconds": null,
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}

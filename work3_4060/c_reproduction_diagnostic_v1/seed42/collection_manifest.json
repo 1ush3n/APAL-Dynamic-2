@@ -1,0 +1,34 @@
+{
+  "a_trajectory": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\trajectories\\A_NOMINAL.json",
+  "a_trajectory_sha256": "81213c55170048a902d2281c4b829a2522eb317bf9ab52f4ac68487de287c01f",
+  "teacher_snapshots": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\teacher_snapshots.pt",
+  "teacher_snapshots_sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62",
+  "teacher_actions_sha256": "8c798a8d5720c12e525323593bb58c15ba2131c9c23dddda25af284af9066dda",
+  "teacher_manifest_sha256": "fa787d67ac13f65884a7d029da55f8298c73502c150c3674a2a77f191876709c",
+  "baseline": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+    "sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+    "h0": 52.037844126999545,
+    "task_count": 210,
+    "metadata_keys": [
+      "bottleneck_station",
+      "h0",
+      "num_aircraft",
+      "num_stations",
+      "physical_tasks_per_aircraft",
+      "source_craft_sha256",
+      "source_worker_pool_sha256",
+      "total_cycles",
+      "total_physical_tasks",
+      "transfer_policy",
+      "version"
+    ],
+    "schema_version": null,
+    "clock_model": "nominal_anchored_v1"
+  },
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  },
+  "device": "cpu"
+}

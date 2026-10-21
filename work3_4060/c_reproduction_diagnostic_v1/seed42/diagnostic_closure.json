@@ -1,0 +1,28 @@
+{
+  "checkpoint_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+  "decisions": 210,
+  "objective_j_total": 2.751822145979913e-15,
+  "makespan": 572.416285396995,
+  "completed_tasks": 210,
+  "success": true,
+  "feasible": true,
+  "postponed_count": 0,
+  "cost_components_weighted": {
+    "j_takt": 2.7308692267343145e-15,
+    "d_time": 2.0952919245598408e-17,
+    "d_team": 0.0,
+    "j_postpone": 0.0,
+    "j_revision": 0.0
+  },
+  "advance_cause_counts": {
+    "explicit": 0,
+    "identical_resubmission": 0,
+    "forced_no_candidate": 0,
+    "auto_after_action": 11,
+    "none": 199
+  },
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}

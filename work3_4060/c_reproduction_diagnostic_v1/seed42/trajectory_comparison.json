@@ -1,0 +1,788 @@
+{
+  "a_vs_diagnostic": {
+    "compared_task_count": 210,
+    "start_deviation_count": 0,
+    "end_deviation_count": 0,
+    "team_deviation_count": 0,
+    "transfer_deviation_count": 0,
+    "first_start_deviation": null,
+    "first_team_deviation": null,
+    "first_transfer_deviation": null,
+    "task_start_deviations": [],
+    "team_deviations": [],
+    "transfer_deviations": [],
+    "schedule_identical": true
+  },
+  "original_c_vs_diagnostic": {
+    "compared_task_count": 210,
+    "start_deviation_count": 205,
+    "end_deviation_count": 207,
+    "team_deviation_count": 91,
+    "transfer_deviation_count": 9,
+    "first_start_deviation": {
+      "task_key": "0_10",
+      "left_start": 243.85420975253396,
+      "right_start": 156.11353238099863,
+      "delta": -87.74067737153533
+    },
+    "first_team_deviation": {
+      "task_key": "0_11",
+      "left_team": [
+        44,
+        1
+      ],
+      "right_team": [
+        44,
+        45
+      ]
+    },
+    "first_transfer_deviation": {
+      "cycle": 3,
+      "left_transfer": 181.07853010982564,
+      "right_transfer": 156.11353238099863,
+      "delta": -24.964997728827
+    },
+    "task_start_deviations": [
+      {
+        "task_key": "0_10",
+        "left_start": 243.85420975253396,
+        "right_start": 156.11353238099863,
+        "delta": -87.74067737153533
+      },
+      {
+        "task_key": "0_11",
+        "left_start": 333.69480650145556,
+        "right_start": 208.15137650799818,
+        "delta": -125.54342999345738
+      },
+      {
+        "task_key": "0_12",
+        "left_start": 116.14580310920051,
+        "right_start": 104.07568825399909,
+        "delta": -12.070114855201425
+      },
+      {
+        "task_key": "0_125",
+        "left_start": 336.0811881125899,
+        "right_start": 212.06627058564231,
+        "delta": -124.01491752694761
+      },
+      {
+        "task_key": "0_13",
+        "left_start": 166.85136789670736,
+        "right_start": 105.33888644255512,
+        "delta": -61.51248145415224
+      },
+      {
+        "task_key": "0_14",
+        "left_start": 264.0315623482067,
+        "right_start": 208.15137650799818,
+        "delta": -55.880185840208526
+      },
+      {
+        "task_key": "0_15",
+        "left_start": 5.447681897216892,
+        "right_start": 12.388928602809594,
+        "delta": 6.941246705592702
+      },
+      {
+        "task_key": "0_17",
+        "left_start": 245.06983618286287,
+        "right_start": 157.32915881132755,
+        "delta": -87.74067737153533
+      },
+      {
+        "task_key": "0_19",
+        "left_start": 267.14683876106835,
+        "right_start": 208.15137650799818,
+        "delta": -58.99546225307017
+      },
+      {
+        "task_key": "0_20",
+        "left_start": 247.02623496917346,
+        "right_start": 159.28555759763813,
+        "delta": -87.74067737153533
+      },
+      {
+        "task_key": "0_21",
+        "left_start": 248.0139314438157,
+        "right_start": 160.27325407228037,
+        "delta": -87.74067737153533
+      },
+      {
+        "task_key": "0_22",
+        "left_start": 333.06576030270463,
+        "right_start": 209.41184000036884,
+        "delta": -123.65392030233579
+      },
+      {
+        "task_key": "0_23",
+        "left_start": 335.04276264163605,
+        "right_start": 210.74115671695776,
+        "delta": -124.30160592467828
+      },
+      {
+        "task_key": "0_24",
+        "left_start": 266.0884435695192,
+        "right_start": 209.6020832640544,
+        "delta": -56.486360305464814
+      },
+      {
+        "task_key": "0_25",
+        "left_start": 52.59948453124001,
+        "right_start": 52.64705819431216,
+        "delta": 0.04757366307214994
+      },
+      {
+        "task_key": "0_26",
+        "left_start": 54.89774963596207,
+        "right_start": 54.25263822167752,
+        "delta": -0.6451114142845498
+      },
+      {
+        "task_key": "0_27",
+        "left_start": 117.40900129775655,
+        "right_start": 106.67116578204781,
+        "delta": -10.737835515708738
+      },
+      {
+        "task_key": "0_28",
+        "left_start": 105.09216804635277,
+        "right_start": 104.07568825399909,
+        "delta": -1.0164797923536781
+      },
+      {
+        "task_key": "0_30",
+        "left_start": 262.24109365693397,
+        "right_start": 210.00005629680845,
+        "delta": -52.24103736012552
+      },
+      {
+        "task_key": "0_4",
+        "left_start": 9.631578187346562,
+        "right_start": 4.404101358031231,
+        "delta": -5.227476829315331
+      },
+      {
+        "task_key": "0_5",
+        "left_start": 5.993407500277284,
+        "right_start": 6.414669369306359,
+        "delta": 0.4212618690290748
+      },
+      {
+        "task_key": "0_6",
+        "left_start": 4.404101358031231,
+        "right_start": 10.052840056375636,
+        "delta": 5.648738698344405
+      },
+      {
+        "task_key": "0_7",
+        "left_start": 11.64214619862169,
+        "right_start": 11.096420595561298,
+        "delta": -0.5457256030603919
+      },
+      {
+        "task_key": "0_8",
+        "left_start": 53.79417740506029,
+        "right_start": 52.037844126999545,
+        "delta": -1.756333278060744
+      },
+      {
+        "task_key": "0_9",
+        "left_start": 63.0760221889373,
+        "right_start": 53.027239849622084,
+        "delta": -10.048782339315217
+      },
+      {
+        "task_key": "1_10",
+        "left_start": 328.9060386114229,
+        "right_start": 208.15137650799818,
+        "delta": -120.75466210342472
+      },
+      {
+        "task_key": "1_11",
+        "left_start": 421.7620631702299,
+        "right_start": 260.1892206349977,
+        "delta": -161.5728425352322
+      },
+      {
+        "task_key": "1_12",
+        "left_start": 193.1486449650271,
+        "right_start": 156.11353238099863,
+        "delta": -37.03511258402847
+      },
+      {
+        "task_key": "1_125",
+        "left_start": 424.1484447813643,
+        "right_start": 264.10411471264183,
+        "delta": -160.04433006872245
+      },
+      {
+        "task_key": "1_13",
+        "left_start": 243.85420975253396,
+        "right_start": 157.37673056955467,
+        "delta": -86.4774791829793
+      },
+      {
+        "task_key": "1_14",
+        "left_start": 352.098819016981,
+        "right_start": 260.1892206349977,
+        "delta": -91.9095983819833
+      },
+      {
+        "task_key": "1_15",
+        "left_start": 68.52370408615418,
+        "right_start": 64.42677272980914,
+        "delta": -4.0969313563450385
+      },
+      {
+        "task_key": "1_16",
+        "left_start": 76.01067639480728,
+        "right_start": 64.97249833286953,
+        "delta": -11.038178061937742
+      },
+      {
+        "task_key": "1_17",
+        "left_start": 330.1216650417518,
+        "right_start": 209.3670029383271,
+        "delta": -120.75466210342469
+      },
+      {
+        "task_key": "1_18",
+        "left_start": 105.09216804635277,
+        "right_start": 104.07568825399909,
+        "delta": -1.0164797923536781
+      },
+      {
+        "task_key": "1_19",
+        "left_start": 355.21409542984264,
+        "right_start": 260.1892206349977,
+        "delta": -95.02487479484495
+      },
+      {
+        "task_key": "1_2",
+        "left_start": 63.0760221889373,
+        "right_start": 52.037844126999545,
+        "delta": -11.038178061937757
+      },
+      {
+        "task_key": "1_20",
+        "left_start": 332.0780638280624,
+        "right_start": 211.32340172463768,
+        "delta": -120.75466210342472
+      },
+      {
+        "task_key": "1_21",
+        "left_start": 333.06576030270463,
+        "right_start": 212.3110981992799,
+        "delta": -120.75466210342472
+      },
+      {
+        "task_key": "1_22",
+        "left_start": 421.133016971479,
+        "right_start": 261.44968412736836,
+        "delta": -159.68333284411062
+      }
+    ],
+    "team_deviations": [
+      {
+        "task_key": "0_11",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "0_14",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          53,
+          77
+        ]
+      },
+      {
+        "task_key": "0_18",
+        "left_team": [
+          10,
+          22
+        ],
+        "right_team": [
+          10,
+          65
+        ]
+      },
+      {
+        "task_key": "0_19",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          56,
+          1
+        ]
+      },
+      {
+        "task_key": "0_22",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "0_23",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "0_24",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          1,
+          56
+        ]
+      },
+      {
+        "task_key": "0_25",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          10,
+          65
+        ]
+      },
+      {
+        "task_key": "0_28",
+        "left_team": [
+          66,
+          0
+        ],
+        "right_team": [
+          47,
+          76
+        ]
+      },
+      {
+        "task_key": "0_29",
+        "left_team": [
+          66,
+          0
+        ],
+        "right_team": [
+          51,
+          50
+        ]
+      },
+      {
+        "task_key": "0_30",
+        "left_team": [
+          44,
+          56
+        ],
+        "right_team": [
+          70,
+          33
+        ]
+      },
+      {
+        "task_key": "0_8",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          22,
+          18
+        ]
+      },
+      {
+        "task_key": "0_9",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          18,
+          22
+        ]
+      },
+      {
+        "task_key": "1_11",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "1_14",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          53,
+          77
+        ]
+      },
+      {
+        "task_key": "1_18",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          10,
+          65
+        ]
+      },
+      {
+        "task_key": "1_19",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          56,
+          1
+        ]
+      },
+      {
+        "task_key": "1_22",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "1_23",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "1_24",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          1,
+          56
+        ]
+      },
+      {
+        "task_key": "1_25",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          10,
+          65
+        ]
+      },
+      {
+        "task_key": "1_28",
+        "left_team": [
+          66,
+          0
+        ],
+        "right_team": [
+          47,
+          76
+        ]
+      },
+      {
+        "task_key": "1_29",
+        "left_team": [
+          66,
+          0
+        ],
+        "right_team": [
+          51,
+          50
+        ]
+      },
+      {
+        "task_key": "1_30",
+        "left_team": [
+          44,
+          56
+        ],
+        "right_team": [
+          70,
+          33
+        ]
+      },
+      {
+        "task_key": "1_8",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          22,
+          18
+        ]
+      },
+      {
+        "task_key": "1_9",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          18,
+          22
+        ]
+      },
+      {
+        "task_key": "2_11",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "2_14",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          53,
+          77
+        ]
+      },
+      {
+        "task_key": "2_18",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          10,
+          65
+        ]
+      },
+      {
+        "task_key": "2_19",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          56,
+          1
+        ]
+      },
+      {
+        "task_key": "2_22",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "2_23",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      },
+      {
+        "task_key": "2_24",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          1,
+          56
+        ]
+      },
+      {
+        "task_key": "2_25",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          10,
+          65
+        ]
+      },
+      {
+        "task_key": "2_28",
+        "left_team": [
+          66,
+          0
+        ],
+        "right_team": [
+          47,
+          76
+        ]
+      },
+      {
+        "task_key": "2_29",
+        "left_team": [
+          66,
+          0
+        ],
+        "right_team": [
+          51,
+          50
+        ]
+      },
+      {
+        "task_key": "2_30",
+        "left_team": [
+          44,
+          56
+        ],
+        "right_team": [
+          70,
+          33
+        ]
+      },
+      {
+        "task_key": "2_8",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          22,
+          18
+        ]
+      },
+      {
+        "task_key": "2_9",
+        "left_team": [
+          10,
+          18
+        ],
+        "right_team": [
+          18,
+          22
+        ]
+      },
+      {
+        "task_key": "3_11",
+        "left_team": [
+          44,
+          1
+        ],
+        "right_team": [
+          44,
+          45
+        ]
+      }
+    ],
+    "transfer_deviations": [
+      {
+        "cycle": 3,
+        "left_transfer": 181.07853010982564,
+        "right_transfer": 156.11353238099863,
+        "delta": -24.964997728827
+      },
+      {
+        "cycle": 4,
+        "left_transfer": 262.24109365693397,
+        "right_transfer": 208.15137650799818,
+        "delta": -54.08971714893579
+      },
+      {
+        "cycle": 5,
+        "left_transfer": 350.30835032570826,
+        "right_transfer": 260.1892206349977,
+        "delta": -90.11912969071057
+      },
+      {
+        "cycle": 6,
+        "left_transfer": 438.3756069944826,
+        "right_transfer": 312.22706476199727,
+        "delta": -126.14854223248534
+      },
+      {
+        "cycle": 7,
+        "left_transfer": 519.6314007540593,
+        "right_transfer": 364.26490888899684,
+        "delta": -155.36649186506247
+      },
+      {
+        "cycle": 8,
+        "left_transfer": 588.2488695949573,
+        "right_transfer": 416.30275301599636,
+        "delta": -171.94611657896098
+      },
+      {
+        "cycle": 9,
+        "left_transfer": 653.2877928093311,
+        "right_transfer": 468.3405971429959,
+        "delta": -184.94719566633523
+      },
+      {
+        "cycle": 10,
+        "left_transfer": 666.9575247090725,
+        "right_transfer": 520.3784412699954,
+        "delta": -146.57908343907707
+      },
+      {
+        "cycle": 11,
+        "left_transfer": 677.8154910577125,
+        "right_transfer": 572.416285396995,
+        "delta": -105.39920566071748
+      }
+    ],
+    "schedule_identical": false
+  },
+  "note": "顺序差异不等于排程更差；这里分别记录首次动作差异（教师状态评分中）与首次实际开工时刻/团队/转站偏离（闭环执行事实中）。"
+}

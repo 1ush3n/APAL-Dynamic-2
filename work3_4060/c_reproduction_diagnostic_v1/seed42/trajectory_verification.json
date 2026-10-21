@@ -1,0 +1,144 @@
+{
+  "overall_status": "PASS",
+  "missing_files": [],
+  "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+  "baseline_h0": 52.037844126999545,
+  "verifier": "work3_4060/verify_trajectory_facts.py::verify_single_trajectory",
+  "trajectories": [
+    {
+      "trajectory_file": "A_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598408e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598414e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 6.162975822039155e-33,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      },
+      "role": "A_NOMINAL"
+    },
+    {
+      "trajectory_file": "C_ORIGINAL_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175535,
+        "d_team": 0.01416666666666667,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842205,
+        "j_total": 3.82256809126947
+      },
+      "reported_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175539,
+        "d_team": 0.014166666666666682,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842213,
+        "j_total": 3.82256809126947
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.163336342344337e-17,
+        "d_team_diff": 1.214306433183765e-17,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 8.326672684688674e-17,
+        "j_total_diff": 0.0
+      },
+      "role": "C_ORIGINAL_NOMINAL"
+    },
+    {
+      "trajectory_file": "C_BC_DIAGNOSTIC_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598408e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598414e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 6.162975822039155e-33,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      },
+      "role": "C_BC_DIAGNOSTIC_NOMINAL"
+    }
+  ]
+}

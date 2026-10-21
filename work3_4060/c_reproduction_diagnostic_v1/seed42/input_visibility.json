@@ -1,0 +1,612 @@
+{
+  "schema_version": "c_reproduction_input_visibility_v1",
+  "graph_feature_version": "work3_graph_v6",
+  "graph_feature_schema_hash": "23b1f82de3b2d11d",
+  "graph_feature_dims": {
+    "task": 28,
+    "worker": 21,
+    "station": 15,
+    "skill": 11
+  },
+  "tensor_contract": {
+    "scanned_states": 210,
+    "state_features": [
+      32
+    ],
+    "time_features": [
+      12
+    ],
+    "candidate_task_features": [
+      8,
+      8
+    ],
+    "candidate_feature_row_counts": [
+      [
+        1,
+        8
+      ],
+      [
+        2,
+        8
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        6,
+        8
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        8,
+        8
+      ],
+      [
+        9,
+        8
+      ],
+      [
+        10,
+        8
+      ],
+      [
+        11,
+        8
+      ],
+      [
+        12,
+        8
+      ],
+      [
+        13,
+        8
+      ],
+      [
+        14,
+        8
+      ],
+      [
+        15,
+        8
+      ],
+      [
+        16,
+        8
+      ],
+      [
+        17,
+        8
+      ],
+      [
+        18,
+        8
+      ],
+      [
+        19,
+        8
+      ],
+      [
+        20,
+        8
+      ],
+      [
+        21,
+        8
+      ],
+      [
+        22,
+        8
+      ],
+      [
+        23,
+        8
+      ],
+      [
+        24,
+        8
+      ],
+      [
+        25,
+        8
+      ],
+      [
+        26,
+        8
+      ],
+      [
+        27,
+        8
+      ],
+      [
+        28,
+        8
+      ]
+    ],
+    "graph_nodes": {
+      "task": 210,
+      "worker": 25,
+      "station": 5,
+      "skill": 5
+    },
+    "graph_edges": {
+      "('task', 'precedes', 'task')": 273,
+      "('task', 'assigned_to', 'station')": 210,
+      "('station', 'has_task', 'task')": 210,
+      "('task', 'done_by', 'worker')": 0,
+      "('task', 'baseline_team', 'worker')": 413,
+      "('task', 'last_published_team', 'worker')": 413,
+      "('worker', 'has_skill', 'skill')": 31,
+      "('skill', 'required_by', 'task')": 210,
+      "('task', 'requires', 'skill')": 210,
+      "('skill', 'provided_by', 'worker')": 31
+    }
+  },
+  "state_feature_semantics": [
+    {
+      "index": 0,
+      "semantics": "本周期已运行时间比例 (t-P_{q-1})/H0"
+    },
+    {
+      "index": 1,
+      "semantics": "各站剩余工时比例（站 0..4，索引 1..5）"
+    },
+    {
+      "index": 6,
+      "semantics": "各站当前运行工序数比例（索引 6..10）"
+    },
+    {
+      "index": 11,
+      "semantics": "各站物料未到工序数比例（索引 11..15）"
+    },
+    {
+      "index": 16,
+      "semantics": "各站最大开工等待紧迫度 log1p（索引 16..20）"
+    },
+    {
+      "index": 21,
+      "semantics": "各站是否有飞机在场 0/1（索引 21..25）"
+    },
+    {
+      "index": 26,
+      "semantics": "启发式剩余时间比例"
+    },
+    {
+      "index": 27,
+      "semantics": "名义剩余时间比例 (P_{q-1}+H0-t)/H0"
+    },
+    {
+      "index": 28,
+      "semantics": "当前脉动周期比例"
+    },
+    {
+      "index": 29,
+      "semantics": "全线累计完工工序比例"
+    },
+    {
+      "index": 30,
+      "semantics": "全线后移工序数比例"
+    },
+    {
+      "index": 31,
+      "semantics": "归一化总生产时长进度"
+    }
+  ],
+  "candidate_feature_semantics": [
+    {
+      "index": 0,
+      "semantics": "工序基准工时 / H0"
+    },
+    {
+      "index": 1,
+      "semantics": "基准站内偏移 + (预约开工-当前时刻)/H0"
+    },
+    {
+      "index": 2,
+      "semantics": "需求人数/5 + 0.25*(1-|pub_team∩base_team|/demand)"
+    },
+    {
+      "index": 3,
+      "semantics": "当前站位/4 + 0.1*(发布站位-基准站位)"
+    },
+    {
+      "index": 4,
+      "semantics": "后移次数/5 + 0.5*[已预约]"
+    },
+    {
+      "index": 5,
+      "semantics": "物料未到标记 + 0.5*[已预约]"
+    },
+    {
+      "index": 6,
+      "semantics": "物料等待/H0 + 预约开工剩余/H0"
+    },
+    {
+      "index": 7,
+      "semantics": "站间偏移/4 + 预约完工剩余/H0"
+    }
+  ],
+  "time_feature_semantics": "0..1 为 (R^/H0, (H0-(t-P_{q-1}))/H0)；2..6 为 C profile 恒零的下一周期修正残差；7..11 为下一周期各站占用位。",
+  "items": [
+    {
+      "item_id": "baseline_local_offset_and_current_position",
+      "question": "基准局部开工偏移与当前开工位置偏离",
+      "entries": [
+        {
+          "physical_source": "TaskRuntimeState.in_station_offset（基准站内偏移 b_i^0）",
+          "encoding_path": "graph.task[10] = baseline_in_station_offset_norm",
+          "status": "direct",
+          "evidence": {
+            "feature": "baseline_in_station_offset_norm",
+            "index": 10,
+            "scanned_states": 210,
+            "nonzero_fraction": 0.6666666865348816,
+            "std": 0.07301105558872223,
+            "min": 0.0,
+            "max": 0.24856245517730713,
+            "distinct_count": 21
+          }
+        },
+        {
+          "physical_source": "launch_pulse_offset（上一转站以来的脉冲偏移）",
+          "encoding_path": "graph.task[11] = launch_pulse_offset_norm",
+          "status": "direct",
+          "evidence": {
+            "feature": "launch_pulse_offset_norm",
+            "index": 11,
+            "scanned_states": 210,
+            "nonzero_fraction": 0.897278904914856,
+            "std": 0.6459790468215942,
+            "min": -2.0,
+            "max": 1.2000000476837158,
+            "distinct_count": 17
+          }
+        },
+        {
+          "physical_source": "publication_reference.position / scheduled_start",
+          "encoding_path": "candidate_task_features[1]、[7]；graph.task[...] last_published_position_norm",
+          "status": "direct",
+          "evidence": {
+            "candidate_feature_1": {
+              "index": 1,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.8636163473129272,
+              "std": 0.08469079434871674,
+              "min": 0.0,
+              "max": 0.24856245517730713,
+              "distinct_count": 21
+            },
+            "candidate_feature_7": {
+              "index": 7,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.0,
+              "std": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "distinct_count": 1
+            },
+            "graph": {
+              "feature": "last_published_position_norm",
+              "index": 25,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.6666666865348816,
+              "std": 0.07301105558872223,
+              "min": 0.0,
+              "max": 0.24856245517730713,
+              "distinct_count": 21
+            }
+          }
+        }
+      ],
+      "verdict": "Actor 可直接获得基准站内偏移与当前开工位置偏离。"
+    },
+    {
+      "item_id": "baseline_team_and_candidate_worker_relation",
+      "question": "基准团队及候选工人与基准团队的关系",
+      "entries": [
+        {
+          "physical_source": "TaskRuntimeState.base_team（基准标准团队 W_i^0）",
+          "encoding_path": "异构图关系类型 (task, baseline_team, worker)；不是工人节点特征位",
+          "status": "direct（以关系类型编码）",
+          "evidence": {
+            "edge_type": "(task, baseline_team, worker)",
+            "num_edges": 413,
+            "teacher_task_baseline_team_edges": 2
+          }
+        },
+        {
+          "physical_source": "上一次正式发布团队",
+          "encoding_path": "异构图关系类型 (task, last_published_team, worker)",
+          "status": "direct（以关系类型编码）",
+          "evidence": {
+            "num_edges": 413
+          }
+        },
+        {
+          "physical_source": "候选工人自身的技能与站位归属",
+          "encoding_path": "graph.worker[skill_0..4]、graph.worker[station_0..4]",
+          "status": "direct",
+          "evidence": {
+            "skill_0": {
+              "feature": "skill_0",
+              "index": 1,
+              "scanned_states": 210,
+              "nonzero_fraction": 1.0,
+              "std": 0.0,
+              "min": 1.0,
+              "max": 1.0,
+              "distinct_count": 1
+            },
+            "station_0": {
+              "feature": "station_0",
+              "index": 8,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.07999999821186066,
+              "std": 0.27129319310188293,
+              "min": 0.0,
+              "max": 1.0,
+              "distinct_count": 2
+            },
+            "station_1": {
+              "feature": "station_1",
+              "index": 9,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.1599999964237213,
+              "std": 0.36660605669021606,
+              "min": 0.0,
+              "max": 1.0,
+              "distinct_count": 2
+            },
+            "efficiency": {
+              "feature": "efficiency",
+              "index": 0,
+              "scanned_states": 210,
+              "nonzero_fraction": 1.0,
+              "std": 0.10869375616312027,
+              "min": 0.8029448986053467,
+              "max": 1.188279151916504,
+              "distinct_count": 25
+            }
+          }
+        },
+        {
+          "physical_source": "候选团队相对基准团队的差异比例",
+          "encoding_path": "candidate_task_features[2] 中的 team_diff_ratio（任务级派生量）",
+          "status": "derivable（任务级聚合，非逐工人布尔位）",
+          "evidence": {
+            "candidate_feature_2": {
+              "index": 2,
+              "scanned_states": 210,
+              "nonzero_fraction": 1.0,
+              "std": 0.0177271980792284,
+              "min": 0.20000000298023224,
+              "max": 0.4000000059604645,
+              "distinct_count": 2
+            }
+          }
+        }
+      ],
+      "verdict": "基准团队关系通过专门的关系类型与工人特征可表达；但不存在“该工人是否属于本工序基准团队”的显式工人节点布尔特征，该判断需要网络在消息传递中沿关系类型推导。"
+    },
+    {
+      "item_id": "current_legal_team_skill_demand_calendar",
+      "question": "当前合法团队、技能/人数、资源日历相关信息",
+      "entries": [
+        {
+          "physical_source": "TaskRuntimeState.demand / skill",
+          "encoding_path": "graph.task[demand]、graph.task[skill_0..4]；candidate_task_features[2]",
+          "status": "direct",
+          "evidence": {
+            "demand": {
+              "feature": "demand",
+              "index": 16,
+              "scanned_states": 210,
+              "nonzero_fraction": 1.0,
+              "std": 0.17950549721717834,
+              "min": 1.0,
+              "max": 2.0,
+              "distinct_count": 2
+            },
+            "skill_0": {
+              "feature": "skill_0",
+              "index": 5,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.800000011920929,
+              "std": 0.4000000059604645,
+              "min": 0.0,
+              "max": 1.0,
+              "distinct_count": 2
+            }
+          }
+        },
+        {
+          "physical_source": "工人效率与已占用日历区间",
+          "encoding_path": "graph.worker[efficiency]、reserved_slot_13..16、active_or_future_interval_count、next_reserved_start/end",
+          "status": "direct",
+          "evidence": {
+            "efficiency": {
+              "feature": "efficiency",
+              "index": 0,
+              "scanned_states": 210,
+              "nonzero_fraction": 1.0,
+              "std": 0.10869375616312027,
+              "min": 0.8029448986053467,
+              "max": 1.188279151916504,
+              "distinct_count": 25
+            },
+            "active_or_future_interval_count": {
+              "feature": "active_or_future_interval_count",
+              "index": 17,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.5108571648597717,
+              "std": 0.2186608910560608,
+              "min": 0.0,
+              "max": 1.399999976158142,
+              "distinct_count": 8
+            },
+            "has_next_reserved_interval": {
+              "feature": "has_next_reserved_interval",
+              "index": 18,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.5108571648597717,
+              "std": 0.4998821020126343,
+              "min": 0.0,
+              "max": 1.0,
+              "distinct_count": 2
+            },
+            "next_reserved_start_remaining_norm": {
+              "feature": "next_reserved_start_remaining_norm",
+              "index": 19,
+              "scanned_states": 210,
+              "nonzero_fraction": 0.02019047550857067,
+              "std": 0.004996736999601126,
+              "min": 0.0,
+              "max": 0.03552567958831787,
+              "distinct_count": 2
+            }
+          }
+        },
+        {
+          "physical_source": "逐人条件合法掩码（技能/效率/已选工人）",
+          "encoding_path": "Actor 内部由 TeamCompletionContext 逐步构造并施加；不在图特征中",
+          "status": "direct（作为硬掩码进入指针头，而非软特征）",
+          "evidence": {
+            "teacher_demand": 2,
+            "valid_permutation_count": 2,
+            "station_worker_count": 2
+          }
+        }
+      ],
+      "verdict": "合法团队与逐人掩码在正式接口内完全可见，技能/人数/日历均有显式编码。"
+    },
+    {
+      "item_id": "cycle_time_and_next_nominal_boundary",
+      "question": "当前周期、仿真时刻与下一名义转站边界",
+      "entries": [
+        {
+          "physical_source": "current_time / last_transfer_time / h0 / current_cycle",
+          "encoding_path": "state_features[0]=(t-P_{q-1})/H0、[27]=(P_{q-1}+H0-t)/H0、[28]=周期比例",
+          "status": "direct",
+          "evidence": {
+            "state_feature_0": {
+              "scanned_states": 210,
+              "nonzero_fraction": 0.0,
+              "std": 0.0,
+              "min": 0.0,
+              "max": 0.0
+            },
+            "state_feature_27": {
+              "nonzero_fraction": 1.0,
+              "min": 1.0,
+              "max": 1.0
+            },
+            "state_feature_28_first_value": 0.09090909361839294,
+            "note": "教师状态全部落在转站时刻，因此 state_features[0]=(t-P_{q-1})/H0 在示范上恒为 0、[27] 恒为 1；这是状态分布特性，不是该维未被编码。"
+          }
+        },
+        {
+          "physical_source": "下一名义转站边界的显式紧迫度输入",
+          "encoding_path": "time_features[0..1]（R^/H0 与 (H0-(t-P_{q-1}))/H0）",
+          "status": "direct",
+          "evidence": {
+            "time_feature_0": {
+              "scanned_states": 210,
+              "nonzero_fraction": 1.0,
+              "std": 0.0,
+              "min": 1.0,
+              "max": 1.0
+            },
+            "time_feature_1": {
+              "nonzero_fraction": 1.0,
+              "std": 0.0,
+              "min": 1.0,
+              "max": 1.0
+            },
+            "zero_residuals_2_to_6_all_zero": true
+          }
+        },
+        {
+          "physical_source": "下一周期各站是否仍会驻留飞机",
+          "encoding_path": "time_features[7..11]（next_cycle_station_mask 占用位）",
+          "status": "direct",
+          "evidence": {
+            "occupancy_first_state": [
+              true,
+              true,
+              false,
+              false,
+              false
+            ],
+            "tail_nonzero_fraction": {
+              "7": 0.5761904716491699,
+              "8": 0.7190476059913635,
+              "9": 0.7857142686843872,
+              "10": 0.8047618865966797,
+              "11": 0.776190459728241
+            }
+          }
+        }
+      ],
+      "verdict": "周期、仿真时刻与名义转站边界既在状态特征中，也作为显式时间输入进入融合层。"
+    }
+  ],
+  "probe_context": {
+    "sample_count": 210,
+    "first_sample_id": 0,
+    "first_decision_index": 1,
+    "first_sim_time": 0.0,
+    "first_cycle": 1,
+    "first_teacher_task": "0_2",
+    "evidence_scope": "跨全部教师状态统计；不是单状态示例"
+  },
+  "notes": [
+    "清册只描述 Actor 实际接收的张量与关系类型，不依据环境对象是否持有字段推断可见性。",
+    "本轮不新增任何特征；若某信息仅能由关系推导，如实记录为可推导而非直接编码。",
+    "没有显式字段不等于完全不可表达；有环境字段也不等于网络看得见。"
+  ],
+  "sample_scan": {
+    "scanned_states": 210,
+    "distinct_candidate_counts": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ],
+    "samples_with_advance_available": 129
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "weights_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\seed42\\C\\weights.pt",
+  "weights_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+  "run_json_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\seed42\\C\\run.json",
+  "run_json_sha256": "97e111e9387dcd4adefa94820687a1bb933cea115af8e781681fdf0359a8b2b4",
+  "actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+  "checkpoint_version": "work3_actor_time_v3",
+  "checkpoint_role": "model_weights",
+  "method_variant": "C",
+  "method_profile": {
+    "name": "C",
+    "graph_policy": true,
+    "allow_postpone": true,
+    "use_time_auxiliary": false,
+    "use_corrected_time_input": false,
+    "use_learned_time_shaping": false
+  },
+  "seed": 42,
+  "source_sha": "f5e7ff4b5f5d61e22140db12177aed98f941f1d9",
+  "source_tree_dirty": true,
+  "initial_actor_fingerprint": "2d639e6138af39725db3658506048ed75396eed26a8ee8629c48bd5deabf203d",
+  "successful_batch_count": 14,
+  "lightning_optimization_steps": 2048,
+  "total_decisions": 4096,
+  "resolved_runtime_config_sha256": "acb009867a3637192b9725691332bebf6c8c1d6cadd69f71ccda9bb0aae24b64",
+  "data_fingerprint": {
+    "scenario_pool_sha256": "3ab465cb84c454dbd15073171ececa9b8e4f57590160addb608a45b6d18eafbd",
+    "scenario_split_sha256": "4b9229de740a78d8b2d3e3f343670484007e082d1f551677f0919db3693b0fa0",
+    "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+    "time_head_checkpoint_sha256": null,
+    "event_plan_sha256": "0a05c948aad337430ae1d1b8c8b227f0304941e8a1915b680055dd9cf03b32f7",
+    "worker_event_plan_sha256": "0bb67bab5cdbb30a8e6b0e9813b3929daca4d23d45e66ccfc60ae2f02b671c01"
+  },
+  "data_fingerprint_drift": {
+    "baseline_sha256": {
+      "training_value": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "current_value": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "matches": true
+    },
+    "scenario_pool_sha256": {
+      "training_value": "3ab465cb84c454dbd15073171ececa9b8e4f57590160addb608a45b6d18eafbd",
+      "current_value": "18a5a90af0b087e147a0ccc9af1c7976e1ea828296ae385e649fee441fc5da60",
+      "matches": false
+    },
+    "scenario_split_sha256": {
+      "training_value": "4b9229de740a78d8b2d3e3f343670484007e082d1f551677f0919db3693b0fa0",
+      "current_value": "4b9229de740a78d8b2d3e3f343670484007e082d1f551677f0919db3693b0fa0",
+      "matches": true
+    }
+  },
+  "scenario_pool_drift": {
+    "training_snapshot_available": true,
+    "training_source_sha": "f5e7ff4b5f5d61e22140db12177aed98f941f1d9",
+    "changed_fields": {
+      "RULE_TRAIN_S1_RHO10": [
+        "intensity",
+        "timing",
+        "timing_reference"
+      ],
+      "RULE_TRAIN_S2_RHO25": [
+        "intensity",
+        "timing",
+        "timing_reference"
+      ],
+      "RULE_TRAIN_S3_RHO50": [
+        "intensity",
+        "timing",
+        "timing_reference"
+      ],
+      "RULE_TRAIN_S4_RHO75": [
+        "intensity",
+        "timing",
+        "timing_reference"
+      ],
+      "RULE_VAL_S1_MODERATE": [
+        "intensity",
+        "timing",
+        "timing_reference"
+      ],
+      "RULE_VAL_S2_STRONG": [
+        "intensity",
+        "timing",
+        "timing_reference"
+      ]
+    },
+    "only_label_or_reference_fields_changed": true,
+    "current_scenario_count": 6,
+    "used_by_this_diagnostic": false,
+    "note": "本轮只跑 Nominal（scenario=None），不加载任何扰动场景；差异仅出现在 timing/intensity/timing_reference 三个标签字段，事件物理定义未变。"
+  },
+  "loaded_by": "scripts.work3.evaluate_c_vs_d.build_formal_evaluation_agent('C', ..., device='cpu')",
+  "graph_feature_version": "work3_graph_v6",
+  "graph_feature_schema_hash": "23b1f82de3b2d11d"
+}

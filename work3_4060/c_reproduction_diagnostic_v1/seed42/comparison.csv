@@ -1,0 +1,4 @@
+entity,description,decisions,completed_tasks,success,feasible,constraint_violations,j_total,j_takt,d_time,d_team,j_postpone,j_revision,makespan,postponed_count,transfers,teacher_nll_mean,teacher_task_accuracy_conditional,teacher_branch_accuracy_conditional,teacher_team_accuracy_unordered,teacher_align_accuracy_conditional,teacher_full_action_accuracy
+A,Baseline-Repair-A（真实教师）,210,210,True,True,0,2.751822145979913e-15,2.7308692267343145e-15,2.0952919245598408e-17,0,0,0,572.41628539699502,0,11,,,,,,
+C_ORIG,方法 C 原检查点（4096 步）,395,210,True,True,0,3.8225680912694702,3.5540902735126259,0.12007224221175535,0.014166666666666669,0,0.13423890887842202,677.81549105771251,0,11,101.89114439828056,0.290476,1.000000,0.580952,0.000000,0.000000
+C_BC_DIAG,C 诊断副本（diagnostic_behavior_clone）,210,210,True,True,0,2.751822145979913e-15,2.7308692267343145e-15,2.0952919245598408e-17,0,0,0,572.41628539699502,0,11,0.16468082732255337,0.980952,1.000000,1.000000,1.000000,0.980952

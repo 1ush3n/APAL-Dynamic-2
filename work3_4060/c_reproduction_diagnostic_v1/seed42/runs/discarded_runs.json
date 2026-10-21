@@ -1,0 +1,20 @@
+{
+  "discarded_runs": [
+    {
+      "run_id": "train_20261021T1247",
+      "stage": "train",
+      "completed_optimizer_steps": 1000,
+      "outcome": "failed_after_training",
+      "reason": "实现错误：收尾阶段把扫描记录当作 {record: ...} 包装体读取（KeyError: record），诊断检查点在保存前抛出，权重未落盘。",
+      "classification": "implementation_error_not_training_result",
+      "observed_before_failure": {
+        "final_scan_nll": 0.383809,
+        "task_accuracy_conditional": 0.981,
+        "team_accuracy_unordered_conditional": 1.0,
+        "full_physical_action_accuracy": 0.981
+      },
+      "action": "修复后从同一初始副本（原 C Actor）重新运行，超参与预算不变；失败运行不计入结果。",
+      "evidence_log": "runs/discarded_train_20261021T1308_artifact_write_bug.log"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "decisions": 395,
+  "objective_j_total": 3.82256809126947,
+  "makespan": 677.8154910577125,
+  "completed_tasks": 210,
+  "success": true,
+  "feasible": true,
+  "cost_components_weighted": {
+    "j_takt": 3.554090273512626,
+    "d_time": 0.12007224221175535,
+    "d_team": 0.01416666666666667,
+    "j_postpone": 0.0,
+    "j_revision": 0.13423890887842202
+  },
+  "archived_reference": {
+    "decisions": 395,
+    "objective_j_total": 3.82256809126947,
+    "makespan": 677.8154910577125,
+    "note": "只作为来源明确的参考，不替代本次实测。"
+  },
+  "measured_matches_archive": {
+    "decisions": true,
+    "objective_j_total": true,
+    "makespan": true
+  },
+  "device": "cpu",
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}
