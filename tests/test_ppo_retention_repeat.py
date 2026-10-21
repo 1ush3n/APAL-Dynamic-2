@@ -170,6 +170,39 @@ def test_discarded_preflight_record_copies_and_hashes_preserved_artifacts(
     assert saved["discarded_runs"][0]["preserved_files"][0]["sha256"] == runner.sha256(copied)
 
 
+def test_r1_csv_writer_keeps_fields_present_only_in_later_rows(tmp_path: Path) -> None:
+    import csv
+    from work3_4060.run_r1_retention_1024 import write_csv
+
+    path = tmp_path / "cross_seed.csv"
+    write_csv(path, [
+        {"point": 128, "j_total": 1.0},
+        {"point": 512, "j_total": 2.0, "reference_scope": "historical", "prior_j": 3.0},
+    ])
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["reference_scope"] == ""
+    assert rows[1]["reference_scope"] == "historical"
+    assert rows[1]["prior_j"] == "3"
+
+
+def test_source_hash_allows_only_documented_report_only_runner_revision(tmp_path: Path) -> None:
+    from work3_4060.run_r1_retention_1024 import _source_hash_status, sha256
+
+    script = tmp_path / "runner.py"
+    script.write_text("report-only revision", encoding="utf-8")
+    binding = {
+        "source_code_hashes": {"new_r1_runner": {"path": str(script), "sha256": "old"}},
+        "post_training_report_revision": {
+            "scope": "report_serialization_only",
+            "script_sha256_after_report_only": sha256(script),
+        },
+    }
+    assert _source_hash_status(binding) == {"new_r1_runner": True}
+    binding["post_training_report_revision"]["scope"] = "training_logic_changed"
+    assert _source_hash_status(binding) == {"new_r1_runner": False}
+
+
 def test_legacy_writer_paths_are_rebound_inside_new_output_root(monkeypatch: pytest.MonkeyPatch) -> None:
     from work3_4060.run_ppo_retention_repeat import _configure_runner
     import work3_4060.run_ppo_ablation_arms as runner

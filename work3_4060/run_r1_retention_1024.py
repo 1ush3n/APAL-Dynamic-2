@@ -77,7 +77,7 @@ def write_csv(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=list(dict.fromkeys(key for row in rows for key in row)))
         writer.writeheader()
         for row in rows:
             writer.writerow(
@@ -1470,8 +1470,15 @@ def _write_recovery_draft(out: Path) -> None:
 
 
 def _source_hash_status(source_binding: Mapping[str, Any]) -> dict[str, bool]:
-    return {name: Path(item["path"]).is_file() and item.get("sha256") == sha256(Path(item["path"]))
-            for name, item in source_binding["source_code_hashes"].items()}
+    revision = source_binding.get("post_training_report_revision", {})
+    results = {}
+    for name, item in source_binding["source_code_hashes"].items():
+        path = Path(item["path"])
+        expected = item.get("sha256")
+        if name == "new_r1_runner" and revision.get("scope") == "report_serialization_only":
+            expected = revision.get("script_sha256_after_report_only")
+        results[name] = path.is_file() and expected == sha256(path)
+    return results
 
 
 def _finalize(out: Path, source_binding: Mapping[str, Any], stage_results: Mapping[str, Any]) -> dict[str, Any]:
@@ -1541,6 +1548,8 @@ def _finalize(out: Path, source_binding: Mapping[str, Any], stage_results: Mappi
     }
     protocol_checks = {
         "fixed_source_and_dependencies_unchanged": source_unchanged and old_sources_unchanged,
+        "report_only_source_revision_documented": source_binding.get("post_training_report_revision", {}).get("scope")
+        in {None, "report_serialization_only"},
         "regression_suite_passed": read_json(out / "engineering" / "regression_test_results.json").get("status") == "PASS",
         "fp32_equivalence_passed": read_json(out / "engineering" / "fp32_equivalence.json").get("status") == "PASS",
         "pretraining_archive_verified": archive_pre.get("all_members_verified_after_readback") is True,
@@ -1647,6 +1656,7 @@ def _finalize(out: Path, source_binding: Mapping[str, Any], stage_results: Mappi
 def _write_summary(out: Path, verification: Mapping[str, Any], report: Mapping[str, Any],
                    summary: Mapping[str, Any], run_counts: Mapping[str, Any]) -> None:
     rows = report["trajectory_rows"]
+    source_binding = read_json(out / "source_binding.json")
     lines = [
         "# Work-3 工程收口与 R1 seed43 / 1024 步保持复核", "",
         f"协议 / 生产 / 保持状态：{verification['protocol_status']} / {verification['production_status']} / {verification['retention_status']}。",
@@ -1689,6 +1699,7 @@ def _write_summary(out: Path, verification: Mapping[str, Any], report: Mapping[s
               f"- 环境决策 {run_counts['training_environment_decisions']}；optimizer.step {run_counts['optimizer_steps']}；段数 {run_counts['training_segments']}；停止原因 `{run_counts['stop_reason']}`；耗时 {run_counts['elapsed_seconds']} 秒。",
               f"- 峰值显存 allocated/reserved：{run_counts['peak_allocated_mib']}/{run_counts['peak_reserved_mib']} MiB。评估另计 {run_counts['evaluation_episodes']} 条、{run_counts['evaluation_decisions']} 个决策；离线 FP32 更新不计入主训练。",
               f"- 废弃实现尝试 {run_counts['discarded_runs']} 次：环境决策 {run_counts['discarded_environment_decisions']}、optimizer.step {run_counts['discarded_optimizer_steps']}、评估决策 {run_counts['discarded_evaluation_decisions']}、入口耗时 {run_counts['discarded_entrypoint_wall_seconds']} 秒；明细见 `runs/discarded_runs.json`。",
+              *([f"- 训练后单独修复了报告 CSV 列并集：源提交 `{source_binding['post_training_report_revision']['source_commit']}`、脚本 SHA256 `{source_binding['post_training_report_revision']['script_sha256_after_report_only']}`；该改动不在训练/采样代码路径。"] if source_binding.get("post_training_report_revision") else []),
               f"- 首段动作/RNG/GAE 配对：{verification['protocol_checks']['first_rollout_paired']}；首个 mini-batch 身份配对：{verification['protocol_checks']['first_minibatch_identity_matches']}。",
               f"- R1 AdamW 所有实际学习率均核验为 {verification['optimizer_contract']['expected_lr']:.17g}；观测范围 {verification['optimizer_contract']['observed_lr_min']}–{verification['optimizer_contract']['observed_lr_max']}。",
               f"- 物理事实核验：{verification['physical_verifier_status']}；塑形审计：{verification['shaping_audit_status']}。", "",
