@@ -1,0 +1,6868 @@
+{
+  "agent": "C_BC_CAL_PPO_step0256",
+  "scenario_id": "NOMINAL",
+  "disturbance_type": null,
+  "disturbance_label": null,
+  "disturbance_definition": null,
+  "disturbance_legacy_names": {
+    "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+    "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+    "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+    "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+    "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+    "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+    "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+    "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+  },
+  "warmup_mode": "none",
+  "warmup": null,
+  "warmup_steps": 0,
+  "policy_steps": 210,
+  "total_steps": 210,
+  "advance_cause_scope": "evaluation_policy_steps",
+  "advance_cause_counts": {
+    "explicit": 0,
+    "identical_resubmission": 0,
+    "forced_no_candidate": 0,
+    "auto_after_action": 11,
+    "none": 199
+  },
+  "advance_cause_events": [
+    {
+      "step_count": 8,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 21,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 39,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 61,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 91,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 121,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 151,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 173,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 190,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 202,
+      "advance_cause": "auto_after_action"
+    },
+    {
+      "step_count": 210,
+      "advance_cause": "auto_after_action"
+    }
+  ],
+  "cost_schema_version": "work3_trajectory_cost_v2",
+  "metrics_unweighted": {
+    "j_h": 0.2829288851136474,
+    "d_t": 0.023917888012426298,
+    "d_w": 0.28095238095238095,
+    "g_postpone": 0.0,
+    "r_t": 0.023917888012426253,
+    "r_w": 0.28095238095238095
+  },
+  "metric_coverage": {
+    "status": "all_tasks_started",
+    "all_tasks_started": true,
+    "started_task_count": 210,
+    "fixed_task_count": 210
+  },
+  "cost_components_weighted": {
+    "j_takt": 0.2829288851136474,
+    "d_time": 0.00478357760248526,
+    "d_team": 0.014047619047619048,
+    "j_postpone": 0.0,
+    "j_revision": 0.018831196650104298
+  },
+  "objective_weights": {
+    "w_h": 1.0,
+    "w_t": 0.2,
+    "w_w": 0.05,
+    "w_p": 1.0,
+    "lambda_1": 0.1,
+    "lambda_2": 0.2,
+    "normalize_by_n": true,
+    "w_revision_time": null,
+    "w_revision_team": null
+  },
+  "objective_normalization": {
+    "h0_hours": 52.037844126999545,
+    "normalize_by_n": true,
+    "fixed_task_count": 210,
+    "metric_rules": {
+      "j_h": "每次全线同步转站超期小时除以H0后求和",
+      "d_t": "周期内开工偏差除以H0；normalize_by_n时再除以固定N",
+      "d_w": "团队替换比例求和；normalize_by_n时再除以固定N",
+      "g_postpone": "累计g(n)，不除以N",
+      "r_t": "相邻正式版本时间位置差除以H0；normalize_by_n时再除以固定N",
+      "r_w": "相邻正式版本团队替换比例求和；normalize_by_n时再除以固定N"
+    }
+  },
+  "revision_weighted_components": {
+    "time": 0.004783577602485251,
+    "team": 0.014047619047619048
+  },
+  "objective_j_total": 0.320591278413856,
+  "ledger_reconciliation": {
+    "environment_cumulative_cost": 0.32059127841385654,
+    "independent_j_total": 0.320591278413856,
+    "difference": 5.551115123125783e-16,
+    "components_match": true,
+    "actual_reward_sum": -0.32059127841385654,
+    "expected_actual_reward_sum": -0.320591278413856,
+    "reward_sum_matches": true,
+    "consistent": true
+  },
+  "final_station_deviation": {
+    "valid_for_final_comparison": true,
+    "status": "complete_feasible",
+    "termination_reason": "completed",
+    "changed_started_task_count": 0,
+    "started_task_count": 210,
+    "station_observed_task_count": 210,
+    "total_task_count": 210,
+    "final_deviation_ratio": 0.0,
+    "observed_started_ratio": 0.0
+  },
+  "j_takt": 0.2829288851136474,
+  "d_time": 0.004783577602485262,
+  "d_team": 0.014047619047619062,
+  "j_postpone": 0.0,
+  "j_revision": 0.018831196650104295,
+  "j_total": 0.320591278413856,
+  "environment_cumulative_cost": 0.32059127841385654,
+  "raw_cost_components": {
+    "j_takt": 0.2829288851136474,
+    "d_time": 0.004783577602485262,
+    "d_team": 0.014047619047619062,
+    "j_postpone": 0.0,
+    "j_revision": 0.018831196650104295
+  },
+  "legacy_field_semantics": {
+    "j_takt,d_time,d_team,j_postpone,j_revision,j_total": "旧字段均为已加权费用；请迁移到cost_components_weighted。",
+    "raw_cost_components": "弃用别名；代表环境的已加权分项，并非未加权原值；正常记账时与新字段相同。"
+  },
+  "makespan": 572.416285396995,
+  "completed_tasks": 210,
+  "success": true,
+  "feasible": true,
+  "termination_reason": "completed",
+  "failure_reason": null,
+  "constraint_violations": {},
+  "constraint_violation_count": 0,
+  "actual_disturbance_hits": 0,
+  "disturbance_effects": {
+    "disturbance_type": null,
+    "disturbance_label": null,
+    "disturbance_legacy_names": {
+      "EventType.MATERIAL_ARRIVE": "保留的旧枚举名；表示工序开工可用下界到达。",
+      "TaskRuntimeState.material_ready_time": "保留的旧字段名；表示工序开工可用下界。",
+      "material_ready_advanced_count": "兼容别名；表示开工可用下界实际增加的命中目标数。",
+      "material_ready_advanced_task_keys": "兼容别名；等同start_availability_advanced_task_keys。",
+      "observed_added_wait_hours": "兼容别名；表示命中目标实际开工相对基准的正偏差，非因果归因。",
+      "TrajectoryFeasibilityReport.material_release": "兼容机器码；表示工序开工可用性下界约束违规。",
+      "scenario.actual_hit_count": "旧场景清单中的值实际是预设目标数；诊断时迁移为scheduled_target_count。",
+      "scenario.actual_fraction": "旧场景清单中的值实际是预设目标比例；诊断时迁移为scheduled_target_fraction。"
+    },
+    "target_count": 0,
+    "actual_hit_count": 0,
+    "actual_hit_rate": 0.0,
+    "actual_hit_task_keys": [],
+    "start_availability_advanced_count": 0,
+    "start_availability_advanced_task_keys": [],
+    "material_ready_advanced_count": 0,
+    "material_ready_advanced_task_keys": [],
+    "unhit_reasons": {},
+    "observed_added_wait_hours": 0.0,
+    "observed_start_deviation_from_baseline_hours": 0.0,
+    "metric_semantics": {
+      "start_availability_advanced_count": "实际事件命中后，开工可用下界相对事件前基准确有增加的目标数。",
+      "observed_start_deviation_from_baseline_hours": "目标实际开工晚于基准开工的小时差总和；未作扰动因果归因。",
+      "material_ready_advanced_count": "旧字段兼容别名，等同start_availability_advanced_count。",
+      "observed_added_wait_hours": "旧字段兼容别名；数值是开工相对基准的正偏差，不代表全由扰动造成。"
+    },
+    "cross_aircraft_affected_task_count": 0,
+    "cross_aircraft_affected_aircraft_ids": [],
+    "event_triggered": false
+  },
+  "time_prediction_metrics": {
+    "labeled_cycle_count": 11,
+    "sample_count": 210,
+    "heuristic_mae_hours": 8.990834941024136,
+    "heuristic_mae_h0": 0.17277493124199797,
+    "corrected_mae_hours": 8.990834941024136,
+    "corrected_mae_h0": 0.17277493124199797
+  },
+  "postponed_count": 0,
+  "postponed_task_count": 0,
+  "multiply_postponed_task_count": 0,
+  "takt_violation_hours": 14.723009222569743,
+  "decisions": 210,
+  "transfers": 11,
+  "wrapped_agent_type": "Method-C",
+  "checkpoint": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0256.pt",
+    "sha256": "b97f6a30250287e3f9b73843cf81a014b8257b49972c4175459cd1b86966aad7",
+    "actor_fingerprint": "c3bc3000b6f967bba5e8ba7efce16a6cace3d79daef851679ed5e2884c4bdd76",
+    "training_decisions": 256,
+    "optimizer_steps": 128
+  },
+  "evaluation": {
+    "device": "cpu",
+    "threads": {
+      "intra_op_threads": 1,
+      "inter_op_threads": 1
+    },
+    "deterministic": true,
+    "decision_limit": 4096,
+    "scenario": "NOMINAL",
+    "disturbance": "none"
+  },
+  "execution_facts": {
+    "tasks_execution": {
+      "0_2": {
+        "task_key": "0_2",
+        "aircraft_id": 0,
+        "task_id": 2,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 0.0,
+        "actual_end": 1.6276026757941506,
+        "cycle_start_time": 0.0,
+        "duration": 1.6276026757941506,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_3": {
+        "task_key": "0_3",
+        "aircraft_id": 0,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 1.6276026757941506,
+        "actual_end": 4.404101358031231,
+        "cycle_start_time": 0.0,
+        "duration": 2.7764986822370807,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_4": {
+        "task_key": "0_4",
+        "aircraft_id": 0,
+        "task_id": 4,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 4.404101358031231,
+        "actual_end": 6.414669369306359,
+        "cycle_start_time": 0.0,
+        "duration": 2.0105680112751276,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_5": {
+        "task_key": "0_5",
+        "aircraft_id": 0,
+        "task_id": 5,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 6.414669369306359,
+        "actual_end": 10.052840056375636,
+        "cycle_start_time": 0.0,
+        "duration": 3.638170687069278,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_6": {
+        "task_key": "0_6",
+        "aircraft_id": 0,
+        "task_id": 6,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 10.052840056375636,
+        "actual_end": 11.096420595561298,
+        "cycle_start_time": 0.0,
+        "duration": 1.0435805391856614,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_7": {
+        "task_key": "0_7",
+        "aircraft_id": 0,
+        "task_id": 7,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 11.096420595561298,
+        "actual_end": 12.388928602809594,
+        "cycle_start_time": 0.0,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_15": {
+        "task_key": "0_15",
+        "aircraft_id": 0,
+        "task_id": 15,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 12.388928602809594,
+        "actual_end": 12.934654205869986,
+        "cycle_start_time": 0.0,
+        "duration": 0.5457256030603916,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_16": {
+        "task_key": "0_16",
+        "aircraft_id": 0,
+        "task_id": 16,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 12.934654205869986,
+        "actual_end": 14.227162213118282,
+        "cycle_start_time": 0.0,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_8": {
+        "task_key": "0_8",
+        "aircraft_id": 0,
+        "task_id": 8,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 52.55523455075628,
+        "actual_end": 53.54463027337882,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 0.9893957226225385,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 52.55523455075628,
+              "position": 0.517390423756737
+            },
+            "time_change": 0.009942579913457482,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 9.469123727102366e-06
+          }
+        ]
+      },
+      "0_9": {
+        "task_key": "0_9",
+        "aircraft_id": 0,
+        "task_id": 9,
+        "station_id": 1,
+        "team": [
+          65,
+          18
+        ],
+        "actual_start": 53.9082381933102,
+        "actual_end": 55.22862197349647,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 1.3203837801862783,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.9893957226225385
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                65,
+                18
+              ],
+              "scheduled_start": 53.9082381933102,
+              "position": 1.8703940663106522
+            },
+            "time_change": 0.01692995469869999,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00013517138542733334
+          }
+        ]
+      },
+      "0_18": {
+        "task_key": "0_18",
+        "aircraft_id": 0,
+        "task_id": 18,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 52.037844126999545,
+        "actual_end": 52.55523455075628,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 0.5173904237567403,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 52.037844126999545,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "0_25": {
+        "task_key": "0_25",
+        "aircraft_id": 0,
+        "task_id": 25,
+        "station_id": 1,
+        "team": [
+          65,
+          10
+        ],
+        "actual_start": 52.64705819431216,
+        "actual_end": 53.9082381933102,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 1.261179998998041,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_26": {
+        "task_key": "0_26",
+        "aircraft_id": 0,
+        "task_id": 26,
+        "station_id": 1,
+        "team": [
+          22,
+          10
+        ],
+        "actual_start": 54.25263822167752,
+        "actual_end": 62.43091077465275,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 8.178272552975228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_12": {
+        "task_key": "0_12",
+        "aircraft_id": 0,
+        "task_id": 12,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 104.07568825399909,
+        "actual_end": 105.33888644255512,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.263198188556029,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_13": {
+        "task_key": "0_13",
+        "aircraft_id": 0,
+        "task_id": 13,
+        "station_id": 2,
+        "team": [
+          66,
+          47
+        ],
+        "actual_start": 108.44066884591886,
+        "actual_end": 109.90641644133531,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.4657475954164394,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 1.263198188556029
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                47
+              ],
+              "scheduled_start": 108.44066884591886,
+              "position": 4.364980591919775
+            },
+            "time_change": 0.05960628183968911,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00017581550651398967
+          }
+        ]
+      },
+      "0_27": {
+        "task_key": "0_27",
+        "aircraft_id": 0,
+        "task_id": 27,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 109.90641644133531,
+        "actual_end": 159.34878304028615,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 49.44236659895083,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 2.5954775280487157
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                0
+              ],
+              "scheduled_start": 109.90641644133531,
+              "position": 5.83072818733622
+            },
+            "time_change": 0.06217111245792199,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 5.9210583293259055e-05
+          }
+        ]
+      },
+      "0_28": {
+        "task_key": "0_28",
+        "aircraft_id": 0,
+        "task_id": 28,
+        "station_id": 2,
+        "team": [
+          47,
+          76
+        ],
+        "actual_start": 104.07568825399909,
+        "actual_end": 108.44066884591886,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 4.364980591919772,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_29": {
+        "task_key": "0_29",
+        "aircraft_id": 0,
+        "task_id": 29,
+        "station_id": 2,
+        "team": [
+          51,
+          50
+        ],
+        "actual_start": 104.07568825399909,
+        "actual_end": 105.36418460035131,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.2884963463522248,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_10": {
+        "task_key": "0_10",
+        "aircraft_id": 0,
+        "task_id": 10,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 159.34878304028615,
+        "actual_end": 160.56440947061506,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.2156264303289086,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_17": {
+        "task_key": "0_17",
+        "aircraft_id": 0,
+        "task_id": 17,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 160.56440947061506,
+        "actual_end": 162.52080825692565,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.9563987863105872,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_20": {
+        "task_key": "0_20",
+        "aircraft_id": 0,
+        "task_id": 20,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 162.52080825692565,
+        "actual_end": 163.50850473156788,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 0.9876964746422382,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_21": {
+        "task_key": "0_21",
+        "aircraft_id": 0,
+        "task_id": 21,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 163.50850473156788,
+        "actual_end": 165.9017692662779,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 2.3932645347100387,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_11": {
+        "task_key": "0_11",
+        "aircraft_id": 0,
+        "task_id": 11,
+        "station_id": 4,
+        "team": [
+          44,
+          45
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 215.88234131894384,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.2604634923706495,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_14": {
+        "task_key": "0_14",
+        "aircraft_id": 0,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          33,
+          70
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 216.9865452904608,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 2.364667463887637,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "scheduled_start": 214.62187782657318,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "0_19": {
+        "task_key": "0_19",
+        "aircraft_id": 0,
+        "task_id": 19,
+        "station_id": 4,
+        "team": [
+          77,
+          53
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 215.95575683096746,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.3338790043942632,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                77,
+                53
+              ],
+              "scheduled_start": 214.62187782657318,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "0_22": {
+        "task_key": "0_22",
+        "aircraft_id": 0,
+        "task_id": 22,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 215.95575683096746,
+        "actual_end": 216.57823369968477,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 0.6224768687173228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 1.2604634923706495
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 215.95575683096746,
+              "position": 1.3338790043942765
+            },
+            "time_change": 0.0014108100221149598,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023943886668772858
+          }
+        ]
+      },
+      "0_24": {
+        "task_key": "0_24",
+        "aircraft_id": 0,
+        "task_id": 24,
+        "station_id": 4,
+        "team": [
+          56,
+          1
+        ],
+        "actual_start": 216.0725845826294,
+        "actual_end": 217.21165803553276,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.1390734529033852,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "0_23": {
+        "task_key": "0_23",
+        "aircraft_id": 0,
+        "task_id": 23,
+        "station_id": 4,
+        "team": [
+          70,
+          53
+        ],
+        "actual_start": 217.21165803553276,
+        "actual_end": 218.33344439330568,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.1217863577729081,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 2.589780208959583
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                70,
+                53
+              ],
+              "scheduled_start": 217.21165803553276,
+              "position": 2.5897802089595814
+            },
+            "time_change": 3.413586533417893e-17,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523818
+          }
+        ]
+      },
+      "0_30": {
+        "task_key": "0_30",
+        "aircraft_id": 0,
+        "task_id": 30,
+        "station_id": 4,
+        "team": [
+          56,
+          36
+        ],
+        "actual_start": 217.21165803553276,
+        "actual_end": 219.27616449559235,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 2.0645064600596004,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "position": 1.8486797888102857
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                56,
+                36
+              ],
+              "scheduled_start": 217.21165803553276,
+              "position": 2.5897802089595814
+            },
+            "time_change": 0.014241566548003471,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0002516586348076224
+          }
+        ]
+      },
+      "0_125": {
+        "task_key": "0_125",
+        "aircraft_id": 0,
+        "task_id": 125,
+        "station_id": 4,
+        "team": [
+          28
+        ],
+        "actual_start": 219.27616449559235,
+        "actual_end": 221.36502024899494,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 2.088855753402571,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44
+              ],
+              "position": 3.914894077644143
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                28
+              ],
+              "scheduled_start": 219.27616449559235,
+              "position": 4.6542866690191715
+            },
+            "time_change": 0.01420874757168118,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0002516273786396964
+          }
+        ]
+      },
+      "1_2": {
+        "task_key": "1_2",
+        "aircraft_id": 1,
+        "task_id": 2,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 52.037844126999545,
+        "actual_end": 53.665446802793696,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 1.6276026757941506,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_3": {
+        "task_key": "1_3",
+        "aircraft_id": 1,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 53.665446802793696,
+        "actual_end": 56.44194548503078,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 2.7764986822370807,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_4": {
+        "task_key": "1_4",
+        "aircraft_id": 1,
+        "task_id": 4,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 56.44194548503078,
+        "actual_end": 58.452513496305905,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 2.0105680112751276,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_5": {
+        "task_key": "1_5",
+        "aircraft_id": 1,
+        "task_id": 5,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 58.452513496305905,
+        "actual_end": 62.09068418337518,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 3.638170687069278,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_6": {
+        "task_key": "1_6",
+        "aircraft_id": 1,
+        "task_id": 6,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 62.09068418337518,
+        "actual_end": 63.13426472256084,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 1.0435805391856614,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_7": {
+        "task_key": "1_7",
+        "aircraft_id": 1,
+        "task_id": 7,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 63.13426472256084,
+        "actual_end": 64.42677272980914,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_15": {
+        "task_key": "1_15",
+        "aircraft_id": 1,
+        "task_id": 15,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 64.42677272980914,
+        "actual_end": 64.97249833286953,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 0.5457256030603916,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_16": {
+        "task_key": "1_16",
+        "aircraft_id": 1,
+        "task_id": 16,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 64.97249833286953,
+        "actual_end": 66.26500634011784,
+        "cycle_start_time": 52.037844126999545,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_8": {
+        "task_key": "1_8",
+        "aircraft_id": 1,
+        "task_id": 8,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 114.46875490165229,
+        "actual_end": 115.45815062427482,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 0.9893957226225385,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 114.46875490165229,
+              "position": 10.3930666476532
+            },
+            "time_change": 0.19972131478561417,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00019021077598629923
+          }
+        ]
+      },
+      "1_9": {
+        "task_key": "1_9",
+        "aircraft_id": 1,
+        "task_id": 9,
+        "station_id": 1,
+        "team": [
+          65,
+          18
+        ],
+        "actual_start": 115.45815062427482,
+        "actual_end": 116.7785344044611,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.3203837801862783,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.9893957226225385
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                65,
+                18
+              ],
+              "scheduled_start": 115.45815062427482,
+              "position": 11.382462370275732
+            },
+            "time_change": 0.19972131478561406,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0003092583950339182
+          }
+        ]
+      },
+      "1_18": {
+        "task_key": "1_18",
+        "aircraft_id": 1,
+        "task_id": 18,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 104.07568825399909,
+        "actual_end": 104.59307867775583,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 0.5173904237567403,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 104.07568825399909,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "1_25": {
+        "task_key": "1_25",
+        "aircraft_id": 1,
+        "task_id": 25,
+        "station_id": 1,
+        "team": [
+          65,
+          18
+        ],
+        "actual_start": 104.6849023213117,
+        "actual_end": 105.83901555140045,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.1541132300887469,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.609214067312613
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                65,
+                18
+              ],
+              "scheduled_start": 104.6849023213117,
+              "position": 0.6092140673126067
+            },
+            "time_change": 1.1947552866962625e-16,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761918
+          }
+        ]
+      },
+      "1_26": {
+        "task_key": "1_26",
+        "aircraft_id": 1,
+        "task_id": 26,
+        "station_id": 1,
+        "team": [
+          22,
+          10
+        ],
+        "actual_start": 106.29048234867706,
+        "actual_end": 114.46875490165229,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 8.178272552975228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_12": {
+        "task_key": "1_12",
+        "aircraft_id": 1,
+        "task_id": 12,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 159.34878304028615,
+        "actual_end": 160.61198122884218,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.263198188556029,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_13": {
+        "task_key": "1_13",
+        "aircraft_id": 1,
+        "task_id": 13,
+        "station_id": 2,
+        "team": [
+          66,
+          47
+        ],
+        "actual_start": 163.7137636322059,
+        "actual_end": 165.17951122762236,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.4657475954164394,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 1.263198188556029
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                47
+              ],
+              "scheduled_start": 163.7137636322059,
+              "position": 4.36498059191976
+            },
+            "time_change": 0.059606281839688836,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0001758155065139894
+          }
+        ]
+      },
+      "1_27": {
+        "task_key": "1_27",
+        "aircraft_id": 1,
+        "task_id": 27,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 165.17951122762236,
+        "actual_end": 214.62187782657318,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 49.44236659895083,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 2.5954775280487157
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                0
+              ],
+              "scheduled_start": 165.17951122762236,
+              "position": 5.830728187336206
+            },
+            "time_change": 0.06217111245792172,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 5.921058329325879e-05
+          }
+        ]
+      },
+      "1_28": {
+        "task_key": "1_28",
+        "aircraft_id": 1,
+        "task_id": 28,
+        "station_id": 2,
+        "team": [
+          47,
+          76
+        ],
+        "actual_start": 159.34878304028615,
+        "actual_end": 163.7137636322059,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 4.364980591919772,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_29": {
+        "task_key": "1_29",
+        "aircraft_id": 1,
+        "task_id": 29,
+        "station_id": 2,
+        "team": [
+          51,
+          50
+        ],
+        "actual_start": 159.34878304028615,
+        "actual_end": 160.63727938663837,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.2884963463522248,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_10": {
+        "task_key": "1_10",
+        "aircraft_id": 1,
+        "task_id": 10,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 215.8375042569021,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.2156264303289086,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_17": {
+        "task_key": "1_17",
+        "aircraft_id": 1,
+        "task_id": 17,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 215.8375042569021,
+        "actual_end": 217.79390304321268,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.9563987863105872,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_20": {
+        "task_key": "1_20",
+        "aircraft_id": 1,
+        "task_id": 20,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 217.79390304321268,
+        "actual_end": 218.78159951785491,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 0.9876964746422382,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_21": {
+        "task_key": "1_21",
+        "aircraft_id": 1,
+        "task_id": 21,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 218.78159951785491,
+        "actual_end": 221.17486405256494,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 2.3932645347100387,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_11": {
+        "task_key": "1_11",
+        "aircraft_id": 1,
+        "task_id": 11,
+        "station_id": 4,
+        "team": [
+          44,
+          53
+        ],
+        "actual_start": 271.9303731677137,
+        "actual_end": 273.22291821545997,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.292545047746288,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                44,
+                53
+              ],
+              "scheduled_start": 271.9303731677137,
+              "position": 2.0354005548534815
+            },
+            "time_change": 0.03911385240875929,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00015629890705596127
+          }
+        ]
+      },
+      "1_14": {
+        "task_key": "1_14",
+        "aircraft_id": 1,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          77,
+          53
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 271.9303731677137,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 2.035400554853468,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_19": {
+        "task_key": "1_19",
+        "aircraft_id": 1,
+        "task_id": 19,
+        "station_id": 4,
+        "team": [
+          44,
+          45
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 271.1554361052309,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.2604634923706495,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "scheduled_start": 269.8949726128602,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "1_22": {
+        "task_key": "1_22",
+        "aircraft_id": 1,
+        "task_id": 22,
+        "station_id": 4,
+        "team": [
+          25,
+          36
+        ],
+        "actual_start": 271.1554361052309,
+        "actual_end": 271.9221705961909,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 0.7667344909600162,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 1.2604634923706495
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                25,
+                36
+              ],
+              "scheduled_start": 271.1554361052309,
+              "position": 1.2604634923706612
+            },
+            "time_change": 2.2615010783893544e-16,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523837
+          }
+        ]
+      },
+      "1_24": {
+        "task_key": "1_24",
+        "aircraft_id": 1,
+        "task_id": 24,
+        "station_id": 4,
+        "team": [
+          56,
+          1
+        ],
+        "actual_start": 271.3456793689164,
+        "actual_end": 272.4847528218198,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.1390734529033852,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "1_23": {
+        "task_key": "1_23",
+        "aircraft_id": 1,
+        "task_id": 23,
+        "station_id": 4,
+        "team": [
+          70,
+          33
+        ],
+        "actual_start": 272.4847528218198,
+        "actual_end": 273.67856552203494,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.1938127002151175,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 2.589780208959583
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                70,
+                33
+              ],
+              "scheduled_start": 272.4847528218198,
+              "position": 2.58978020895961
+            },
+            "time_change": 5.12037980012684e-16,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523864
+          }
+        ]
+      },
+      "1_30": {
+        "task_key": "1_30",
+        "aircraft_id": 1,
+        "task_id": 30,
+        "station_id": 4,
+        "team": [
+          70,
+          33
+        ],
+        "actual_start": 273.67856552203494,
+        "actual_end": 275.7447798108688,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 2.0662142888338573,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "position": 1.8486797888102857
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                70,
+                33
+              ],
+              "scheduled_start": 273.67856552203494,
+              "position": 3.783592909174729
+            },
+            "time_change": 0.03718280710557962,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 3.5412197243409166e-05
+          }
+        ]
+      },
+      "1_125": {
+        "task_key": "1_125",
+        "aircraft_id": 1,
+        "task_id": 125,
+        "station_id": 4,
+        "team": [
+          28
+        ],
+        "actual_start": 275.7447798108688,
+        "actual_end": 277.8336355642714,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 2.088855753402571,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44
+              ],
+              "position": 3.914894077644143
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                28
+              ],
+              "scheduled_start": 275.7447798108688,
+              "position": 5.849807198008591
+            },
+            "time_change": 0.03718280710557971,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0002735074353386474
+          }
+        ]
+      },
+      "2_2": {
+        "task_key": "2_2",
+        "aircraft_id": 2,
+        "task_id": 2,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 104.07568825399909,
+        "actual_end": 105.70329092979324,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.6276026757941506,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_3": {
+        "task_key": "2_3",
+        "aircraft_id": 2,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 105.70329092979324,
+        "actual_end": 108.47978961203032,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 2.7764986822370807,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_4": {
+        "task_key": "2_4",
+        "aircraft_id": 2,
+        "task_id": 4,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 108.47978961203032,
+        "actual_end": 110.49035762330544,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 2.0105680112751276,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_5": {
+        "task_key": "2_5",
+        "aircraft_id": 2,
+        "task_id": 5,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 110.49035762330544,
+        "actual_end": 114.12852831037472,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 3.638170687069278,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_6": {
+        "task_key": "2_6",
+        "aircraft_id": 2,
+        "task_id": 6,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 114.12852831037472,
+        "actual_end": 115.17210884956037,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.0435805391856614,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_7": {
+        "task_key": "2_7",
+        "aircraft_id": 2,
+        "task_id": 7,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 115.17210884956039,
+        "actual_end": 116.46461685680869,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_15": {
+        "task_key": "2_15",
+        "aircraft_id": 2,
+        "task_id": 15,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 116.46461685680869,
+        "actual_end": 117.01034245986908,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 0.5457256030603916,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_16": {
+        "task_key": "2_16",
+        "aircraft_id": 2,
+        "task_id": 16,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 117.01034245986908,
+        "actual_end": 118.30285046711738,
+        "cycle_start_time": 104.07568825399909,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_8": {
+        "task_key": "2_8",
+        "aircraft_id": 2,
+        "task_id": 8,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 169.74184968793935,
+        "actual_end": 170.73124541056188,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 0.9893957226225385,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 169.74184968793935,
+              "position": 10.3930666476532
+            },
+            "time_change": 0.19972131478561417,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00019021077598629923
+          }
+        ]
+      },
+      "2_9": {
+        "task_key": "2_9",
+        "aircraft_id": 2,
+        "task_id": 9,
+        "station_id": 1,
+        "team": [
+          65,
+          18
+        ],
+        "actual_start": 170.73124541056188,
+        "actual_end": 172.05162919074817,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.3203837801862783,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.9893957226225385
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                65,
+                18
+              ],
+              "scheduled_start": 170.73124541056188,
+              "position": 11.382462370275732
+            },
+            "time_change": 0.19972131478561406,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0003092583950339182
+          }
+        ]
+      },
+      "2_18": {
+        "task_key": "2_18",
+        "aircraft_id": 2,
+        "task_id": 18,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 159.34878304028615,
+        "actual_end": 159.8661734640429,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 0.5173904237567403,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 159.34878304028615,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "2_25": {
+        "task_key": "2_25",
+        "aircraft_id": 2,
+        "task_id": 25,
+        "station_id": 1,
+        "team": [
+          65,
+          18
+        ],
+        "actual_start": 159.95799710759877,
+        "actual_end": 161.1121103376875,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.1541132300887469,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.609214067312613
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                65,
+                18
+              ],
+              "scheduled_start": 159.95799710759877,
+              "position": 0.609214067312621
+            },
+            "time_change": 1.536113940038052e-16,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761921
+          }
+        ]
+      },
+      "2_26": {
+        "task_key": "2_26",
+        "aircraft_id": 2,
+        "task_id": 26,
+        "station_id": 1,
+        "team": [
+          22,
+          10
+        ],
+        "actual_start": 161.56357713496413,
+        "actual_end": 169.74184968793935,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 8.178272552975228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_12": {
+        "task_key": "2_12",
+        "aircraft_id": 2,
+        "task_id": 12,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 215.88507601512921,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.263198188556029,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_13": {
+        "task_key": "2_13",
+        "aircraft_id": 2,
+        "task_id": 13,
+        "station_id": 2,
+        "team": [
+          66,
+          47
+        ],
+        "actual_start": 218.98685841849294,
+        "actual_end": 220.4526060139094,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.4657475954164394,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 1.263198188556029
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                47
+              ],
+              "scheduled_start": 218.98685841849294,
+              "position": 4.36498059191976
+            },
+            "time_change": 0.059606281839688836,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0001758155065139894
+          }
+        ]
+      },
+      "2_27": {
+        "task_key": "2_27",
+        "aircraft_id": 2,
+        "task_id": 27,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 220.4526060139094,
+        "actual_end": 269.8949726128602,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 49.44236659895083,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 2.5954775280487157
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                0
+              ],
+              "scheduled_start": 220.4526060139094,
+              "position": 5.830728187336206
+            },
+            "time_change": 0.06217111245792172,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 5.921058329325879e-05
+          }
+        ]
+      },
+      "2_28": {
+        "task_key": "2_28",
+        "aircraft_id": 2,
+        "task_id": 28,
+        "station_id": 2,
+        "team": [
+          47,
+          76
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 218.98685841849294,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 4.364980591919772,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_29": {
+        "task_key": "2_29",
+        "aircraft_id": 2,
+        "task_id": 29,
+        "station_id": 2,
+        "team": [
+          51,
+          50
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 215.9103741729254,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.2884963463522248,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_10": {
+        "task_key": "2_10",
+        "aircraft_id": 2,
+        "task_id": 10,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 271.1105990431891,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.2156264303289086,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_17": {
+        "task_key": "2_17",
+        "aircraft_id": 2,
+        "task_id": 17,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 271.1105990431891,
+        "actual_end": 273.0669978294997,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.9563987863105872,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_20": {
+        "task_key": "2_20",
+        "aircraft_id": 2,
+        "task_id": 20,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 273.0669978294997,
+        "actual_end": 274.05469430414195,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 0.9876964746422382,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_21": {
+        "task_key": "2_21",
+        "aircraft_id": 2,
+        "task_id": 21,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 274.05469430414195,
+        "actual_end": 276.447958838852,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 2.3932645347100387,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_11": {
+        "task_key": "2_11",
+        "aircraft_id": 2,
+        "task_id": 11,
+        "station_id": 4,
+        "team": [
+          53,
+          56
+        ],
+        "actual_start": 329.043853917744,
+        "actual_end": 330.43058045469024,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.386726536946218,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                56
+              ],
+              "scheduled_start": 329.043853917744,
+              "position": 3.875786518596726
+            },
+            "time_change": 0.07448015158233268,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00030902871579269783
+          }
+        ]
+      },
+      "2_14": {
+        "task_key": "2_14",
+        "aircraft_id": 2,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          77,
+          53
+        ],
+        "actual_start": 331.0777195052651,
+        "actual_end": 333.1131200601186,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 2.035400554853468,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                77,
+                53
+              ],
+              "scheduled_start": 331.0777195052651,
+              "position": 5.909652106117846
+            },
+            "time_change": 0.11356450685572611,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00010815667319592964
+          }
+        ]
+      },
+      "2_19": {
+        "task_key": "2_19",
+        "aircraft_id": 2,
+        "task_id": 19,
+        "station_id": 4,
+        "team": [
+          44,
+          53
+        ],
+        "actual_start": 325.1680673991473,
+        "actual_end": 326.46061244689355,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.292545047746288,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                44,
+                53
+              ],
+              "scheduled_start": 325.1680673991473,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "2_22": {
+        "task_key": "2_22",
+        "aircraft_id": 2,
+        "task_id": 22,
+        "station_id": 4,
+        "team": [
+          53,
+          56
+        ],
+        "actual_start": 330.43058045469024,
+        "actual_end": 331.0777195052651,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 0.6471390505749017,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 1.2604634923706495
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                56
+              ],
+              "scheduled_start": 330.43058045469024,
+              "position": 5.262513055542968
+            },
+            "time_change": 0.07690652121185546,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.000311339544011291
+          }
+        ]
+      },
+      "2_24": {
+        "task_key": "2_24",
+        "aircraft_id": 2,
+        "task_id": 24,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 326.6187741552035,
+        "actual_end": 327.6661161882834,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.0473420330799401,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 1.4507067560561981
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 326.6187741552035,
+              "position": 1.4507067560562064
+            },
+            "time_change": 1.5787837717057756e-16,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523828
+          }
+        ]
+      },
+      "2_23": {
+        "task_key": "2_23",
+        "aircraft_id": 2,
+        "task_id": 23,
+        "station_id": 4,
+        "team": [
+          44,
+          45
+        ],
+        "actual_start": 327.7578476081069,
+        "actual_end": 328.7288713355628,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 0.9710237274559077,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "2_30": {
+        "task_key": "2_30",
+        "aircraft_id": 2,
+        "task_id": 30,
+        "station_id": 4,
+        "team": [
+          70,
+          56
+        ],
+        "actual_start": 327.01674718795755,
+        "actual_end": 329.043853917744,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 2.027106729786469,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "position": 1.8486797888102857
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                70,
+                56
+              ],
+              "scheduled_start": 327.01674718795755,
+              "position": 1.8486797888102728
+            },
+            "time_change": 2.4748502367279725e-16,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761929
+          }
+        ]
+      },
+      "2_125": {
+        "task_key": "2_125",
+        "aircraft_id": 2,
+        "task_id": 125,
+        "station_id": 4,
+        "team": [
+          33
+        ],
+        "actual_start": 333.1131200601186,
+        "actual_end": 335.0114860135848,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.8983659534661612,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44
+              ],
+              "position": 3.914894077644143
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                33
+              ],
+              "scheduled_start": 333.1131200601186,
+              "position": 7.945052660971328
+            },
+            "time_change": 0.07744668617499778,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00031185398683333126
+          }
+        ]
+      },
+      "3_2": {
+        "task_key": "3_2",
+        "aircraft_id": 3,
+        "task_id": 2,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 159.34878304028615,
+        "actual_end": 160.9763857160803,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.6276026757941506,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_3": {
+        "task_key": "3_3",
+        "aircraft_id": 3,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 160.9763857160803,
+        "actual_end": 163.75288439831738,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 2.7764986822370807,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_4": {
+        "task_key": "3_4",
+        "aircraft_id": 3,
+        "task_id": 4,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 163.75288439831738,
+        "actual_end": 165.7634524095925,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 2.0105680112751276,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_5": {
+        "task_key": "3_5",
+        "aircraft_id": 3,
+        "task_id": 5,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 165.7634524095925,
+        "actual_end": 169.40162309666178,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 3.638170687069278,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_6": {
+        "task_key": "3_6",
+        "aircraft_id": 3,
+        "task_id": 6,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 169.40162309666178,
+        "actual_end": 170.44520363584743,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.0435805391856614,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_7": {
+        "task_key": "3_7",
+        "aircraft_id": 3,
+        "task_id": 7,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 170.44520363584746,
+        "actual_end": 171.73771164309576,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_15": {
+        "task_key": "3_15",
+        "aircraft_id": 3,
+        "task_id": 15,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 171.73771164309574,
+        "actual_end": 172.28343724615613,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 0.5457256030603916,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_16": {
+        "task_key": "3_16",
+        "aircraft_id": 3,
+        "task_id": 16,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 172.28343724615613,
+        "actual_end": 173.57594525340443,
+        "cycle_start_time": 159.34878304028615,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_8": {
+        "task_key": "3_8",
+        "aircraft_id": 3,
+        "task_id": 8,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 225.01494447422638,
+        "actual_end": 226.00434019684891,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 0.9893957226225385,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 225.01494447422638,
+              "position": 10.3930666476532
+            },
+            "time_change": 0.19972131478561417,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00019021077598629923
+          }
+        ]
+      },
+      "3_9": {
+        "task_key": "3_9",
+        "aircraft_id": 3,
+        "task_id": 9,
+        "station_id": 1,
+        "team": [
+          65,
+          18
+        ],
+        "actual_start": 226.00434019684891,
+        "actual_end": 227.3247239770352,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.3203837801862783,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.9893957226225385
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                65,
+                18
+              ],
+              "scheduled_start": 226.00434019684891,
+              "position": 11.382462370275732
+            },
+            "time_change": 0.19972131478561406,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0003092583950339182
+          }
+        ]
+      },
+      "3_18": {
+        "task_key": "3_18",
+        "aircraft_id": 3,
+        "task_id": 18,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 215.13926825032993,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 0.5173904237567403,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 214.62187782657318,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "3_25": {
+        "task_key": "3_25",
+        "aircraft_id": 3,
+        "task_id": 25,
+        "station_id": 1,
+        "team": [
+          18,
+          65
+        ],
+        "actual_start": 215.2310918938858,
+        "actual_end": 216.38520512397454,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.1541132300887469,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.609214067312613
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                65
+              ],
+              "scheduled_start": 215.2310918938858,
+              "position": 0.609214067312621
+            },
+            "time_change": 1.536113940038052e-16,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761921
+          }
+        ]
+      },
+      "3_26": {
+        "task_key": "3_26",
+        "aircraft_id": 3,
+        "task_id": 26,
+        "station_id": 1,
+        "team": [
+          22,
+          10
+        ],
+        "actual_start": 216.83667192125117,
+        "actual_end": 225.01494447422638,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 8.178272552975228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_12": {
+        "task_key": "3_12",
+        "aircraft_id": 3,
+        "task_id": 12,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 271.15817080141625,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.263198188556029,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_13": {
+        "task_key": "3_13",
+        "aircraft_id": 3,
+        "task_id": 13,
+        "station_id": 2,
+        "team": [
+          66,
+          47
+        ],
+        "actual_start": 274.25995320478,
+        "actual_end": 275.7257008001964,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.4657475954164394,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 1.263198188556029
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                47
+              ],
+              "scheduled_start": 274.25995320478,
+              "position": 4.364980591919789
+            },
+            "time_change": 0.059606281839689385,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0001758155065139899
+          }
+        ]
+      },
+      "3_27": {
+        "task_key": "3_27",
+        "aircraft_id": 3,
+        "task_id": 27,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 275.7257008001964,
+        "actual_end": 325.1680673991473,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 49.44236659895083,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 2.5954775280487157
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                0
+              ],
+              "scheduled_start": 275.7257008001964,
+              "position": 5.830728187336206
+            },
+            "time_change": 0.06217111245792172,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 5.921058329325879e-05
+          }
+        ]
+      },
+      "3_28": {
+        "task_key": "3_28",
+        "aircraft_id": 3,
+        "task_id": 28,
+        "station_id": 2,
+        "team": [
+          47,
+          76
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 274.25995320478,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 4.364980591919772,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_29": {
+        "task_key": "3_29",
+        "aircraft_id": 3,
+        "task_id": 29,
+        "station_id": 2,
+        "team": [
+          51,
+          50
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 271.18346895921246,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.2884963463522248,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_10": {
+        "task_key": "3_10",
+        "aircraft_id": 3,
+        "task_id": 10,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 325.1680673991473,
+        "actual_end": 326.38369382947616,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.2156264303289086,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_17": {
+        "task_key": "3_17",
+        "aircraft_id": 3,
+        "task_id": 17,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 326.38369382947616,
+        "actual_end": 328.3400926157868,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.9563987863105872,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_20": {
+        "task_key": "3_20",
+        "aircraft_id": 3,
+        "task_id": 20,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 328.3400926157868,
+        "actual_end": 329.327789090429,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 0.9876964746422382,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_21": {
+        "task_key": "3_21",
+        "aircraft_id": 3,
+        "task_id": 21,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 329.327789090429,
+        "actual_end": 331.72105362513906,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 2.3932645347100387,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "3_11": {
+        "task_key": "3_11",
+        "aircraft_id": 3,
+        "task_id": 11,
+        "station_id": 4,
+        "team": [
+          44,
+          53
+        ],
+        "actual_start": 378.72790217595207,
+        "actual_end": 380.02044722369834,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.292545047746288,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                44,
+                53
+              ],
+              "scheduled_start": 378.72790217595207,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761906
+          }
+        ]
+      },
+      "3_14": {
+        "task_key": "3_14",
+        "aircraft_id": 3,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          53,
+          56
+        ],
+        "actual_start": 384.04208945690687,
+        "actual_end": 386.1581314318026,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 2.1160419748957104,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                56
+              ],
+              "scheduled_start": 384.04208945690687,
+              "position": 5.314187280954798
+            },
+            "time_change": 0.1021215880501391,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00021630627433346587
+          }
+        ]
+      },
+      "3_19": {
+        "task_key": "3_19",
+        "aircraft_id": 3,
+        "task_id": 19,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 380.02044722369834,
+        "actual_end": 381.3543262280926,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.3338790043942632,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 380.02044722369834,
+              "position": 1.2925450477462732
+            },
+            "time_change": 0.024838558734135634,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00026175100831822443
+          }
+        ]
+      },
+      "3_22": {
+        "task_key": "3_22",
+        "aircraft_id": 3,
+        "task_id": 22,
+        "station_id": 4,
+        "team": [
+          53,
+          44
+        ],
+        "actual_start": 383.4389017679586,
+        "actual_end": 384.04208945690687,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 0.6031876889482678,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 1.2604634923706495
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                44
+              ],
+              "scheduled_start": 383.4389017679586,
+              "position": 4.710999592006544
+            },
+            "time_change": 0.0663082062203573,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00018219829163843555
+          }
+        ]
+      },
+      "3_24": {
+        "task_key": "3_24",
+        "aircraft_id": 3,
+        "task_id": 24,
+        "station_id": 4,
+        "team": [
+          53,
+          56
+        ],
+        "actual_start": 381.3543262280926,
+        "actual_end": 382.4431633608059,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.0888371327133268,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 1.4507067560561981
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                56
+              ],
+              "scheduled_start": 381.3543262280926,
+              "position": 2.6264240521405213
+            },
+            "time_change": 0.02259350508862278,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00014056524294154554
+          }
+        ]
+      },
+      "3_23": {
+        "task_key": "3_23",
+        "aircraft_id": 3,
+        "task_id": 23,
+        "station_id": 4,
+        "team": [
+          53,
+          44
+        ],
+        "actual_start": 382.4431633608059,
+        "actual_end": 383.4389017679586,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 0.995738407152696,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 2.589780208959583
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                44
+              ],
+              "scheduled_start": 382.4431633608059,
+              "position": 3.71526118485383
+            },
+            "time_change": 0.021628124584628924,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00013964583293774185
+          }
+        ]
+      },
+      "3_30": {
+        "task_key": "3_30",
+        "aircraft_id": 3,
+        "task_id": 30,
+        "station_id": 4,
+        "team": [
+          70,
+          77
+        ],
+        "actual_start": 381.3543262280926,
+        "actual_end": 383.2970478324101,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.9427216043174862,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "position": 1.8486797888102857
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                70,
+                77
+              ],
+              "scheduled_start": 381.3543262280926,
+              "position": 2.6264240521405213
+            },
+            "time_change": 0.014945743360008017,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0001332816603428648
+          }
+        ]
+      },
+      "3_125": {
+        "task_key": "3_125",
+        "aircraft_id": 3,
+        "task_id": 125,
+        "station_id": 4,
+        "team": [
+          53
+        ],
+        "actual_start": 386.1581314318026,
+        "actual_end": 387.84678128208157,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.6886498502790002,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44
+              ],
+              "position": 3.914894077644143
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53
+              ],
+              "scheduled_start": 386.1581314318026,
+              "position": 7.43022925585052
+            },
+            "time_change": 0.06755343610367719,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00030243184390826405
+          }
+        ]
+      },
+      "4_2": {
+        "task_key": "4_2",
+        "aircraft_id": 4,
+        "task_id": 2,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 214.62187782657318,
+        "actual_end": 216.24948050236733,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.6276026757941506,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_3": {
+        "task_key": "4_3",
+        "aircraft_id": 4,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 216.24948050236733,
+        "actual_end": 219.0259791846044,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 2.7764986822370807,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_4": {
+        "task_key": "4_4",
+        "aircraft_id": 4,
+        "task_id": 4,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 219.0259791846044,
+        "actual_end": 221.03654719587954,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 2.0105680112751276,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_5": {
+        "task_key": "4_5",
+        "aircraft_id": 4,
+        "task_id": 5,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 221.03654719587954,
+        "actual_end": 224.6747178829488,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 3.638170687069278,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_6": {
+        "task_key": "4_6",
+        "aircraft_id": 4,
+        "task_id": 6,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 224.6747178829488,
+        "actual_end": 225.71829842213447,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.0435805391856614,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_7": {
+        "task_key": "4_7",
+        "aircraft_id": 4,
+        "task_id": 7,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 225.71829842213447,
+        "actual_end": 227.01080642938277,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_15": {
+        "task_key": "4_15",
+        "aircraft_id": 4,
+        "task_id": 15,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 227.01080642938277,
+        "actual_end": 227.55653203244316,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 0.5457256030603916,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_16": {
+        "task_key": "4_16",
+        "aircraft_id": 4,
+        "task_id": 16,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 227.55653203244316,
+        "actual_end": 228.84904003969146,
+        "cycle_start_time": 214.62187782657318,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_8": {
+        "task_key": "4_8",
+        "aircraft_id": 4,
+        "task_id": 8,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 280.2880392605134,
+        "actual_end": 281.27743498313595,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 0.9893957226225385,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 280.2880392605134,
+              "position": 10.3930666476532
+            },
+            "time_change": 0.19972131478561417,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00019021077598629923
+          }
+        ]
+      },
+      "4_9": {
+        "task_key": "4_9",
+        "aircraft_id": 4,
+        "task_id": 9,
+        "station_id": 1,
+        "team": [
+          65,
+          18
+        ],
+        "actual_start": 281.27743498313595,
+        "actual_end": 282.5978187633222,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.3203837801862783,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.9893957226225385
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                65,
+                18
+              ],
+              "scheduled_start": 281.27743498313595,
+              "position": 11.382462370275732
+            },
+            "time_change": 0.19972131478561406,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0003092583950339182
+          }
+        ]
+      },
+      "4_18": {
+        "task_key": "4_18",
+        "aircraft_id": 4,
+        "task_id": 18,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 270.41236303661697,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 0.5173904237567403,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 269.8949726128602,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "4_25": {
+        "task_key": "4_25",
+        "aircraft_id": 4,
+        "task_id": 25,
+        "station_id": 1,
+        "team": [
+          18,
+          65
+        ],
+        "actual_start": 270.50418668017284,
+        "actual_end": 271.6582999102616,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.1541132300887469,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.609214067312613
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                65
+              ],
+              "scheduled_start": 270.50418668017284,
+              "position": 0.609214067312621
+            },
+            "time_change": 1.536113940038052e-16,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761921
+          }
+        ]
+      },
+      "4_26": {
+        "task_key": "4_26",
+        "aircraft_id": 4,
+        "task_id": 26,
+        "station_id": 1,
+        "team": [
+          22,
+          10
+        ],
+        "actual_start": 272.1097667075382,
+        "actual_end": 280.2880392605134,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 8.178272552975228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_12": {
+        "task_key": "4_12",
+        "aircraft_id": 4,
+        "task_id": 12,
+        "station_id": 2,
+        "team": [
+          66,
+          47
+        ],
+        "actual_start": 325.1680673991473,
+        "actual_end": 326.55781326739395,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.3897458682466979,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                47
+              ],
+              "scheduled_start": 325.1680673991473,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761906
+          }
+        ]
+      },
+      "4_13": {
+        "task_key": "4_13",
+        "aircraft_id": 4,
+        "task_id": 13,
+        "station_id": 2,
+        "team": [
+          47,
+          66
+        ],
+        "actual_start": 327.81978798158485,
+        "actual_end": 329.28553557700127,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.4657475954164394,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 1.263198188556029
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                66
+              ],
+              "scheduled_start": 327.81978798158485,
+              "position": 2.6517205824375765
+            },
+            "time_change": 0.0266829346445027,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00014445993775666927
+          }
+        ]
+      },
+      "4_27": {
+        "task_key": "4_27",
+        "aircraft_id": 4,
+        "task_id": 27,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 329.28553557700127,
+        "actual_end": 378.72790217595207,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 49.44236659895083,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 2.5954775280487157
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                0
+              ],
+              "scheduled_start": 329.28553557700127,
+              "position": 4.117468177853993
+            },
+            "time_change": 0.029247765262735037,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 2.7855014535938134e-05
+          }
+        ]
+      },
+      "4_28": {
+        "task_key": "4_28",
+        "aircraft_id": 4,
+        "task_id": 28,
+        "station_id": 2,
+        "team": [
+          47,
+          76
+        ],
+        "actual_start": 329.28553557700127,
+        "actual_end": 333.65051616892106,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 4.364980591919772,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                47,
+                76
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                76
+              ],
+              "scheduled_start": 329.28553557700127,
+              "position": 4.117468177853993
+            },
+            "time_change": 0.07912449577667396,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 7.535666264445141e-05
+          }
+        ]
+      },
+      "4_29": {
+        "task_key": "4_29",
+        "aircraft_id": 4,
+        "task_id": 29,
+        "station_id": 2,
+        "team": [
+          47,
+          51
+        ],
+        "actual_start": 326.55781326739395,
+        "actual_end": 327.81978798158485,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.2619747141908886,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                50,
+                51
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                51
+              ],
+              "scheduled_start": 326.55781326739395,
+              "position": 1.3897458682466777
+            },
+            "time_change": 0.026706445886862093,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00014448232941605916
+          }
+        ]
+      },
+      "4_10": {
+        "task_key": "4_10",
+        "aircraft_id": 4,
+        "task_id": 10,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 378.72790217595207,
+        "actual_end": 379.94352860628095,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.2156264303289086,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_17": {
+        "task_key": "4_17",
+        "aircraft_id": 4,
+        "task_id": 17,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 379.94352860628095,
+        "actual_end": 381.89992739259156,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.9563987863105872,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_20": {
+        "task_key": "4_20",
+        "aircraft_id": 4,
+        "task_id": 20,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 381.89992739259156,
+        "actual_end": 382.8876238672338,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 0.9876964746422382,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_21": {
+        "task_key": "4_21",
+        "aircraft_id": 4,
+        "task_id": 21,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 382.8876238672338,
+        "actual_end": 385.28088840194386,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 2.3932645347100387,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "4_11": {
+        "task_key": "4_11",
+        "aircraft_id": 4,
+        "task_id": 11,
+        "station_id": 4,
+        "team": [
+          53,
+          44
+        ],
+        "actual_start": 431.025762238566,
+        "actual_end": 432.3183072863123,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.292545047746288,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                44
+              ],
+              "scheduled_start": 431.025762238566,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761906
+          }
+        ]
+      },
+      "4_14": {
+        "task_key": "4_14",
+        "aircraft_id": 4,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 438.26046520397404,
+        "actual_end": 440.2958657588275,
+        "cycle_start_time": 431.025762238566,
+        "duration": 2.035400554853468,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 438.26046520397404,
+              "position": 7.234702965408019
+            },
+            "time_change": 0.13902772274254024,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00013240735499289548
+          }
+        ]
+      },
+      "4_19": {
+        "task_key": "4_19",
+        "aircraft_id": 4,
+        "task_id": 19,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 432.3183072863123,
+        "actual_end": 433.65218629070654,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.3338790043942632,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 432.3183072863123,
+              "position": 1.2925450477462732
+            },
+            "time_change": 0.024838558734135634,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00026175100831822443
+          }
+        ]
+      },
+      "4_22": {
+        "task_key": "4_22",
+        "aircraft_id": 4,
+        "task_id": 22,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 435.6952667309392,
+        "actual_end": 436.3177435996565,
+        "cycle_start_time": 431.025762238566,
+        "duration": 0.6224768687173228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 1.2604634923706495
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 435.6952667309392,
+              "position": 4.669504492373164
+            },
+            "time_change": 0.06551080386194848,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0003004864798685224
+          }
+        ]
+      },
+      "4_24": {
+        "task_key": "4_24",
+        "aircraft_id": 4,
+        "task_id": 24,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 433.65218629070654,
+        "actual_end": 434.69952832378647,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.0473420330799401,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 1.4507067560561981
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 433.65218629070654,
+              "position": 2.6264240521405213
+            },
+            "time_change": 0.02259350508862278,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0002596128619891646
+          }
+        ]
+      },
+      "4_23": {
+        "task_key": "4_23",
+        "aircraft_id": 4,
+        "task_id": 23,
+        "station_id": 4,
+        "team": [
+          53,
+          44
+        ],
+        "actual_start": 434.69952832378647,
+        "actual_end": 435.6952667309392,
+        "cycle_start_time": 431.025762238566,
+        "duration": 0.995738407152696,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 2.589780208959583
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                44
+              ],
+              "scheduled_start": 434.69952832378647,
+              "position": 3.67376608522045
+            },
+            "time_change": 0.020830722226220105,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00013888640212020965
+          }
+        ]
+      },
+      "4_30": {
+        "task_key": "4_30",
+        "aircraft_id": 4,
+        "task_id": 30,
+        "station_id": 4,
+        "team": [
+          77,
+          70
+        ],
+        "actual_start": 436.3177435996565,
+        "actual_end": 438.26046520397404,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.9427216043174862,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "position": 1.8486797888102857
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                77,
+                70
+              ],
+              "scheduled_start": 436.3177435996565,
+              "position": 5.291981361090507
+            },
+            "time_change": 0.06616918187226906,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00018206588749739914
+          }
+        ]
+      },
+      "4_125": {
+        "task_key": "4_125",
+        "aircraft_id": 4,
+        "task_id": 125,
+        "station_id": 4,
+        "team": [
+          53
+        ],
+        "actual_start": 440.2958657588275,
+        "actual_end": 441.9845156091065,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.6886498502790002,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44
+              ],
+              "position": 3.914894077644143
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53
+              ],
+              "scheduled_start": 440.2958657588275,
+              "position": 9.2701035202615
+            },
+            "time_change": 0.10290990206181191,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0003361046686302971
+          }
+        ]
+      },
+      "5_2": {
+        "task_key": "5_2",
+        "aircraft_id": 5,
+        "task_id": 2,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 269.8949726128602,
+        "actual_end": 271.52257528865437,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.6276026757941506,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_3": {
+        "task_key": "5_3",
+        "aircraft_id": 5,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 271.52257528865437,
+        "actual_end": 274.29907397089147,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 2.7764986822370807,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_4": {
+        "task_key": "5_4",
+        "aircraft_id": 5,
+        "task_id": 4,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 274.29907397089147,
+        "actual_end": 276.3096419821666,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 2.0105680112751276,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_5": {
+        "task_key": "5_5",
+        "aircraft_id": 5,
+        "task_id": 5,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 276.30964198216657,
+        "actual_end": 279.9478126692359,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 3.638170687069278,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_6": {
+        "task_key": "5_6",
+        "aircraft_id": 5,
+        "task_id": 6,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 279.9478126692359,
+        "actual_end": 280.9913932084215,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.0435805391856614,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_7": {
+        "task_key": "5_7",
+        "aircraft_id": 5,
+        "task_id": 7,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 280.9913932084215,
+        "actual_end": 282.2839012156698,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_15": {
+        "task_key": "5_15",
+        "aircraft_id": 5,
+        "task_id": 15,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 282.2839012156698,
+        "actual_end": 282.8296268187302,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 0.5457256030603916,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_16": {
+        "task_key": "5_16",
+        "aircraft_id": 5,
+        "task_id": 16,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 282.8296268187302,
+        "actual_end": 284.1221348259785,
+        "cycle_start_time": 269.8949726128602,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_8": {
+        "task_key": "5_8",
+        "aircraft_id": 5,
+        "task_id": 8,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 335.5611340468005,
+        "actual_end": 336.550529769423,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 0.9893957226225385,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 335.5611340468005,
+              "position": 10.3930666476532
+            },
+            "time_change": 0.19972131478561417,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00019021077598629923
+          }
+        ]
+      },
+      "5_9": {
+        "task_key": "5_9",
+        "aircraft_id": 5,
+        "task_id": 9,
+        "station_id": 1,
+        "team": [
+          18,
+          65
+        ],
+        "actual_start": 336.550529769423,
+        "actual_end": 337.87091354960927,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.3203837801862783,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.9893957226225385
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                65
+              ],
+              "scheduled_start": 336.550529769423,
+              "position": 11.382462370275732
+            },
+            "time_change": 0.19972131478561406,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0003092583950339182
+          }
+        ]
+      },
+      "5_18": {
+        "task_key": "5_18",
+        "aircraft_id": 5,
+        "task_id": 18,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 325.1680673991473,
+        "actual_end": 325.685457822904,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 0.5173904237567403,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "scheduled_start": 325.1680673991473,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "5_25": {
+        "task_key": "5_25",
+        "aircraft_id": 5,
+        "task_id": 25,
+        "station_id": 1,
+        "team": [
+          18,
+          65
+        ],
+        "actual_start": 325.7772814664599,
+        "actual_end": 326.93139469654864,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.1541132300887469,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.609214067312613
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                65
+              ],
+              "scheduled_start": 325.7772814664599,
+              "position": 0.609214067312621
+            },
+            "time_change": 1.536113940038052e-16,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761921
+          }
+        ]
+      },
+      "5_26": {
+        "task_key": "5_26",
+        "aircraft_id": 5,
+        "task_id": 26,
+        "station_id": 1,
+        "team": [
+          22,
+          10
+        ],
+        "actual_start": 327.38286149382526,
+        "actual_end": 335.5611340468005,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 8.178272552975228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_12": {
+        "task_key": "5_12",
+        "aircraft_id": 5,
+        "task_id": 12,
+        "station_id": 2,
+        "team": [
+          66,
+          47
+        ],
+        "actual_start": 378.72790217595207,
+        "actual_end": 380.11764804419875,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.3897458682466979,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                47
+              ],
+              "scheduled_start": 378.72790217595207,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761906
+          }
+        ]
+      },
+      "5_13": {
+        "task_key": "5_13",
+        "aircraft_id": 5,
+        "task_id": 13,
+        "station_id": 2,
+        "team": [
+          47,
+          66
+        ],
+        "actual_start": 380.11764804419875,
+        "actual_end": 381.58339563961516,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.4657475954164394,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 1.263198188556029
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                66
+              ],
+              "scheduled_start": 380.11764804419875,
+              "position": 1.3897458682466777
+            },
+            "time_change": 0.0024318394009906737,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00012136365657237208
+          }
+        ]
+      },
+      "5_27": {
+        "task_key": "5_27",
+        "aircraft_id": 5,
+        "task_id": 27,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 381.58339563961516,
+        "actual_end": 431.025762238566,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 49.44236659895083,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 2.5954775280487157
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                0
+              ],
+              "scheduled_start": 381.58339563961516,
+              "position": 2.8554934636630946
+            },
+            "time_change": 0.004996670019223013,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 4.7587333516409645e-06
+          }
+        ]
+      },
+      "5_28": {
+        "task_key": "5_28",
+        "aircraft_id": 5,
+        "task_id": 28,
+        "station_id": 2,
+        "team": [
+          47,
+          76
+        ],
+        "actual_start": 382.84537035380606,
+        "actual_end": 387.21035094572585,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 4.364980591919772,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                47,
+                76
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                76
+              ],
+              "scheduled_start": 382.84537035380606,
+              "position": 4.117468177853993
+            },
+            "time_change": 0.07912449577667396,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 7.535666264445141e-05
+          }
+        ]
+      },
+      "5_29": {
+        "task_key": "5_29",
+        "aircraft_id": 5,
+        "task_id": 29,
+        "station_id": 2,
+        "team": [
+          47,
+          51
+        ],
+        "actual_start": 381.58339563961516,
+        "actual_end": 382.84537035380606,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.2619747141908886,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                50,
+                51
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                51
+              ],
+              "scheduled_start": 381.58339563961516,
+              "position": 2.8554934636630946
+            },
+            "time_change": 0.05487340053316194,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0001713080005077733
+          }
+        ]
+      },
+      "5_10": {
+        "task_key": "5_10",
+        "aircraft_id": 5,
+        "task_id": 10,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 431.025762238566,
+        "actual_end": 432.2413886688949,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.2156264303289086,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_17": {
+        "task_key": "5_17",
+        "aircraft_id": 5,
+        "task_id": 17,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 432.2413886688949,
+        "actual_end": 434.1977874552055,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.9563987863105872,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_20": {
+        "task_key": "5_20",
+        "aircraft_id": 5,
+        "task_id": 20,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 434.1977874552055,
+        "actual_end": 435.18548392984775,
+        "cycle_start_time": 431.025762238566,
+        "duration": 0.9876964746422382,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_21": {
+        "task_key": "5_21",
+        "aircraft_id": 5,
+        "task_id": 21,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 435.18548392984775,
+        "actual_end": 437.5787484645578,
+        "cycle_start_time": 431.025762238566,
+        "duration": 2.3932645347100387,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "5_11": {
+        "task_key": "5_11",
+        "aircraft_id": 5,
+        "task_id": 11,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 483.06360636556553,
+        "actual_end": 484.3974853699598,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.3338790043942632,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 483.06360636556553,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "5_14": {
+        "task_key": "5_14",
+        "aircraft_id": 5,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 490.3521965633442,
+        "actual_end": 492.3875971181977,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 2.035400554853468,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 490.3521965633442,
+              "position": 7.28859019777866
+            },
+            "time_change": 0.14006326203658034,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00013339358289198128
+          }
+        ]
+      },
+      "5_19": {
+        "task_key": "5_19",
+        "aircraft_id": 5,
+        "task_id": 19,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 485.00067305890803,
+        "actual_end": 486.3345520633023,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.3338790043942632,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 485.00067305890803,
+              "position": 1.9370666933425014
+            },
+            "time_change": 0.03722419185189621,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00027354684938275835
+          }
+        ]
+      },
+      "5_22": {
+        "task_key": "5_22",
+        "aircraft_id": 5,
+        "task_id": 22,
+        "station_id": 4,
+        "team": [
+          53,
+          44
+        ],
+        "actual_start": 484.3974853699598,
+        "actual_end": 485.00067305890803,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 0.6031876889482678,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 1.2604634923706495
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                44
+              ],
+              "scheduled_start": 484.3974853699598,
+              "position": 1.3338790043942481
+            },
+            "time_change": 0.0014108100221144136,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00012039124764010897
+          }
+        ]
+      },
+      "5_24": {
+        "task_key": "5_24",
+        "aircraft_id": 5,
+        "task_id": 24,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 486.3345520633023,
+        "actual_end": 487.3818940963822,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.0473420330799401,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 1.4507067560561981
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 486.3345520633023,
+              "position": 3.2709456977367495
+            },
+            "time_change": 0.034979138206383355,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0002714087030536985
+          }
+        ]
+      },
+      "5_23": {
+        "task_key": "5_23",
+        "aircraft_id": 5,
+        "task_id": 23,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 487.3818940963822,
+        "actual_end": 488.4094749590267,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.0275808626444694,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 2.589780208959583
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 487.3818940963822,
+              "position": 4.318287730816678
+            },
+            "time_change": 0.03321635534398068,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00026972986223236257
+          }
+        ]
+      },
+      "5_30": {
+        "task_key": "5_30",
+        "aircraft_id": 5,
+        "task_id": 30,
+        "station_id": 4,
+        "team": [
+          77,
+          70
+        ],
+        "actual_start": 488.4094749590267,
+        "actual_end": 490.3521965633442,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.9427216043174862,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "position": 1.8486797888102857
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                77,
+                70
+              ],
+              "scheduled_start": 488.4094749590267,
+              "position": 5.345868593461148
+            },
+            "time_change": 0.06720472116630914,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00018305211539648494
+          }
+        ]
+      },
+      "5_125": {
+        "task_key": "5_125",
+        "aircraft_id": 5,
+        "task_id": 125,
+        "station_id": 4,
+        "team": [
+          53
+        ],
+        "actual_start": 492.3875971181977,
+        "actual_end": 494.07624696847665,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.6886498502790002,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44
+              ],
+              "position": 3.914894077644143
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53
+              ],
+              "scheduled_start": 492.3875971181977,
+              "position": 9.323990752632142
+            },
+            "time_change": 0.103945441355852,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0003370908965293829
+          }
+        ]
+      },
+      "6_2": {
+        "task_key": "6_2",
+        "aircraft_id": 6,
+        "task_id": 2,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 325.1680673991473,
+        "actual_end": 326.7956700749414,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.6276026757941506,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_3": {
+        "task_key": "6_3",
+        "aircraft_id": 6,
+        "task_id": 3,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 326.7956700749414,
+        "actual_end": 329.57216875717853,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 2.7764986822370807,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_4": {
+        "task_key": "6_4",
+        "aircraft_id": 6,
+        "task_id": 4,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 329.57216875717853,
+        "actual_end": 331.5827367684537,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 2.0105680112751276,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_5": {
+        "task_key": "6_5",
+        "aircraft_id": 6,
+        "task_id": 5,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 331.58273676845363,
+        "actual_end": 335.22090745552293,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 3.638170687069278,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_6": {
+        "task_key": "6_6",
+        "aircraft_id": 6,
+        "task_id": 6,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 335.22090745552293,
+        "actual_end": 336.2644879947086,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.0435805391856614,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_7": {
+        "task_key": "6_7",
+        "aircraft_id": 6,
+        "task_id": 7,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 336.2644879947086,
+        "actual_end": 337.55699600195686,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_15": {
+        "task_key": "6_15",
+        "aircraft_id": 6,
+        "task_id": 15,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 337.55699600195686,
+        "actual_end": 338.1027216050173,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 0.5457256030603916,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_16": {
+        "task_key": "6_16",
+        "aircraft_id": 6,
+        "task_id": 16,
+        "station_id": 0,
+        "team": [
+          72,
+          12
+        ],
+        "actual_start": 338.1027216050173,
+        "actual_end": 339.39522961226555,
+        "cycle_start_time": 325.1680673991473,
+        "duration": 1.2925080072482962,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_8": {
+        "task_key": "6_8",
+        "aircraft_id": 6,
+        "task_id": 8,
+        "station_id": 1,
+        "team": [
+          18,
+          22
+        ],
+        "actual_start": 378.72790217595207,
+        "actual_end": 379.7172978985746,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 0.9893957226225385,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_9": {
+        "task_key": "6_9",
+        "aircraft_id": 6,
+        "task_id": 9,
+        "station_id": 1,
+        "team": [
+          18,
+          65
+        ],
+        "actual_start": 381.4289065025198,
+        "actual_end": 382.74929028270606,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.3203837801862783,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                18,
+                22
+              ],
+              "position": 0.9893957226225385
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                65
+              ],
+              "scheduled_start": 381.4289065025198,
+              "position": 2.701004326567727
+            },
+            "time_change": 0.03289161249201578,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00015037296427811028
+          }
+        ]
+      },
+      "6_18": {
+        "task_key": "6_18",
+        "aircraft_id": 6,
+        "task_id": 18,
+        "station_id": 1,
+        "team": [
+          18,
+          65
+        ],
+        "actual_start": 379.7172978985746,
+        "actual_end": 380.27479327243105,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 0.5574953738564286,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                65
+              ],
+              "scheduled_start": 379.7172978985746,
+              "position": 0.9893957226225325
+            },
+            "time_change": 0.01901300369415554,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00013715524161348147
+          }
+        ]
+      },
+      "6_25": {
+        "task_key": "6_25",
+        "aircraft_id": 6,
+        "task_id": 25,
+        "station_id": 1,
+        "team": [
+          18,
+          65
+        ],
+        "actual_start": 380.27479327243105,
+        "actual_end": 381.4289065025198,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 1.1541132300887469,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 1,
+              "team": [
+                10,
+                65
+              ],
+              "position": 0.609214067312613
+            },
+            "after": {
+              "station": 1,
+              "team": [
+                18,
+                65
+              ],
+              "scheduled_start": 380.27479327243105,
+              "position": 1.546891096478987
+            },
+            "time_change": 0.01801913674359668,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.0001362087016605683
+          }
+        ]
+      },
+      "6_26": {
+        "task_key": "6_26",
+        "aircraft_id": 6,
+        "task_id": 26,
+        "station_id": 1,
+        "team": [
+          22,
+          10
+        ],
+        "actual_start": 380.94269627063005,
+        "actual_end": 389.12096882360527,
+        "cycle_start_time": 378.72790217595207,
+        "duration": 8.178272552975228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_12": {
+        "task_key": "6_12",
+        "aircraft_id": 6,
+        "task_id": 12,
+        "station_id": 2,
+        "team": [
+          66,
+          47
+        ],
+        "actual_start": 431.025762238566,
+        "actual_end": 432.4155081068127,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.3897458682466979,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                66,
+                47
+              ],
+              "scheduled_start": 431.025762238566,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 0.5,
+            "station_changed": false,
+            "revision_cost": 0.00011904761904761906
+          }
+        ]
+      },
+      "6_13": {
+        "task_key": "6_13",
+        "aircraft_id": 6,
+        "task_id": 13,
+        "station_id": 2,
+        "team": [
+          47,
+          51
+        ],
+        "actual_start": 432.4155081068127,
+        "actual_end": 434.0695526351211,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.6540445283084464,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                0,
+                66
+              ],
+              "position": 1.263198188556029
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                51
+              ],
+              "scheduled_start": 432.4155081068127,
+              "position": 1.3897458682466777
+            },
+            "time_change": 0.0024318394009906737,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00024041127561999116
+          }
+        ]
+      },
+      "6_27": {
+        "task_key": "6_27",
+        "aircraft_id": 6,
+        "task_id": 27,
+        "station_id": 2,
+        "team": [
+          66,
+          0
+        ],
+        "actual_start": 433.62123976661474,
+        "actual_end": 483.06360636556553,
+        "cycle_start_time": 431.025762238566,
+        "duration": 49.44236659895083,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_28": {
+        "task_key": "6_28",
+        "aircraft_id": 6,
+        "task_id": 28,
+        "station_id": 2,
+        "team": [
+          47,
+          76
+        ],
+        "actual_start": 434.0695526351211,
+        "actual_end": 438.4345332270409,
+        "cycle_start_time": 431.025762238566,
+        "duration": 4.364980591919772,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 2,
+              "team": [
+                47,
+                76
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 2,
+              "team": [
+                47,
+                76
+              ],
+              "scheduled_start": 434.0695526351211,
+              "position": 3.043790396555096
+            },
+            "time_change": 0.05849186198272657,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 5.570653522164437e-05
+          }
+        ]
+      },
+      "6_29": {
+        "task_key": "6_29",
+        "aircraft_id": 6,
+        "task_id": 29,
+        "station_id": 2,
+        "team": [
+          51,
+          50
+        ],
+        "actual_start": 431.025762238566,
+        "actual_end": 432.31425858491826,
+        "cycle_start_time": 431.025762238566,
+        "duration": 1.2884963463522248,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_10": {
+        "task_key": "6_10",
+        "aircraft_id": 6,
+        "task_id": 10,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 483.06360636556553,
+        "actual_end": 484.2792327958944,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.2156264303289086,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_17": {
+        "task_key": "6_17",
+        "aircraft_id": 6,
+        "task_id": 17,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 484.2792327958944,
+        "actual_end": 486.23563158220503,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 1.9563987863105872,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_20": {
+        "task_key": "6_20",
+        "aircraft_id": 6,
+        "task_id": 20,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 486.23563158220503,
+        "actual_end": 487.22332805684727,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 0.9876964746422382,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_21": {
+        "task_key": "6_21",
+        "aircraft_id": 6,
+        "task_id": 21,
+        "station_id": 3,
+        "team": [
+          55,
+          6
+        ],
+        "actual_start": 487.22332805684727,
+        "actual_end": 489.6165925915573,
+        "cycle_start_time": 483.06360636556553,
+        "duration": 2.3932645347100387,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": []
+      },
+      "6_11": {
+        "task_key": "6_11",
+        "aircraft_id": 6,
+        "task_id": 11,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 520.3784412699954,
+        "actual_end": 521.7123202743896,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 1.3338790043942632,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 520.3784412699954,
+              "position": 0.0
+            },
+            "time_change": 0.0,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023809523809523812
+          }
+        ]
+      },
+      "6_14": {
+        "task_key": "6_14",
+        "aircraft_id": 6,
+        "task_id": 14,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 527.4679128739862,
+        "actual_end": 529.5033134288396,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 2.035400554853468,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 527.4679128739862,
+              "position": 7.0894716039907735
+            },
+            "time_change": 0.13623684306922393,
+            "team_change": 0.0,
+            "station_changed": false,
+            "revision_cost": 0.00012974937435164186
+          }
+        ]
+      },
+      "6_19": {
+        "task_key": "6_19",
+        "aircraft_id": 6,
+        "task_id": 19,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 522.3347971431069,
+        "actual_end": 523.6686761475012,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 1.3338790043942632,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 0.0
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 522.3347971431069,
+              "position": 1.9563558731115336
+            },
+            "time_change": 0.037594867849194566,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00027389987414209007
+          }
+        ]
+      },
+      "6_22": {
+        "task_key": "6_22",
+        "aircraft_id": 6,
+        "task_id": 22,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 521.7123202743896,
+        "actual_end": 522.3347971431069,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 0.6224768687173228,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 1.2604634923706495
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 521.7123202743896,
+              "position": 1.3338790043942481
+            },
+            "time_change": 0.0014108100221144136,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00023943886668772803
+          }
+        ]
+      },
+      "6_24": {
+        "task_key": "6_24",
+        "aircraft_id": 6,
+        "task_id": 24,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 523.6686761475012,
+        "actual_end": 524.7160181805812,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 1.0473420330799401,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                1,
+                56
+              ],
+              "position": 1.4507067560561981
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 523.6686761475012,
+              "position": 3.2902348775057817
+            },
+            "time_change": 0.03534981420368171,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00027176172781303025
+          }
+        ]
+      },
+      "6_23": {
+        "task_key": "6_23",
+        "aircraft_id": 6,
+        "task_id": 23,
+        "station_id": 4,
+        "team": [
+          53,
+          77
+        ],
+        "actual_start": 524.7160181805812,
+        "actual_end": 525.7435990432256,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 1.0275808626444694,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44,
+                45
+              ],
+              "position": 2.589780208959583
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53,
+                77
+              ],
+              "scheduled_start": 524.7160181805812,
+              "position": 4.337576910585767
+            },
+            "time_change": 0.03358703134128013,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.00027008288699169536
+          }
+        ]
+      },
+      "6_30": {
+        "task_key": "6_30",
+        "aircraft_id": 6,
+        "task_id": 30,
+        "station_id": 4,
+        "team": [
+          77,
+          44
+        ],
+        "actual_start": 525.7435990432256,
+        "actual_end": 527.4679128739862,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 1.7243138307605386,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                33,
+                70
+              ],
+              "position": 1.8486797888102857
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                77,
+                44
+              ],
+              "scheduled_start": 525.7435990432256,
+              "position": 5.36515777323018
+            },
+            "time_change": 0.06757539716360751,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0003024527592034357
+          }
+        ]
+      },
+      "6_125": {
+        "task_key": "6_125",
+        "aircraft_id": 6,
+        "task_id": 125,
+        "station_id": 4,
+        "team": [
+          53
+        ],
+        "actual_start": 529.5033134288396,
+        "actual_end": 531.1919632791187,
+        "cycle_start_time": 520.3784412699954,
+        "duration": 1.6886498502790002,
+        "status": "COMPLETED",
+        "postpone_count": 0,
+        "revision_history": [
+          {
+            "reason": "station_reservation",
+            "before": {
+              "station": 4,
+              "team": [
+                44
+              ],
+              "position": 3.914894077644143
+            },
+            "after": {
+              "station": 4,
+              "team": [
+                53
+              ],
+              "scheduled_start": 529.5033134288396,
+              "position": 9.124872158844255
+            },
+            "time_change": 0.1001190223884956,
+            "team_change": 1.0,
+            "station_changed": false,
+            "revision_cost": 0.0003334466879890435
+          }
+        ]
+      }
+    },
+    "aircraft_execution": {
+      "0": {
+        "aircraft_id": 0,
+        "entry_times": {
+          "0": 0.0,
+          "1": 52.037844126999545,
+          "2": 104.07568825399909,
+          "3": 159.34878304028615,
+          "4": 214.62187782657318
+        },
+        "exit_times": {
+          "0": 52.037844126999545,
+          "1": 104.07568825399909,
+          "2": 159.34878304028615,
+          "3": 214.62187782657318,
+          "4": 269.8949726128602
+        }
+      },
+      "1": {
+        "aircraft_id": 1,
+        "entry_times": {
+          "0": 52.037844126999545,
+          "1": 104.07568825399909,
+          "2": 159.34878304028615,
+          "3": 214.62187782657318,
+          "4": 269.8949726128602
+        },
+        "exit_times": {
+          "0": 104.07568825399909,
+          "1": 159.34878304028615,
+          "2": 214.62187782657318,
+          "3": 269.8949726128602,
+          "4": 325.1680673991473
+        }
+      },
+      "2": {
+        "aircraft_id": 2,
+        "entry_times": {
+          "0": 104.07568825399909,
+          "1": 159.34878304028615,
+          "2": 214.62187782657318,
+          "3": 269.8949726128602,
+          "4": 325.1680673991473
+        },
+        "exit_times": {
+          "0": 159.34878304028615,
+          "1": 214.62187782657318,
+          "2": 269.8949726128602,
+          "3": 325.1680673991473,
+          "4": 378.72790217595207
+        }
+      },
+      "3": {
+        "aircraft_id": 3,
+        "entry_times": {
+          "0": 159.34878304028615,
+          "1": 214.62187782657318,
+          "2": 269.8949726128602,
+          "3": 325.1680673991473,
+          "4": 378.72790217595207
+        },
+        "exit_times": {
+          "0": 214.62187782657318,
+          "1": 269.8949726128602,
+          "2": 325.1680673991473,
+          "3": 378.72790217595207,
+          "4": 431.025762238566
+        }
+      },
+      "4": {
+        "aircraft_id": 4,
+        "entry_times": {
+          "0": 214.62187782657318,
+          "1": 269.8949726128602,
+          "2": 325.1680673991473,
+          "3": 378.72790217595207,
+          "4": 431.025762238566
+        },
+        "exit_times": {
+          "0": 269.8949726128602,
+          "1": 325.1680673991473,
+          "2": 378.72790217595207,
+          "3": 431.025762238566,
+          "4": 483.06360636556553
+        }
+      },
+      "5": {
+        "aircraft_id": 5,
+        "entry_times": {
+          "0": 269.8949726128602,
+          "1": 325.1680673991473,
+          "2": 378.72790217595207,
+          "3": 431.025762238566,
+          "4": 483.06360636556553
+        },
+        "exit_times": {
+          "0": 325.1680673991473,
+          "1": 378.72790217595207,
+          "2": 431.025762238566,
+          "3": 483.06360636556553,
+          "4": 520.3784412699954
+        }
+      },
+      "6": {
+        "aircraft_id": 6,
+        "entry_times": {
+          "0": 325.1680673991473,
+          "1": 378.72790217595207,
+          "2": 431.025762238566,
+          "3": 483.06360636556553,
+          "4": 520.3784412699954
+        },
+        "exit_times": {
+          "0": 378.72790217595207,
+          "1": 431.025762238566,
+          "2": 483.06360636556553,
+          "3": 520.3784412699954,
+          "4": 572.416285396995
+        }
+      }
+    },
+    "cycle_execution_records": {
+      "1": {
+        "cycle_id": 1,
+        "cycle_start_time": 0.0,
+        "transfer_time": 52.037844126999545,
+        "occupied_stations": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "aircraft_at_stations": [
+          0,
+          null,
+          null,
+          null,
+          null
+        ],
+        "station_first_cleared_times": {
+          "0": 14.227162213118282
+        },
+        "nominal_transfer_time": 52.037844126999545,
+        "delay_relative_to_nominal": 0.0
+      },
+      "2": {
+        "cycle_id": 2,
+        "cycle_start_time": 52.037844126999545,
+        "transfer_time": 104.07568825399909,
+        "occupied_stations": [
+          true,
+          true,
+          false,
+          false,
+          false
+        ],
+        "aircraft_at_stations": [
+          1,
+          0,
+          null,
+          null,
+          null
+        ],
+        "station_first_cleared_times": {
+          "1": 62.43091077465275,
+          "0": 66.26500634011784
+        },
+        "nominal_transfer_time": 104.07568825399909,
+        "delay_relative_to_nominal": 0.0
+      },
+      "3": {
+        "cycle_id": 3,
+        "cycle_start_time": 104.07568825399909,
+        "transfer_time": 159.34878304028615,
+        "occupied_stations": [
+          true,
+          true,
+          true,
+          false,
+          false
+        ],
+        "aircraft_at_stations": [
+          2,
+          1,
+          0,
+          null,
+          null
+        ],
+        "station_first_cleared_times": {
+          "1": 116.7785344044611,
+          "0": 118.30285046711738,
+          "2": 159.34878304028615
+        },
+        "nominal_transfer_time": 156.11353238099863,
+        "delay_relative_to_nominal": 3.235250659287516
+      },
+      "4": {
+        "cycle_id": 4,
+        "cycle_start_time": 159.34878304028615,
+        "transfer_time": 214.62187782657318,
+        "occupied_stations": [
+          true,
+          true,
+          true,
+          true,
+          false
+        ],
+        "aircraft_at_stations": [
+          3,
+          2,
+          1,
+          0,
+          null
+        ],
+        "station_first_cleared_times": {
+          "3": 165.9017692662779,
+          "1": 172.05162919074817,
+          "0": 173.57594525340443,
+          "2": 214.62187782657318
+        },
+        "nominal_transfer_time": 208.15137650799818,
+        "delay_relative_to_nominal": 6.470501318575003
+      },
+      "5": {
+        "cycle_id": 5,
+        "cycle_start_time": 214.62187782657318,
+        "transfer_time": 269.8949726128602,
+        "occupied_stations": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "aircraft_at_stations": [
+          4,
+          3,
+          2,
+          1,
+          0
+        ],
+        "station_first_cleared_times": {
+          "3": 221.17486405256494,
+          "4": 221.36502024899494,
+          "1": 227.3247239770352,
+          "0": 228.84904003969146,
+          "2": 269.8949726128602
+        },
+        "nominal_transfer_time": 260.1892206349977,
+        "delay_relative_to_nominal": 9.70575197786252
+      },
+      "6": {
+        "cycle_id": 6,
+        "cycle_start_time": 269.8949726128602,
+        "transfer_time": 325.1680673991473,
+        "occupied_stations": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "aircraft_at_stations": [
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "station_first_cleared_times": {
+          "3": 276.447958838852,
+          "4": 277.8336355642714,
+          "1": 282.5978187633222,
+          "0": 284.1221348259785,
+          "2": 325.1680673991473
+        },
+        "nominal_transfer_time": 312.22706476199727,
+        "delay_relative_to_nominal": 12.941002637150007
+      },
+      "7": {
+        "cycle_id": 7,
+        "cycle_start_time": 325.1680673991473,
+        "transfer_time": 378.72790217595207,
+        "occupied_stations": [
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "aircraft_at_stations": [
+          6,
+          5,
+          4,
+          3,
+          2
+        ],
+        "station_first_cleared_times": {
+          "3": 331.72105362513906,
+          "4": 335.0114860135848,
+          "1": 337.87091354960927,
+          "0": 339.39522961226555,
+          "2": 378.72790217595207
+        },
+        "nominal_transfer_time": 364.26490888899684,
+        "delay_relative_to_nominal": 14.462993286955225
+      },
+      "8": {
+        "cycle_id": 8,
+        "cycle_start_time": 378.72790217595207,
+        "transfer_time": 431.025762238566,
+        "occupied_stations": [
+          false,
+          true,
+          true,
+          true,
+          true
+        ],
+        "aircraft_at_stations": [
+          null,
+          6,
+          5,
+          4,
+          3
+        ],
+        "station_first_cleared_times": {
+          "3": 385.28088840194386,
+          "4": 387.84678128208157,
+          "1": 389.12096882360527,
+          "2": 431.025762238566
+        },
+        "nominal_transfer_time": 416.30275301599636,
+        "delay_relative_to_nominal": 14.723009222569658
+      },
+      "9": {
+        "cycle_id": 9,
+        "cycle_start_time": 431.025762238566,
+        "transfer_time": 483.06360636556553,
+        "occupied_stations": [
+          false,
+          false,
+          true,
+          true,
+          true
+        ],
+        "aircraft_at_stations": [
+          null,
+          null,
+          6,
+          5,
+          4
+        ],
+        "station_first_cleared_times": {
+          "3": 437.5787484645578,
+          "4": 441.9845156091065,
+          "2": 483.06360636556553
+        },
+        "nominal_transfer_time": 468.3405971429959,
+        "delay_relative_to_nominal": 14.723009222569658
+      },
+      "10": {
+        "cycle_id": 10,
+        "cycle_start_time": 483.06360636556553,
+        "transfer_time": 520.3784412699954,
+        "occupied_stations": [
+          false,
+          false,
+          false,
+          true,
+          true
+        ],
+        "aircraft_at_stations": [
+          null,
+          null,
+          null,
+          6,
+          5
+        ],
+        "station_first_cleared_times": {
+          "3": 489.6165925915573,
+          "4": 494.07624696847665
+        },
+        "nominal_transfer_time": 520.3784412699954,
+        "delay_relative_to_nominal": 0.0
+      },
+      "11": {
+        "cycle_id": 11,
+        "cycle_start_time": 520.3784412699954,
+        "transfer_time": 572.416285396995,
+        "occupied_stations": [
+          false,
+          false,
+          false,
+          false,
+          true
+        ],
+        "aircraft_at_stations": [
+          null,
+          null,
+          null,
+          null,
+          6
+        ],
+        "station_first_cleared_times": {
+          "4": 531.1919632791187
+        },
+        "nominal_transfer_time": 572.416285396995,
+        "delay_relative_to_nominal": 0.0
+      }
+    },
+    "step_rewards": [
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.00047619047619047624,
+      -0.0,
+      -9.469123727102362e-06,
+      -0.0002798118945817693,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0004761904761904764,
+      -0.0001190476190476191,
+      -0.0,
+      -0.0,
+      -0.0001902107759862992,
+      -0.0003092583950339183,
+      -0.00017581550651398978,
+      -0.06308386592109057,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0004761904761904634,
+      -0.00011904761904761585,
+      -0.0,
+      -0.0,
+      -0.0001902107759862992,
+      -0.0,
+      -0.00030925839503391506,
+      -0.00017581550651399325,
+      -0.0,
+      -5.9210583293264896e-05,
+      -0.06302465533779676,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0004761904761904634,
+      -0.0,
+      -0.00011904761904762973,
+      -0.0,
+      -0.0,
+      -0.0001902107759862992,
+      -0.0,
+      -0.00030925839503392893,
+      -0.0,
+      -0.0004761904761904634,
+      -0.00017581550651399325,
+      -0.0,
+      -0.0,
+      -5.921058329325102e-05,
+      -0.0,
+      -0.0002380952380952317,
+      -0.00023943886668773007,
+      -0.0004761904761904634,
+      -0.0002516586348076111,
+      -0.06425710283466676,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0004761904761904634,
+      -0.0,
+      -0.00011904761904762973,
+      -0.0,
+      -0.0001902107759862992,
+      -0.0,
+      -0.0,
+      -0.00030925839503392893,
+      -0.0004761904761904634,
+      -0.00017581550651399325,
+      -0.0,
+      -0.0,
+      -0.0,
+      -5.921058329325102e-05,
+      -0.0002380952380952317,
+      -0.0,
+      -0.00015629890705595728,
+      -0.0002380952380952317,
+      -3.541219724340072e-05,
+      -0.06423957178896447,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.00023809523809525945,
+      -0.0004761904761905189,
+      -0.0,
+      -0.00011904761904762973,
+      -0.0001902107759862992,
+      -0.00014448232941605132,
+      -0.0,
+      -0.0001444599377566913,
+      -0.00030925839503392893,
+      -2.7855014535949074e-05,
+      -7.535666264446572e-05,
+      -0.0004761904761905189,
+      -0.00023809523809525945,
+      -0.0,
+      -0.0,
+      -0.0,
+      -0.00011904761904762973,
+      -0.00030902871579269187,
+      -0.00031133954401130204,
+      -0.00010815667319591382,
+      -0.03196781176096486,
+      -0.0,
+      -0.00023809523809525945,
+      -0.0,
+      -0.0,
+      -0.0001371552416135069,
+      -0.0,
+      -0.00012136365657239301,
+      -0.00013620870166058952,
+      -0.00017130800050779715,
+      -4.758733351650779e-06,
+      -0.00015037296427811153,
+      -0.00023809523809525945,
+      -0.00026175100831821174,
+      -7.535666264446572e-05,
+      -0.00014056524294153716,
+      -0.0,
+      -0.00013964583293774036,
+      -0.0,
+      -0.0001821982916384579,
+      -0.00013328166034287658,
+      -0.0002163062743334443,
+      -0.007471805978180812,
+      -0.00023809523809525945,
+      -0.0,
+      -0.00024041127561996722,
+      -0.0,
+      -0.0,
+      -0.00023809523809525945,
+      -5.570653522163349e-05,
+      -0.0,
+      -0.00026175100831821174,
+      -0.0,
+      -0.0002596128619891669,
+      -0.00013888640212023073,
+      -0.0,
+      -0.0003004864798685225,
+      -0.00018206588749741792,
+      -0.00013240735499286949,
+      -0.002243537142888663,
+      -0.0,
+      -0.0,
+      -0.0004761904761905189,
+      -0.0001203912476401281,
+      -0.0002735468493827442,
+      -0.0,
+      -0.00027140870305369935,
+      -0.0,
+      -0.0002697298622323374,
+      -0.00018305211539648703,
+      -0.0001333935828919941,
+      -0.0019257041536561714,
+      -0.0004761904761905189,
+      -0.0002394388666877023,
+      -0.0002738998741421139,
+      -0.00027176172781301355,
+      -0.00027008288699170713,
+      -0.00030245275920343095,
+      -0.0001297493743516176,
+      -0.00215427886516939
+    ]
+  }
+}

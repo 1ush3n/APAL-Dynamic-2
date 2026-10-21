@@ -1,0 +1,90 @@
+{
+  "schema_version": "critic_calibration_control_binding_v1",
+  "control_dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42",
+  "files": {
+    "manifest": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\manifest.json",
+      "sha256": "66027ca64721137913d916d82231c2d1229d35b8bf0adc2917036b7272973612"
+    },
+    "resolved_config": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\resolved_config.yaml",
+      "sha256": "37860a1e32f5e761b9a053059f314e8691777211302a314b06ba8dfa4830723e"
+    },
+    "training_summary": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\training_summary.json",
+      "sha256": "3f244a35270785430b3c7ac2a817d0791aad72455ec313b3fed646e53575faf0"
+    },
+    "first_rollout": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\first_rollout.pt",
+      "sha256": "2ffb1cdedc95892ed8bce4d9bf8d023fd4c00e4c059a887a652832b1c2fd6390"
+    },
+    "shaping_audit": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\shaping_audit_summary.json",
+      "sha256": "0d2731a1303b7f4bb7960b6f958fcc49c17d26bc48e72817257db5ff71ff8b7e"
+    },
+    "verification": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\verification.json",
+      "sha256": "639f2790993992d31b75d2156654212367dd92bba88a58bf4c53caba4a186832"
+    },
+    "trajectory_step0000": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\trajectories\\step0000_NOMINAL.json",
+      "sha256": "b327c9ae2ca3945c1a9b790a6daea8c1cfa81dc03ee54b0d46db3d88babccf3a"
+    },
+    "checkpoint_step0000": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0000.pt",
+      "sha256": "c784ff07d9ef1bb77baef93b3e3716f5b1563e009188a908cb0a0c6010164db3"
+    },
+    "trajectory_step0128": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\trajectories\\step0128_NOMINAL.json",
+      "sha256": "76ba5214efd639a5dc398e975768468537a39d146cef146145febc5776640b9c"
+    },
+    "checkpoint_step0128": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0128.pt",
+      "sha256": "737cf8136c382bdfbba873b510b7ce0e98371f3d48ff25635250704db405f14b"
+    },
+    "trajectory_step0256": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\trajectories\\step0256_NOMINAL.json",
+      "sha256": "099a0be0a302ea365784fe8e5d8cb2fedfec23fdac8fe08e686a1507fac6d724"
+    },
+    "checkpoint_step0256": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0256.pt",
+      "sha256": "65c19c988156b26348eacf087f12deeed123764524d349f630ad3f8e84dcd6f5"
+    },
+    "trajectory_step0512": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\trajectories\\step0512_NOMINAL.json",
+      "sha256": "062878899eea0cea55dc633051f3b41b0faf640a73387989f38fe4a67bab7210"
+    },
+    "checkpoint_step0512": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0512.pt",
+      "sha256": "057e4923ae06069ce4925da9c33fb3de09c9d686a7af4566497414e34685ceed"
+    }
+  },
+  "control_reference_commit": "72de395e36846a669f26a7d2fcfa82d768300bd9",
+  "hyperparameters": {
+    "method_variant": "C",
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "beta_shaping": 1.0,
+    "learning_rate": 0.0003,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "ppo_epochs": 1,
+    "batch_size": 2,
+    "rollout_steps": 8,
+    "num_envs": 1,
+    "max_grad_norm": 0.5,
+    "optimizer": "AdamW",
+    "optimizer_eps": 1e-05,
+    "weight_decay": 0.0001,
+    "normalize_advantages": true,
+    "amp_dtype": "fp32",
+    "disturbance_enabled": false,
+    "scenario": "NOMINAL",
+    "warmup_mode": "none",
+    "seed": 42,
+    "total_env_steps": 512,
+    "max_decisions": 512
+  },
+  "note": "未校准对照直接复用前轮归档运行，不新增第二条 512 步对照。"
+}

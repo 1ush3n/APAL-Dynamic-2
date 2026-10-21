@@ -1,0 +1,35 @@
+# 校准臂 PPO 配置：与未校准对照逐字段一致，仅以下诊断字段不同
+runtime:
+  seed: 42
+  device: cuda:0
+  precision: fp32
+  num_envs: 1
+  start_method: spawn
+  total_env_steps: 512
+  disturbance_enabled: false
+  scenario: NOMINAL
+  warmup_mode: none
+# 本轮诊断字段（不计入对照匹配）
+  init_weights: calibration/calibrated_model.pt
+  calibration_seed: 4201
+  calibration_split_seed: 4202
+paths:
+  baseline: D:\OneDrive\研究生\APAL-Dynamic-2\work3_4060\rule_baseline_ac_v1\mini210_rule_baseline.json
+ppo:
+  steps_per_iter: 8
+  epochs: 1
+  batch_size: 2
+  learning_rate: 0.0003
+  clip_epsilon: 0.2
+  value_coefficient: 0.5
+  entropy_coefficient: 0.01
+  gamma: 0.99
+  gae_lambda: 0.95
+  shaping_coefficient: 1.0
+  max_grad_norm: 0.5
+  optimizer: AdamW
+  optimizer_eps: 1e-05
+  weight_decay: 0.0001
+  normalize_advantages: true
+checkpoints:
+  points: [0, 128, 256, 512]

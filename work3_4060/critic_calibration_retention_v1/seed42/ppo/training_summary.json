@@ -1,0 +1,95 @@
+{
+  "stop_reason": "budget_exhausted",
+  "training_decisions": 512,
+  "optimizer_steps": 256,
+  "episodes_started": 3,
+  "episodes_completed": 2,
+  "segments": 66,
+  "elapsed_seconds": 113.21076959999846,
+  "seeds": {
+    "python": [
+      2147483648,
+      3564348608,
+      1266698288
+    ],
+    "numpy": 42,
+    "torch": 42,
+    "cuda": 42
+  },
+  "device": "cuda:0",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "peak_reserved_mib": 34.0,
+    "budget_mib": 6144.0,
+    "budget_exceeded": false
+  },
+  "checkpoints": [
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0000.pt",
+      "sha256": "89e83050a5cd2d3a77c023176b51f39eb9060e278cbe02d70825a758a3e26d91",
+      "actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+      "training_decisions": 0,
+      "optimizer_steps": 0,
+      "step_index": 0,
+      "tag": "step0000"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0128.pt",
+      "sha256": "b23f24f40d56477b7a1339c1fe0b040b6b55d878ffea6fb5fe1a1ecb5f9ceb15",
+      "actor_fingerprint": "bd98843ce0553dcfe24ffb1e09e23ce6c8c63a33d0bd954c9edefe5d53b8f686",
+      "training_decisions": 128,
+      "optimizer_steps": 64,
+      "step_index": 1,
+      "tag": "step0128"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0256.pt",
+      "sha256": "b97f6a30250287e3f9b73843cf81a014b8257b49972c4175459cd1b86966aad7",
+      "actor_fingerprint": "c3bc3000b6f967bba5e8ba7efce16a6cace3d79daef851679ed5e2884c4bdd76",
+      "training_decisions": 256,
+      "optimizer_steps": 128,
+      "step_index": 2,
+      "tag": "step0256"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0512.pt",
+      "sha256": "2537dc524feb35e7a23bc102fa356e8bfd33cabc0a7a000f2ec83c1e726da30c",
+      "actor_fingerprint": "52590c7db32b026b44e9d22f981bdc2b5d71fb60b4a0e378480fae85b51fcf07",
+      "training_decisions": 512,
+      "optimizer_steps": 256,
+      "step_index": 3,
+      "tag": "step0512"
+    }
+  ],
+  "hyperparameters": {
+    "method_variant": "C",
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "beta_shaping": 1.0,
+    "learning_rate": 0.0003,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "ppo_epochs": 1,
+    "batch_size": 2,
+    "rollout_steps": 8,
+    "num_envs": 1,
+    "max_grad_norm": 0.5,
+    "optimizer": "AdamW",
+    "optimizer_eps": 1e-05,
+    "weight_decay": 0.0001,
+    "normalize_advantages": true,
+    "amp_dtype": "fp32",
+    "disturbance_enabled": false,
+    "scenario": "NOMINAL",
+    "warmup_mode": "none",
+    "seed": 42,
+    "total_env_steps": 512,
+    "max_decisions": 512
+  },
+  "calibration": {
+    "steps": 128,
+    "stop_reason": "max_steps",
+    "model_sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6"
+  }
+}
