@@ -27,6 +27,107 @@ def test_seed_and_output_root_are_explicit_and_isolated() -> None:
         resolve_output_root(expected.parent.parent / "ppo_ablation_arms_v1" / "seed42")
 
 
+def test_r1_1024_config_changes_only_lr_seed_and_explicit_budget() -> None:
+    from work3_4060.run_r1_retention_1024 import OUTPUT_ROOT, build_resolved_config, resolve_output_root
+
+    source = {
+        "method_variant": "C",
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "beta_shaping": 1.0,
+        "learning_rate": 3e-4,
+        "clip_epsilon": 0.2,
+        "value_coefficient": 0.5,
+        "entropy_coefficient": 0.01,
+        "ppo_epochs": 1,
+        "batch_size": 2,
+        "rollout_steps": 8,
+        "num_envs": 1,
+        "max_grad_norm": 0.5,
+        "optimizer": "AdamW",
+        "optimizer_eps": 1e-5,
+        "weight_decay": 1e-4,
+        "normalize_advantages": True,
+        "amp_dtype": "fp32",
+        "disturbance_enabled": False,
+        "scenario": "NOMINAL",
+        "warmup_mode": "none",
+        "total_env_steps": 512,
+        "max_decisions": 512,
+    }
+    resolved = build_resolved_config(source)
+    assert resolved["effective_hyperparameters"]["learning_rate"] == pytest.approx(3e-5)
+    assert resolved["effective_hyperparameters"]["seed"] == 43
+    assert resolved["effective_hyperparameters"]["total_env_steps"] == 1024
+    assert resolved["effective_hyperparameters"]["max_decisions"] == 1024
+    assert resolved["points"] == [0, 128, 256, 512, 768, 1024]
+    for key, value in source.items():
+        if key not in {"learning_rate", "total_env_steps", "max_decisions"}:
+            assert resolved["effective_hyperparameters"][key] == value
+    assert resolve_output_root(OUTPUT_ROOT) == OUTPUT_ROOT.resolve()
+    with pytest.raises(ValueError):
+        resolve_output_root(OUTPUT_ROOT.parents[1] / "ppo_retention_repeat_v1" / "ppo_seed43")
+
+
+def test_missing_training_dependency_is_reported_as_missing(tmp_path: Path) -> None:
+    from work3_4060.run_r1_retention_1024 import inventory_dependency_paths
+
+    rows, missing = inventory_dependency_paths({"calibrated_model": tmp_path / "absent.pt"})
+    assert missing == ["calibrated_model"]
+    assert rows[0]["exists"] is False
+    assert rows[0]["sha256"] is None
+
+
+def test_r1_report_gates_distinguish_failed_protocol_from_incomplete_evidence() -> None:
+    from work3_4060.run_r1_retention_1024 import (
+        _classify_protocol_status,
+        _fixture_inputs_match,
+        _pytest_summary_counts,
+    )
+
+    assert _fixture_inputs_match({"baseline": "same", "current": "same"})
+    assert not _fixture_inputs_match({"baseline": "a", "current": "b"})
+    assert _pytest_summary_counts("16 passed, 57 deselected in 1.2s") == {
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0,
+    }
+    assert _pytest_summary_counts("3 failed, 59 deselected in 1.2s") == {
+        "passed": 0,
+        "failed": 3,
+        "skipped": 0,
+    }
+    checks = {
+        "fixed_source_and_dependencies_unchanged": True,
+        "regression_suite_passed": True,
+        "fp32_equivalence_passed": True,
+        "pretraining_archive_verified": True,
+        "step0000_matches_bc_and_verifier": True,
+        "first_rollout_paired": False,
+        "first_minibatch_identity_matches": True,
+        "r1_adamw_lr_contract": True,
+        "run_json_effective_lr_and_budget_contract": True,
+        "initial_parameters_complete_and_r1_has_no_r4_hook": True,
+        "checkpoint_initial_fingerprints_match_source": True,
+        "actual_training_budget_1024": True,
+        "all_six_fixed_evaluations_present": False,
+    }
+    statuses = {"raw_cost": "INCOMPLETE"}
+    assert _classify_protocol_status(
+        checks,
+        shaping_status="INCOMPLETE",
+        objective_statuses=statuses,
+        physical_status="INCOMPLETE",
+    ) == "FAIL"
+    checks["first_rollout_paired"] = True
+    assert _classify_protocol_status(
+        checks,
+        shaping_status="INCOMPLETE",
+        objective_statuses=statuses,
+        physical_status="INCOMPLETE",
+    ) == "INCOMPLETE"
+
+
 def test_legacy_writer_paths_are_rebound_inside_new_output_root(monkeypatch: pytest.MonkeyPatch) -> None:
     from work3_4060.run_ppo_retention_repeat import _configure_runner
     import work3_4060.run_ppo_ablation_arms as runner
@@ -44,6 +145,17 @@ def test_legacy_writer_paths_are_rebound_inside_new_output_root(monkeypatch: pyt
         assert paths["dir"].resolve().is_relative_to(expected.resolve())
         assert paths["run_json"].resolve() != (expected.parent.parent / "ppo_ablation_arms_v1" / "seed42" / arm / "runs" / "ppo_run.json").resolve()
     assert runner.REFERENCE_SUMMARY == expected.parents[1] / "critic_calibration_retention_v1" / "seed42" / "ppo" / "training_summary.json"
+
+
+def test_r1_update_pairing_can_bind_prior_same_arm_minibatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import work3_4060.run_ppo_ablation_arms as runner
+
+    source = tmp_path / "old_R1_first_update.json"
+    monkeypatch.setattr(runner, "OUTPUT_DIR", tmp_path / "new_run")
+    monkeypatch.setattr(runner, "REFERENCE_MINIBATCH_UPDATE", source)
+    assert runner.minibatch_reference_path("R1") == source
+    monkeypatch.setattr(runner, "REFERENCE_MINIBATCH_UPDATE", None)
+    assert runner.minibatch_reference_path("R1") == tmp_path / "new_run" / "REF" / "first_update.json"
 
 
 def test_arm_configs_only_scale_r1_lr_and_enable_r4_detach() -> None:

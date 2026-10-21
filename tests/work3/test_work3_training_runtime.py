@@ -633,6 +633,41 @@ def test_snapshot_masks_match_environment_and_actor_replay_probability() -> None
     assert float(replay_log_probs[0]) == pytest.approx(snapshot_result[1], abs=1e-6)
 
 
+def _future_reservation_and_explicit_advance_prefix(env: Any) -> list[dict[str, object]]:
+    from envs.work3.core_types import ActionBranch, TaskStatus
+
+    env.reset()
+    task = next(
+        candidate
+        for candidate in env.get_action_candidates()
+        if env.can_reserve(candidate)
+        and env.state.last_transfer_time + candidate.in_station_offset
+        > env.state.current_time + env.tolerance
+    )
+    team = tuple(env.valid_team_completion_workers(task, [])[: task.demand])
+    assert len(team) == task.demand
+    reservation = {
+        "task_key": task.task_key,
+        "branch": ActionBranch.STATION_EXECUTE,
+        "team": team,
+        "align": 1,
+    }
+    _, _, terminated, truncated, info = env.step(reservation)
+    assert not terminated and not truncated
+    assert info["scheduled_status"] == "RESERVED"
+    assert task.status == TaskStatus.RESERVED
+    assert task not in env.get_action_candidates()
+    assert env.event_queue.peek() is not None
+    assert env.get_action_candidates()
+
+    advance = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
+    _, _, terminated, truncated, info = env.step(advance)
+    assert not terminated and not truncated
+    assert info["advance_cause"] == "explicit"
+    assert info["advanced"] is True
+    return [reservation, advance]
+
+
 def test_single_env_worker_matches_direct_environment_for_frozen_actions() -> None:
     from copy import deepcopy
 
@@ -655,12 +690,14 @@ def test_single_env_worker_matches_direct_environment_for_frozen_actions() -> No
     planning_env = AirLineEnvWork3(baseline_json_path=baseline_path)
     planning_env.reset()
     agent = HeuristicAgentWork3(name="SingleEnvParityFixture")
-    frozen_actions: list[dict[str, object]] = []
-    for _ in range(12000):
+    frozen_actions = _future_reservation_and_explicit_advance_prefix(planning_env)
+    for _ in range(12000 - len(frozen_actions)):
         if planning_env._check_terminated():
             break
         action = agent.select_action(planning_env)
         if action is None:
+            assert not planning_env.get_action_candidates()
+            assert planning_env.event_queue.peek() is not None
             action = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
         frozen_actions.append(deepcopy(action))
         _obs, _reward, terminated, truncated, info = planning_env.step(action)
@@ -872,16 +909,26 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
     planning_env = AirLineEnvWork3(baseline_json_path=baseline_path)
     planning_env.reset()
     agent = HeuristicAgentWork3(name="VectorBudgetFixture")
-    frozen_actions: list[dict[str, object]] = []
-    for _ in range(32):
+    frozen_actions = _future_reservation_and_explicit_advance_prefix(planning_env)
+    for _ in range(32 - len(frozen_actions)):
         action = agent.select_action(planning_env)
         if action is None:
+            assert not planning_env.get_action_candidates()
+            assert planning_env.event_queue.peek() is not None
             action = {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT}
         frozen_actions.append(action)
-        planning_env.step(action)
-        if action.get("branch") == ActionBranch.ADVANCE_TO_NEXT_EVENT:
+        _, _, terminated, truncated, _ = planning_env.step(action)
+        assert not truncated
+        if terminated:
             break
-    assert frozen_actions[-1]["branch"] == ActionBranch.ADVANCE_TO_NEXT_EVENT
+    assert any(
+        action.get("branch") == ActionBranch.ADVANCE_TO_NEXT_EVENT
+        for action in frozen_actions
+    )
+    assert any(
+        action.get("branch") == ActionBranch.STATION_EXECUTE
+        for action in frozen_actions
+    )
 
     vector = Work3VectorEnv(
         env_kwargs={"baseline_json_path": str(baseline_path)},
@@ -917,6 +964,8 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
                 max_total_steps=17,
             )
             observed.extend(result for result in last_batch.results if result is not None)
+            if last_batch.results[1] is None:
+                break
         assert last_batch is not None
         assert last_batch.results[0] is not None
         assert last_batch.results[1] is None
@@ -2015,40 +2064,12 @@ def test_lightning_ppo_update_mixes_stay_and_postpone_samples(
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     stay_env = AirLineEnvWork3(baseline_json_path=baseline_path)
     stay_env.reset()
-    stay_task = next(
-        task
-        for task in stay_env.get_action_candidates()
-        if stay_env.can_reserve(task)
-        and not stay_env.can_postpone(task)
-        and task.skill >= 0
-    )
-    stay_team = tuple(
-        stay_env.valid_team_completion_workers(stay_task, [])[: stay_task.demand]
-    )
-    stay_task.in_station_offset = 20.0
-    stay_env.step(
-        {
-            "task_key": stay_task.task_key,
-            "branch": ActionBranch.STATION_EXECUTE,
-            "team": stay_team,
-            "align": 1,
-        }
-    )
-    assert stay_task.status == TaskStatus.RESERVED
-    assert stay_env.get_action_branch_mask(stay_task) == (True, False)
-    stay_candidate_getter = stay_env.get_action_candidates
-    stay_env.get_action_candidates = lambda: [stay_task]  # type: ignore[method-assign]
-
     postpone_env = AirLineEnvWork3(baseline_json_path=baseline_path)
     postpone_env.reset()
-    postpone_task = next(
-        task
+    assert any(
+        postpone_env.get_action_branch_mask(task) == (False, True)
         for task in postpone_env.get_action_candidates()
-        if postpone_env.get_action_branch_mask(task) == (False, True)
     )
-    assert postpone_task.status == TaskStatus.UNREADY
-    postpone_candidate_getter = postpone_env.get_action_candidates
-    postpone_env.get_action_candidates = lambda: [postpone_task]  # type: ignore[method-assign]
 
     transitions: list[PPOTransition] = []
     bootstrap_values: dict[tuple[int, int, int], float] = {}
@@ -2077,19 +2098,26 @@ def test_lightning_ppo_update_mixes_stay_and_postpone_samples(
             episode_id=episode_id,
             episode_index=0,
         )
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(0 if episode_id == 1 else 5)
         action, log_prob, value, sample_record = actor.select_snapshot(
             snapshot,
-            deterministic=True,
+            deterministic=False,
+            generator=generator,
         )
         assert action is not None
         assert action["branch"] == expected_branch
-        environment.get_action_candidates = (
-            stay_candidate_getter
-            if episode_id == 1
-            else postpone_candidate_getter
-        )  # type: ignore[method-assign]
+        sampled_task = environment.state.tasks[action["task_key"]]
+        assert sampled_task.status != TaskStatus.RESERVED
+        branch_mask = environment.get_action_branch_mask(sampled_task)
+        assert branch_mask[int(expected_branch)]
+        assert sampled_task in environment.get_action_candidates()
         _, reward, terminated, truncated, _ = environment.step(action)
         assert not truncated
+        if episode_id == 1:
+            assert sampled_task.status == TaskStatus.RESERVED
+            assert environment.get_action_branch_mask(sampled_task) == (False, False)
+            assert sampled_task not in environment.get_action_candidates()
 
         transition = PPOTransition(
             state_feat=state_features,

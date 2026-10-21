@@ -60,6 +60,7 @@ REFERENCE_SUMMARY = REFERENCE_PPO / "training_summary.json"
 REFERENCE_HISTORY = REFERENCE_PPO / "training_history.jsonl"
 REFERENCE_PAIRING = REFERENCE_PPO / "first_rollout_pairing.json"
 REFERENCE_FIRST_ROLLOUT = REFERENCE_PPO / "first_rollout.pt"
+REFERENCE_MINIBATCH_UPDATE: Path | None = None
 BASELINE_PATH = BASE_DIR / "rule_baseline_ac_v1" / "mini210_rule_baseline.json"
 
 MANIFEST = OUTPUT_DIR / "manifest.json"
@@ -138,6 +139,13 @@ def arm_paths(arm: str) -> dict[str, Path]:
     }
 
 
+def minibatch_reference_path(arm: str) -> Path:
+    """解析首个 PPO mini-batch 身份参照；默认保留旧的 REF 配对行为。"""
+    if arm == "REF":
+        raise ValueError("REF 臂不应读取自身的 mini-batch 参照")
+    return REFERENCE_MINIBATCH_UPDATE or arm_paths("REF")["first_update"]
+
+
 def write_run_json(arm: str, history: Sequence[Mapping[str, Any]], hyper: Mapping[str, Any],
                    stop_reason: str, decisions: int) -> None:
     """写本臂自己的 run.json（不得写入参照臂目录）。"""
@@ -182,6 +190,14 @@ def write_run_json(arm: str, history: Sequence[Mapping[str, Any]], hyper: Mappin
                 "batch_size": int(hyper["batch_size"]),
                 "rollout_steps": int(hyper["rollout_steps"]),
                 "disturbance_enabled": False,
+                **(
+                    {
+                        "total_env_steps": int(hyper["total_env_steps"]),
+                        "max_decisions": int(hyper["max_decisions"]),
+                    }
+                    if RUN_SEED is not None
+                    else {}
+                ),
                 **(
                     {
                         "seed": int(RUN_SEED),
@@ -405,6 +421,8 @@ def stage_arm(arm: str) -> int:
     hyper = dict(load_json(REFERENCE_SUMMARY)["hyperparameters"])
     if RUN_SEED is not None:
         hyper["seed"] = int(RUN_SEED)
+    hyper["total_env_steps"] = int(BUDGET)
+    hyper["max_decisions"] = int(BUDGET)
     seeds = prev.seed_everything(int(hyper["seed"]))
     model, _ = cal.load_calibrated_actor(CAL_MODEL)
     for parameter in model.parameters():
@@ -492,6 +510,13 @@ def stage_arm(arm: str) -> int:
     first_rollout_payload: dict[str, Any] | None = None
     pre_sampling_rng: dict[str, Any] | None = None
     terminated = False
+    previous_cost_breakdown = {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0,
+    }
     started = time.perf_counter()
 
     try:
@@ -529,6 +554,18 @@ def stage_arm(arm: str) -> int:
                 )
                 result = env.step(action)
                 raw_reward = float(result.raw_reward)
+                info = result.info or {}
+                current_cost_breakdown = info.get("cost_breakdown", {})
+                cost_component_increments = {
+                    key: float(current_cost_breakdown.get(key, previous_cost_breakdown[key]))
+                    - previous_cost_breakdown[key]
+                    for key in previous_cost_breakdown
+                }
+                if current_cost_breakdown:
+                    previous_cost_breakdown = {
+                        key: float(current_cost_breakdown.get(key, previous_cost_breakdown[key]))
+                        for key in previous_cost_breakdown
+                    }
                 terminated = bool(result.terminated)
                 decisions += 1
                 episode_step += 1
@@ -559,7 +596,6 @@ def stage_arm(arm: str) -> int:
                 transitions.append(transition)
                 buffer.add(transition)
                 raw_buffer.add(transition)
-                info = result.info or {}
                 segment_records.append(
                     {
                         "decision_index": decisions, "episode_id": episode_id,
@@ -572,6 +608,7 @@ def stage_arm(arm: str) -> int:
                         "phi_current": phi_current, "phi_next": phi_next,
                         "terminated": terminated, "truncated": False,
                         "step_cost": float(info.get("step_cost", 0.0)),
+                        "cost_component_increments": cost_component_increments,
                     }
                 )
                 shaping.transition(
@@ -587,6 +624,7 @@ def stage_arm(arm: str) -> int:
                         "terminated": terminated, "truncated": False,
                         "predictor_version": None, "bootstrap_value": None,
                         "phi_source": "heuristic_phi",
+                        "cost_component_increments": cost_component_increments,
                     }
                 )
                 episode_last_info[episode_id] = info
@@ -696,7 +734,7 @@ def stage_arm(arm: str) -> int:
                         stop_reason = "first_rollout_pairing_failed"
                         break
                     if arm != "REF":
-                        reference_update = load_json(arm_paths("REF")["first_update"])
+                        reference_update = load_json(minibatch_reference_path(arm))
                         if predicted_permutation != reference_update["minibatch_permutation"]:
                             stop_reason = "first_minibatch_identity_failed"
                             dump_json(paths["dir"] / "first_minibatch_failure.json", {
@@ -848,6 +886,13 @@ def stage_arm(arm: str) -> int:
                 episode_step = 0
                 env.reset(scenario=None, episode_id=episode_id, episode_index=episode_id)
                 pending_snapshot = env.snapshot()
+                previous_cost_breakdown = {
+                    "cost_takt": 0.0,
+                    "cost_time": 0.0,
+                    "cost_team": 0.0,
+                    "cost_postpone": 0.0,
+                    "cost_revision": 0.0,
+                }
             rollout_id += 1
             if decisions in POINTS and decisions > 0:
                 checkpoints.append(
@@ -909,6 +954,12 @@ def stage_arm(arm: str) -> int:
                 "device": str(device),
                 "optimizer_name": type(optimizer).__name__,
                 "optimizer_param_group_lrs": [float(group["lr"]) for group in optimizer.param_groups],
+                "optimizer_param_group_settings": [
+                    {"lr": float(group["lr"]), "eps": float(group["eps"]),
+                     "weight_decay": float(group["weight_decay"]),
+                     "parameter_count": sum(parameter.numel() for parameter in group["params"])}
+                    for group in optimizer.param_groups
+                ],
                 "optimizer_schedulers": [],
                 "optimized_parameter_count": len(optimizer_parameters),
                 "parameter_group_counts": parameter_group_info["counts"],
