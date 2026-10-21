@@ -1,0 +1,320 @@
+{
+  "schema_version": "c_alignment_bc_robustness_reuse_v1",
+  "created_at": "2026-10-21T13:59:04+0800",
+  "git": {
+    "head": "c3a1a3ea9680c3a83d13fcbc735a74bfcad9c19b",
+    "branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "worktree_dirty": true,
+    "worktree_entries": [
+      "?? tests/test_alignment_bc_robustness.py",
+      "?? work3_4060/c_alignment_bc_robustness_v1/",
+      "?? work3_4060/run_alignment_bc_robustness.py"
+    ]
+  },
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  },
+  "device": "cpu",
+  "precision": "fp32",
+  "greedy": true,
+  "warmup": "none",
+  "decision_limit": 4096,
+  "optimizer_updates": 0,
+  "baseline": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+    "exists": true,
+    "sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+    "comment": "",
+    "h0": 52.037844126999545,
+    "transfer_policy": "nominal_anchored_v1"
+  },
+  "scenarios_file": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\scenarios.json",
+    "exists": true,
+    "sha256": "18a5a90af0b087e147a0ccc9af1c7976e1ea828296ae385e649fee441fc5da60",
+    "comment": ""
+  },
+  "validation_split": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\validation.json",
+    "exists": true,
+    "sha256": "ca7067bcee7551d3263402c679b05320732ecdffb3d98d3253312268e538ea15",
+    "comment": "",
+    "membership": [
+      "RULE_VAL_S1_MODERATE",
+      "RULE_VAL_S2_STRONG"
+    ]
+  },
+  "validation_scenarios": {
+    "RULE_VAL_S1_MODERATE": {
+      "scenario": {
+        "scenario_id": "RULE_VAL_S1_MODERATE",
+        "valid": true,
+        "split": "val",
+        "timing": "EARLY",
+        "intensity": "MED",
+        "aircraft_id": 1,
+        "station_id": 1,
+        "target_task_key": "1_4",
+        "rho": 0.2,
+        "tau": 47.037844126999545,
+        "delta": 15.407568825399906,
+        "recovery_time": 62.44541295239945,
+        "candidate_count": 1,
+        "affected_count": 1,
+        "affected_task_keys": [
+          "1_4"
+        ],
+        "description": "Validation 1: Station 1 moderate critical path delay rho=0.20",
+        "timing_reference": "nominal_entry_referenced_preentry_v1"
+      },
+      "fingerprint": "7bca17523b94a22fee826281ae413663773a05486136b6a1f3edbe5abe86c7bf",
+      "target_task": "1_4",
+      "target_base_station_0based": 0,
+      "target_in_station_offset": 4.404101358031231,
+      "target_baseline_team": [
+        12,
+        72
+      ],
+      "target_demand": 2,
+      "split_membership": true
+    },
+    "RULE_VAL_S2_STRONG": {
+      "scenario": {
+        "scenario_id": "RULE_VAL_S2_STRONG",
+        "valid": true,
+        "split": "val",
+        "timing": "MID",
+        "intensity": "HIGH",
+        "aircraft_id": 1,
+        "station_id": 3,
+        "target_task_key": "1_27",
+        "rho": 0.6,
+        "tau": 151.11353238099863,
+        "delta": 36.22270647619973,
+        "recovery_time": 187.33623885719837,
+        "candidate_count": 1,
+        "affected_count": 1,
+        "affected_task_keys": [
+          "1_27"
+        ],
+        "description": "Validation 2: Station 3 strong bottleneck delay rho=0.60",
+        "timing_reference": "nominal_entry_referenced_preentry_v1"
+      },
+      "fingerprint": "2a1c17874c5539f874112eee69ab58bb7cb20ecdad78b894b6255a3733621881",
+      "target_task": "1_27",
+      "target_base_station_0based": 2,
+      "target_in_station_offset": 2.5954775280487157,
+      "target_baseline_team": [
+        0,
+        66
+      ],
+      "target_demand": 2,
+      "split_membership": true
+    }
+  },
+  "original_c": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\seed42\\C\\weights.pt",
+    "exists": true,
+    "sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "comment": "",
+    "actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "method_variant": "C",
+    "seed": 42,
+    "source_sha": "f5e7ff4b5f5d61e22140db12177aed98f941f1d9",
+    "lightning_optimization_steps": 2048,
+    "data_fingerprint": {
+      "scenario_pool_sha256": "3ab465cb84c454dbd15073171ececa9b8e4f57590160addb608a45b6d18eafbd",
+      "scenario_split_sha256": "4b9229de740a78d8b2d3e3f343670484007e082d1f551677f0919db3693b0fa0",
+      "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "time_head_checkpoint_sha256": null,
+      "event_plan_sha256": "0a05c948aad337430ae1d1b8c8b227f0304941e8a1915b680055dd9cf03b32f7",
+      "worker_event_plan_sha256": "0bb67bab5cdbb30a8e6b0e9813b3929daca4d23d45e66ccfc60ae2f02b671c01"
+    }
+  },
+  "diagnostic_copy": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+    "exists": true,
+    "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "comment": "",
+    "format": "diagnostic_behavior_clone",
+    "actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "source_checkpoint_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "source_actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "teacher_manifest_sha256": "fa787d67ac13f65884a7d029da55f8298c73502c150c3674a2a77f191876709c",
+    "training_steps": 1000,
+    "local_only_note": "*.pt 未入 Git（仓库既有 .gitignore）；本文件为用户本地原件，本轮以其 SHA256 与指纹做来源绑定。"
+  },
+  "reused_trajectories": [
+    {
+      "role": "历史复用：A 的 Nominal 完整物理事实",
+      "source": "c_reproduction_diagnostic_v1/seed42（上一轮新增，已严格核验）",
+      "method": "A_BASELINE_REPAIR",
+      "scenario_id": "NOMINAL",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\trajectories\\A_NOMINAL.json",
+      "exists": true,
+      "sha256": "3b500569a6d89ac04955b9c5230aa6a5a223af518a2e03b36681b7cba4b506bc",
+      "comment": "",
+      "declared_agent": "Baseline-Repair-A",
+      "declared_scenario_id": "NOMINAL",
+      "decisions": 210,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "objective_j_total": 2.751822145979913e-15,
+      "makespan": 572.416285396995,
+      "actual_disturbance_hits": 0,
+      "has_execution_facts": true
+    },
+    {
+      "role": "历史复用：未干预原 C 的 Nominal CPU 对照",
+      "source": "c_reproduction_diagnostic_v1/seed42（上一轮新增，已严格核验）",
+      "method": "C_ORIGINAL",
+      "scenario_id": "NOMINAL",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\trajectories\\C_ORIGINAL_NOMINAL.json",
+      "exists": true,
+      "sha256": "d3eed790386b1d42b29da654ec8bb566fb6170351e7a9f13e1d8470e8454853c",
+      "comment": "",
+      "declared_agent": "Method-C",
+      "declared_scenario_id": "NOMINAL",
+      "decisions": 395,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "objective_j_total": 3.82256809126947,
+      "makespan": 677.8154910577125,
+      "actual_disturbance_hits": 0,
+      "has_execution_facts": true
+    },
+    {
+      "role": "历史复用：冻结 BC 副本自己的 Nominal 参照",
+      "source": "c_reproduction_diagnostic_v1/seed42（上一轮新增，已严格核验）",
+      "method": "C_BC_DIAGNOSTIC",
+      "scenario_id": "NOMINAL",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\trajectories\\C_BC_DIAGNOSTIC_NOMINAL.json",
+      "exists": true,
+      "sha256": "c7ae4fd35debeaa8e6fe8543852343f918c4e2e31529183c925e30ddef283726",
+      "comment": "",
+      "declared_agent": "Method-C",
+      "declared_scenario_id": "NOMINAL",
+      "decisions": 210,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "objective_j_total": 2.751822145979913e-15,
+      "makespan": 572.416285396995,
+      "actual_disturbance_hits": 0,
+      "has_execution_facts": true
+    },
+    {
+      "role": "历史复用：A 在 v1 S1 的完整物理事实",
+      "source": "rule_baseline_ac_v1（已归档，六文件严格核验 PASS）",
+      "method": "A_BASELINE_REPAIR",
+      "scenario_id": "RULE_VAL_S1_MODERATE",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\trajectories\\A_RULE_VAL_S1_MODERATE.json",
+      "exists": true,
+      "sha256": "74cf9091d516940b85701834734c9a07db59d935395c6c3aca187e1d30bc3fcb",
+      "comment": "",
+      "declared_agent": "Baseline-Repair-A",
+      "declared_scenario_id": "RULE_VAL_S1_MODERATE",
+      "decisions": 210,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "objective_j_total": 0.000566058902418331,
+      "makespan": 572.416285396995,
+      "actual_disturbance_hits": 1,
+      "has_execution_facts": true
+    },
+    {
+      "role": "历史复用：A 在 v1 S2 的完整物理事实",
+      "source": "rule_baseline_ac_v1（已归档，六文件严格核验 PASS）",
+      "method": "A_BASELINE_REPAIR",
+      "scenario_id": "RULE_VAL_S2_STRONG",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\trajectories\\A_RULE_VAL_S2_STRONG.json",
+      "exists": true,
+      "sha256": "c47294ffb9293a2b620c770394c3fa669d550bf0f327899406c9e3570fcc648e",
+      "comment": "",
+      "declared_agent": "Baseline-Repair-A",
+      "declared_scenario_id": "RULE_VAL_S2_STRONG",
+      "decisions": 210,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "objective_j_total": 0.5511711233327029,
+      "makespan": 572.416285396995,
+      "actual_disturbance_hits": 1,
+      "has_execution_facts": true
+    }
+  ],
+  "background_only": [
+    {
+      "role": "背景参照：不做正式配对（本轮无原 C 受扰臂）",
+      "source": "rule_baseline_ac_v1",
+      "method": "C_ORIGINAL",
+      "scenario_id": "RULE_VAL_S1_MODERATE",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\trajectories\\C_RULE_VAL_S1_MODERATE.json",
+      "exists": true,
+      "sha256": "67568679f8944ed114d2d3e4ede1d964260061d37f30af06d107ba7a09504222",
+      "comment": "",
+      "declared_agent": "Method-C",
+      "declared_scenario_id": "RULE_VAL_S1_MODERATE",
+      "decisions": 396,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "objective_j_total": 3.82256809126947,
+      "makespan": 677.8154910577125,
+      "actual_disturbance_hits": 1,
+      "has_execution_facts": true
+    },
+    {
+      "role": "背景参照：不做正式配对（本轮无原 C 受扰臂）",
+      "source": "rule_baseline_ac_v1",
+      "method": "C_ORIGINAL",
+      "scenario_id": "RULE_VAL_S2_STRONG",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\trajectories\\C_RULE_VAL_S2_STRONG.json",
+      "exists": true,
+      "sha256": "99c0aabe8c8622383329eb980b76eb05debbbe2ba8938db19041b44d2fdddae6",
+      "comment": "",
+      "declared_agent": "Method-C",
+      "declared_scenario_id": "RULE_VAL_S2_STRONG",
+      "decisions": 397,
+      "completed_tasks": 210,
+      "success": true,
+      "feasible": true,
+      "objective_j_total": 3.82256809126947,
+      "makespan": 677.8154910577125,
+      "actual_disturbance_hits": 1,
+      "has_execution_facts": true
+    }
+  ],
+  "new_trajectories_expected": [
+    {
+      "method": "C_ORIGINAL_ALIGN1_DIAGNOSTIC",
+      "scenario_id": "NOMINAL",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json",
+      "role": "对齐单变量干预（仅把执行分支 align 改为 1）"
+    },
+    {
+      "method": "C_BC_DIAGNOSTIC",
+      "scenario_id": "RULE_VAL_S1_MODERATE",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S1_MODERATE.json",
+      "role": "冻结 BC 副本，v1 验证扰动 S1"
+    },
+    {
+      "method": "C_BC_DIAGNOSTIC",
+      "scenario_id": "RULE_VAL_S2_STRONG",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S2_STRONG.json",
+      "role": "冻结 BC 副本，v1 验证扰动 S2"
+    }
+  ],
+  "missing": {
+    "reused": [],
+    "required_new": [
+      "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json",
+      "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S1_MODERATE.json",
+      "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S2_STRONG.json"
+    ]
+  }
+}

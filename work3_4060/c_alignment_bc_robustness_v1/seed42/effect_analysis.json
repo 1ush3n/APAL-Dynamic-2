@@ -1,0 +1,262 @@
+{
+  "schema_version": "c_alignment_bc_effect_v1",
+  "nominal_alignment": {
+    "j_original": 3.82256809126947,
+    "j_align1": 4.009873696121158,
+    "delta_j": -0.18730560485168768,
+    "delta_makespan": -12.940758521671796,
+    "delta_j_takt": -0.17762839908380013,
+    "delta_d_time": -0.0048386028839440265,
+    "delta_d_team": 0.0,
+    "delta_j_postpone": 0.0,
+    "delta_j_revision": -0.0048386028839440265,
+    "relative_j_reduction": -0.04899993940709208,
+    "effect_status": "费用恶化",
+    "gap_to_a": 4.009873696121155,
+    "gap_to_a_original_c": 3.8225680912694675,
+    "decisions_original": 395,
+    "decisions_align1": 405
+  },
+  "bc_disturbance": {
+    "A@RULE_VAL_S1_MODERATE": {
+      "j_total": 0.000566058902418331,
+      "makespan": 572.416285396995,
+      "delta_j_vs_own_nominal": 0.0005660589024155791,
+      "delta_makespan_vs_own_nominal": 0.0,
+      "delta_j_takt_vs_own_nominal": 0.0,
+      "actual_disturbance_hits": 1,
+      "success": true,
+      "feasible": true,
+      "constraint_violations": 0,
+      "decisions": 210
+    },
+    "BC@RULE_VAL_S1_MODERATE": {
+      "j_total": 0.000359557403250744,
+      "makespan": 572.416285396995,
+      "delta_j_vs_own_nominal": 0.00035955740324799217,
+      "delta_makespan_vs_own_nominal": 0.0,
+      "delta_j_takt_vs_own_nominal": 0.0,
+      "actual_disturbance_hits": 1,
+      "success": true,
+      "feasible": true,
+      "constraint_violations": 0,
+      "decisions": 210
+    },
+    "RULE_VAL_S1_MODERATE": {
+      "target_task": "1_4",
+      "tau": 47.037844126999545,
+      "recovery_time": 62.44541295239945
+    },
+    "A@RULE_VAL_S2_STRONG": {
+      "j_total": 0.5511711233327029,
+      "makespan": 572.416285396995,
+      "delta_j_vs_own_nominal": 0.5511711233327001,
+      "delta_makespan_vs_own_nominal": 0.0,
+      "delta_j_takt_vs_own_nominal": 0.55012326948606,
+      "actual_disturbance_hits": 1,
+      "success": true,
+      "feasible": true,
+      "constraint_violations": 0,
+      "decisions": 210
+    },
+    "BC@RULE_VAL_S2_STRONG": {
+      "j_total": 0.5511711233327029,
+      "makespan": 572.416285396995,
+      "delta_j_vs_own_nominal": 0.5511711233327001,
+      "delta_makespan_vs_own_nominal": 0.0,
+      "delta_j_takt_vs_own_nominal": 0.55012326948606,
+      "actual_disturbance_hits": 1,
+      "success": true,
+      "feasible": true,
+      "constraint_violations": 0,
+      "decisions": 210
+    },
+    "RULE_VAL_S2_STRONG": {
+      "target_task": "1_27",
+      "tau": 151.11353238099863,
+      "recovery_time": 187.33623885719837
+    },
+    "target_evidence": {
+      "A@RULE_VAL_S1_MODERATE": {
+        "target_task_key": "1_4",
+        "target_base_station_0based": 0,
+        "target_baseline_team": [
+          12,
+          72
+        ],
+        "target_in_station_offset": 4.404101358031231,
+        "tau": 47.037844126999545,
+        "recovery_time": 62.44541295239945,
+        "actual_hit_keys": [
+          "1_4"
+        ],
+        "target_actual_start": 62.44541295239945,
+        "target_actual_end": 64.45598096367458,
+        "target_team": [
+          12,
+          72
+        ],
+        "target_nominal_start": 56.44194548503078,
+        "start_shift_vs_own_nominal": 6.003467467368672,
+        "target_started_before_event": false,
+        "target_start_satisfies_recovery": true,
+        "target_predecessor_end_times": [],
+        "target_predecessor_released_before_recovery": null,
+        "same_team_tasks_started_after_recovery_before_target": [],
+        "delayed_cycles": [],
+        "makespan_shift_vs_own_nominal": 0.0
+      },
+      "BC@RULE_VAL_S1_MODERATE": {
+        "target_task_key": "1_4",
+        "target_base_station_0based": 0,
+        "target_baseline_team": [
+          12,
+          72
+        ],
+        "target_in_station_offset": 4.404101358031231,
+        "tau": 47.037844126999545,
+        "recovery_time": 62.44541295239945,
+        "actual_hit_keys": [
+          "1_4"
+        ],
+        "target_actual_start": 66.26500634011784,
+        "target_actual_end": 68.27557435139296,
+        "target_team": [
+          72,
+          12
+        ],
+        "target_nominal_start": 56.44194548503078,
+        "start_shift_vs_own_nominal": 9.823060855087057,
+        "target_started_before_event": false,
+        "target_start_satisfies_recovery": true,
+        "target_predecessor_end_times": [],
+        "target_predecessor_released_before_recovery": null,
+        "same_team_tasks_started_after_recovery_before_target": [
+          {
+            "task_key": "1_7",
+            "actual_start": 63.13426472256084
+          },
+          {
+            "task_key": "1_15",
+            "actual_start": 64.42677272980914
+          },
+          {
+            "task_key": "1_16",
+            "actual_start": 64.97249833286953
+          }
+        ],
+        "delayed_cycles": [],
+        "makespan_shift_vs_own_nominal": 0.0
+      },
+      "A@RULE_VAL_S2_STRONG": {
+        "target_task_key": "1_27",
+        "target_base_station_0based": 2,
+        "target_baseline_team": [
+          0,
+          66
+        ],
+        "target_in_station_offset": 2.5954775280487157,
+        "tau": 151.11353238099863,
+        "recovery_time": 187.33623885719837,
+        "actual_hit_keys": [
+          "1_27"
+        ],
+        "target_actual_start": 187.33623885719837,
+        "target_actual_end": 236.7786054561492,
+        "target_team": [
+          0,
+          66
+        ],
+        "target_nominal_start": 158.70900990904735,
+        "start_shift_vs_own_nominal": 28.627228948151014,
+        "target_started_before_event": false,
+        "target_start_satisfies_recovery": true,
+        "target_predecessor_end_times": [],
+        "target_predecessor_released_before_recovery": null,
+        "same_team_tasks_started_after_recovery_before_target": [],
+        "delayed_cycles": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "makespan_shift_vs_own_nominal": 0.0
+      },
+      "BC@RULE_VAL_S2_STRONG": {
+        "target_task_key": "1_27",
+        "target_base_station_0based": 2,
+        "target_baseline_team": [
+          0,
+          66
+        ],
+        "target_in_station_offset": 2.5954775280487157,
+        "tau": 151.11353238099863,
+        "recovery_time": 187.33623885719837,
+        "actual_hit_keys": [
+          "1_27"
+        ],
+        "target_actual_start": 187.33623885719837,
+        "target_actual_end": 236.7786054561492,
+        "target_team": [
+          66,
+          0
+        ],
+        "target_nominal_start": 158.70900990904735,
+        "start_shift_vs_own_nominal": 28.627228948151014,
+        "target_started_before_event": false,
+        "target_start_satisfies_recovery": true,
+        "target_predecessor_end_times": [],
+        "target_predecessor_released_before_recovery": null,
+        "same_team_tasks_started_after_recovery_before_target": [],
+        "delayed_cycles": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "makespan_shift_vs_own_nominal": 0.0
+      }
+    }
+  },
+  "action_different_but_schedule_same": {
+    "align_start_deviation_count": 167,
+    "align_team_deviation_count": 0,
+    "align_transfer_deviation_count": 7,
+    "align_schedule_identical": false,
+    "align_first_start_deviation": {
+      "task_key": "0_11",
+      "left_start": 333.69480650145556,
+      "right_start": 335.54348629026583,
+      "delta": 1.8486797888102728
+    },
+    "align_first_transfer_deviation": {
+      "cycle": 5,
+      "left_transfer": 350.30835032570826,
+      "right_transfer": 352.15703011451853,
+      "delta": 1.8486797888102728
+    },
+    "bc_s1_start_deviation_count": 1,
+    "bc_s1_team_deviation_count": 0,
+    "bc_s1_transfer_deviation_count": 0,
+    "bc_s1_first_start_deviation": {
+      "task_key": "1_4",
+      "left_start": 56.44194548503078,
+      "right_start": 66.26500634011784,
+      "delta": 9.823060855087057
+    },
+    "bc_s2_start_deviation_count": 142,
+    "bc_s2_team_deviation_count": 0,
+    "bc_s2_transfer_deviation_count": 6,
+    "bc_s2_first_start_deviation": {
+      "task_key": "0_11",
+      "left_start": 208.15137650799818,
+      "right_start": 236.7786054561492,
+      "delta": 28.627228948151014
+    },
+    "comparison_basis": "按 task_key 与 cycle_id 对齐；不按不同步数上的动作行号硬配对。"
+  }
+}

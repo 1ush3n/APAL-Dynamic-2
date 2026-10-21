@@ -1,0 +1,40 @@
+{
+  "method": "C_ORIGINAL_ALIGN1_DIAGNOSTIC",
+  "counts": {
+    "decision_count": 405,
+    "applicable_count": 210,
+    "already_aligned_count": 0,
+    "changed_0_to_1_count": 210,
+    "not_applicable_count": 195,
+    "advance_count": 195,
+    "postpone_count": 0,
+    "run_seconds_note": "见 runs/align_console.log"
+  },
+  "weights_checked": {
+    "sha256_before": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "sha256_after": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "actor_fingerprint_before": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "actor_fingerprint_after": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "weights_unchanged": true
+  },
+  "trajectory": {
+    "decisions": 405,
+    "objective_j_total": 4.009873696121158,
+    "makespan": 690.7562495793843,
+    "completed_tasks": 210,
+    "success": true,
+    "feasible": true,
+    "postponed_count": 0,
+    "advance_cause_counts": {
+      "explicit": 195,
+      "identical_resubmission": 0,
+      "forced_no_candidate": 0,
+      "auto_after_action": 11,
+      "none": 199
+    }
+  },
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}

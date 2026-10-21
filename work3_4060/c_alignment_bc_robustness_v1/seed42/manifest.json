@@ -1,0 +1,60 @@
+{
+  "task": "Work-3 C 对齐单变量干预与冻结 BC 副本受扰诊断",
+  "schema_version": "c_alignment_bc_robustness_manifest_v1",
+  "created_at": "2026-10-21T13:59:04+0800",
+  "reference_commit": "c3a1a3ea9680c3a83d13fcbc735a74bfcad9c19b",
+  "run_context": {
+    "head": "c3a1a3ea9680c3a83d13fcbc735a74bfcad9c19b",
+    "branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "worktree_dirty": true,
+    "worktree_entries": [
+      "?? tests/test_alignment_bc_robustness.py",
+      "?? work3_4060/c_alignment_bc_robustness_v1/",
+      "?? work3_4060/run_alignment_bc_robustness.py"
+    ]
+  },
+  "output_dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42",
+  "instance": {
+    "baseline_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+    "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+    "dataset": "mini210",
+    "aircraft": 7,
+    "stations": 5,
+    "tasks_per_aircraft": 30,
+    "h0": 52.037844126999545,
+    "transfer_policy": "nominal_anchored_v1"
+  },
+  "execution_settings": {
+    "device": "cpu",
+    "precision": "fp32",
+    "greedy": true,
+    "warmup": "none",
+    "max_decisions": 4096,
+    "threads": {
+      "intra_op_threads": 1,
+      "inter_op_threads": 1
+    },
+    "optimizer_updates": 0
+  },
+  "weights": {
+    "original_c_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "original_c_actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "diagnostic_copy_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "diagnostic_copy_actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550"
+  },
+  "scope": {
+    "new_complete_trajectories": 3,
+    "extra_control_runs": 0,
+    "note": "原 C Nominal 对照复用上一轮同入口单线程 CPU 轨迹，因此本轮新增恰为三条；未干预、未训练、未改场景、未改权重。"
+  },
+  "frozen_contracts": [
+    "环境物理规则、费用权重、H0、同步转站模式、基准团队",
+    "正式 C profile、候选集与所有原有掩码",
+    "v1 场景文件与验证 split"
+  ],
+  "artifacts_expected": [
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S1_MODERATE.json",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S2_STRONG.json"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "protocol_status": "PASS",
+  "overall_status": "PASS",
+  "checks": {
+    "protocol_status_pass": true,
+    "original_c_weights_unchanged": true,
+    "diagnostic_copy_unchanged": true,
+    "diagnostic_copy_binding_valid": true,
+    "scenario_binding_v1": true,
+    "align_intervention_executed": true,
+    "bc_runs_used_no_alignment_wrapper": true
+  },
+  "production_status": {
+    "C_ORIGINAL_ALIGN1_DIAGNOSTIC@NOMINAL": {
+      "production_status": "自然完工",
+      "termination_reason": "completed",
+      "decisions": 405,
+      "completed_tasks": 210,
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 0,
+      "makespan": 690.7562495793843,
+      "objective_j_total": 4.009873696121158,
+      "production_valid": true
+    },
+    "C_BC_DIAGNOSTIC@RULE_VAL_S1_MODERATE": {
+      "production_status": "自然完工",
+      "termination_reason": "completed",
+      "decisions": 210,
+      "completed_tasks": 210,
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "makespan": 572.416285396995,
+      "objective_j_total": 0.000359557403250744,
+      "production_valid": true
+    },
+    "C_BC_DIAGNOSTIC@RULE_VAL_S2_STRONG": {
+      "production_status": "自然完工",
+      "termination_reason": "completed",
+      "decisions": 210,
+      "completed_tasks": 210,
+      "constraint_violation_count": 0,
+      "actual_disturbance_hits": 1,
+      "makespan": 572.416285396995,
+      "objective_j_total": 0.5511711233327029,
+      "production_valid": true
+    }
+  },
+  "weight_integrity_summary": {
+    "original_c_unchanged": true,
+    "diagnostic_copy_unchanged": true
+  },
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}
