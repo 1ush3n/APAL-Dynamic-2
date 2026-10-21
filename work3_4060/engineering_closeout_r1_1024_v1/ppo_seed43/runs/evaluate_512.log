@@ -1,0 +1,4 @@
+W1021 20:14:33.288000 26888 site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+[DataLoader] 已成功加载数据集：290 个工序，1 个根节点，6 个子组，753 条边
+[20:14:36] R1/step0512: J=0.0056442301 decisions=210
+COMMAND=["D:\\Conda\\envs\\rag_env\\python.exe", "D:\\OneDrive\\鐮旂┒鐢焅\APAL-Dynamic-2\\work3_4060\\run_r1_retention_1024.py", "--worker", "evaluate", "--output", "D:\\OneDrive\\鐮旂┒鐢焅\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43", "--point", "512"]

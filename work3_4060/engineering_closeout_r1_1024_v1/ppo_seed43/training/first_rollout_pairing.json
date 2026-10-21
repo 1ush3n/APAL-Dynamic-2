@@ -1,0 +1,76 @@
+{
+  "rollout_pairing": {
+    "arm": "R1",
+    "compared_to": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_rollout.pt",
+    "paired": true,
+    "checks": {
+      "state_feats": true,
+      "snapshot_facts": true,
+      "actions": true,
+      "old_log_probs": true,
+      "old_values": true,
+      "raw_rewards": true,
+      "shaped_rewards": true,
+      "bootstrap_value": true,
+      "raw_advantages": true,
+      "advantages": true,
+      "return_targets": true,
+      "pre_sampling_rng": true,
+      "pre_update_rng": true,
+      "predicted_minibatch_permutation": true,
+      "time_urgencies": true,
+      "sample_records": true,
+      "bootstrap_input": true
+    },
+    "first_difference": null,
+    "steps_compared": 8,
+    "tolerances": {
+      "state_feats": 1e-07,
+      "time_urgencies": 1e-07,
+      "old_log_probs": 0.0001,
+      "old_values": 0.0001,
+      "raw_rewards": 1e-09,
+      "shaped_rewards": 1e-09,
+      "bootstrap_value": 0.0001,
+      "raw_advantages": 0.0001,
+      "advantages": 0.0001,
+      "return_targets": 0.0001,
+      "snapshot_facts": 1e-07,
+      "bootstrap_input": 1e-07
+    },
+    "action_fields_exact": true,
+    "snapshot_masks_and_mapping_exact": true,
+    "rng_and_minibatch_identity_exact": true
+  },
+  "minibatch_identity": {
+    "old_samples": [
+      4,
+      1
+    ],
+    "new_samples": [
+      4,
+      1
+    ],
+    "old_permutation": [
+      4,
+      1,
+      3,
+      5,
+      2,
+      0,
+      6,
+      7
+    ],
+    "new_permutation": [
+      4,
+      1,
+      3,
+      5,
+      2,
+      0,
+      6,
+      7
+    ],
+    "exact_match": true
+  }
+}

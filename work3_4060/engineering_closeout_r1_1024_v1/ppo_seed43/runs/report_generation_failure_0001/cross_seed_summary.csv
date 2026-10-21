@@ -1,0 +1,11 @@
+﻿ppo_seed,initialization_seed,point,arm,j_total,reference_j_total,delta_j_ref_minus_r1,source,paired_with_reference_within_source_run,independent_initialization,prior_same_seed_r1_j_total,reference_scope
+42,42,0,R1,2.751822145979913e-15,2.751822145979913e-15,0,historical_seed42_ablation,True,False,,
+42,42,128,R1,2.751822145979913e-15,0.65078746180350677,0.650787461803504,historical_seed42_ablation,True,False,,
+42,42,256,R1,2.751822145979913e-15,0.32059127841385598,0.32059127841385321,historical_seed42_ablation,True,False,,
+42,42,512,R1,2.751822145979913e-15,0.70725716373484449,0.70725716373484171,historical_seed42_ablation,True,False,,
+43,42,0,R1,2.751822145979913e-15,2.751822145979913e-15,0,new_r1_with_historical_seed43_context,False,False,2.751822145979913e-15,旧seed43 REF；仅作同seed历史背景，不是本次R1运行内同步训练对照
+43,42,128,R1,2.751822145979913e-15,0.038372027262752975,0.03837202726275022,new_r1_with_historical_seed43_context,False,False,2.751822145979913e-15,旧seed43 REF；仅作同seed历史背景，不是本次R1运行内同步训练对照
+43,42,256,R1,2.751822145979913e-15,0.037615200272356257,0.037615200272353502,new_r1_with_historical_seed43_context,False,False,2.751822145979913e-15,旧seed43 REF；仅作同seed历史背景，不是本次R1运行内同步训练对照
+43,42,512,R1,0.0056442301401819044,0.070977935830499259,0.065333705690317351,new_r1_with_historical_seed43_context,False,False,0.0056442301401819044,旧seed43 REF；仅作同seed历史背景，不是本次R1运行内同步训练对照
+43,42,768,R1,0.0056442301401819044,,,new_r1_with_historical_seed43_context,False,False,,旧seed43 REF；仅作同seed历史背景，不是本次R1运行内同步训练对照
+43,42,1024,R1,0.0038594454795206888,,,new_r1_with_historical_seed43_context,False,False,,旧seed43 REF；仅作同seed历史背景，不是本次R1运行内同步训练对照

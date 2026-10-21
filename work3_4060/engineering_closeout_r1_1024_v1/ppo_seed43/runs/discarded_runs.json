@@ -1,0 +1,31 @@
+{
+  "discarded_runs": [
+    {
+      "attempt": "discarded_preflight_attempt_0001",
+      "source_commit": "074fe078181e64a2300da37d0b31eadd976cb1dc",
+      "failure_stage": "校准初始化时导入仓库模块失败；训练子进程未启动",
+      "failure": "ModuleNotFoundError: No module named 'work3_4060'",
+      "preserved_original_path": "D:\\OneDrive\\研究生\\work3_local_archives\\discarded_preflight_attempt_0001",
+      "preserved_copy_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\runs\\discarded_preflight_attempt_0001",
+      "preserved_files": [
+        {
+          "path": "dependency_inventory.json",
+          "size_bytes": 97031,
+          "sha256": "9e1bc614046c08b320d175125c698dff1099a169b3ab73b86b5fb1a300de31b2"
+        },
+        {
+          "path": "environment_versions.json",
+          "size_bytes": 527,
+          "sha256": "e0c3e2b6bad1fe1bd86ac3ad677a094bcd7c09e20efad264c7d774f01b037b57"
+        }
+      ],
+      "training_started": false,
+      "environment_decisions": 0,
+      "optimizer_steps": 0,
+      "offline_diagnostic_updates": 0,
+      "evaluation_decisions": 0,
+      "observed_entrypoint_wall_seconds": 3.039,
+      "retry_authorization": "本轮提示词允许实现错误修复后从相同来源/seed/预算重启一次"
+    }
+  ]
+}

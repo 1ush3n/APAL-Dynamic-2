@@ -1,0 +1,87 @@
+{
+  "status": "PASS",
+  "historical_source_reconstruction": "RECONSTRUCTED_NOT_EXACT",
+  "historical_exact_reproduction_status": "INCOMPLETE",
+  "historical_runtime_sha256": "86c0afddd0717f92b253f746dc85eb32a000f6d05bde5a85f4d0e9b9486bd7a3",
+  "recorded_final_source_sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f",
+  "reconstruction": "只按已记录差异在损失/前向调用外围显式关闭 CUDA autocast；未恢复旧运行时原文件字节。",
+  "same_device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "device": "cuda:0",
+  "sample_indices": [
+    4,
+    1
+  ],
+  "optimizer": "fresh AdamW lr=3e-5 eps=1e-5 wd=1e-4",
+  "rng_source": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_rollout.pt",
+  "rng_matches_saved_pre_update_state": true,
+  "loss_metrics": {
+    "count": 11,
+    "max_abs": 0.0,
+    "max_relative_non_near_zero": 0.0,
+    "near_zero_elements": 4,
+    "allclose": true
+  },
+  "pre_clip_gradients": {
+    "count": 138,
+    "max_abs": 0.0,
+    "max_relative_non_near_zero": 0.0,
+    "near_zero_elements": 58076,
+    "allclose": true
+  },
+  "post_clip_gradients": {
+    "count": 138,
+    "max_abs": 0.0,
+    "max_relative_non_near_zero": 0.0,
+    "near_zero_elements": 60709,
+    "allclose": true
+  },
+  "optimizer_step_parameters": {
+    "count": 138,
+    "max_abs": 0.0,
+    "max_relative_non_near_zero": 0.0,
+    "near_zero_elements": 0,
+    "allclose": true
+  },
+  "clip_norm_abs_difference": 0.0,
+  "preclip_group_norms": {
+    "shared": {
+      "reconstructed": 3.1795403046292026,
+      "current": 3.1795403046292026
+    },
+    "policy": {
+      "reconstructed": 0.9809814857231406,
+      "current": 0.9809814857231406
+    },
+    "value": {
+      "reconstructed": 0.09909501317666565,
+      "current": 0.09909501317666565
+    }
+  },
+  "clipped_group_norms": {
+    "shared": {
+      "reconstructed": 0.4775650663417913,
+      "current": 0.4775650663417913
+    },
+    "policy": {
+      "reconstructed": 0.14734284579125903,
+      "current": 0.14734284579125903
+    },
+    "value": {
+      "reconstructed": 0.014884013361072363,
+      "current": 0.014884013361072363
+    }
+  },
+  "tolerances": {
+    "atol": 1e-06,
+    "rtol": 0.0001,
+    "near_zero_scale_threshold": 1e-12
+  },
+  "historical_record_loss_difference": {
+    "total_loss": 0.0,
+    "policy_loss": 0.0,
+    "value_loss": 0.0,
+    "entropy": 0.0
+  },
+  "counted_as_environment_interactions": 0,
+  "counted_as_ppo_updates": 0
+}

@@ -1,0 +1,2147 @@
+{
+  "files": [
+    {
+      "name": "mini210_baseline",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+      "exists": true,
+      "size_bytes": 123120,
+      "sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "expected_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "matches_expected": true
+    },
+    {
+      "name": "regression_fixture_real_283",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\data\\work3\\real_283_k10_baseline.json",
+      "exists": true,
+      "size_bytes": 5256357,
+      "sha256": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "raw_physical_process_data",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\data\\283.csv",
+      "exists": true,
+      "size_bytes": 9887,
+      "sha256": "4059f36706bef9539278bd035b8fa8056611bf5af1eefda0625c78b9c64244e1",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "worker_skill_calendar_data",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\data\\worker_pool_fixed.csv",
+      "exists": true,
+      "size_bytes": 33769,
+      "sha256": "48b0322f27f3b3fcab49253a0dd996e22333072d744a03fcd1ae8aa7de8c899b",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibrated_model",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\calibrated_model.pt",
+      "exists": true,
+      "size_bytes": 1286955,
+      "sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+      "expected_sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_manifest",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\manifest.json",
+      "exists": true,
+      "size_bytes": 2297,
+      "sha256": "db65c300ade4b10ea06f6983a50723023b47fed5484d59877e2386a39454efbf",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_weight_integrity",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\weight_integrity.json",
+      "exists": true,
+      "size_bytes": 3215,
+      "sha256": "96e11df88a90ab9c0f310832da1006025bc76fe8a1b19e9eabbb39a127a56ec9",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_fit_metrics",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\fit_metrics.json",
+      "exists": true,
+      "size_bytes": 10572,
+      "sha256": "01f718d5c8c319e22a738cb33fa9477411b976745330a8d9e7b52a5496644ff1",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_policy_invariance",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\policy_invariance.json",
+      "exists": true,
+      "size_bytes": 8809,
+      "sha256": "9bac5e99af1e6629ce3675360ee208a04f4befa00c084b53182963bdb984e006",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_snapshot_targets",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\snapshots_and_mc_targets.pt",
+      "exists": true,
+      "size_bytes": 22414919,
+      "sha256": "5962f2c2d14dc4a4cb9448ccaf1025d9831d754b4f8ecb00f8634ce5b652d859",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_ppo_summary",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\training_summary.json",
+      "exists": true,
+      "size_bytes": 3216,
+      "sha256": "bd0ef31c8ba86274656ba5ce05d13563c8ebeeacfb22bc7b92cacf017b1c2437",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_ppo_history",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\training_history.jsonl",
+      "exists": true,
+      "size_bytes": 184503,
+      "sha256": "9482e3099720ccb9f017904e00c0402bee48a3c97e45513e78f7ba023ae05689",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "calibration_ppo_first_rollout",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 823783,
+      "sha256": "9f3a69369b2660517853c88056b68b2f6b6c07e48e94071e5f700352cf006114",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "ablation_registry_seed42",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\arm_registry.json",
+      "exists": true,
+      "size_bytes": 2784,
+      "sha256": "78073445d9a1dec0a1c7481eb351b2042430b8b2a3221c54144e3952823d44ed",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "ablation_comparison_seed42",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\comparison_by_point.csv",
+      "exists": true,
+      "size_bytes": 3812,
+      "sha256": "3380b56e02290a20a6332fb00128f720d1a6ce2016bd3f17f8952d75a3ac2a5f",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_manifest",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\manifest.json",
+      "exists": true,
+      "size_bytes": 4400,
+      "sha256": "30d30a91163f28cc2816df1b6ec9f077bd78aa1b3f2f3d3ee34f439750b74f57",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_source_binding",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\source_binding.json",
+      "exists": true,
+      "size_bytes": 15594,
+      "sha256": "faa51eed8b3a819d11b07599e4ea9db134b76eefaca1da88547bab0832f0e65e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_r1_rollout",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "expected_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_r1_first_update",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_update.json",
+      "exists": true,
+      "size_bytes": 1220,
+      "sha256": "84985c56948d7be334651465a1aab9aaee9abd2e507857b9c6117e5bf5deed1a",
+      "expected_sha256": "84985c56948d7be334651465a1aab9aaee9abd2e507857b9c6117e5bf5deed1a",
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_r1_minibatches",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\minibatch_indices.jsonl",
+      "exists": true,
+      "size_bytes": 49053,
+      "sha256": "95648197ef589203ef7e0f0383529b5e4c2e065ee07c37c634ad459a4751de43",
+      "expected_sha256": "95648197ef589203ef7e0f0383529b5e4c2e065ee07c37c634ad459a4751de43",
+      "matches_expected": true
+    },
+    {
+      "name": "bc_diagnostic_actor",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+      "exists": true,
+      "size_bytes": 1289195,
+      "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "bc_teacher_snapshots",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\teacher_snapshots.pt",
+      "exists": true,
+      "size_bytes": 22437191,
+      "sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62",
+      "expected_sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62",
+      "matches_expected": true
+    },
+    {
+      "name": "bc_nominal_trajectory",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\trajectories\\C_BC_DIAGNOSTIC_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 118867,
+      "sha256": "c7ae4fd35debeaa8e6fe8543852343f918c4e2e31529183c925e30ddef283726",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_inventory",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\binary_artifact_inventory.json",
+      "exists": true,
+      "size_bytes": 9119,
+      "sha256": "db1f90d87a98862b0da7cf924962b07225c37b45e51593168e4f333d4912d312",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_00",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\first_update.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "fb458633bfa72f5abba0693faf03f5cda7ebf185453727b74e956de2f3e74358",
+      "expected_sha256": "fb458633bfa72f5abba0693faf03f5cda7ebf185453727b74e956de2f3e74358",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_01",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\first_update_pre.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "449d61247ad78057a6c13b62183534f668739071c34112ab5c1a8db98ba9fc10",
+      "expected_sha256": "449d61247ad78057a6c13b62183534f668739071c34112ab5c1a8db98ba9fc10",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_02",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6",
+      "expected_sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_03",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0008.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "d2b94c7733e4d3297b2e11d3ea7f16f310eee45f4e7e0f3196269707d820907f",
+      "expected_sha256": "d2b94c7733e4d3297b2e11d3ea7f16f310eee45f4e7e0f3196269707d820907f",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_04",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0128.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "f742a8d4c288a4c2eb545a4e847d768cb0c567efd77261b8959224852351065b",
+      "expected_sha256": "f742a8d4c288a4c2eb545a4e847d768cb0c567efd77261b8959224852351065b",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_05",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0256.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "99a5af43926ecca64e3ba7525a740d87714c94296eb5fd02c34ebe6d789f3e54",
+      "expected_sha256": "99a5af43926ecca64e3ba7525a740d87714c94296eb5fd02c34ebe6d789f3e54",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_06",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0512.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "271a8b24e0d7f2a2d6e884d390b02f03606a91a2dcec82404b2c35313d02069b",
+      "expected_sha256": "271a8b24e0d7f2a2d6e884d390b02f03606a91a2dcec82404b2c35313d02069b",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_07",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "expected_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_08",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_09",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_10",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\first_update.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "121163e1a2a3deceec405a6786371adf165636358685532265435809c01b64fa",
+      "expected_sha256": "121163e1a2a3deceec405a6786371adf165636358685532265435809c01b64fa",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_11",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\first_update_pre.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "6709c9c7e6efe15166af5210c1499a88ad27905117bfd3738418f5d4a1b20588",
+      "expected_sha256": "6709c9c7e6efe15166af5210c1499a88ad27905117bfd3738418f5d4a1b20588",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_12",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f",
+      "expected_sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_13",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0008.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336",
+      "expected_sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_14",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0128.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889",
+      "expected_sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_15",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0256.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c",
+      "expected_sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_16",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0512.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140",
+      "expected_sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_17",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "expected_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_18",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_19",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_20",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\first_update.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "10e29cd418120c6edafd7b4b7a4c1f87b1fd4c04795c655ff1c91a183cba614f",
+      "expected_sha256": "10e29cd418120c6edafd7b4b7a4c1f87b1fd4c04795c655ff1c91a183cba614f",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_21",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\first_update_pre.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "1060039a9f30da1ebe8ca732120424f726947ef1a4820943d337ca8c236c51fa",
+      "expected_sha256": "1060039a9f30da1ebe8ca732120424f726947ef1a4820943d337ca8c236c51fa",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_22",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "expected_sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_23",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0008.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "f976a4aa8486685977a954a780c0943c5c1ceec9152e842cceabc5563ec75b78",
+      "expected_sha256": "f976a4aa8486685977a954a780c0943c5c1ceec9152e842cceabc5563ec75b78",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_24",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0128.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "97bd49d11b8190f0c0867fd926ef5ccbb4fae409ef7e51a51c0422e22e5dd261",
+      "expected_sha256": "97bd49d11b8190f0c0867fd926ef5ccbb4fae409ef7e51a51c0422e22e5dd261",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_25",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0256.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "4b28d7001bd34e79ba28abff0edeb396d0324e59bdac65b979e92aea49e5be4c",
+      "expected_sha256": "4b28d7001bd34e79ba28abff0edeb396d0324e59bdac65b979e92aea49e5be4c",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_26",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0512.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "def6316a5b26fa807bf6889e31758721a0bf76ffb2dcc081ee67a42b9159d761",
+      "expected_sha256": "def6316a5b26fa807bf6889e31758721a0bf76ffb2dcc081ee67a42b9159d761",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_27",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "expected_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_28",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_29",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_30",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "expected_sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_31",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911381,
+      "sha256": "3e0a269b5d4e7aa1a14e039f49049aeb5d61a0a3f3f0a446039ba2e5d90cd3dd",
+      "expected_sha256": "3e0a269b5d4e7aa1a14e039f49049aeb5d61a0a3f3f0a446039ba2e5d90cd3dd",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_32",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "matches_expected": true
+    },
+    {
+      "name": "prior_binary_33",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_000",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\action_order_comparison.csv",
+      "exists": true,
+      "size_bytes": 1979,
+      "sha256": "d95d3935e2c8edd1308f3e4333aa4244d8f98653b8f48d0197fd6d4913f15cfb",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_001",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\arm_registry.json",
+      "exists": true,
+      "size_bytes": 3256,
+      "sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_002",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\binary_artifact_inventory.json",
+      "exists": true,
+      "size_bytes": 9119,
+      "sha256": "db1f90d87a98862b0da7cf924962b07225c37b45e51593168e4f333d4912d312",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_003",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\comparison_by_point.csv",
+      "exists": true,
+      "size_bytes": 4730,
+      "sha256": "a94c746f40d1a39b3478e3071ffcb924c2aaf8efd00c8f1147a223619dbc46f8",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_004",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\cross_seed_summary.csv",
+      "exists": true,
+      "size_bytes": 1614,
+      "sha256": "f32c4a36d6691f8ae94540be34bce1acda864cba6b9d815a97694b31bd6d9d9c",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_005",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\cycle_comparison.csv",
+      "exists": true,
+      "size_bytes": 8855,
+      "sha256": "6347361764b56d43e336df53f3b40790adbdb4e49c3a9d93dc0655a8dbb3e2e2",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_006",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\dependency_inventory.json",
+      "exists": true,
+      "size_bytes": 9645,
+      "sha256": "a89af1aafccdbe0c1f9898e9dcf4f48aa89a4c5d2241d35a38e06dcb490245d1",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_007",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\interpretation_errata.md",
+      "exists": true,
+      "size_bytes": 1805,
+      "sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_008",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\manifest.json",
+      "exists": true,
+      "size_bytes": 4400,
+      "sha256": "30d30a91163f28cc2816df1b6ec9f077bd78aa1b3f2f3d3ee34f439750b74f57",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_009",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\pairing_verification.json",
+      "exists": true,
+      "size_bytes": 3997,
+      "sha256": "226b974be1e0247f3ec0f3789e24c4ff81f9e9820c63887c6c26c0b7708fead1",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_010",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\parameter_change_metrics.csv",
+      "exists": true,
+      "size_bytes": 5845,
+      "sha256": "46842f62eb989f30086ff765f5eafc7afbb9b455fedae867e179cbf664109428",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_011",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\policy_probe_metrics.csv",
+      "exists": true,
+      "size_bytes": 2502,
+      "sha256": "4e475b2e99eaea1cfb104142dbd843a07ee7cd3ca0a57b9b5527bf7f67b268f6",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_012",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\first_update.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "fb458633bfa72f5abba0693faf03f5cda7ebf185453727b74e956de2f3e74358",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_013",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\first_update_pre.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "449d61247ad78057a6c13b62183534f668739071c34112ab5c1a8db98ba9fc10",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_014",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_015",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0008.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "d2b94c7733e4d3297b2e11d3ea7f16f310eee45f4e7e0f3196269707d820907f",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_016",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0128.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "f742a8d4c288a4c2eb545a4e847d768cb0c567efd77261b8959224852351065b",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_017",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0256.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "99a5af43926ecca64e3ba7525a740d87714c94296eb5fd02c34ebe6d789f3e54",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_018",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\checkpoints\\step0512.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "271a8b24e0d7f2a2d6e884d390b02f03606a91a2dcec82404b2c35313d02069b",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_019",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_020",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_rollout_pairing.json",
+      "exists": true,
+      "size_bytes": 1235,
+      "sha256": "b129157d24f241d9b07483408db27bf6ec608de3a1d8dc1c9fccc42811ab7680",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_021",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_update.json",
+      "exists": true,
+      "size_bytes": 1220,
+      "sha256": "84985c56948d7be334651465a1aab9aaee9abd2e507857b9c6117e5bf5deed1a",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_022",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\minibatch_indices.jsonl",
+      "exists": true,
+      "size_bytes": 49053,
+      "sha256": "95648197ef589203ef7e0f0383529b5e4c2e065ee07c37c634ad459a4751de43",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_023",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_024",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_025",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\probe\\step0000.json",
+      "exists": true,
+      "size_bytes": 8052,
+      "sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_026",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\probe\\step0008.json",
+      "exists": true,
+      "size_bytes": 8035,
+      "sha256": "4eff83f001c5bf3b716981715af0b6794e68d84661cac4d6e52bcf1cfe8e133d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_027",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\probe\\step0128.json",
+      "exists": true,
+      "size_bytes": 8079,
+      "sha256": "052e2a25b1be7da20befb301f1be61817acd0efe44d0c8b145057e0c9f10d5a0",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_028",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\probe\\step0256.json",
+      "exists": true,
+      "size_bytes": 8079,
+      "sha256": "0a5d12777a18eaebeb5290402d6b24bb157bf10e67ffc65c15b2b32b0efa15f6",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_029",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\probe\\step0512.json",
+      "exists": true,
+      "size_bytes": 8166,
+      "sha256": "77a164644860b204b4464251107ffbe16e8b0f35071aa7a83fcbb084682f393e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_030",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\runs\\ppo_run.json",
+      "exists": true,
+      "size_bytes": 957,
+      "sha256": "cbcc9bf7a2383b5d8e2216962a5e645271ec7759c7ca591e65d8b059ebc9b55a",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_031",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\shaping_audit_summary.json",
+      "exists": true,
+      "size_bytes": 3317,
+      "sha256": "beee4cb70b24aec99627f340a7ff9f4ffc953240cd72c81f31b5e0571b916777",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_032",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\shaping_events.jsonl",
+      "exists": true,
+      "size_bytes": 279058,
+      "sha256": "ca46b516b0b2c7bf70e4ee2c95768db7e8ba220856193d4824b64684eda2aa4a",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_033",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\training_history.jsonl",
+      "exists": true,
+      "size_bytes": 534397,
+      "sha256": "bb96788f5b673db44f6fda6641ae4765333965835650fec7bde447aca76bc846",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_034",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\training_summary.json",
+      "exists": true,
+      "size_bytes": 4410,
+      "sha256": "723459ed5217646a7c237129044d9224f528aab77a4600d42c45a20884114429",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_035",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\trajectories\\step0008_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 166250,
+      "sha256": "4d8f6c0cc5973c6a40315f0ea2905282acb1d03b1b72625f3778b91089eefb14",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_036",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\trajectories\\step0128_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 166253,
+      "sha256": "f579be468bf8246034e3c0ee22ea3a3c6da31d84c40be5f58ad2f3d62924d2c5",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_037",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\trajectories\\step0256_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 166254,
+      "sha256": "5755598a50b94dadc38bb9b176351cf447359f3c6911aebea1ebd598f647bd0b",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_038",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\trajectories\\step0512_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 191402,
+      "sha256": "6a8f0816a79d59d508241fff2e28c5138ce231de1e7bdf693dfd57bf0fb0daa7",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_039",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\first_update.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "121163e1a2a3deceec405a6786371adf165636358685532265435809c01b64fa",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_040",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\first_update_pre.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "6709c9c7e6efe15166af5210c1499a88ad27905117bfd3738418f5d4a1b20588",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_041",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_042",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0008.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_043",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0128.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_044",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0256.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_045",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\checkpoints\\step0512.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_046",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_047",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\first_rollout_pairing.json",
+      "exists": true,
+      "size_bytes": 1235,
+      "sha256": "192a4b3cc565735df06f070dbf1bff2d79852ee94f1ad528c4588f3066dac6e5",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_048",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\first_update.json",
+      "exists": true,
+      "size_bytes": 1186,
+      "sha256": "ea7e9b2c6ef31401584db0c15f79ed206b4817a9e881430b55258e9afc8d4bdc",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_049",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\minibatch_indices.jsonl",
+      "exists": true,
+      "size_bytes": 48977,
+      "sha256": "85af386f761b8c62470252796a2dea014d6a668b93fa3a607d4fe79139ec632d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_050",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_051",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_052",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\probe\\step0000.json",
+      "exists": true,
+      "size_bytes": 8052,
+      "sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_053",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\probe\\step0008.json",
+      "exists": true,
+      "size_bytes": 8018,
+      "sha256": "2c405a5b1647af868c98a66216906d94bff1a9f72070ab12ba882d50f729c8df",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_054",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\probe\\step0128.json",
+      "exists": true,
+      "size_bytes": 8109,
+      "sha256": "8e8e3ab489a8a16dc747e2c32e0b3577cdbef03752647e7641966396869b782c",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_055",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\probe\\step0256.json",
+      "exists": true,
+      "size_bytes": 8007,
+      "sha256": "1a11b713e189b393316284ec7f8dfea596a5bc9e3d3b6e293fafed3379dab6dd",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_056",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\probe\\step0512.json",
+      "exists": true,
+      "size_bytes": 8027,
+      "sha256": "2277dd614a37d8158703dc2a115afc9f392eb77f8d26cab91657535cb3622ff0",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_057",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\runs\\ppo_run.json",
+      "exists": true,
+      "size_bytes": 925,
+      "sha256": "5d4d660099be613d63673ada7bef31c0b920eab6c556e747646eed1c73ad3293",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_058",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\shaping_audit_summary.json",
+      "exists": true,
+      "size_bytes": 3378,
+      "sha256": "962ade78c6ac03027819abe9109b5ef8486f328f84cdfa3ec16d500abb101761",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_059",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\shaping_events.jsonl",
+      "exists": true,
+      "size_bytes": 284449,
+      "sha256": "13d181a624306362dd5fc362a1fe5308a525bb5601788fbae84c1dee0a71f9ad",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_060",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\training_history.jsonl",
+      "exists": true,
+      "size_bytes": 531963,
+      "sha256": "6a89c26b14df99d13eefd80fad84bb94d2f94ee536a20e3b51b692a72fb8ee23",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_061",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\training_summary.json",
+      "exists": true,
+      "size_bytes": 4422,
+      "sha256": "081cf39f9a935eb64e1a908096c65b24a1e30f2a38a2899c0d5ccfae8f3eba1c",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_062",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\trajectories\\step0008_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 166250,
+      "sha256": "ef82ded93421d83398cecc4f7463e41eb4297707dada51ea7e141785d86c694d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_063",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\trajectories\\step0128_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 251937,
+      "sha256": "49decf74d5225f2538cc41b2a408d24e4cc6cef1823217daeeb5e3ad4595e602",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_064",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\trajectories\\step0256_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 253156,
+      "sha256": "631a26a64390713a255c8dae86b2fbc0d580d15cabd07172db26a60b2de3a8f8",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_065",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R4\\trajectories\\step0512_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 250916,
+      "sha256": "94e1ad6d3bc289813c020402aa43d406ca67411a52b35eabb7cd3c8b2ffa0815",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_066",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\r4_gradient_preflight.json",
+      "exists": true,
+      "size_bytes": 400,
+      "sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_067",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\first_update.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "10e29cd418120c6edafd7b4b7a4c1f87b1fd4c04795c655ff1c91a183cba614f",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_068",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\first_update_pre.pt",
+      "exists": true,
+      "size_bytes": 1287083,
+      "sha256": "1060039a9f30da1ebe8ca732120424f726947ef1a4820943d337ca8c236c51fa",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_069",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_070",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0008.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "f976a4aa8486685977a954a780c0943c5c1ceec9152e842cceabc5563ec75b78",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_071",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0128.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "97bd49d11b8190f0c0867fd926ef5ccbb4fae409ef7e51a51c0422e22e5dd261",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_072",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0256.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "4b28d7001bd34e79ba28abff0edeb396d0324e59bdac65b979e92aea49e5be4c",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_073",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\checkpoints\\step0512.pt",
+      "exists": true,
+      "size_bytes": 1287595,
+      "sha256": "def6316a5b26fa807bf6889e31758721a0bf76ffb2dcc081ee67a42b9159d761",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_074",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_075",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\first_rollout_pairing.json",
+      "exists": true,
+      "size_bytes": 1236,
+      "sha256": "a2f003b44f24222fcbfe357df41afbb43b5fcb1fb3851df6dc2d500f06bba65f",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_076",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\first_update.json",
+      "exists": true,
+      "size_bytes": 1186,
+      "sha256": "015cca3cf6b8d33364552e45ba1065a9b14c944227cab5b4140b513174ada248",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_077",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\minibatch_indices.jsonl",
+      "exists": true,
+      "size_bytes": 49006,
+      "sha256": "14613b3ac14b3bd4214969f38946d782cf525c6521a61b3a44abd2cd923b4bfa",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_078",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_079",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_080",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\probe\\step0000.json",
+      "exists": true,
+      "size_bytes": 8053,
+      "sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_081",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\probe\\step0008.json",
+      "exists": true,
+      "size_bytes": 7983,
+      "sha256": "38344a5447d6ed7771f9ab61219d0ed1984abcef704e06fbad54977e60a05d09",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_082",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\probe\\step0128.json",
+      "exists": true,
+      "size_bytes": 7846,
+      "sha256": "a2aa7362eaf325fb3a14501ebdeaed68c4a7145f9fb3372cbee4f431ec3b7cd3",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_083",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\probe\\step0256.json",
+      "exists": true,
+      "size_bytes": 7888,
+      "sha256": "059796b6cd36abe2329cffcc4209b2b3d84aecf0bb965103ccdb37b179c0dbe9",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_084",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\probe\\step0512.json",
+      "exists": true,
+      "size_bytes": 7873,
+      "sha256": "c56be584d65902e0a3b5ac162a02abe451de94946e00bc7f9c893fb4e123cb09",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_085",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\runs\\ppo_run.json",
+      "exists": true,
+      "size_bytes": 926,
+      "sha256": "bb973d15f3a5b443cd4faae33a89f40a75265589a4ae7a3c1b3fe092f5a03647",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_086",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\shaping_audit_summary.json",
+      "exists": true,
+      "size_bytes": 3383,
+      "sha256": "63c354d2eae76d9241b5fc7508a072ad7ade4eab16e2a1579947021e2f3775b3",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_087",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\shaping_events.jsonl",
+      "exists": true,
+      "size_bytes": 282654,
+      "sha256": "eb7dd2037617159e641f8a1efb996ef02fbb2f159ed57dc2a019b139e626e891",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_088",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\training_history.jsonl",
+      "exists": true,
+      "size_bytes": 529437,
+      "sha256": "cd13e71177e267db43ba7cb6c55a2c1498ccf55063c58a1d1230fdddcf1d31de",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_089",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\training_summary.json",
+      "exists": true,
+      "size_bytes": 4391,
+      "sha256": "77bf9ef62cfd2e5256102c01c348c454600f040c21a872eab39b692dd4bd27f9",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_090",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\trajectories\\step0008_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 166252,
+      "sha256": "cf0934078c5dfc3dcd3b97b37927afdf7e22fd813ba7de06b1786c31ec4551ae",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_091",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\trajectories\\step0128_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 245818,
+      "sha256": "8c9f708c576bf845719c60b62babcb0afa2686799d1e794017464067fce56556",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_092",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\trajectories\\step0256_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 237886,
+      "sha256": "2b8fb2f631c4afbca703ab8212616124a606632aa9c6e8bb493ea344e586e471",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_093",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\REF\\trajectories\\step0512_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 246730,
+      "sha256": "354f15defc04a42cca9f6f82dad6c5560a31e1b72c0a00592e8ecf2c6caa1ef7",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_094",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\regression_test_results.json",
+      "exists": true,
+      "size_bytes": 2301,
+      "sha256": "07adf4ed3ef01632e9acfeed4911e9bb88fd6e4cf82528120207716e291ab000",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_095",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\resolved_configs\\R1.yaml",
+      "exists": true,
+      "size_bytes": 872,
+      "sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_096",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\resolved_configs\\R4.yaml",
+      "exists": true,
+      "size_bytes": 881,
+      "sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_097",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\resolved_configs\\REF.yaml",
+      "exists": true,
+      "size_bytes": 830,
+      "sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_098",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_001\\dependency_inventory.json",
+      "exists": true,
+      "size_bytes": 9645,
+      "sha256": "041867ee81f14f4febb1b3490a1fbb5107ab441232c69d9f85285a6ab273f3a1",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_099",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_001\\interpretation_errata.md",
+      "exists": true,
+      "size_bytes": 1805,
+      "sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_100",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_001\\resolved_configs\\R1.yaml",
+      "exists": true,
+      "size_bytes": 872,
+      "sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_101",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_001\\resolved_configs\\R4.yaml",
+      "exists": true,
+      "size_bytes": 881,
+      "sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_102",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_001\\resolved_configs\\REF.yaml",
+      "exists": true,
+      "size_bytes": 830,
+      "sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_103",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\arm_registry.json",
+      "exists": true,
+      "size_bytes": 3256,
+      "sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_104",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\comparison_by_point.csv",
+      "exists": true,
+      "size_bytes": 757,
+      "sha256": "c57067b869fa970b4db13cd0fc72efa85d97c5904bb1666a58bee5cd473a0041",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_105",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\dependency_inventory.json",
+      "exists": true,
+      "size_bytes": 9645,
+      "sha256": "1edc1fe8693d625fc7285ea0a93b6571c673624e415d967f4f752027d717b236",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_106",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\interpretation_errata.md",
+      "exists": true,
+      "size_bytes": 1805,
+      "sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_107",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\manifest.json",
+      "exists": true,
+      "size_bytes": 3984,
+      "sha256": "2b83206ede5e792681a584ec4487f05ddf5a75d94582c40b8e0c3efeea45e86f",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_108",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\pairing_verification.json",
+      "exists": true,
+      "size_bytes": 1471,
+      "sha256": "dea4ffa1469c34451dba6acbef915b64ec9c0137323e528cb5e1eb3a1a7bd89c",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_109",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\R1\\probe\\step0000.json",
+      "exists": true,
+      "size_bytes": 8052,
+      "sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_110",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\R4\\probe\\step0000.json",
+      "exists": true,
+      "size_bytes": 8052,
+      "sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_111",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\r4_gradient_preflight.json",
+      "exists": true,
+      "size_bytes": 400,
+      "sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_112",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\checkpoints\\step0000.pt",
+      "exists": true,
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_113",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\first_rollout.pt",
+      "exists": true,
+      "size_bytes": 911381,
+      "sha256": "3e0a269b5d4e7aa1a14e039f49049aeb5d61a0a3f3f0a446039ba2e5d90cd3dd",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_114",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\first_rollout_pairing.json",
+      "exists": true,
+      "size_bytes": 1250,
+      "sha256": "fe11d60ea46ace8995d3ac2f8f64110f70ca8c504e71cd02367cd8f8cdbe5c77",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_115",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\minibatch_indices.jsonl",
+      "exists": true,
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_116",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\pre_sampling_rng.pt",
+      "exists": true,
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_117",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\pre_update_rng.pt",
+      "exists": true,
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_118",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\probe\\step0000.json",
+      "exists": true,
+      "size_bytes": 8053,
+      "sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_119",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\runs\\ppo_run.json",
+      "exists": true,
+      "size_bytes": 935,
+      "sha256": "dd4b83d472490c019a1f2ebb09eb4fc30ef36803ab36fb14fd44a8c4c87f3b5a",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_120",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\shaping_events.jsonl",
+      "exists": true,
+      "size_bytes": 4344,
+      "sha256": "27d545dd6cde50f9c2dbcec7f4e766836b798dff1140a47b139fbba8124dadce",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_121",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\training_history.jsonl",
+      "exists": true,
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_122",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\REF\\training_summary.json",
+      "exists": true,
+      "size_bytes": 2601,
+      "sha256": "b74740245f58008feefa060ee92930ea2ef736249252efd5bda17950186476d7",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_123",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\resolved_configs\\R1.yaml",
+      "exists": true,
+      "size_bytes": 872,
+      "sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_124",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\resolved_configs\\R4.yaml",
+      "exists": true,
+      "size_bytes": 881,
+      "sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_125",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\resolved_configs\\REF.yaml",
+      "exists": true,
+      "size_bytes": 830,
+      "sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_126",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\shared_step0000_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 166259,
+      "sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_127",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\shared_step0000_verification.json",
+      "exists": true,
+      "size_bytes": 601,
+      "sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_128",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\source_binding.json",
+      "exists": true,
+      "size_bytes": 9376,
+      "sha256": "7a031fba201cca11aa5b4acb95e6a081420be45a165b7087a338fa2a71c84ade",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_129",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\root\\verification.json",
+      "exists": true,
+      "size_bytes": 164,
+      "sha256": "df9231768898089f48325335b8b86fa0f7942868fa2f30cdfbbd60c85b4a9d06",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_130",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\evaluate_REF_--point_0.log",
+      "exists": true,
+      "size_bytes": 270,
+      "sha256": "1122b254e7bcd82ea77071b8d9fec907530b02cadbea1d16330cfd82df7bdcda",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_131",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\fatal_error.json",
+      "exists": true,
+      "size_bytes": 52,
+      "sha256": "54c89eb23e67f80857ff4fbd0d8bb5997966a7c696e8650eaa408ba57324f5ba",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_132",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\probe_R1_--point_0.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "8f3382ed3e346aa284e68b1578333b2a690447e410b582cc2989834ebebceeb0",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_133",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\probe_R4_--point_0.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "851d896911159976b99be6d84ac0beeed9283ea1a9a63b53e276f9bacf7ec2d3",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_134",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\probe_REF_--point_0.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "6aa4acd7a86ae74b0035e527c5e6eb15174cba9ce81bdf0ec6c5e82b2d01c98b",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_135",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\r4-preflight_main.log",
+      "exists": true,
+      "size_bytes": 620,
+      "sha256": "c67d55ee0ad69e4264e1fc15d0ff0ec02b32cf17bb2a0781a547febe0d939c65",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_136",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\stage_results.json",
+      "exists": true,
+      "size_bytes": 1138,
+      "sha256": "ccaa04777650de1c3899ece248eaf1f9b6e3891712693ec415df11a9f4878b11",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_137",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_attempt_002\\runs\\train_REF.log",
+      "exists": true,
+      "size_bytes": 356,
+      "sha256": "77a75f0ab9604e8ee2989d391aa5b1e42165f4417e1591e45547856855fa4e0e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_138",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\discarded_runs.json",
+      "exists": true,
+      "size_bytes": 486,
+      "sha256": "0f8a114169dd9fe9e14c5c8b1aef84a759c6981c650ca387efe6447e0f992e46",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_139",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_128.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "c93fbb1e22928d74b63014cb3b7b56f9d706df0948e3ef7656528565d7937cee",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_140",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_256.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "c2e0e91d150540c4a3e14c02cd042bf4705c904d10bc974a59d0e4dffcc30efe",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_141",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_512.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "bccff144e2e9603d8579cb267d99b778c80bedb16d1ce3d2b7d6d35fcb0d6c48",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_142",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R1_--point_8.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "6ff91be3e3518a92b3c77daa48b3f3926225c55093ecf7c2cc833558dae21ac5",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_143",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_128.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "f4577f18984d96f680f579b8211f7b4a26d0f95d86bee952fa2b9b175eeddc7c",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_144",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_256.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "b451d8f8d5828d762b34e0ed696b6fed56fc08dcf85750085c5d5eb7bf5838b3",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_145",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_512.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "88d6eb742cec8d8253a2d89ce47b5e5215361c3634505cb7dac657cbe4b25357",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_146",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_R4_--point_8.log",
+      "exists": true,
+      "size_bytes": 269,
+      "sha256": "fe4743f329cfc98efec071dc3857e08667ac6fd9033c2b85bb4384511cd04ed4",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_147",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_0.log",
+      "exists": true,
+      "size_bytes": 270,
+      "sha256": "ccafd26ca1e7000b0c769a3368dbe2073e81c018ebdc4dbaf0f4b1b861b714e0",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_148",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_128.log",
+      "exists": true,
+      "size_bytes": 270,
+      "sha256": "87259d2a8aceda6326564a767849b9863e8117e384ea853c5ce311b30c96f0b2",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_149",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_256.log",
+      "exists": true,
+      "size_bytes": 270,
+      "sha256": "23ba9a9eae82db271cb06c34b23498735adbb7eac830fd9769e373bf3be4feaa",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_150",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_512.log",
+      "exists": true,
+      "size_bytes": 270,
+      "sha256": "89596d721d27739711b87e9ef7a9f178cc7850742c4e8d5e39150e2083688873",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_151",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\evaluate_REF_--point_8.log",
+      "exists": true,
+      "size_bytes": 270,
+      "sha256": "ed355d9add8cc9a0c892d920f5d38a79062a11b60d4e2f349192f5efbf174c04",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_152",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_0.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "9caeb8df649154887612aea6254681aae5359241eaae19baec1bd1bf85903262",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_153",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_128.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "048b17a2251e6ccfde709cbee47c96fa3de6ce2390bbcb6fcfac658e61eae90e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_154",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_256.log",
+      "exists": true,
+      "size_bytes": 139,
+      "sha256": "d6ebe46f87e34586b0bca6deaa87e7a29d2d6c11b86056de7f3388a7568b5c8d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_155",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_512.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "e0c9bae091b3f9da0644c8b0b626b024d419d21ebee0ed97204da7e7a3124fbb",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_156",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R1_--point_8.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "9dc47d80d650b14b78b79a2ba877354fa6e7a1f8e80d7667c1fdd2fbbbb84244",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_157",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_0.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "413e6ce1f07d5611a6961452a7300376c4ef5f5ec31554bb98a59d78f385ec5d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_158",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_128.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "e5ea6d50b464dbea33e4d8ebb79d05b3578c6596a80821c5882c9d07e1263245",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_159",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_256.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "ab8c0e4b9fab793e1a31beeead6efe8245c74ac724726e532b223b2a20238512",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_160",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_512.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "98a7dd52c91b18616096b21d79a9b5b38210b6ad45d0bcb494a1c2be71e9b2f2",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_161",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_R4_--point_8.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "b6f09f92643672ffa77ea67fc73dc8e1279fc8df99482c0ef97ec2da719e0729",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_162",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_0.log",
+      "exists": true,
+      "size_bytes": 139,
+      "sha256": "7b8c579c77195350831cf0e659a98ab1ed30100855f9cbe09a7f408bff48f75d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_163",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_128.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "d93d42e5ae8e1562577c01ec818703b534eb771ff8c858a2ba0ec553ce69a97b",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_164",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_256.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "c2606c0dca1bfc44a1f6941be641fc91c1e216220c1d4826b7cb827f35f9c5fd",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_165",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_512.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "e96da3a4b74b59a2f41e6866fcdd35f0741da7566ab6bbce3092fd79df8e70a4",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_166",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\probe_REF_--point_8.log",
+      "exists": true,
+      "size_bytes": 140,
+      "sha256": "765b7f68f5dcb3d879e6760024b990f94272b58a6b44cdf51ec200d5a8911b73",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_167",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\r4-preflight_main.log",
+      "exists": true,
+      "size_bytes": 620,
+      "sha256": "4127f76361a8640e97c6e0ba59c48dc2e8e86c537168a4e71f82e06dd0fdf0d7",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_168",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\stage_results.json",
+      "exists": true,
+      "size_bytes": 6125,
+      "sha256": "352875722bb3f76de6d94069a5d6ec03f05d157e917a8c99a861cb13abaac6d8",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_169",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\train_R1.log",
+      "exists": true,
+      "size_bytes": 518,
+      "sha256": "83b64f75d1b02ce5da3744eff23ed26fb342563fcd96f6f37a00e6d01b72ff42",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_170",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\train_R4.log",
+      "exists": true,
+      "size_bytes": 538,
+      "sha256": "06a2626bb0ba3d9702618c50aacd1c070c9fb49e51197d801b0074c4ca6a47ed",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_171",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\runs\\train_REF.log",
+      "exists": true,
+      "size_bytes": 531,
+      "sha256": "45f1be6d4f262c11d6095a6d03b5b8fb94292f4316abaccaefa28b7069f8ae86",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_172",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\shared_step0000_NOMINAL.json",
+      "exists": true,
+      "size_bytes": 166259,
+      "sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_173",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\shared_step0000_verification.json",
+      "exists": true,
+      "size_bytes": 601,
+      "sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_174",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\source_binding.json",
+      "exists": true,
+      "size_bytes": 15594,
+      "sha256": "faa51eed8b3a819d11b07599e4ea9db134b76eefaca1da88547bab0832f0e65e",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_175",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\summary.md",
+      "exists": true,
+      "size_bytes": 6648,
+      "sha256": "555837e3cc563d4852d25e1f455cf90d620974e5c44d04b24026185f205c979f",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_176",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\trajectory_comparison.csv",
+      "exists": true,
+      "size_bytes": 358525,
+      "sha256": "b2d827fbcab10003f2e4356cf10b4b0c034bde30e1f197aa91556d109e6e8dfa",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_177",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\trajectory_verification.json",
+      "exists": true,
+      "size_bytes": 24244,
+      "sha256": "8158b87af3c4888671f392ba613814278a4dbf0f2dc037bb1c930e9aba4a14ed",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_178",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\verification.json",
+      "exists": true,
+      "size_bytes": 45609,
+      "sha256": "c1e9fec26268eed17e5e22cb4e8b49ca5239c75b74bd0d92c8cbc0cc538d2c2d",
+      "expected_sha256": null,
+      "matches_expected": true
+    },
+    {
+      "name": "old_seed43_artifact_179",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\weight_integrity.json",
+      "exists": true,
+      "size_bytes": 21492,
+      "sha256": "6acc6401b456842d65cb3d1e3955bad31cb4bcc6dc25f7adeed9f932aeea5a44",
+      "expected_sha256": null,
+      "matches_expected": true
+    }
+  ],
+  "missing_or_mismatched": []
+}

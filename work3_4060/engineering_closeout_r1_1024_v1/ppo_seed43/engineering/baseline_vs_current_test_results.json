@@ -1,0 +1,109 @@
+{
+  "classification": "基线/修复前均失败，修复覆盖通过",
+  "baseline_commit": "0e2e0bbc19e93871a3b557ec132144440daa4bba",
+  "pre_repair_commit": "2c434ff0592a28af8e9e3ad9d36cd7e6e4e1d3dd",
+  "same_python": "D:\\Conda\\envs\\rag_env\\python.exe",
+  "same_dependency_environment": "D:\\Conda\\envs\\rag_env",
+  "test_selection": [
+    "test_single_env_worker_matches_direct_environment_for_frozen_actions",
+    "test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget",
+    "test_lightning_ppo_update_mixes_stay_and_postpone_samples"
+  ],
+  "baseline_and_pre_repair_command": "历史日志未保存完整shell调用；从固定筛选记录可确认参数为 tests/work3/test_work3_training_runtime.py -q -k <三项修复目标>。",
+  "fixed_targeted_command": "D:\\Conda\\envs\\rag_env\\python.exe -m pytest tests/test_ppo_retention_repeat.py tests/work3/test_work3_training_runtime.py -q -k \"test_single_env_worker_matches_direct_environment_for_frozen_actions or test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget or lightning_ppo_update_mixes_stay_and_postpone_samples or amp_precision_resolver_rejects_mixed_precision_on_cpu or actor_sampling_and_replay_keep_probability_math_fp32_under_amp or training_entry_uses_configured_amp_for_rollout_and_lightning or runtime_seed_and_worker_episode_seed_are_reproducible or lightning_trainer_fit_runs_ppo_update_and_separates_step_counts or lightning_amp_uses_only_precision_plugin_scaler or lightning_configures_one_deduplicated_optimizer_for_all_trainable_models or lightning_module_construction_preserves_actor_cuda_device or lightning_ppo_loss_computation_is_pure_and_datamodule_uses_no_loader_workers or lightning_fit_calls_preserve_the_single_optimizer_between_rollouts\"",
+  "targeted_regression_selectors": [
+    "test_single_env_worker_matches_direct_environment_for_frozen_actions",
+    "test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget",
+    "test_lightning_ppo_update_mixes_stay_and_postpone_samples",
+    "amp_precision_resolver_rejects_mixed_precision_on_cpu",
+    "actor_sampling_and_replay_keep_probability_math_fp32_under_amp",
+    "training_entry_uses_configured_amp_for_rollout_and_lightning",
+    "runtime_seed_and_worker_episode_seed_are_reproducible",
+    "lightning_trainer_fit_runs_ppo_update_and_separates_step_counts",
+    "lightning_amp_uses_only_precision_plugin_scaler",
+    "lightning_configures_one_deduplicated_optimizer_for_all_trainable_models",
+    "lightning_module_construction_preserves_actor_cuda_device",
+    "lightning_ppo_loss_computation_is_pure_and_datamodule_uses_no_loader_workers",
+    "lightning_fit_calls_preserve_the_single_optimizer_between_rollouts"
+  ],
+  "fixture_input_hashes": {
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_baseline_0e2e\\data\\work3\\real_283_k10_baseline.json": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_current_2c434ff\\data\\work3\\real_283_k10_baseline.json": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\data\\work3\\real_283_k10_baseline.json": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e"
+  },
+  "same_fixture_input_hash_across_runs": true,
+  "runs": {
+    "baseline_0e2e": {
+      "original_log": "C:\\Users\\13575\\AppData\\Local\\Temp\\work3_baseline_0e2e_test.log",
+      "copied_log": "engineering\\source_versions\\baseline_0e2e.log",
+      "log_sha256": "85cda24b8308f82b0d32e31b77f8aee45bee75f68936b15bdf2bf9a90763316b",
+      "pytest_summary": "3 failed, 59 deselected in 33.13s",
+      "module_paths": [
+        "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_baseline_0e2e\\work3_4060\\run_ppo_ablation_arms.py",
+        "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_baseline_0e2e\\work3_4060\\run_bc_ppo_retention.py"
+      ],
+      "module_source_hashes": [
+        {
+          "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_baseline_0e2e\\work3_4060\\run_ppo_ablation_arms.py",
+          "sha256": "49514956577a561c0a8e5763d2380a91353ac54f9c0fdb675bf16f064a0c7869"
+        },
+        {
+          "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_baseline_0e2e\\work3_4060\\run_bc_ppo_retention.py",
+          "sha256": "e41de5edadb5d3a690e93a2e34ace3908826ab1ca3b3f39994820da48134df13"
+        }
+      ],
+      "log_reported_module_paths": [
+        "D:\\OneDrive\\�о���\\APAL-Dynamic-2_work3_baseline_0e2e\\work3_4060\\run_ppo_ablation_arms.py",
+        "D:\\OneDrive\\�о���\\APAL-Dynamic-2_work3_baseline_0e2e\\work3_4060\\run_bc_ppo_retention.py"
+      ]
+    },
+    "current_pre_repair_2c434ff": {
+      "original_log": "C:\\Users\\13575\\AppData\\Local\\Temp\\work3_current_2c434ff_test.log",
+      "copied_log": "engineering\\source_versions\\current_pre_repair_2c434ff.log",
+      "log_sha256": "26b0d81e40a0671b9099ec83cd109806170b2bc7f89e41ba07c0017a668f7fce",
+      "pytest_summary": "3 failed, 59 deselected in 32.57s",
+      "module_paths": [
+        "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_current_2c434ff\\work3_4060\\run_ppo_ablation_arms.py",
+        "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_current_2c434ff\\work3_4060\\run_bc_ppo_retention.py"
+      ],
+      "module_source_hashes": [
+        {
+          "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_current_2c434ff\\work3_4060\\run_ppo_ablation_arms.py",
+          "sha256": "75d32b30b7b28d381efa4ca272c7d9747a7297cc369c915d6a73b698e6cec409"
+        },
+        {
+          "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_current_2c434ff\\work3_4060\\run_bc_ppo_retention.py",
+          "sha256": "32d677609b008c2e0ecc86007b232d4c2949d008114f9c45244319eb38ffb57a"
+        }
+      ],
+      "log_reported_module_paths": [
+        "D:\\OneDrive\\�о���\\APAL-Dynamic-2_work3_current_2c434ff\\work3_4060\\run_ppo_ablation_arms.py",
+        "D:\\OneDrive\\�о���\\APAL-Dynamic-2_work3_current_2c434ff\\work3_4060\\run_bc_ppo_retention.py"
+      ]
+    },
+    "fixed_current_targeted_regressions": {
+      "original_log": "C:\\Users\\13575\\AppData\\Local\\Temp\\work3_final_targeted_regressions_v3.log",
+      "copied_log": "engineering\\source_versions\\fixed_current_targeted_regressions.log",
+      "log_sha256": "baaab80620fd9315463cba0fbc14f9bcfcc9be7bbf829409591d4f21c35309cb",
+      "pytest_summary": "16 passed, 60 deselected in 152.55s (0:02:32)",
+      "module_paths": [
+        "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_ppo_ablation_arms.py",
+        "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_bc_ppo_retention.py"
+      ],
+      "module_source_hashes": [
+        {
+          "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_ppo_ablation_arms.py",
+          "sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22"
+        },
+        {
+          "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_bc_ppo_retention.py",
+          "sha256": "93b99f9b559b03efd7b51ffb5d3d23cdbc60895cd652c64250a4753d6dfe7991"
+        }
+      ],
+      "log_reported_module_paths": []
+    }
+  },
+  "current_repaired_regression_status": "PASS",
+  "baseline_and_pre_repair_failure_confirmed": true,
+  "passed": true
+}

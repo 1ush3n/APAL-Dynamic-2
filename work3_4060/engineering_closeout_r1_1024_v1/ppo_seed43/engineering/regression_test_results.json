@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "baseline_and_pre_repair_classification": "基线/修复前均失败，修复覆盖通过",
+  "fixed_current_targeted_regression_status": "PASS",
+  "targeted_test_selection": [
+    "test_single_env_worker_matches_direct_environment_for_frozen_actions",
+    "test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget",
+    "test_lightning_ppo_update_mixes_stay_and_postpone_samples"
+  ],
+  "test_logs": {
+    "baseline_0e2e": "engineering\\source_versions\\baseline_0e2e.log",
+    "current_pre_repair_2c434ff": "engineering\\source_versions\\current_pre_repair_2c434ff.log",
+    "fixed_current_targeted_regressions": "engineering\\source_versions\\fixed_current_targeted_regressions.log"
+  },
+  "fixed_shared_input_hashes": {
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_baseline_0e2e\\data\\work3\\real_283_k10_baseline.json": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2_work3_current_2c434ff\\data\\work3\\real_283_k10_baseline.json": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e",
+    "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\data\\work3\\real_283_k10_baseline.json": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e"
+  }
+}

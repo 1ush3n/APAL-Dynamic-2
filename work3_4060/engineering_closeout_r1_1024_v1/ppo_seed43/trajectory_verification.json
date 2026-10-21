@@ -1,0 +1,305 @@
+{
+  "rows": [
+    {
+      "arm": "R1",
+      "point": 0,
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\shared_step0000_NOMINAL.json",
+      "trajectory_file": "shared_step0000_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598408e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598414e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 6.162975822039155e-33,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "arm": "R1",
+      "point": 128,
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\trajectories\\step0128_NOMINAL.json",
+      "trajectory_file": "step0128_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598408e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598414e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 6.162975822039155e-33,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "arm": "R1",
+      "point": 256,
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\trajectories\\step0256_NOMINAL.json",
+      "trajectory_file": "step0256_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598408e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598414e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 6.162975822039155e-33,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "arm": "R1",
+      "point": 512,
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\trajectories\\step0512_NOMINAL.json",
+      "trajectory_file": "step0512_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.0010364007843753095,
+        "d_team": 0.001785714285714286,
+        "j_postpone": 0.0,
+        "j_revision": 0.0028221150700895774,
+        "j_total": 0.005644230140181904
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.001036400784375309,
+        "d_team": 0.0017857142857142863,
+        "j_postpone": 0.0,
+        "j_revision": 0.0028221150700895774,
+        "j_total": 0.005644230140181904
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.336808689942018e-19,
+        "d_team_diff": 2.168404344971009e-19,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "arm": "R1",
+      "point": 768,
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\trajectories\\step0768_NOMINAL.json",
+      "trajectory_file": "step0768_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.0010364007843753095,
+        "d_team": 0.001785714285714286,
+        "j_postpone": 0.0,
+        "j_revision": 0.0028221150700895774,
+        "j_total": 0.005644230140181904
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.001036400784375309,
+        "d_team": 0.0017857142857142863,
+        "j_postpone": 0.0,
+        "j_revision": 0.0028221150700895774,
+        "j_total": 0.005644230140181904
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.336808689942018e-19,
+        "d_team_diff": 2.168404344971009e-19,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "arm": "R1",
+      "point": 1024,
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\trajectories\\step1024_NOMINAL.json",
+      "trajectory_file": "step1024_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.0006201989302351782,
+        "d_team": 0.00130952380952381,
+        "j_postpone": 0.0,
+        "j_revision": 0.00192972273975897,
+        "j_total": 0.003859445479520689
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.0006201989302351774,
+        "d_team": 0.00130952380952381,
+        "j_postpone": 0.0,
+        "j_revision": 0.00192972273975897,
+        "j_total": 0.0038594454795206888
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 8.673617379884035e-19,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 4.336808689942018e-19
+      }
+    }
+  ],
+  "expected_points": [
+    0,
+    128,
+    256,
+    512,
+    768,
+    1024
+  ],
+  "verified_points": [
+    0,
+    128,
+    256,
+    512,
+    768,
+    1024
+  ],
+  "physical_time_tolerance_hours": 1e-07,
+  "cost_ledger_tolerance": 1e-09,
+  "status": "PASS"
+}

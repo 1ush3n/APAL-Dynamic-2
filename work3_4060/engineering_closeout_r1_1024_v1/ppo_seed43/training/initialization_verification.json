@@ -1,0 +1,16 @@
+{
+  "model_sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+  "full_model_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+  "policy_subset_fingerprint": "0989e9bf8e2fed71ee630bc1d2d9da251d7d9cae5dec6c0e502ec54b8bcd1aee",
+  "critic_subset_fingerprint": "d600297254a057d96cea7fc57d2859e9d1965abaa1ac8bcc3748ff7e8081c95f",
+  "parameter_group_counts": {
+    "shared": 102,
+    "policy": 32,
+    "value": 4
+  },
+  "all_parameters_trainable": true,
+  "trainable_parameter_count": 138,
+  "optimizer_state_loaded": false,
+  "r4_hook_present": false,
+  "strict_loader": true
+}

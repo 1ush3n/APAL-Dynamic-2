@@ -1,0 +1,3 @@
+# autocast 历史源码说明
+
+记录中的运行时 SHA256=86c0afddd0717f92b253f746dc85eb32a000f6d05bde5a85f4d0e9b9486bd7a3，最终源 SHA256=6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f。当前仓库保留尊重调用方 autocast 策略的最终实现。运行时临时文件未从本地历史恢复，因此本轮对照只重建“外层显式 autocast(enabled=False)”这一已记录差异，不称为旧源码逐字节复现。

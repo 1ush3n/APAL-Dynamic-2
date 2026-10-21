@@ -1,0 +1,146 @@
+{
+  "arm": "R1",
+  "change": "learning_rate_x0.1",
+  "stop_reason": "budget_exhausted",
+  "training_decisions": 1024,
+  "optimizer_steps": 512,
+  "segments": 131,
+  "episodes_started": 5,
+  "episodes_completed": 4,
+  "elapsed_seconds": 247.2925022999989,
+  "seeds": {
+    "python": [
+      2147483648,
+      3625268051,
+      1202335661
+    ],
+    "numpy": 43,
+    "torch": 43,
+    "cuda": 43
+  },
+  "learning_rate": 2.9999999999999997e-05,
+  "entropy_coefficient": 0.01,
+  "initial_fingerprints": {
+    "full_model": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+    "policy_subset": "0989e9bf8e2fed71ee630bc1d2d9da251d7d9cae5dec6c0e502ec54b8bcd1aee",
+    "critic_subset": "d600297254a057d96cea7fc57d2859e9d1965abaa1ac8bcc3748ff7e8081c95f"
+  },
+  "advantage_mode": "standard",
+  "detach_value": false,
+  "device": "cuda:0",
+  "optimizer_name": "AdamW",
+  "optimizer_param_group_lrs": [
+    2.9999999999999997e-05
+  ],
+  "optimizer_param_group_settings": [
+    {
+      "lr": 2.9999999999999997e-05,
+      "eps": 1e-05,
+      "weight_decay": 0.0001,
+      "parameter_count": 310295
+    }
+  ],
+  "optimizer_schedulers": [],
+  "optimized_parameter_count": 138,
+  "parameter_group_counts": {
+    "shared": 102,
+    "policy": 32,
+    "value": 4
+  },
+  "detach_hook": {
+    "installed": false,
+    "target": null,
+    "install_count": 0,
+    "removed": false,
+    "hooks_after_cleanup": 0
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "peak_allocated_mib": 76.36474609375,
+    "peak_reserved_mib": 78.0,
+    "budget_mib": 6144.0,
+    "budget_exceeded": false
+  },
+  "checkpoints": [
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\checkpoints\\step0000.pt",
+      "sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6",
+      "actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+      "training_decisions": 0,
+      "optimizer_steps": 0,
+      "step_index": 0,
+      "tag": "step0000"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\checkpoints\\step0128.pt",
+      "sha256": "5cb9b9441cd009775dc585013e2c5ce6f60bf556c0e92d10b3ee884f6f8ab118",
+      "actor_fingerprint": "0187938977372840766f30c7f85db5ab4b1f1e128922f9ef8cc7066adb849605",
+      "training_decisions": 128,
+      "optimizer_steps": 64,
+      "step_index": 1,
+      "tag": "step0128"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\checkpoints\\step0256.pt",
+      "sha256": "bf052042117738e7fcdb3866b11c9e181daa68f3495ce0c7d048e8ec5d795067",
+      "actor_fingerprint": "fce5f70d379b13031177dea373971a3c4e5f5ddaf3b86e5615640d95795e385b",
+      "training_decisions": 256,
+      "optimizer_steps": 128,
+      "step_index": 2,
+      "tag": "step0256"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\checkpoints\\step0512.pt",
+      "sha256": "abf9dfa4126c4d66d379fd78c005c251db122afb7885fb2a2c8b35f2048d57cf",
+      "actor_fingerprint": "73c15a0bdb8cbd78a115259f63e3c3e12f55af12eb332e86d749b9fcbf3d345a",
+      "training_decisions": 512,
+      "optimizer_steps": 256,
+      "step_index": 3,
+      "tag": "step0512"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\checkpoints\\step0768.pt",
+      "sha256": "3abad45b0614f40e1ba39f8d930b3491e1abed8dd4afb02ce211e3effc1bfd1a",
+      "actor_fingerprint": "507d9d1f7a64586d9262886faf12d11f568c8e6f9d4a04a640601541a0a9bb78",
+      "training_decisions": 768,
+      "optimizer_steps": 384,
+      "step_index": 4,
+      "tag": "step0768"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\R1\\checkpoints\\step1024.pt",
+      "sha256": "26a0e651e6e93bf58aa910ba046c8a0a3737f39a6ae616609697747bd3edf4d2",
+      "actor_fingerprint": "b5984ae6f0774693cd9a4d51cc8ea556bcbc6e4aa8a283b1ffd59ecbde62d080",
+      "training_decisions": 1024,
+      "optimizer_steps": 512,
+      "step_index": 5,
+      "tag": "step1024"
+    }
+  ],
+  "hyperparameters": {
+    "method_variant": "C",
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "beta_shaping": 1.0,
+    "learning_rate": 0.0003,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "ppo_epochs": 1,
+    "batch_size": 2,
+    "rollout_steps": 8,
+    "num_envs": 1,
+    "max_grad_norm": 0.5,
+    "optimizer": "AdamW",
+    "optimizer_eps": 1e-05,
+    "weight_decay": 0.0001,
+    "normalize_advantages": true,
+    "amp_dtype": "fp32",
+    "disturbance_enabled": false,
+    "scenario": "NOMINAL",
+    "warmup_mode": "none",
+    "seed": 43,
+    "total_env_steps": 1024,
+    "max_decisions": 1024
+  }
+}

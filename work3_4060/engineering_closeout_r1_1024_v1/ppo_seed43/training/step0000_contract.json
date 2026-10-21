@@ -1,0 +1,13 @@
+{
+  "trajectory_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\shared_step0000_NOMINAL.json",
+  "independent_fact_status": "PASS",
+  "completed_tasks": 210,
+  "success": true,
+  "feasible": true,
+  "j_total": 2.751822145979913e-15,
+  "bc_j_total": 2.751822145979913e-15,
+  "matches_bc_physical_schedule": true,
+  "task_differences": [],
+  "physical_time_tolerance_hours": 1e-07,
+  "passed": true
+}

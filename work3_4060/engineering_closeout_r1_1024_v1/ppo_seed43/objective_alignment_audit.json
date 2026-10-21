@@ -1,0 +1,4645 @@
+{
+  "gamma": 0.99,
+  "beta": 1.0,
+  "reward_identity": "J_total = -sum_t r_raw_t",
+  "discounted_objective": "G_gamma_raw=sum_t gamma^t r_raw_t",
+  "training_episode_shaping_audits": [
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "transitions": 210,
+      "natural_terminal": true,
+      "raw_reward_sum": -0.00579245921988731,
+      "cost_increment_sum": 0.005792459219887313,
+      "raw_reward_cost_increment_residual": 2.6020852139652106e-18,
+      "raw_cost_identity_pass_1e-9": true,
+      "discounted_raw_return_gamma_0_99": -0.0015172646677036002,
+      "discounted_shaping_difference": 0.5,
+      "potential_identity_expected": 0.5,
+      "potential_identity_residual": 0.0,
+      "identity_pass_1e-9": true,
+      "cost_component_increment_recorded": true
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "transitions": 210,
+      "natural_terminal": true,
+      "raw_reward_sum": -0.008886505492045662,
+      "cost_increment_sum": 0.008886505492045664,
+      "raw_reward_cost_increment_residual": 1.734723475976807e-18,
+      "raw_cost_identity_pass_1e-9": true,
+      "discounted_raw_return_gamma_0_99": -0.0021841801503458616,
+      "discounted_shaping_difference": 0.5,
+      "potential_identity_expected": 0.5,
+      "potential_identity_residual": 0.0,
+      "identity_pass_1e-9": true,
+      "cost_component_increment_recorded": true
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "transitions": 210,
+      "natural_terminal": true,
+      "raw_reward_sum": -0.012984809131698876,
+      "cost_increment_sum": 0.012984809131698865,
+      "raw_reward_cost_increment_residual": -1.0408340855860843e-17,
+      "raw_cost_identity_pass_1e-9": true,
+      "discounted_raw_return_gamma_0_99": -0.004487346596267289,
+      "discounted_shaping_difference": 0.5,
+      "potential_identity_expected": 0.5,
+      "potential_identity_residual": 0.0,
+      "identity_pass_1e-9": true,
+      "cost_component_increment_recorded": true
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "transitions": 210,
+      "natural_terminal": true,
+      "raw_reward_sum": -0.006522008514396921,
+      "cost_increment_sum": 0.00652200851439692,
+      "raw_reward_cost_increment_residual": -8.673617379884035e-19,
+      "raw_cost_identity_pass_1e-9": true,
+      "discounted_raw_return_gamma_0_99": -0.002473552029548188,
+      "discounted_shaping_difference": 0.5,
+      "potential_identity_expected": 0.5,
+      "potential_identity_residual": 0.0,
+      "identity_pass_1e-9": true,
+      "cost_component_increment_recorded": true
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "transitions": 184,
+      "natural_terminal": false,
+      "raw_reward_sum": -0.00571935524413537,
+      "cost_increment_sum": 0.005719355244135371,
+      "raw_reward_cost_increment_residual": 1.734723475976807e-18,
+      "raw_cost_identity_pass_1e-9": true,
+      "discounted_raw_return_gamma_0_99": -0.0022732755347701556,
+      "discounted_shaping_difference": 0.42132335894610523,
+      "potential_identity_expected": 0.42132335894610523,
+      "potential_identity_residual": 0.0,
+      "identity_pass_1e-9": true,
+      "cost_component_increment_recorded": true
+    }
+  ],
+  "greedy_evaluation_accounting": [
+    {
+      "source": "shared_step0000_NOMINAL.json",
+      "episode_type": "greedy_evaluation_natural_episode",
+      "raw_reward_sum": -2.7518221459799146e-15,
+      "negative_j_total": -2.751822145979913e-15,
+      "raw_cost_identity_residual": -1.5777218104420236e-30,
+      "raw_cost_identity_pass_1e-9": true,
+      "gamma_discounted_raw_return": -4.90920170734729e-16,
+      "j_total_is_undiscounted": true
+    },
+    {
+      "source": "step0128_NOMINAL.json",
+      "episode_type": "greedy_evaluation_natural_episode",
+      "raw_reward_sum": -2.7518221459799146e-15,
+      "negative_j_total": -2.751822145979913e-15,
+      "raw_cost_identity_residual": -1.5777218104420236e-30,
+      "raw_cost_identity_pass_1e-9": true,
+      "gamma_discounted_raw_return": -4.90920170734729e-16,
+      "j_total_is_undiscounted": true
+    },
+    {
+      "source": "step0256_NOMINAL.json",
+      "episode_type": "greedy_evaluation_natural_episode",
+      "raw_reward_sum": -2.7518221459799146e-15,
+      "negative_j_total": -2.751822145979913e-15,
+      "raw_cost_identity_residual": -1.5777218104420236e-30,
+      "raw_cost_identity_pass_1e-9": true,
+      "gamma_discounted_raw_return": -4.90920170734729e-16,
+      "j_total_is_undiscounted": true
+    },
+    {
+      "source": "step0512_NOMINAL.json",
+      "episode_type": "greedy_evaluation_natural_episode",
+      "raw_reward_sum": -0.005644230140181902,
+      "negative_j_total": -0.005644230140181904,
+      "raw_cost_identity_residual": 2.6020852139652106e-18,
+      "raw_cost_identity_pass_1e-9": true,
+      "gamma_discounted_raw_return": -0.0023893593595661687,
+      "j_total_is_undiscounted": true
+    },
+    {
+      "source": "step0768_NOMINAL.json",
+      "episode_type": "greedy_evaluation_natural_episode",
+      "raw_reward_sum": -0.005644230140181902,
+      "negative_j_total": -0.005644230140181904,
+      "raw_cost_identity_residual": 2.6020852139652106e-18,
+      "raw_cost_identity_pass_1e-9": true,
+      "gamma_discounted_raw_return": -0.0023945733745816284,
+      "j_total_is_undiscounted": true
+    },
+    {
+      "source": "step1024_NOMINAL.json",
+      "episode_type": "greedy_evaluation_natural_episode",
+      "raw_reward_sum": -0.003859445479520683,
+      "negative_j_total": -0.0038594454795206888,
+      "raw_cost_identity_residual": 5.637851296924623e-18,
+      "raw_cost_identity_pass_1e-9": true,
+      "gamma_discounted_raw_return": -0.00171503198390707,
+      "j_total_is_undiscounted": true
+    }
+  ],
+  "nonzero_training_cost_reward_locations": [
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 11,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_9",
+      "raw_reward": -0.00013517138542733334,
+      "discount_weight_gamma_0_99": 0.8953382542587164,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013517138542733334
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 20,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "1_16",
+      "raw_reward": -0.00013517138542733356,
+      "discount_weight_gamma_0_99": 0.8179069375972308,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 1.6123766379714543e-05,
+        "cost_team": 0.00011904761904761906,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 71,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_9",
+      "raw_reward": -0.00025421900447495266,
+      "discount_weight_gamma_0_99": 0.4898902730042049,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00025421900447495266
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 76,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_26",
+      "raw_reward": -2.0103965866774304e-05,
+      "discount_weight_gamma_0_99": 0.46588077516979337,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.0103965866774304e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 90,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "4_7",
+      "raw_reward": -0.00027432297034172865,
+      "discount_weight_gamma_0_99": 0.4047319726783238,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 3.622773224649096e-05,
+        "cost_team": 0.00023809523809523815,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 91,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.40068465295154054,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 97,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_25",
+      "raw_reward": -8.506630343277713e-06,
+      "discount_weight_gamma_0_99": 0.37723664692350417,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.506630343277821e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 100,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_9",
+      "raw_reward": -1.548660176831692e-06,
+      "discount_weight_gamma_0_99": 0.3660323412732292,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.548660176831692e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 104,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_18",
+      "raw_reward": -4.273801928885465e-05,
+      "discount_weight_gamma_0_99": 0.35160920655802225,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.273801928885476e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 109,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_26",
+      "raw_reward": -1.3353177137166283e-05,
+      "discount_weight_gamma_0_99": 0.334376856889913,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.3353177137166174e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 120,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "5_16",
+      "raw_reward": -6.614648694668003e-05,
+      "discount_weight_gamma_0_99": 0.2993803913123313,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 6.6146486946134e-05,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 122,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.2934227215252159,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 126,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_18",
+      "raw_reward": -1.9656282742694332e-05,
+      "discount_weight_gamma_0_99": 0.2818606955404635,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694224e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 130,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_9",
+      "raw_reward": -0.0001317459316238674,
+      "discount_weight_gamma_0_99": 0.27075425951199406,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001317459316238674
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 133,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_25",
+      "raw_reward": -4.4671221237981744e-05,
+      "discount_weight_gamma_0_99": 0.2627125872502283,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.4671221237981744e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 135,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_24",
+      "raw_reward": -0.0002453788206939185,
+      "discount_weight_gamma_0_99": 0.25748460676394874,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002453788206939185
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 139,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_26",
+      "raw_reward": -3.8368115632453695e-05,
+      "discount_weight_gamma_0_99": 0.24733868589386818,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453695e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 140,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_23",
+      "raw_reward": -0.0001235973635597496,
+      "discount_weight_gamma_0_99": 0.24486529903492948,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001235973635597496
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 150,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "6_7",
+      "raw_reward": -0.0006034177354912141,
+      "discount_weight_gamma_0_99": 0.22145178723886091,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.00012722725930019183,
+        "cost_team": 0.0004761904761904762,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 151,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_8",
+      "raw_reward": -0.0004761904761904764,
+      "discount_weight_gamma_0_99": 0.2192372693664723,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002380952380952382
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 155,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_9",
+      "raw_reward": -0.00024130888064404854,
+      "discount_weight_gamma_0_99": 0.21059844619672852,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00024130888064404876
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 160,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_26",
+      "raw_reward": -7.19384203587024e-06,
+      "discount_weight_gamma_0_99": 0.2002770268574893,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 7.19384203587024e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 161,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_18",
+      "raw_reward": -0.00019740461802216945,
+      "discount_weight_gamma_0_99": 0.19827425658891443,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00019740461802216923
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 165,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_25",
+      "raw_reward": -0.00019740461802216945,
+      "discount_weight_gamma_0_99": 0.1904614597650274,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00019740461802216945
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 172,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "4_21",
+      "raw_reward": -0.0006433119587242607,
+      "discount_weight_gamma_0_99": 0.17752252675876343,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00040521672062902175,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 181,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_24",
+      "raw_reward": -0.0002453788206939183,
+      "discount_weight_gamma_0_99": 0.16216989001100654,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00024537882069391873
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 186,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_23",
+      "raw_reward": -4.549744512130291e-06,
+      "discount_weight_gamma_0_99": 0.1542219517938446,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.549744512130291e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 189,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_125",
+      "raw_reward": -0.00024992856520604945,
+      "discount_weight_gamma_0_99": 0.14964140560361563,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 1.1833327110812118e-05,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 193,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_19",
+      "raw_reward": -0.000142116242305256,
+      "discount_weight_gamma_0_99": 0.1437449371536248,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.000142116242305256
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 194,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_22",
+      "raw_reward": -2.4669887350056013e-05,
+      "discount_weight_gamma_0_99": 0.14230748778208857,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.4669887350056013e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 195,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_24",
+      "raw_reward": -2.118811242850585e-05,
+      "discount_weight_gamma_0_99": 0.14088441290426768,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.1188112428506285e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 198,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_23",
+      "raw_reward": -2.1188112428506718e-05,
+      "discount_weight_gamma_0_99": 0.136700004956598,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.1188112428506718e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 200,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_125",
+      "raw_reward": -1.4707661295500218e-05,
+      "discount_weight_gamma_0_99": 0.13397967485796172,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.4707661295500218e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 201,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "6_21",
+      "raw_reward": -0.00022387001580782568,
+      "discount_weight_gamma_0_99": 0.1326398781093821,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00010482239676020669,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 204,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_19",
+      "raw_reward": -0.00014211624230525514,
+      "discount_weight_gamma_0_99": 0.12870034108965533,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014211624230525514
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 205,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_22",
+      "raw_reward": -2.4669887350055146e-05,
+      "discount_weight_gamma_0_99": 0.1274133376787588,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.4669887350055146e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 206,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_24",
+      "raw_reward": -2.1188112428504983e-05,
+      "discount_weight_gamma_0_99": 0.12613920430197118,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.1188112428505417e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 208,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_23",
+      "raw_reward": -2.118811242850585e-05,
+      "discount_weight_gamma_0_99": 0.12362903413636196,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.1188112428505417e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 0,
+      "episode_step": 209,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_125",
+      "raw_reward": -0.0002385776771049548,
+      "discount_weight_gamma_0_99": 0.12239274379499834,
+      "cost_component_increments": {
+        "cost_takt": 1.6385215360405888e-15,
+        "cost_time": 0.00010482239676019996,
+        "cost_team": 0.00011904761904761888,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.470766129549805e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 46,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_9",
+      "raw_reward": -0.00025421900447495266,
+      "discount_weight_gamma_0_99": 0.6298236312032323,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00025421900447495266
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 49,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_26",
+      "raw_reward": -2.0103965866774304e-05,
+      "discount_weight_gamma_0_99": 0.611117239532865,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.0103965866774304e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 60,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "3_16",
+      "raw_reward": -0.00027432297034172816,
+      "discount_weight_gamma_0_99": 0.5471566423907612,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 3.622773224649017e-05,
+        "cost_team": 0.00023809523809523812,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 62,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.536268225207185,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761907,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761905
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 66,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_18",
+      "raw_reward": -1.9656282742694224e-05,
+      "discount_weight_gamma_0_99": 0.5151371174238033,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694224e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 70,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_9",
+      "raw_reward": -0.0001317459316238674,
+      "discount_weight_gamma_0_99": 0.49483865960020695,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001317459316238674
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 73,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_25",
+      "raw_reward": -4.467122123798131e-05,
+      "discount_weight_gamma_0_99": 0.4801414565714212,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.467122123798131e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 76,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_26",
+      "raw_reward": -3.8368115632453044e-05,
+      "discount_weight_gamma_0_99": 0.46588077516979337,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453044e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 90,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "4_16",
+      "raw_reward": -0.00023444155123699805,
+      "discount_weight_gamma_0_99": 0.4047319726783238,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0001153939321893789,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 92,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.3966778064220251,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 96,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_25",
+      "raw_reward": -9.047594237518658e-06,
+      "discount_weight_gamma_0_99": 0.38104711810454966,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 9.04759423751855e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 100,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_9",
+      "raw_reward": -0.00014421897966485206,
+      "discount_weight_gamma_0_99": 0.3660323412732292,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014421897966485206
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 102,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_26",
+      "raw_reward": -2.7759427127277804e-05,
+      "discount_weight_gamma_0_99": 0.3587482976818919,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.7759427127277804e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 106,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_18",
+      "raw_reward": -0.0002179702031135768,
+      "discount_weight_gamma_0_99": 0.3446121833475176,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.000217970203113577
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 120,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "5_16",
+      "raw_reward": -0.00039899620414377435,
+      "discount_weight_gamma_0_99": 0.2993803913123313,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.0002799485850956099,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 122,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_8",
+      "raw_reward": -0.00023809523809523777,
+      "discount_weight_gamma_0_99": 0.2934227215252159,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 126,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_18",
+      "raw_reward": -2.0197246636934844e-05,
+      "discount_weight_gamma_0_99": 0.2818606955404635,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.019724663693506e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 130,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_9",
+      "raw_reward": -0.00013228689551810814,
+      "discount_weight_gamma_0_99": 0.27075425951199406,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013228689551810814
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 132,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_26",
+      "raw_reward": -1.5827342980534106e-05,
+      "discount_weight_gamma_0_99": 0.26536624974770534,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.582734298053389e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 135,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_25",
+      "raw_reward": -0.00019488846656741648,
+      "discount_weight_gamma_0_99": 0.25748460676394874,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00019488846656741648
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 136,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_24",
+      "raw_reward": -0.0001263312016462994,
+      "discount_weight_gamma_0_99": 0.2549097606963093,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00012633120164629963
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 138,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_30",
+      "raw_reward": -0.00013841804911507048,
+      "discount_weight_gamma_0_99": 0.2498370564584527,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001384180491150707
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 139,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_23",
+      "raw_reward": -4.016206774802751e-05,
+      "discount_weight_gamma_0_99": 0.24733868589386818,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.016206774802751e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 143,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_125",
+      "raw_reward": -3.368161661502101e-05,
+      "discount_weight_gamma_0_99": 0.23759255478829303,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.368161661502123e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 150,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "6_16",
+      "raw_reward": -0.0007017928868279602,
+      "discount_weight_gamma_0_99": 0.22145178723886091,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.00034465002968455766,
+        "cost_team": 0.0003571428571428573,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 151,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_8",
+      "raw_reward": -0.00023809523809523864,
+      "discount_weight_gamma_0_99": 0.2192372693664723,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761888
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 155,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_25",
+      "raw_reward": -9.047594237518441e-06,
+      "discount_weight_gamma_0_99": 0.21059844619672852,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 9.047594237518441e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 159,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_9",
+      "raw_reward": -0.00014421897966485162,
+      "discount_weight_gamma_0_99": 0.2023000271287771,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014421897966485206
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 161,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_26",
+      "raw_reward": -2.7759427127277587e-05,
+      "discount_weight_gamma_0_99": 0.19827425658891443,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.7759427127277587e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 163,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_18",
+      "raw_reward": -0.0002179702031135768,
+      "discount_weight_gamma_0_99": 0.19432859888279502,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002179702031135768
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 164,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_24",
+      "raw_reward": -0.00012633120164629984,
+      "discount_weight_gamma_0_99": 0.19238531289396707,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001263312016462994
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 165,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_23",
+      "raw_reward": -5.807033355067007e-06,
+      "discount_weight_gamma_0_99": 0.1904614597650274,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 5.80703335506744e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 167,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_30",
+      "raw_reward": -0.0001561894329579908,
+      "discount_weight_gamma_0_99": 0.18667127671570335,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00015618943295799123
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 171,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_125",
+      "raw_reward": -3.368161661502101e-05,
+      "discount_weight_gamma_0_99": 0.17931568359471053,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.368161661502101e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 172,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "4_21",
+      "raw_reward": -0.000721005488717604,
+      "discount_weight_gamma_0_99": 0.17752252675876343,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00036386263157474797,
+        "cost_team": 0.0003571428571428573,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 181,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_24",
+      "raw_reward": -0.00012633120164629984,
+      "discount_weight_gamma_0_99": 0.16216989001100654,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001263312016462994
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 182,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_23",
+      "raw_reward": -5.807033355067007e-06,
+      "discount_weight_gamma_0_99": 0.16054819111089647,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 5.80703335506744e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 183,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_30",
+      "raw_reward": -0.0001561894329579908,
+      "discount_weight_gamma_0_99": 0.1589427091997875,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00015618943295799123
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 188,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_125",
+      "raw_reward": -3.368161661502101e-05,
+      "discount_weight_gamma_0_99": 0.1511529349531471,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.368161661502101e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 189,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "5_21",
+      "raw_reward": -0.0003220092845743795,
+      "discount_weight_gamma_0_99": 0.14964140560361563,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 8.391404647914154e-05,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 193,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_19",
+      "raw_reward": -0.000142116242305256,
+      "discount_weight_gamma_0_99": 0.1437449371536248,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.000142116242305256
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 194,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_22",
+      "raw_reward": -2.4669887350056013e-05,
+      "discount_weight_gamma_0_99": 0.14230748778208857,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.4669887350056013e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 195,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_24",
+      "raw_reward": -0.000151001088996355,
+      "discount_weight_gamma_0_99": 0.14088441290426768,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00015100108899635542
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 196,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_30",
+      "raw_reward": -0.00016308793646512606,
+      "discount_weight_gamma_0_99": 0.139475568775225,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001630879364651265
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 198,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_23",
+      "raw_reward": -0.00018387957414570284,
+      "discount_weight_gamma_0_99": 0.136700004956598,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001838795741457024
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 200,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_125",
+      "raw_reward": -5.9585070377015e-05,
+      "discount_weight_gamma_0_99": 0.13397967485796172,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 5.9585070377014566e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 201,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "6_21",
+      "raw_reward": -0.0007243397996395118,
+      "discount_weight_gamma_0_99": 0.1326398781093821,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00024814932344903516,
+        "cost_team": 0.00047619047619047576,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 204,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_19",
+      "raw_reward": -0.0001528815998254867,
+      "discount_weight_gamma_0_99": 0.12870034108965533,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00015288159982548627
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 205,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_24",
+      "raw_reward": -0.000151001088996355,
+      "discount_weight_gamma_0_99": 0.1274133376787588,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00015100108899635586
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 206,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_30",
+      "raw_reward": -0.00016308793646512693,
+      "discount_weight_gamma_0_99": 0.12613920430197118,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00016308793646512606
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 207,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_23",
+      "raw_reward": -6.483195509808526e-05,
+      "discount_weight_gamma_0_99": 0.12487781225895148,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 6.483195509808439e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 1,
+      "episode_step": 209,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_125",
+      "raw_reward": -0.0006485055883168455,
+      "discount_weight_gamma_0_99": 0.12239274379499834,
+      "cost_component_increments": {
+        "cost_takt": 1.6385215360405888e-15,
+        "cost_time": 0.00023301122720727294,
+        "cost_team": 0.00035714285714285665,
+        "cost_postpone": 0.0,
+        "cost_revision": 5.8351503965077024e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 9,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_8",
+      "raw_reward": -0.00023809523809523812,
+      "discount_weight_gamma_0_99": 0.9135172474836408,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761906,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761906
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 10,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_18",
+      "raw_reward": -2.0197246636935467e-05,
+      "discount_weight_gamma_0_99": 0.9043820750088044,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.0197246636935454e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 11,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_9",
+      "raw_reward": -0.00013228689551810847,
+      "discount_weight_gamma_0_99": 0.8953382542587164,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013228689551810844
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 12,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_26",
+      "raw_reward": -1.582734298053378e-05,
+      "discount_weight_gamma_0_99": 0.8863848717161292,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.582734298053378e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 14,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_25",
+      "raw_reward": -0.0001948884665674167,
+      "discount_weight_gamma_0_99": 0.8687458127689782,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001948884665674167
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 20,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "1_16",
+      "raw_reward": -0.00036319995170299465,
+      "discount_weight_gamma_0_99": 0.8179069375972308,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0002441523326553755,
+        "cost_team": 0.00011904761904761906,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 22,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_8",
+      "raw_reward": -0.0002380952380952381,
+      "discount_weight_gamma_0_99": 0.8016305895390459,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761907,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 26,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_18",
+      "raw_reward": -2.0197246636935277e-05,
+      "discount_weight_gamma_0_99": 0.7700431458051551,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.0197246636935277e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 27,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_9",
+      "raw_reward": -0.00013228689551810814,
+      "discount_weight_gamma_0_99": 0.7623427143471035,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013228689551810825
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 28,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_26",
+      "raw_reward": -1.5827342980533456e-05,
+      "discount_weight_gamma_0_99": 0.7547192872036326,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.5827342980533456e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 30,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_25",
+      "raw_reward": -0.00019488846656741626,
+      "discount_weight_gamma_0_99": 0.7397003733882802,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00019488846656741626
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 38,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "2_16",
+      "raw_reward": -0.00036319995170299357,
+      "discount_weight_gamma_0_99": 0.682554595010387,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00024415233265537474,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 39,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_8",
+      "raw_reward": -0.00023809523809523777,
+      "discount_weight_gamma_0_99": 0.6757290490602831,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 45,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_25",
+      "raw_reward": -9.047594237519309e-06,
+      "discount_weight_gamma_0_99": 0.6361854860638709,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 9.047594237519092e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 46,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_9",
+      "raw_reward": -0.0001442189796648525,
+      "discount_weight_gamma_0_99": 0.6298236312032323,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001442189796648525
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 47,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_26",
+      "raw_reward": -2.7759427127277587e-05,
+      "discount_weight_gamma_0_99": 0.6235253948912,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.7759427127277804e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 50,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_18",
+      "raw_reward": -0.0002179702031135768,
+      "discount_weight_gamma_0_99": 0.6050060671375364,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.000217970203113577
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 60,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "3_16",
+      "raw_reward": -0.0003989962041432266,
+      "discount_weight_gamma_0_99": 0.5471566423907612,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00027994858509560827,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 61,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_8",
+      "raw_reward": -0.00023809523809523777,
+      "discount_weight_gamma_0_99": 0.5416850759668536,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 66,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_18",
+      "raw_reward": -2.019724663693571e-05,
+      "discount_weight_gamma_0_99": 0.5151371174238033,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.0197246636935494e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 70,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_9",
+      "raw_reward": -0.00013228689551810857,
+      "discount_weight_gamma_0_99": 0.49483865960020695,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001322868955181088
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 72,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_26",
+      "raw_reward": -1.5827342980534106e-05,
+      "discount_weight_gamma_0_99": 0.48499137027416284,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.582734298053389e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 75,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_25",
+      "raw_reward": -0.00019488846656741648,
+      "discount_weight_gamma_0_99": 0.4705866415856499,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00019488846656741648
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 90,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "4_7",
+      "raw_reward": -0.00036319995170299574,
+      "discount_weight_gamma_0_99": 0.4047319726783238,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0002441523326553774,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 91,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_8",
+      "raw_reward": -0.00023809523809523864,
+      "discount_weight_gamma_0_99": 0.40068465295154054,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761888
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 96,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_25",
+      "raw_reward": -9.047594237518441e-06,
+      "discount_weight_gamma_0_99": 0.38104711810454966,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 9.047594237518441e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 101,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_9",
+      "raw_reward": -0.0001442189796648525,
+      "discount_weight_gamma_0_99": 0.3623720178604969,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014421897966485206
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 102,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_26",
+      "raw_reward": -2.7759427127277587e-05,
+      "discount_weight_gamma_0_99": 0.3587482976818919,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.7759427127277587e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 105,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "1_24",
+      "raw_reward": -0.0002453788206939183,
+      "discount_weight_gamma_0_99": 0.348093114492442,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00024537882069391873
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 106,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_18",
+      "raw_reward": -0.0002179702031135768,
+      "discount_weight_gamma_0_99": 0.3446121833475176,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002179702031135768
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 107,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "1_30",
+      "raw_reward": -0.0001371607602721342,
+      "discount_weight_gamma_0_99": 0.34116606151404244,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013716076027213376
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 108,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "1_23",
+      "raw_reward": -3.8904778905090795e-05,
+      "discount_weight_gamma_0_99": 0.337754400898902,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8904778905090795e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 113,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "1_125",
+      "raw_reward": -3.2424327772084295e-05,
+      "discount_weight_gamma_0_99": 0.3212010745647914,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.2424327772084295e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 120,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "5_16",
+      "raw_reward": -0.0008528648917870011,
+      "discount_weight_gamma_0_99": 0.2993803913123313,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.0003766744155959793,
+        "cost_team": 0.0004761904761904764,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 121,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_8",
+      "raw_reward": -0.00023809523809523864,
+      "discount_weight_gamma_0_99": 0.296386587399208,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761888
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 127,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_18",
+      "raw_reward": -2.0197246636935277e-05,
+      "discount_weight_gamma_0_99": 0.27904208858505886,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.0197246636934844e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 131,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_9",
+      "raw_reward": -0.00013228689551810814,
+      "discount_weight_gamma_0_99": 0.2680467169168741,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013228689551810814
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 132,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_26",
+      "raw_reward": -1.5827342980534106e-05,
+      "discount_weight_gamma_0_99": 0.26536624974770534,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.5827342980534106e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 135,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_24",
+      "raw_reward": -0.00012633120164629984,
+      "discount_weight_gamma_0_99": 0.25748460676394874,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001263312016462994
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 136,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_25",
+      "raw_reward": -0.00019488846656741648,
+      "discount_weight_gamma_0_99": 0.2549097606963093,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00019488846656741648
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 137,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_30",
+      "raw_reward": -0.0001384180491150709,
+      "discount_weight_gamma_0_99": 0.2523606630893462,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013841804911507048
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 138,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_23",
+      "raw_reward": -4.016206774802751e-05,
+      "discount_weight_gamma_0_99": 0.2498370564584527,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.016206774802751e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 143,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_125",
+      "raw_reward": -3.368161661502101e-05,
+      "discount_weight_gamma_0_99": 0.23759255478829303,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.368161661502101e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 150,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "6_16",
+      "raw_reward": -0.0007017928868279615,
+      "discount_weight_gamma_0_99": 0.22145178723886091,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.0003446500296845575,
+        "cost_team": 0.0003571428571428573,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 151,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_8",
+      "raw_reward": -0.00023809523809523864,
+      "discount_weight_gamma_0_99": 0.2192372693664723,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761888,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761888
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 155,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_25",
+      "raw_reward": -9.047594237518441e-06,
+      "discount_weight_gamma_0_99": 0.21059844619672852,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 9.047594237518441e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 159,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_19",
+      "raw_reward": -0.00014211624230525688,
+      "discount_weight_gamma_0_99": 0.2023000271287771,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.000142116242305256
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 160,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_9",
+      "raw_reward": -0.0001442189796648525,
+      "discount_weight_gamma_0_99": 0.2002770268574893,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014421897966485162
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 161,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_26",
+      "raw_reward": -2.7759427127278455e-05,
+      "discount_weight_gamma_0_99": 0.19827425658891443,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.7759427127277587e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 162,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_22",
+      "raw_reward": -2.4669887350056013e-05,
+      "discount_weight_gamma_0_99": 0.19629151402302528,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.4669887350056013e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 164,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_24",
+      "raw_reward": -2.118811242850585e-05,
+      "discount_weight_gamma_0_99": 0.19238531289396707,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.118811242850585e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 165,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_18",
+      "raw_reward": -0.00021797020311357766,
+      "discount_weight_gamma_0_99": 0.1904614597650274,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002179702031135768
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 168,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_23",
+      "raw_reward": -2.118811242850585e-05,
+      "discount_weight_gamma_0_99": 0.1848045639485463,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.1188112428506718e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 171,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_125",
+      "raw_reward": -1.4707661295500218e-05,
+      "discount_weight_gamma_0_99": 0.17931568359471053,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.4707661295500218e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 172,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "4_21",
+      "raw_reward": -0.0006228662199510519,
+      "discount_weight_gamma_0_99": 0.17752252675876343,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0003847709818558132,
+        "cost_team": 0.00023809523809523777,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 179,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_19",
+      "raw_reward": -0.00014211624230525688,
+      "discount_weight_gamma_0_99": 0.16546259566473476,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.000142116242305256
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 181,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_22",
+      "raw_reward": -2.4669887350056013e-05,
+      "discount_weight_gamma_0_99": 0.16216989001100654,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.4669887350056013e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 182,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_24",
+      "raw_reward": -2.118811242850585e-05,
+      "discount_weight_gamma_0_99": 0.16054819111089647,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.118811242850585e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 185,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_23",
+      "raw_reward": -2.118811242850585e-05,
+      "discount_weight_gamma_0_99": 0.15577974928671173,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.1188112428506718e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 188,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_125",
+      "raw_reward": -1.4707661295500218e-05,
+      "discount_weight_gamma_0_99": 0.1511529349531471,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.4707661295500218e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 189,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "5_17",
+      "raw_reward": -0.0002238700158078248,
+      "discount_weight_gamma_0_99": 0.14964140560361563,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00010482239676020723,
+        "cost_team": 0.00011904761904761888,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 193,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_19",
+      "raw_reward": -0.0001528815998254867,
+      "discount_weight_gamma_0_99": 0.1437449371536248,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00015288159982548583
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 195,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_30",
+      "raw_reward": -0.00014371750639767533,
+      "discount_weight_gamma_0_99": 0.14088441290426768,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014371750639767446
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 196,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_24",
+      "raw_reward": -0.0001853561233893155,
+      "discount_weight_gamma_0_99": 0.139475568775225,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001853561233893155
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 198,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_23",
+      "raw_reward": -0.00018387957414570284,
+      "discount_weight_gamma_0_99": 0.136700004956598,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00018387957414570284
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 200,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_125",
+      "raw_reward": -5.958507037701413e-05,
+      "discount_weight_gamma_0_99": 0.13397967485796172,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 5.9585070377015e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 201,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "6_21",
+      "raw_reward": -0.0007254198741351945,
+      "discount_weight_gamma_0_99": 0.1326398781093821,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00024922939794471766,
+        "cost_team": 0.00047619047619047554,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 203,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_14",
+      "raw_reward": -0.00014211624230525514,
+      "discount_weight_gamma_0_99": 0.1300003445350054,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014211624230525514
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 204,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_19",
+      "raw_reward": -0.00017823247412696898,
+      "discount_weight_gamma_0_99": 0.12870034108965533,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00017823247412696898
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 205,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_22",
+      "raw_reward": -6.078611917176985e-05,
+      "discount_weight_gamma_0_99": 0.1274133376787588,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 6.078611917176898e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 206,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_24",
+      "raw_reward": -0.000176351963297839,
+      "discount_weight_gamma_0_99": 0.12613920430197118,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00017635196329783814
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 207,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_30",
+      "raw_reward": -0.00018908569478200653,
+      "discount_weight_gamma_0_99": 0.12487781225895148,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00018908569478200653
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 208,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_23",
+      "raw_reward": -0.00021107740383487054,
+      "discount_weight_gamma_0_99": 0.12362903413636196,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00021107740383487054
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 2,
+      "episode_step": 209,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_125",
+      "raw_reward": -0.0011296726719921078,
+      "discount_weight_gamma_0_99": 0.12239274379499834,
+      "cost_component_increments": {
+        "cost_takt": 1.6385215360405888e-15,
+        "cost_time": 0.0004484231895164922,
+        "cost_team": 0.0005952380952380944,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.60113872358792e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 9,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_8",
+      "raw_reward": -0.00023809523809523812,
+      "discount_weight_gamma_0_99": 0.9135172474836408,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761906,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761906
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 10,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_18",
+      "raw_reward": -1.9656282742694142e-05,
+      "discount_weight_gamma_0_99": 0.9043820750088044,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.965628274269413e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 11,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_9",
+      "raw_reward": -1.5486601768315835e-06,
+      "discount_weight_gamma_0_99": 0.8953382542587164,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.5486601768315835e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 12,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_25",
+      "raw_reward": -1.9656282742694115e-05,
+      "discount_weight_gamma_0_99": 0.8863848717161292,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694142e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 15,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_26",
+      "raw_reward": -1.3353177137165795e-05,
+      "discount_weight_gamma_0_99": 0.8600583546412884,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.3353177137165822e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 20,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "1_16",
+      "raw_reward": -5.4214402799385825e-05,
+      "discount_weight_gamma_0_99": 0.8179069375972308,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 5.421440279938589e-05,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 21,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_8",
+      "raw_reward": -0.00023809523809523815,
+      "discount_weight_gamma_0_99": 0.8097278682212584,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761906,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761907
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 26,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_18",
+      "raw_reward": -1.9656282742694224e-05,
+      "discount_weight_gamma_0_99": 0.7700431458051551,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694278e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 27,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_9",
+      "raw_reward": -0.0001317459316238671,
+      "discount_weight_gamma_0_99": 0.7623427143471035,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001317459316238671
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 29,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_25",
+      "raw_reward": -4.4671221237980985e-05,
+      "discount_weight_gamma_0_99": 0.7471720943315961,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.4671221237980985e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 30,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_26",
+      "raw_reward": -3.836811563245283e-05,
+      "discount_weight_gamma_0_99": 0.7397003733882802,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.836811563245283e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 38,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "2_7",
+      "raw_reward": -0.00023444155123699577,
+      "discount_weight_gamma_0_99": 0.682554595010387,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00011539393218937677,
+        "cost_team": 0.00011904761904761907,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 39,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.6757290490602831,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 44,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_25",
+      "raw_reward": -8.506630343277713e-06,
+      "discount_weight_gamma_0_99": 0.6426116020847181,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.506630343277821e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 46,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_9",
+      "raw_reward": -0.00014367801577061133,
+      "discount_weight_gamma_0_99": 0.6298236312032323,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014367801577061122
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 49,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_18",
+      "raw_reward": -6.775295778414163e-05,
+      "discount_weight_gamma_0_99": 0.611117239532865,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 6.775295778414163e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 50,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_26",
+      "raw_reward": -3.8368115632453044e-05,
+      "discount_weight_gamma_0_99": 0.6050060671375364,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453044e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 60,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "3_7",
+      "raw_reward": -0.0002583057195304848,
+      "discount_weight_gamma_0_99": 0.5471566423907612,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00013925810048286586,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 61,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.5416850759668536,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 67,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_18",
+      "raw_reward": -1.9656282742694115e-05,
+      "discount_weight_gamma_0_99": 0.5099857462495653,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694332e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 71,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_9",
+      "raw_reward": -0.0001317459316238674,
+      "discount_weight_gamma_0_99": 0.4898902730042049,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001317459316238674
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 76,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_25",
+      "raw_reward": -4.4671221237981094e-05,
+      "discount_weight_gamma_0_99": 0.46588077516979337,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.467122123798131e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 79,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_26",
+      "raw_reward": -3.836811563245326e-05,
+      "discount_weight_gamma_0_99": 0.45204365026647536,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453044e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 90,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "4_16",
+      "raw_reward": -0.00023444155123699675,
+      "discount_weight_gamma_0_99": 0.4047319726783238,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0001153939321893789,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 91,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_8",
+      "raw_reward": -0.00023809523809523777,
+      "discount_weight_gamma_0_99": 0.40068465295154054,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 97,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_18",
+      "raw_reward": -1.9656282742694115e-05,
+      "discount_weight_gamma_0_99": 0.37723664692350417,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694332e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 101,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_9",
+      "raw_reward": -0.0001317459316238674,
+      "discount_weight_gamma_0_99": 0.3623720178604969,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001317459316238674
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 105,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_25",
+      "raw_reward": -4.467122123798196e-05,
+      "discount_weight_gamma_0_99": 0.348093114492442,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.4671221237981744e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 109,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_26",
+      "raw_reward": -3.8368115632453695e-05,
+      "discount_weight_gamma_0_99": 0.334376856889913,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453695e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 120,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "5_7",
+      "raw_reward": -0.00023444155123754622,
+      "discount_weight_gamma_0_99": 0.2993803913123313,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.00011539393218938133,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 121,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_8",
+      "raw_reward": -0.00023809523809523777,
+      "discount_weight_gamma_0_99": 0.296386587399208,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 126,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_18",
+      "raw_reward": -1.9656282742694115e-05,
+      "discount_weight_gamma_0_99": 0.2818606955404635,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694332e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 130,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_9",
+      "raw_reward": -0.0001317459316238674,
+      "discount_weight_gamma_0_99": 0.27075425951199406,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001317459316238674
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 136,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_25",
+      "raw_reward": -4.467122123798196e-05,
+      "discount_weight_gamma_0_99": 0.2549097606963093,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.4671221237981744e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 139,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_26",
+      "raw_reward": -3.8368115632453695e-05,
+      "discount_weight_gamma_0_99": 0.24733868589386818,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.836811563245348e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 150,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "6_16",
+      "raw_reward": -0.00023444155123754536,
+      "discount_weight_gamma_0_99": 0.22145178723886091,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.00011539393218938112,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 151,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_8",
+      "raw_reward": -0.00023809523809523864,
+      "discount_weight_gamma_0_99": 0.2192372693664723,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761888
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 156,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_25",
+      "raw_reward": -8.506630343277713e-06,
+      "discount_weight_gamma_0_99": 0.20849246173476124,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.506630343277713e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 160,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_9",
+      "raw_reward": -0.0002627256348182302,
+      "discount_weight_gamma_0_99": 0.2002770268574893,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002627256348182302
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 164,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_18",
+      "raw_reward": -6.91450907611569e-05,
+      "discount_weight_gamma_0_99": 0.19238531289396707,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 6.91450907611569e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 168,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_26",
+      "raw_reward": -3.9760248609468744e-05,
+      "discount_weight_gamma_0_99": 0.1848045639485463,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.9760248609468744e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 172,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "4_10",
+      "raw_reward": -0.0003801376045321353,
+      "discount_weight_gamma_0_99": 0.17752252675876343,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0001420423664368973,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 195,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_24",
+      "raw_reward": -0.00012633120164629984,
+      "discount_weight_gamma_0_99": 0.14088441290426768,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001263312016462994
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 196,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_30",
+      "raw_reward": -0.0001384180491150709,
+      "discount_weight_gamma_0_99": 0.139475568775225,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013841804911507048
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 197,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_23",
+      "raw_reward": -4.016206774802751e-05,
+      "discount_weight_gamma_0_99": 0.13808081308747275,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.016206774802751e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 200,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "5_125",
+      "raw_reward": -3.368161661502101e-05,
+      "discount_weight_gamma_0_99": 0.13397967485796172,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.368161661502101e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 201,
+      "decision_time_hours": 468.3405971429959,
+      "cycle_id": 10,
+      "task_key": "6_21",
+      "raw_reward": -0.00033859293512442015,
+      "discount_weight_gamma_0_99": 0.1326398781093821,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00010049769702918129,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 205,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_24",
+      "raw_reward": -0.00012633120164629984,
+      "discount_weight_gamma_0_99": 0.1274133376787588,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001263312016462994
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 206,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_30",
+      "raw_reward": -0.00013834469456352767,
+      "discount_weight_gamma_0_99": 0.12613920430197118,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013834469456352723
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 208,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_23",
+      "raw_reward": -0.00015913633224410445,
+      "discount_weight_gamma_0_99": 0.12362903413636196,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00015913633224410445
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 3,
+      "episode_step": 209,
+      "decision_time_hours": 520.3784412699954,
+      "cycle_id": 11,
+      "task_key": "6_125",
+      "raw_reward": -0.0004934958854064028,
+      "discount_weight_gamma_0_99": 0.12239274379499834,
+      "cost_component_increments": {
+        "cost_takt": 1.6385215360405888e-15,
+        "cost_time": 0.00010151119978649029,
+        "cost_team": 0.00035714285714285687,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.4841828475415306e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 8,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_8",
+      "raw_reward": -0.00023809523809523812,
+      "discount_weight_gamma_0_99": 0.9227446944279201,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761906,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761906
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 10,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_25",
+      "raw_reward": -8.506630343277686e-06,
+      "discount_weight_gamma_0_99": 0.9043820750088044,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.506630343277672e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 11,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_9",
+      "raw_reward": -1.5486601768315835e-06,
+      "discount_weight_gamma_0_99": 0.8953382542587164,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.5486601768315835e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 12,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_18",
+      "raw_reward": -4.273801928885443e-05,
+      "discount_weight_gamma_0_99": 0.8863848717161292,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.273801928885446e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 14,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "0_26",
+      "raw_reward": -1.3353177137165795e-05,
+      "discount_weight_gamma_0_99": 0.8687458127689782,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.3353177137165822e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 20,
+      "decision_time_hours": 52.037844126999545,
+      "cycle_id": 2,
+      "task_key": "1_7",
+      "raw_reward": -6.614648694612969e-05,
+      "discount_weight_gamma_0_99": 0.8179069375972308,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 6.614648694612977e-05,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 21,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_8",
+      "raw_reward": -0.00023809523809523815,
+      "discount_weight_gamma_0_99": 0.8097278682212584,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761906,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761907
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 26,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_18",
+      "raw_reward": -1.9656282742694224e-05,
+      "discount_weight_gamma_0_99": 0.7700431458051551,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694224e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 27,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_9",
+      "raw_reward": -1.548660176831692e-06,
+      "discount_weight_gamma_0_99": 0.7623427143471035,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.548660176831692e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 29,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_25",
+      "raw_reward": -1.9656282742694115e-05,
+      "discount_weight_gamma_0_99": 0.7471720943315961,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694115e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 31,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "1_26",
+      "raw_reward": -1.3353177137165957e-05,
+      "discount_weight_gamma_0_99": 0.7323033696543975,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.3353177137165957e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 38,
+      "decision_time_hours": 104.07568825399909,
+      "cycle_id": 3,
+      "task_key": "2_16",
+      "raw_reward": -5.421440279938664e-05,
+      "discount_weight_gamma_0_99": 0.682554595010387,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 5.421440279938665e-05,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 39,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.6757290490602831,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761907,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761905
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 43,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_25",
+      "raw_reward": -8.506630343277821e-06,
+      "discount_weight_gamma_0_99": 0.6491026283684022,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.506630343277767e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 46,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_9",
+      "raw_reward": -0.00014367801577061133,
+      "discount_weight_gamma_0_99": 0.6298236312032323,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014367801577061122
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 49,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_18",
+      "raw_reward": -6.775295778414163e-05,
+      "discount_weight_gamma_0_99": 0.611117239532865,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 6.775295778414163e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 50,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "2_26",
+      "raw_reward": -3.8368115632453044e-05,
+      "discount_weight_gamma_0_99": 0.6050060671375364,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453044e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 60,
+      "decision_time_hours": 156.11353238099863,
+      "cycle_id": 4,
+      "task_key": "3_16",
+      "raw_reward": -0.0002583057195304848,
+      "discount_weight_gamma_0_99": 0.5471566423907612,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0001392581004828658,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 61,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_8",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.5416850759668536,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.00011904761904761905,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 66,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_18",
+      "raw_reward": -1.9656282742694332e-05,
+      "discount_weight_gamma_0_99": 0.5151371174238033,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.9656282742694224e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 70,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_9",
+      "raw_reward": -0.0001317459316238674,
+      "discount_weight_gamma_0_99": 0.49483865960020695,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001317459316238674
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 76,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_25",
+      "raw_reward": -4.467122123798131e-05,
+      "discount_weight_gamma_0_99": 0.46588077516979337,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.467122123798131e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 79,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "3_26",
+      "raw_reward": -3.8368115632453044e-05,
+      "discount_weight_gamma_0_99": 0.45204365026647536,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453044e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 90,
+      "decision_time_hours": 208.15137650799818,
+      "cycle_id": 5,
+      "task_key": "4_16",
+      "raw_reward": -0.00023444155123699675,
+      "discount_weight_gamma_0_99": 0.4047319726783238,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00011539393218937884,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 91,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_8",
+      "raw_reward": -0.00023809523809523777,
+      "discount_weight_gamma_0_99": 0.40068465295154054,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 95,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_25",
+      "raw_reward": -8.506630343277713e-06,
+      "discount_weight_gamma_0_99": 0.38489607889348454,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.506630343277713e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 100,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_9",
+      "raw_reward": -0.00014367801577061133,
+      "discount_weight_gamma_0_99": 0.3660323412732292,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014367801577061133
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 106,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_18",
+      "raw_reward": -6.775295778414228e-05,
+      "discount_weight_gamma_0_99": 0.3446121833475176,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 6.775295778414206e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 109,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "4_26",
+      "raw_reward": -3.8368115632453695e-05,
+      "discount_weight_gamma_0_99": 0.334376856889913,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453695e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 120,
+      "decision_time_hours": 260.1892206349977,
+      "cycle_id": 6,
+      "task_key": "5_16",
+      "raw_reward": -0.00025830571953103405,
+      "discount_weight_gamma_0_99": 0.2993803913123313,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.00013925810048286916,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 121,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_8",
+      "raw_reward": -0.00023809523809523777,
+      "discount_weight_gamma_0_99": 0.296386587399208,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0001190476190476191,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001190476190476191
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 125,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_25",
+      "raw_reward": -8.506630343277713e-06,
+      "discount_weight_gamma_0_99": 0.28470777327319546,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 8.506630343277713e-06
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 131,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_9",
+      "raw_reward": -0.00014367801577061133,
+      "discount_weight_gamma_0_99": 0.2680467169168741,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00014367801577061133
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 136,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_18",
+      "raw_reward": -6.775295778414228e-05,
+      "discount_weight_gamma_0_99": 0.2549097606963093,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 6.775295778414206e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 138,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "5_26",
+      "raw_reward": -3.8368115632453695e-05,
+      "discount_weight_gamma_0_99": 0.2498370564584527,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.8368115632453695e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 142,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "2_125",
+      "raw_reward": -0.0002380952380952382,
+      "discount_weight_gamma_0_99": 0.2399924795841344,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002380952380952382
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 150,
+      "decision_time_hours": 312.22706476199727,
+      "cycle_id": 7,
+      "task_key": "6_7",
+      "raw_reward": -0.0004964009576262718,
+      "discount_weight_gamma_0_99": 0.22145178723886091,
+      "cost_component_increments": {
+        "cost_takt": 5.461738453468629e-16,
+        "cost_time": 0.00013925810048286895,
+        "cost_team": 0.0003571428571428573,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 151,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_8",
+      "raw_reward": -0.00047619047619047554,
+      "discount_weight_gamma_0_99": 0.2192372693664723,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0002380952380952382
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 155,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_9",
+      "raw_reward": -0.00012226126159642966,
+      "discount_weight_gamma_0_99": 0.21059844619672852,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00012226126159642966
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 160,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_18",
+      "raw_reward": -4.566620245654261e-05,
+      "discount_weight_gamma_0_99": 0.2002770268574893,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.566620245654218e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 162,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_25",
+      "raw_reward": -4.566620245654261e-05,
+      "discount_weight_gamma_0_99": 0.19629151402302528,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 4.566620245654261e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 164,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_30",
+      "raw_reward": -0.00011904761904761932,
+      "discount_weight_gamma_0_99": 0.19238531289396707,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00011904761904761932
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 165,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_23",
+      "raw_reward": -2.0791637680575917e-05,
+      "discount_weight_gamma_0_99": 0.1904614597650274,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 2.0791637680575917e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 168,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "6_26",
+      "raw_reward": -3.936309685101391e-05,
+      "discount_weight_gamma_0_99": 0.1848045639485463,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 3.9363096851014346e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 171,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "3_125",
+      "raw_reward": -1.4311186547569417e-05,
+      "discount_weight_gamma_0_99": 0.17931568359471053,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 1.4311186547569417e-05
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 172,
+      "decision_time_hours": 364.26490888899684,
+      "cycle_id": 8,
+      "task_key": "4_17",
+      "raw_reward": -0.0004071072066362943,
+      "discount_weight_gamma_0_99": 0.17752252675876343,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.00016901196854105546,
+        "cost_team": 0.0002380952380952382,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 181,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_24",
+      "raw_reward": -0.00012633120164629984,
+      "discount_weight_gamma_0_99": 0.16216989001100654,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.0001263312016462994
+      }
+    },
+    {
+      "worker_id": 0,
+      "episode_id": 4,
+      "episode_step": 182,
+      "decision_time_hours": 416.30275301599636,
+      "cycle_id": 9,
+      "task_key": "4_30",
+      "raw_reward": -0.0001384180491150709,
+      "discount_weight_gamma_0_99": 0.16054819111089647,
+      "cost_component_increments": {
+        "cost_takt": 0.0,
+        "cost_time": 0.0,
+        "cost_team": 0.0,
+        "cost_postpone": 0.0,
+        "cost_revision": 0.00013841804911507048
+      }
+    }
+  ],
+  "independent_shaping_verifier_status": "PASS",
+  "truncated_episode_boundary": "截断保留 gamma^T * Phi(s_T) 与 bootstrap，不把预算截止设为自然终止。",
+  "training_potential_identity_status": "PASS",
+  "training_raw_cost_identity_status": "PASS",
+  "evaluation_raw_cost_identity_status": "PASS"
+}

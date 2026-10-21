@@ -1,0 +1,49 @@
+{
+  "schema_version": "work3_r1_retention_single_arm_v1",
+  "source_calibration_manifest": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\manifest.json",
+  "shared_start": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\calibrated_model.pt",
+    "sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+    "full_model_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+    "policy_subset_fingerprint": "0989e9bf8e2fed71ee630bc1d2d9da251d7d9cae5dec6c0e502ec54b8bcd1aee",
+    "critic_subset_fingerprint": "d600297254a057d96cea7fc57d2859e9d1965abaa1ac8bcc3748ff7e8081c95f"
+  },
+  "source_arm_registry": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\arm_registry.json",
+  "source_arm_registry_sha256": "78073445d9a1dec0a1c7481eb351b2042430b8b2a3221c54144e3952823d44ed",
+  "arm": {
+    "method_variant": "C",
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "beta_shaping": 1.0,
+    "learning_rate": 2.9999999999999997e-05,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "ppo_epochs": 1,
+    "batch_size": 2,
+    "rollout_steps": 8,
+    "num_envs": 1,
+    "max_grad_norm": 0.5,
+    "optimizer": "AdamW",
+    "optimizer_eps": 1e-05,
+    "weight_decay": 0.0001,
+    "normalize_advantages": true,
+    "amp_dtype": "fp32",
+    "disturbance_enabled": false,
+    "scenario": "NOMINAL",
+    "warmup_mode": "none",
+    "seed": 43,
+    "total_env_steps": 1024,
+    "max_decisions": 1024
+  },
+  "points": [
+    0,
+    128,
+    256,
+    512,
+    768,
+    1024
+  ],
+  "ppo_sampling_seed": 43,
+  "initialization_seed": 42
+}

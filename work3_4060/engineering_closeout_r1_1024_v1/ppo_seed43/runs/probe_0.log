@@ -1,0 +1,2 @@
+W1021 20:08:44.611000 22280 site-packages\torch\utils\flop_counter.py:29] triton not found; flop counting will not work for triton kernels
+COMMAND=["D:\\Conda\\envs\\rag_env\\python.exe", "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_r1_retention_1024.py", "--worker", "probe", "--output", "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43", "--point", "0"]

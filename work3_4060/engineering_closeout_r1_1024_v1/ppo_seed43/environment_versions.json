@@ -1,0 +1,17 @@
+{
+  "python": "3.11.15 | packaged by Anaconda, Inc. | (main, Mar 11 2026, 17:12:15) [MSC v.1942 64 bit (AMD64)]",
+  "executable": "D:\\Conda\\envs\\rag_env\\python.exe",
+  "prefix": "D:\\Conda\\envs\\rag_env",
+  "packages": {
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "torch": "2.12.0+cu132",
+    "torch-geometric": "2.7.0",
+    "lightning": "2.6.5",
+    "pytest": "9.0.3"
+  },
+  "torch_cuda_build": "13.2",
+  "cuda_available": true,
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "device_count": 1
+}

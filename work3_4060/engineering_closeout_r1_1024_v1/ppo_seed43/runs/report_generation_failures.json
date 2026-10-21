@@ -1,0 +1,50 @@
+{
+  "failures": [
+    {
+      "attempt": 1,
+      "recorded_at_utc": "2026-10-21T12:19:43.370994+00:00",
+      "source_commit": "792ad6054342ca4b740791bf5c00be93a8abd2cf",
+      "stage": "_finalize -> _write_evaluation_reports -> cross_seed_summary.csv",
+      "exception_type": "ValueError",
+      "message": "dict contains fields not in fieldnames: 'prior_same_seed_r1_j_total', 'reference_scope'",
+      "additional_environment_decisions": 0,
+      "additional_optimizer_steps": 0,
+      "additional_evaluation_decisions": 0,
+      "model_or_trajectory_changed": false,
+      "resolution": "动态CSV字段并集已在报告专用提交中修复；仅离线重跑汇总。",
+      "preserved_outputs": [
+        {
+          "path": "archive_manifest_postrun.json",
+          "size_bytes": 184269,
+          "sha256": "35698afb4ac2840ca55031e84c5ca5eb45f97c4d8398b1e77ee13c9f31f4c29e"
+        },
+        {
+          "path": "archive_verification_postrun.json",
+          "size_bytes": 293,
+          "sha256": "7c3006d04ee15f649aa85d9c1165ac999be6f8ebaf945e61800cd1e3170d4b6b"
+        },
+        {
+          "path": "cross_seed_summary.csv",
+          "size_bytes": 1925,
+          "sha256": "7d0f06169b2c71903ddaf4e52860ce363fa3240f8687ffe8e5e6c13ea96dde51"
+        },
+        {
+          "path": "summary.md",
+          "size_bytes": 4665,
+          "sha256": "bd2983eb0ea2d55970169b636beca365732aa48a9181d6b45470bfe4b5daf8e9"
+        },
+        {
+          "path": "trajectory_verification.json",
+          "size_bytes": 10002,
+          "sha256": "45a766399f031df5b314207d45b02c214dfb694e15e85296a54f16f144b5f58a"
+        },
+        {
+          "path": "verification.json",
+          "size_bytes": 167001,
+          "sha256": "a24a236255c11ae80626b01c153b3b3bca13889be91e8282778a6a2e190622ff"
+        }
+      ],
+      "preserved_output_directory": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\engineering_closeout_r1_1024_v1\\ppo_seed43\\runs\\report_generation_failure_0001"
+    }
+  ]
+}

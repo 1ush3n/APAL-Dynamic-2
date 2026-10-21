@@ -1,0 +1,2931 @@
+{
+  "archive_path": "D:\\OneDrive\\研究生\\work3_local_archives\\work3_r1_1024_pretraining_792ad6054342.zip",
+  "archive_size_bytes": 33634969,
+  "archive_sha256": "e63734988d2e1bfbba46f889d65ff240f1288a6859468c378547955035885773",
+  "member_count": 243,
+  "pt_member_count": 39,
+  "all_members_verified_after_readback": true,
+  "catalog": [
+    {
+      "member": "repo/data/283.csv",
+      "size_bytes": 9887,
+      "sha256": "4059f36706bef9539278bd035b8fa8056611bf5af1eefda0625c78b9c64244e1"
+    },
+    {
+      "member": "repo/data/work3/real_283_k10_baseline.json",
+      "size_bytes": 5256357,
+      "sha256": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e"
+    },
+    {
+      "member": "repo/data/worker_pool_fixed.csv",
+      "size_bytes": 33769,
+      "sha256": "48b0322f27f3b3fcab49253a0dd996e22333072d744a03fcd1ae8aa7de8c899b"
+    },
+    {
+      "member": "repo/envs/work3/core_types.py",
+      "size_bytes": 40496,
+      "sha256": "3fc05a4bdfb70885add48986b31b5d49358cd05e0b7fe305329b9b81f5f2a301"
+    },
+    {
+      "member": "repo/envs/work3/environment.py",
+      "size_bytes": 73457,
+      "sha256": "96c013e2d37b1da410a3b7e101148f747bb4ace930540b50d79240e0485dcbf8"
+    },
+    {
+      "member": "repo/models/work3/actor_critic.py",
+      "size_bytes": 59595,
+      "sha256": "8d569427a84df65e64b445717c5abbb7de61362f5a19f73162daa6d4b5141aa5"
+    },
+    {
+      "member": "repo/models/work3/graph_builder.py",
+      "size_bytes": 34888,
+      "sha256": "9037e16f4d4c9305f8ef4e64b6a5bf4086060ac53c176dc63e0acc2ba785a3e6"
+    },
+    {
+      "member": "repo/models/work3/ppo_buffer.py",
+      "size_bytes": 41814,
+      "sha256": "accebee88cf0b845413e8724e0c35ade833635e625cac5654ce727afcd35959b"
+    },
+    {
+      "member": "repo/models/work3/ppo_trainer.py",
+      "size_bytes": 25473,
+      "sha256": "51e43d0f42d22642a87862c5cf80ca1b7018d7a5fa7585689444db7bc85fd427"
+    },
+    {
+      "member": "repo/models/work3/time_head.py",
+      "size_bytes": 7938,
+      "sha256": "fbb6153266c2b21e5dfe0c64c57a968e9ce06930cca8a8a7b2f8175e4cd4b298"
+    },
+    {
+      "member": "repo/pytest.ini",
+      "size_bytes": 521,
+      "sha256": "5b55d183c282821bc69b447d5bb326e4c77b8ea080f7ed5fa9bd78ab4c1c6828"
+    },
+    {
+      "member": "repo/tests/test_ppo_retention_repeat.py",
+      "size_bytes": 13219,
+      "sha256": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd"
+    },
+    {
+      "member": "repo/tests/work3/test_work3_training_runtime.py",
+      "size_bytes": 118360,
+      "sha256": "1a6b11f269d4fbca3cd543f6ff4b731ca42091b08a38958c0c90598ee6a0a7c2"
+    },
+    {
+      "member": "repo/training/work3_lightning.py",
+      "size_bytes": 20468,
+      "sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f"
+    },
+    {
+      "member": "repo/training/work3_r3_e04_audit.py",
+      "size_bytes": 38716,
+      "sha256": "e0e6f381bee472042d54a89a5f5f1c7b79a8bb48cf1013f87f4358bc50cea524"
+    },
+    {
+      "member": "repo/training/work3_vector_env.py",
+      "size_bytes": 46971,
+      "sha256": "c632351b43ddc71044de968148e1503c8832af1464f6c0f7d347f5e747513eb8"
+    },
+    {
+      "member": "repo/utils/work3/objective_evaluator.py",
+      "size_bytes": 12058,
+      "sha256": "f1963a179385b10499b0183f0e576ea52e693c1ac5fba1f1d0acb878fce4ea49"
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_diagnostic_v1/seed42/diagnostic_actor.pt",
+      "size_bytes": 1289195,
+      "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752"
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_diagnostic_v1/seed42/teacher_snapshots.pt",
+      "size_bytes": 22437191,
+      "sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62"
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_diagnostic_v1/seed42/trajectories/C_BC_DIAGNOSTIC_NOMINAL.json",
+      "size_bytes": 118867,
+      "sha256": "c7ae4fd35debeaa8e6fe8543852343f918c4e2e31529183c925e30ddef283726"
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_protocol.py",
+      "size_bytes": 45793,
+      "sha256": "7c8a8c91a0b49ab90234f797de987ae0b7413a094c0ee7e8ce66579358e289b6"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/calibrated_model.pt",
+      "size_bytes": 1286955,
+      "sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/fit_metrics.json",
+      "size_bytes": 10572,
+      "sha256": "01f718d5c8c319e22a738cb33fa9477411b976745330a8d9e7b52a5496644ff1"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/policy_invariance.json",
+      "size_bytes": 8809,
+      "sha256": "9bac5e99af1e6629ce3675360ee208a04f4befa00c084b53182963bdb984e006"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/snapshots_and_mc_targets.pt",
+      "size_bytes": 22414919,
+      "sha256": "5962f2c2d14dc4a4cb9448ccaf1025d9831d754b4f8ecb00f8634ce5b652d859"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/manifest.json",
+      "size_bytes": 2297,
+      "sha256": "db65c300ade4b10ea06f6983a50723023b47fed5484d59877e2386a39454efbf"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/ppo/first_rollout.pt",
+      "size_bytes": 823783,
+      "sha256": "9f3a69369b2660517853c88056b68b2f6b6c07e48e94071e5f700352cf006114"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/ppo/training_history.jsonl",
+      "size_bytes": 184503,
+      "sha256": "9482e3099720ccb9f017904e00c0402bee48a3c97e45513e78f7ba023ae05689"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/ppo/training_summary.json",
+      "size_bytes": 3216,
+      "sha256": "bd0ef31c8ba86274656ba5ce05d13563c8ebeeacfb22bc7b92cacf017b1c2437"
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/weight_integrity.json",
+      "size_bytes": 3215,
+      "sha256": "96e11df88a90ab9c0f310832da1006025bc76fe8a1b19e9eabbb39a127a56ec9"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/arm_registry.json",
+      "size_bytes": 1811,
+      "sha256": "e4c9a39a0c16d57d78bbed34fff76c061cbe33098cd843732ef16b118c94f748"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/dependency_inventory.json",
+      "size_bytes": 97031,
+      "sha256": "9e1bc614046c08b320d175125c698dff1099a169b3ab73b86b5fb1a300de31b2"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/baseline_vs_current_test_results.json",
+      "size_bytes": 7442,
+      "sha256": "b695f8a21cb9747d170c2534d7a38f0614c3a903b9bffc422a4b7d02edd71f9b"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/fp32_equivalence.json",
+      "size_bytes": 2588,
+      "sha256": "3f4afcb91d0f616feb427f5a01c2cc55169d08e599be8fc79076de1097ba60e9"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/regression_test_results.json",
+      "size_bytes": 1304,
+      "sha256": "29432685db51e99e12a937b00eb319ae2002f15a54fed0146d45a43a3b5cb3e5"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/autocast_compatibility_note.md",
+      "size_bytes": 459,
+      "sha256": "12d63116291ad3017131b7ba1bc9e35d707cbe36f8c6a7e85e53f08d24e9ac49"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/baseline_0e2e.log",
+      "size_bytes": 8239,
+      "sha256": "85cda24b8308f82b0d32e31b77f8aee45bee75f68936b15bdf2bf9a90763316b"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/current_pre_repair_2c434ff.log",
+      "size_bytes": 8245,
+      "sha256": "26b0d81e40a0671b9099ec83cd109806170b2bc7f89e41ba07c0017a668f7fce"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/fixed_current_targeted_regressions.log",
+      "size_bytes": 128,
+      "sha256": "baaab80620fd9315463cba0fbc14f9bcfcc9be7bbf829409591d4f21c35309cb"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/run_ppo_ablation_arms.py",
+      "size_bytes": 84306,
+      "sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/run_r1_retention_1024.py",
+      "size_bytes": 109868,
+      "sha256": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/test_ppo_retention_repeat.py",
+      "size_bytes": 13219,
+      "sha256": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/test_work3_training_runtime.py",
+      "size_bytes": 118360,
+      "sha256": "1a6b11f269d4fbca3cd543f6ff4b731ca42091b08a38958c0c90598ee6a0a7c2"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/work3_lightning.py",
+      "size_bytes": 20468,
+      "sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/test_fixture_repairs.md",
+      "size_bytes": 1291,
+      "sha256": "88fa36b5c2a43e33e740aca6d1cb41f4d2167327ab083334a3c1c01f20b3b679"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/environment_versions.json",
+      "size_bytes": 527,
+      "sha256": "e0c3e2b6bad1fe1bd86ac3ad677a094bcd7c09e20efad264c7d774f01b037b57"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/manifest.json",
+      "size_bytes": 2498,
+      "sha256": "75f5d45a1316b6027540468ffa3dee5a0689e88beb98b9c558a2a5d47493a55b"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/runs/discarded_preflight_attempt_0001/dependency_inventory.json",
+      "size_bytes": 97031,
+      "sha256": "9e1bc614046c08b320d175125c698dff1099a169b3ab73b86b5fb1a300de31b2"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/runs/discarded_preflight_attempt_0001/environment_versions.json",
+      "size_bytes": 527,
+      "sha256": "e0c3e2b6bad1fe1bd86ac3ad677a094bcd7c09e20efad264c7d774f01b037b57"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/runs/discarded_runs.json",
+      "size_bytes": 1378,
+      "sha256": "8e84b557dd400e604a8a472217b6caf945e041e431cfe1befcf90765b3670830"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/source_binding.json",
+      "size_bytes": 6238,
+      "sha256": "5dd6d50176946fe5f15373fad8115b55bc18d5dfd675c3ed9980ad489baae645"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/training/initialization_verification.json",
+      "size_bytes": 646,
+      "sha256": "5b6e3c31b667b33dfd4ba19fcfe23515cb30a8e2890aca8267aefbb5ecc1e8b1"
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/training/resolved_config.yaml",
+      "size_bytes": 2102,
+      "sha256": "15993a31fbb9d1cb4b96c8d40d908560fdd5640ff42b57c7bf26e191acaea511"
+    },
+    {
+      "member": "repo/work3_4060/ppo_ablation_arms_v1/seed42/arm_registry.json",
+      "size_bytes": 2784,
+      "sha256": "78073445d9a1dec0a1c7481eb351b2042430b8b2a3221c54144e3952823d44ed"
+    },
+    {
+      "member": "repo/work3_4060/ppo_ablation_arms_v1/seed42/comparison_by_point.csv",
+      "size_bytes": 3812,
+      "sha256": "3380b56e02290a20a6332fb00128f720d1a6ce2016bd3f17f8952d75a3ac2a5f"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/first_update.pt",
+      "size_bytes": 1287083,
+      "sha256": "fb458633bfa72f5abba0693faf03f5cda7ebf185453727b74e956de2f3e74358"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/first_update_pre.pt",
+      "size_bytes": 1287083,
+      "sha256": "449d61247ad78057a6c13b62183534f668739071c34112ab5c1a8db98ba9fc10"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0008.pt",
+      "size_bytes": 1287595,
+      "sha256": "d2b94c7733e4d3297b2e11d3ea7f16f310eee45f4e7e0f3196269707d820907f"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0128.pt",
+      "size_bytes": 1287595,
+      "sha256": "f742a8d4c288a4c2eb545a4e847d768cb0c567efd77261b8959224852351065b"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0256.pt",
+      "size_bytes": 1287595,
+      "sha256": "99a5af43926ecca64e3ba7525a740d87714c94296eb5fd02c34ebe6d789f3e54"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0512.pt",
+      "size_bytes": 1287595,
+      "sha256": "271a8b24e0d7f2a2d6e884d390b02f03606a91a2dcec82404b2c35313d02069b"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/first_rollout.pt",
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/first_rollout_pairing.json",
+      "size_bytes": 1235,
+      "sha256": "b129157d24f241d9b07483408db27bf6ec608de3a1d8dc1c9fccc42811ab7680"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/first_update.json",
+      "size_bytes": 1220,
+      "sha256": "84985c56948d7be334651465a1aab9aaee9abd2e507857b9c6117e5bf5deed1a"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/minibatch_indices.jsonl",
+      "size_bytes": 49053,
+      "sha256": "95648197ef589203ef7e0f0383529b5e4c2e065ee07c37c634ad459a4751de43"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0000.json",
+      "size_bytes": 8052,
+      "sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0008.json",
+      "size_bytes": 8035,
+      "sha256": "4eff83f001c5bf3b716981715af0b6794e68d84661cac4d6e52bcf1cfe8e133d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0128.json",
+      "size_bytes": 8079,
+      "sha256": "052e2a25b1be7da20befb301f1be61817acd0efe44d0c8b145057e0c9f10d5a0"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0256.json",
+      "size_bytes": 8079,
+      "sha256": "0a5d12777a18eaebeb5290402d6b24bb157bf10e67ffc65c15b2b32b0efa15f6"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0512.json",
+      "size_bytes": 8166,
+      "sha256": "77a164644860b204b4464251107ffbe16e8b0f35071aa7a83fcbb084682f393e"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/runs/ppo_run.json",
+      "size_bytes": 957,
+      "sha256": "cbcc9bf7a2383b5d8e2216962a5e645271ec7759c7ca591e65d8b059ebc9b55a"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/shaping_audit_summary.json",
+      "size_bytes": 3317,
+      "sha256": "beee4cb70b24aec99627f340a7ff9f4ffc953240cd72c81f31b5e0571b916777"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/shaping_events.jsonl",
+      "size_bytes": 279058,
+      "sha256": "ca46b516b0b2c7bf70e4ee2c95768db7e8ba220856193d4824b64684eda2aa4a"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/training_history.jsonl",
+      "size_bytes": 534397,
+      "sha256": "bb96788f5b673db44f6fda6641ae4765333965835650fec7bde447aca76bc846"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/training_summary.json",
+      "size_bytes": 4410,
+      "sha256": "723459ed5217646a7c237129044d9224f528aab77a4600d42c45a20884114429"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0008_NOMINAL.json",
+      "size_bytes": 166250,
+      "sha256": "4d8f6c0cc5973c6a40315f0ea2905282acb1d03b1b72625f3778b91089eefb14"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0128_NOMINAL.json",
+      "size_bytes": 166253,
+      "sha256": "f579be468bf8246034e3c0ee22ea3a3c6da31d84c40be5f58ad2f3d62924d2c5"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0256_NOMINAL.json",
+      "size_bytes": 166254,
+      "sha256": "5755598a50b94dadc38bb9b176351cf447359f3c6911aebea1ebd598f647bd0b"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0512_NOMINAL.json",
+      "size_bytes": 191402,
+      "sha256": "6a8f0816a79d59d508241fff2e28c5138ce231de1e7bdf693dfd57bf0fb0daa7"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/first_update.pt",
+      "size_bytes": 1287083,
+      "sha256": "121163e1a2a3deceec405a6786371adf165636358685532265435809c01b64fa"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/first_update_pre.pt",
+      "size_bytes": 1287083,
+      "sha256": "6709c9c7e6efe15166af5210c1499a88ad27905117bfd3738418f5d4a1b20588"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0008.pt",
+      "size_bytes": 1287595,
+      "sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0128.pt",
+      "size_bytes": 1287595,
+      "sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0256.pt",
+      "size_bytes": 1287595,
+      "sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0512.pt",
+      "size_bytes": 1287595,
+      "sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/first_rollout.pt",
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/first_rollout_pairing.json",
+      "size_bytes": 1235,
+      "sha256": "192a4b3cc565735df06f070dbf1bff2d79852ee94f1ad528c4588f3066dac6e5"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/first_update.json",
+      "size_bytes": 1186,
+      "sha256": "ea7e9b2c6ef31401584db0c15f79ed206b4817a9e881430b55258e9afc8d4bdc"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/minibatch_indices.jsonl",
+      "size_bytes": 48977,
+      "sha256": "85af386f761b8c62470252796a2dea014d6a668b93fa3a607d4fe79139ec632d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0000.json",
+      "size_bytes": 8052,
+      "sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0008.json",
+      "size_bytes": 8018,
+      "sha256": "2c405a5b1647af868c98a66216906d94bff1a9f72070ab12ba882d50f729c8df"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0128.json",
+      "size_bytes": 8109,
+      "sha256": "8e8e3ab489a8a16dc747e2c32e0b3577cdbef03752647e7641966396869b782c"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0256.json",
+      "size_bytes": 8007,
+      "sha256": "1a11b713e189b393316284ec7f8dfea596a5bc9e3d3b6e293fafed3379dab6dd"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0512.json",
+      "size_bytes": 8027,
+      "sha256": "2277dd614a37d8158703dc2a115afc9f392eb77f8d26cab91657535cb3622ff0"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/runs/ppo_run.json",
+      "size_bytes": 925,
+      "sha256": "5d4d660099be613d63673ada7bef31c0b920eab6c556e747646eed1c73ad3293"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/shaping_audit_summary.json",
+      "size_bytes": 3378,
+      "sha256": "962ade78c6ac03027819abe9109b5ef8486f328f84cdfa3ec16d500abb101761"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/shaping_events.jsonl",
+      "size_bytes": 284449,
+      "sha256": "13d181a624306362dd5fc362a1fe5308a525bb5601788fbae84c1dee0a71f9ad"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/training_history.jsonl",
+      "size_bytes": 531963,
+      "sha256": "6a89c26b14df99d13eefd80fad84bb94d2f94ee536a20e3b51b692a72fb8ee23"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/training_summary.json",
+      "size_bytes": 4422,
+      "sha256": "081cf39f9a935eb64e1a908096c65b24a1e30f2a38a2899c0d5ccfae8f3eba1c"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0008_NOMINAL.json",
+      "size_bytes": 166250,
+      "sha256": "ef82ded93421d83398cecc4f7463e41eb4297707dada51ea7e141785d86c694d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0128_NOMINAL.json",
+      "size_bytes": 251937,
+      "sha256": "49decf74d5225f2538cc41b2a408d24e4cc6cef1823217daeeb5e3ad4595e602"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0256_NOMINAL.json",
+      "size_bytes": 253156,
+      "sha256": "631a26a64390713a255c8dae86b2fbc0d580d15cabd07172db26a60b2de3a8f8"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0512_NOMINAL.json",
+      "size_bytes": 250916,
+      "sha256": "94e1ad6d3bc289813c020402aa43d406ca67411a52b35eabb7cd3c8b2ffa0815"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/first_update.pt",
+      "size_bytes": 1287083,
+      "sha256": "10e29cd418120c6edafd7b4b7a4c1f87b1fd4c04795c655ff1c91a183cba614f"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/first_update_pre.pt",
+      "size_bytes": 1287083,
+      "sha256": "1060039a9f30da1ebe8ca732120424f726947ef1a4820943d337ca8c236c51fa"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0008.pt",
+      "size_bytes": 1287595,
+      "sha256": "f976a4aa8486685977a954a780c0943c5c1ceec9152e842cceabc5563ec75b78"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0128.pt",
+      "size_bytes": 1287595,
+      "sha256": "97bd49d11b8190f0c0867fd926ef5ccbb4fae409ef7e51a51c0422e22e5dd261"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0256.pt",
+      "size_bytes": 1287595,
+      "sha256": "4b28d7001bd34e79ba28abff0edeb396d0324e59bdac65b979e92aea49e5be4c"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0512.pt",
+      "size_bytes": 1287595,
+      "sha256": "def6316a5b26fa807bf6889e31758721a0bf76ffb2dcc081ee67a42b9159d761"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/first_rollout.pt",
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/first_rollout_pairing.json",
+      "size_bytes": 1236,
+      "sha256": "a2f003b44f24222fcbfe357df41afbb43b5fcb1fb3851df6dc2d500f06bba65f"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/first_update.json",
+      "size_bytes": 1186,
+      "sha256": "015cca3cf6b8d33364552e45ba1065a9b14c944227cab5b4140b513174ada248"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/minibatch_indices.jsonl",
+      "size_bytes": 49006,
+      "sha256": "14613b3ac14b3bd4214969f38946d782cf525c6521a61b3a44abd2cd923b4bfa"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0000.json",
+      "size_bytes": 8053,
+      "sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0008.json",
+      "size_bytes": 7983,
+      "sha256": "38344a5447d6ed7771f9ab61219d0ed1984abcef704e06fbad54977e60a05d09"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0128.json",
+      "size_bytes": 7846,
+      "sha256": "a2aa7362eaf325fb3a14501ebdeaed68c4a7145f9fb3372cbee4f431ec3b7cd3"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0256.json",
+      "size_bytes": 7888,
+      "sha256": "059796b6cd36abe2329cffcc4209b2b3d84aecf0bb965103ccdb37b179c0dbe9"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0512.json",
+      "size_bytes": 7873,
+      "sha256": "c56be584d65902e0a3b5ac162a02abe451de94946e00bc7f9c893fb4e123cb09"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/runs/ppo_run.json",
+      "size_bytes": 926,
+      "sha256": "bb973d15f3a5b443cd4faae33a89f40a75265589a4ae7a3c1b3fe092f5a03647"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/shaping_audit_summary.json",
+      "size_bytes": 3383,
+      "sha256": "63c354d2eae76d9241b5fc7508a072ad7ade4eab16e2a1579947021e2f3775b3"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/shaping_events.jsonl",
+      "size_bytes": 282654,
+      "sha256": "eb7dd2037617159e641f8a1efb996ef02fbb2f159ed57dc2a019b139e626e891"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/training_history.jsonl",
+      "size_bytes": 529437,
+      "sha256": "cd13e71177e267db43ba7cb6c55a2c1498ccf55063c58a1d1230fdddcf1d31de"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/training_summary.json",
+      "size_bytes": 4391,
+      "sha256": "77bf9ef62cfd2e5256102c01c348c454600f040c21a872eab39b692dd4bd27f9"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0008_NOMINAL.json",
+      "size_bytes": 166252,
+      "sha256": "cf0934078c5dfc3dcd3b97b37927afdf7e22fd813ba7de06b1786c31ec4551ae"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0128_NOMINAL.json",
+      "size_bytes": 245818,
+      "sha256": "8c9f708c576bf845719c60b62babcb0afa2686799d1e794017464067fce56556"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0256_NOMINAL.json",
+      "size_bytes": 237886,
+      "sha256": "2b8fb2f631c4afbca703ab8212616124a606632aa9c6e8bb493ea344e586e471"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0512_NOMINAL.json",
+      "size_bytes": 246730,
+      "sha256": "354f15defc04a42cca9f6f82dad6c5560a31e1b72c0a00592e8ecf2c6caa1ef7"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/action_order_comparison.csv",
+      "size_bytes": 1979,
+      "sha256": "d95d3935e2c8edd1308f3e4333aa4244d8f98653b8f48d0197fd6d4913f15cfb"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/arm_registry.json",
+      "size_bytes": 3256,
+      "sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/binary_artifact_inventory.json",
+      "size_bytes": 9119,
+      "sha256": "db1f90d87a98862b0da7cf924962b07225c37b45e51593168e4f333d4912d312"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/comparison_by_point.csv",
+      "size_bytes": 4730,
+      "sha256": "a94c746f40d1a39b3478e3071ffcb924c2aaf8efd00c8f1147a223619dbc46f8"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/cross_seed_summary.csv",
+      "size_bytes": 1614,
+      "sha256": "f32c4a36d6691f8ae94540be34bce1acda864cba6b9d815a97694b31bd6d9d9c"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/cycle_comparison.csv",
+      "size_bytes": 8855,
+      "sha256": "6347361764b56d43e336df53f3b40790adbdb4e49c3a9d93dc0655a8dbb3e2e2"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/dependency_inventory.json",
+      "size_bytes": 9645,
+      "sha256": "a89af1aafccdbe0c1f9898e9dcf4f48aa89a4c5d2241d35a38e06dcb490245d1"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/interpretation_errata.md",
+      "size_bytes": 1805,
+      "sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/manifest.json",
+      "size_bytes": 4400,
+      "sha256": "30d30a91163f28cc2816df1b6ec9f077bd78aa1b3f2f3d3ee34f439750b74f57"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/pairing_verification.json",
+      "size_bytes": 3997,
+      "sha256": "226b974be1e0247f3ec0f3789e24c4ff81f9e9820c63887c6c26c0b7708fead1"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/parameter_change_metrics.csv",
+      "size_bytes": 5845,
+      "sha256": "46842f62eb989f30086ff765f5eafc7afbb9b455fedae867e179cbf664109428"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/policy_probe_metrics.csv",
+      "size_bytes": 2502,
+      "sha256": "4e475b2e99eaea1cfb104142dbd843a07ee7cd3ca0a57b9b5527bf7f67b268f6"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/r4_gradient_preflight.json",
+      "size_bytes": 400,
+      "sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/regression_test_results.json",
+      "size_bytes": 2301,
+      "sha256": "07adf4ed3ef01632e9acfeed4911e9bb88fd6e4cf82528120207716e291ab000"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/resolved_configs/R1.yaml",
+      "size_bytes": 872,
+      "sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/resolved_configs/R4.yaml",
+      "size_bytes": 881,
+      "sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/resolved_configs/REF.yaml",
+      "size_bytes": 830,
+      "sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/dependency_inventory.json",
+      "size_bytes": 9645,
+      "sha256": "041867ee81f14f4febb1b3490a1fbb5107ab441232c69d9f85285a6ab273f3a1"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/interpretation_errata.md",
+      "size_bytes": 1805,
+      "sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/resolved_configs/R1.yaml",
+      "size_bytes": 872,
+      "sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/resolved_configs/R4.yaml",
+      "size_bytes": 881,
+      "sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/resolved_configs/REF.yaml",
+      "size_bytes": 830,
+      "sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/R1/probe/step0000.json",
+      "size_bytes": 8052,
+      "sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/R4/probe/step0000.json",
+      "size_bytes": 8052,
+      "sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/first_rollout.pt",
+      "size_bytes": 911381,
+      "sha256": "3e0a269b5d4e7aa1a14e039f49049aeb5d61a0a3f3f0a446039ba2e5d90cd3dd"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/first_rollout_pairing.json",
+      "size_bytes": 1250,
+      "sha256": "fe11d60ea46ace8995d3ac2f8f64110f70ca8c504e71cd02367cd8f8cdbe5c77"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/minibatch_indices.jsonl",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/probe/step0000.json",
+      "size_bytes": 8053,
+      "sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/runs/ppo_run.json",
+      "size_bytes": 935,
+      "sha256": "dd4b83d472490c019a1f2ebb09eb4fc30ef36803ab36fb14fd44a8c4c87f3b5a"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/shaping_events.jsonl",
+      "size_bytes": 4344,
+      "sha256": "27d545dd6cde50f9c2dbcec7f4e766836b798dff1140a47b139fbba8124dadce"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/training_history.jsonl",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/training_summary.json",
+      "size_bytes": 2601,
+      "sha256": "b74740245f58008feefa060ee92930ea2ef736249252efd5bda17950186476d7"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/arm_registry.json",
+      "size_bytes": 3256,
+      "sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/comparison_by_point.csv",
+      "size_bytes": 757,
+      "sha256": "c57067b869fa970b4db13cd0fc72efa85d97c5904bb1666a58bee5cd473a0041"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/dependency_inventory.json",
+      "size_bytes": 9645,
+      "sha256": "1edc1fe8693d625fc7285ea0a93b6571c673624e415d967f4f752027d717b236"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/interpretation_errata.md",
+      "size_bytes": 1805,
+      "sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/manifest.json",
+      "size_bytes": 3984,
+      "sha256": "2b83206ede5e792681a584ec4487f05ddf5a75d94582c40b8e0c3efeea45e86f"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/pairing_verification.json",
+      "size_bytes": 1471,
+      "sha256": "dea4ffa1469c34451dba6acbef915b64ec9c0137323e528cb5e1eb3a1a7bd89c"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/r4_gradient_preflight.json",
+      "size_bytes": 400,
+      "sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/resolved_configs/R1.yaml",
+      "size_bytes": 872,
+      "sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/resolved_configs/R4.yaml",
+      "size_bytes": 881,
+      "sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/resolved_configs/REF.yaml",
+      "size_bytes": 830,
+      "sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/shared_step0000_NOMINAL.json",
+      "size_bytes": 166259,
+      "sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/shared_step0000_verification.json",
+      "size_bytes": 601,
+      "sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/source_binding.json",
+      "size_bytes": 9376,
+      "sha256": "7a031fba201cca11aa5b4acb95e6a081420be45a165b7087a338fa2a71c84ade"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/verification.json",
+      "size_bytes": 164,
+      "sha256": "df9231768898089f48325335b8b86fa0f7942868fa2f30cdfbbd60c85b4a9d06"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/evaluate_REF_--point_0.log",
+      "size_bytes": 270,
+      "sha256": "1122b254e7bcd82ea77071b8d9fec907530b02cadbea1d16330cfd82df7bdcda"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/fatal_error.json",
+      "size_bytes": 52,
+      "sha256": "54c89eb23e67f80857ff4fbd0d8bb5997966a7c696e8650eaa408ba57324f5ba"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/probe_R1_--point_0.log",
+      "size_bytes": 140,
+      "sha256": "8f3382ed3e346aa284e68b1578333b2a690447e410b582cc2989834ebebceeb0"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/probe_R4_--point_0.log",
+      "size_bytes": 140,
+      "sha256": "851d896911159976b99be6d84ac0beeed9283ea1a9a63b53e276f9bacf7ec2d3"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/probe_REF_--point_0.log",
+      "size_bytes": 140,
+      "sha256": "6aa4acd7a86ae74b0035e527c5e6eb15174cba9ce81bdf0ec6c5e82b2d01c98b"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/r4-preflight_main.log",
+      "size_bytes": 620,
+      "sha256": "c67d55ee0ad69e4264e1fc15d0ff0ec02b32cf17bb2a0781a547febe0d939c65"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/stage_results.json",
+      "size_bytes": 1138,
+      "sha256": "ccaa04777650de1c3899ece248eaf1f9b6e3891712693ec415df11a9f4878b11"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/train_REF.log",
+      "size_bytes": 356,
+      "sha256": "77a75f0ab9604e8ee2989d391aa5b1e42165f4417e1591e45547856855fa4e0e"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_runs.json",
+      "size_bytes": 486,
+      "sha256": "0f8a114169dd9fe9e14c5c8b1aef84a759c6981c650ca387efe6447e0f992e46"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_128.log",
+      "size_bytes": 269,
+      "sha256": "c93fbb1e22928d74b63014cb3b7b56f9d706df0948e3ef7656528565d7937cee"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_256.log",
+      "size_bytes": 269,
+      "sha256": "c2e0e91d150540c4a3e14c02cd042bf4705c904d10bc974a59d0e4dffcc30efe"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_512.log",
+      "size_bytes": 269,
+      "sha256": "bccff144e2e9603d8579cb267d99b778c80bedb16d1ce3d2b7d6d35fcb0d6c48"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_8.log",
+      "size_bytes": 269,
+      "sha256": "6ff91be3e3518a92b3c77daa48b3f3926225c55093ecf7c2cc833558dae21ac5"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_128.log",
+      "size_bytes": 269,
+      "sha256": "f4577f18984d96f680f579b8211f7b4a26d0f95d86bee952fa2b9b175eeddc7c"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_256.log",
+      "size_bytes": 269,
+      "sha256": "b451d8f8d5828d762b34e0ed696b6fed56fc08dcf85750085c5d5eb7bf5838b3"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_512.log",
+      "size_bytes": 269,
+      "sha256": "88d6eb742cec8d8253a2d89ce47b5e5215361c3634505cb7dac657cbe4b25357"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_8.log",
+      "size_bytes": 269,
+      "sha256": "fe4743f329cfc98efec071dc3857e08667ac6fd9033c2b85bb4384511cd04ed4"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_0.log",
+      "size_bytes": 270,
+      "sha256": "ccafd26ca1e7000b0c769a3368dbe2073e81c018ebdc4dbaf0f4b1b861b714e0"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_128.log",
+      "size_bytes": 270,
+      "sha256": "87259d2a8aceda6326564a767849b9863e8117e384ea853c5ce311b30c96f0b2"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_256.log",
+      "size_bytes": 270,
+      "sha256": "23ba9a9eae82db271cb06c34b23498735adbb7eac830fd9769e373bf3be4feaa"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_512.log",
+      "size_bytes": 270,
+      "sha256": "89596d721d27739711b87e9ef7a9f178cc7850742c4e8d5e39150e2083688873"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_8.log",
+      "size_bytes": 270,
+      "sha256": "ed355d9add8cc9a0c892d920f5d38a79062a11b60d4e2f349192f5efbf174c04"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_0.log",
+      "size_bytes": 140,
+      "sha256": "9caeb8df649154887612aea6254681aae5359241eaae19baec1bd1bf85903262"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_128.log",
+      "size_bytes": 140,
+      "sha256": "048b17a2251e6ccfde709cbee47c96fa3de6ce2390bbcb6fcfac658e61eae90e"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_256.log",
+      "size_bytes": 139,
+      "sha256": "d6ebe46f87e34586b0bca6deaa87e7a29d2d6c11b86056de7f3388a7568b5c8d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_512.log",
+      "size_bytes": 140,
+      "sha256": "e0c9bae091b3f9da0644c8b0b626b024d419d21ebee0ed97204da7e7a3124fbb"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_8.log",
+      "size_bytes": 140,
+      "sha256": "9dc47d80d650b14b78b79a2ba877354fa6e7a1f8e80d7667c1fdd2fbbbb84244"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_0.log",
+      "size_bytes": 140,
+      "sha256": "413e6ce1f07d5611a6961452a7300376c4ef5f5ec31554bb98a59d78f385ec5d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_128.log",
+      "size_bytes": 140,
+      "sha256": "e5ea6d50b464dbea33e4d8ebb79d05b3578c6596a80821c5882c9d07e1263245"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_256.log",
+      "size_bytes": 140,
+      "sha256": "ab8c0e4b9fab793e1a31beeead6efe8245c74ac724726e532b223b2a20238512"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_512.log",
+      "size_bytes": 140,
+      "sha256": "98a7dd52c91b18616096b21d79a9b5b38210b6ad45d0bcb494a1c2be71e9b2f2"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_8.log",
+      "size_bytes": 140,
+      "sha256": "b6f09f92643672ffa77ea67fc73dc8e1279fc8df99482c0ef97ec2da719e0729"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_0.log",
+      "size_bytes": 139,
+      "sha256": "7b8c579c77195350831cf0e659a98ab1ed30100855f9cbe09a7f408bff48f75d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_128.log",
+      "size_bytes": 140,
+      "sha256": "d93d42e5ae8e1562577c01ec818703b534eb771ff8c858a2ba0ec553ce69a97b"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_256.log",
+      "size_bytes": 140,
+      "sha256": "c2606c0dca1bfc44a1f6941be641fc91c1e216220c1d4826b7cb827f35f9c5fd"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_512.log",
+      "size_bytes": 140,
+      "sha256": "e96da3a4b74b59a2f41e6866fcdd35f0741da7566ab6bbce3092fd79df8e70a4"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_8.log",
+      "size_bytes": 140,
+      "sha256": "765b7f68f5dcb3d879e6760024b990f94272b58a6b44cdf51ec200d5a8911b73"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/r4-preflight_main.log",
+      "size_bytes": 620,
+      "sha256": "4127f76361a8640e97c6e0ba59c48dc2e8e86c537168a4e71f82e06dd0fdf0d7"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/stage_results.json",
+      "size_bytes": 6125,
+      "sha256": "352875722bb3f76de6d94069a5d6ec03f05d157e917a8c99a861cb13abaac6d8"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/train_R1.log",
+      "size_bytes": 518,
+      "sha256": "83b64f75d1b02ce5da3744eff23ed26fb342563fcd96f6f37a00e6d01b72ff42"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/train_R4.log",
+      "size_bytes": 538,
+      "sha256": "06a2626bb0ba3d9702618c50aacd1c070c9fb49e51197d801b0074c4ca6a47ed"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/train_REF.log",
+      "size_bytes": 531,
+      "sha256": "45f1be6d4f262c11d6095a6d03b5b8fb94292f4316abaccaefa28b7069f8ae86"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/shared_step0000_NOMINAL.json",
+      "size_bytes": 166259,
+      "sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/shared_step0000_verification.json",
+      "size_bytes": 601,
+      "sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/source_binding.json",
+      "size_bytes": 15594,
+      "sha256": "faa51eed8b3a819d11b07599e4ea9db134b76eefaca1da88547bab0832f0e65e"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/summary.md",
+      "size_bytes": 6648,
+      "sha256": "555837e3cc563d4852d25e1f455cf90d620974e5c44d04b24026185f205c979f"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/trajectory_comparison.csv",
+      "size_bytes": 358525,
+      "sha256": "b2d827fbcab10003f2e4356cf10b4b0c034bde30e1f197aa91556d109e6e8dfa"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/trajectory_verification.json",
+      "size_bytes": 24244,
+      "sha256": "8158b87af3c4888671f392ba613814278a4dbf0f2dc037bb1c930e9aba4a14ed"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/verification.json",
+      "size_bytes": 45609,
+      "sha256": "c1e9fec26268eed17e5e22cb4e8b49ca5239c75b74bd0d92c8cbc0cc538d2c2d"
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/weight_integrity.json",
+      "size_bytes": 21492,
+      "sha256": "6acc6401b456842d65cb3d1e3955bad31cb4bcc6dc25f7adeed9f932aeea5a44"
+    },
+    {
+      "member": "repo/work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json",
+      "size_bytes": 123120,
+      "sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414"
+    },
+    {
+      "member": "repo/work3_4060/run_bc_ppo_retention.py",
+      "size_bytes": 113324,
+      "sha256": "93b99f9b559b03efd7b51ffb5d3d23cdbc60895cd652c64250a4753d6dfe7991"
+    },
+    {
+      "member": "repo/work3_4060/run_critic_calibration_retention.py",
+      "size_bytes": 108256,
+      "sha256": "fc9ab1c62c3d43dc7caa201e6aae53ff6c4c91bffc112e88ce91d60cffc8c78a"
+    },
+    {
+      "member": "repo/work3_4060/run_ppo_ablation_arms.py",
+      "size_bytes": 84306,
+      "sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22"
+    },
+    {
+      "member": "repo/work3_4060/run_ppo_retention_repeat.py",
+      "size_bytes": 64745,
+      "sha256": "0e3ad3873cc5ba9f563441c53d2cc041102686d2f07b646c94025117a98ccdb6"
+    },
+    {
+      "member": "repo/work3_4060/run_r1_retention_1024.py",
+      "size_bytes": 109868,
+      "sha256": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f"
+    },
+    {
+      "member": "repo/work3_4060/verify_shaping_trace.py",
+      "size_bytes": 31230,
+      "sha256": "8c7f167d32d3e369635ad9761bc1eb6bbce1401a1df0d2e7b82babb0dc45ba6e"
+    },
+    {
+      "member": "repo/work3_4060/verify_trajectory_facts.py",
+      "size_bytes": 32534,
+      "sha256": "6b1a7c8d9fc04203f472a27891dd16f72dc603f129acb26a1eb7008eff2d22b0"
+    }
+  ],
+  "member_checks": [
+    {
+      "member": "repo/data/283.csv",
+      "expected_sha256": "4059f36706bef9539278bd035b8fa8056611bf5af1eefda0625c78b9c64244e1",
+      "actual_sha256": "4059f36706bef9539278bd035b8fa8056611bf5af1eefda0625c78b9c64244e1",
+      "size_bytes": 9887,
+      "passed": true
+    },
+    {
+      "member": "repo/data/work3/real_283_k10_baseline.json",
+      "expected_sha256": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e",
+      "actual_sha256": "46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e",
+      "size_bytes": 5256357,
+      "passed": true
+    },
+    {
+      "member": "repo/data/worker_pool_fixed.csv",
+      "expected_sha256": "48b0322f27f3b3fcab49253a0dd996e22333072d744a03fcd1ae8aa7de8c899b",
+      "actual_sha256": "48b0322f27f3b3fcab49253a0dd996e22333072d744a03fcd1ae8aa7de8c899b",
+      "size_bytes": 33769,
+      "passed": true
+    },
+    {
+      "member": "repo/envs/work3/core_types.py",
+      "expected_sha256": "3fc05a4bdfb70885add48986b31b5d49358cd05e0b7fe305329b9b81f5f2a301",
+      "actual_sha256": "3fc05a4bdfb70885add48986b31b5d49358cd05e0b7fe305329b9b81f5f2a301",
+      "size_bytes": 40496,
+      "passed": true
+    },
+    {
+      "member": "repo/envs/work3/environment.py",
+      "expected_sha256": "96c013e2d37b1da410a3b7e101148f747bb4ace930540b50d79240e0485dcbf8",
+      "actual_sha256": "96c013e2d37b1da410a3b7e101148f747bb4ace930540b50d79240e0485dcbf8",
+      "size_bytes": 73457,
+      "passed": true
+    },
+    {
+      "member": "repo/models/work3/actor_critic.py",
+      "expected_sha256": "8d569427a84df65e64b445717c5abbb7de61362f5a19f73162daa6d4b5141aa5",
+      "actual_sha256": "8d569427a84df65e64b445717c5abbb7de61362f5a19f73162daa6d4b5141aa5",
+      "size_bytes": 59595,
+      "passed": true
+    },
+    {
+      "member": "repo/models/work3/graph_builder.py",
+      "expected_sha256": "9037e16f4d4c9305f8ef4e64b6a5bf4086060ac53c176dc63e0acc2ba785a3e6",
+      "actual_sha256": "9037e16f4d4c9305f8ef4e64b6a5bf4086060ac53c176dc63e0acc2ba785a3e6",
+      "size_bytes": 34888,
+      "passed": true
+    },
+    {
+      "member": "repo/models/work3/ppo_buffer.py",
+      "expected_sha256": "accebee88cf0b845413e8724e0c35ade833635e625cac5654ce727afcd35959b",
+      "actual_sha256": "accebee88cf0b845413e8724e0c35ade833635e625cac5654ce727afcd35959b",
+      "size_bytes": 41814,
+      "passed": true
+    },
+    {
+      "member": "repo/models/work3/ppo_trainer.py",
+      "expected_sha256": "51e43d0f42d22642a87862c5cf80ca1b7018d7a5fa7585689444db7bc85fd427",
+      "actual_sha256": "51e43d0f42d22642a87862c5cf80ca1b7018d7a5fa7585689444db7bc85fd427",
+      "size_bytes": 25473,
+      "passed": true
+    },
+    {
+      "member": "repo/models/work3/time_head.py",
+      "expected_sha256": "fbb6153266c2b21e5dfe0c64c57a968e9ce06930cca8a8a7b2f8175e4cd4b298",
+      "actual_sha256": "fbb6153266c2b21e5dfe0c64c57a968e9ce06930cca8a8a7b2f8175e4cd4b298",
+      "size_bytes": 7938,
+      "passed": true
+    },
+    {
+      "member": "repo/pytest.ini",
+      "expected_sha256": "5b55d183c282821bc69b447d5bb326e4c77b8ea080f7ed5fa9bd78ab4c1c6828",
+      "actual_sha256": "5b55d183c282821bc69b447d5bb326e4c77b8ea080f7ed5fa9bd78ab4c1c6828",
+      "size_bytes": 521,
+      "passed": true
+    },
+    {
+      "member": "repo/tests/test_ppo_retention_repeat.py",
+      "expected_sha256": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd",
+      "actual_sha256": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd",
+      "size_bytes": 13219,
+      "passed": true
+    },
+    {
+      "member": "repo/tests/work3/test_work3_training_runtime.py",
+      "expected_sha256": "1a6b11f269d4fbca3cd543f6ff4b731ca42091b08a38958c0c90598ee6a0a7c2",
+      "actual_sha256": "1a6b11f269d4fbca3cd543f6ff4b731ca42091b08a38958c0c90598ee6a0a7c2",
+      "size_bytes": 118360,
+      "passed": true
+    },
+    {
+      "member": "repo/training/work3_lightning.py",
+      "expected_sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f",
+      "actual_sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f",
+      "size_bytes": 20468,
+      "passed": true
+    },
+    {
+      "member": "repo/training/work3_r3_e04_audit.py",
+      "expected_sha256": "e0e6f381bee472042d54a89a5f5f1c7b79a8bb48cf1013f87f4358bc50cea524",
+      "actual_sha256": "e0e6f381bee472042d54a89a5f5f1c7b79a8bb48cf1013f87f4358bc50cea524",
+      "size_bytes": 38716,
+      "passed": true
+    },
+    {
+      "member": "repo/training/work3_vector_env.py",
+      "expected_sha256": "c632351b43ddc71044de968148e1503c8832af1464f6c0f7d347f5e747513eb8",
+      "actual_sha256": "c632351b43ddc71044de968148e1503c8832af1464f6c0f7d347f5e747513eb8",
+      "size_bytes": 46971,
+      "passed": true
+    },
+    {
+      "member": "repo/utils/work3/objective_evaluator.py",
+      "expected_sha256": "f1963a179385b10499b0183f0e576ea52e693c1ac5fba1f1d0acb878fce4ea49",
+      "actual_sha256": "f1963a179385b10499b0183f0e576ea52e693c1ac5fba1f1d0acb878fce4ea49",
+      "size_bytes": 12058,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_diagnostic_v1/seed42/diagnostic_actor.pt",
+      "expected_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+      "actual_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+      "size_bytes": 1289195,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_diagnostic_v1/seed42/teacher_snapshots.pt",
+      "expected_sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62",
+      "actual_sha256": "ac9855fa1c19eb906bd2bcbef6446acb80ade7fb8e0f4e94e9f930f8018bfa62",
+      "size_bytes": 22437191,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_diagnostic_v1/seed42/trajectories/C_BC_DIAGNOSTIC_NOMINAL.json",
+      "expected_sha256": "c7ae4fd35debeaa8e6fe8543852343f918c4e2e31529183c925e30ddef283726",
+      "actual_sha256": "c7ae4fd35debeaa8e6fe8543852343f918c4e2e31529183c925e30ddef283726",
+      "size_bytes": 118867,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/c_reproduction_protocol.py",
+      "expected_sha256": "7c8a8c91a0b49ab90234f797de987ae0b7413a094c0ee7e8ce66579358e289b6",
+      "actual_sha256": "7c8a8c91a0b49ab90234f797de987ae0b7413a094c0ee7e8ce66579358e289b6",
+      "size_bytes": 45793,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/calibrated_model.pt",
+      "expected_sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+      "actual_sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+      "size_bytes": 1286955,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/fit_metrics.json",
+      "expected_sha256": "01f718d5c8c319e22a738cb33fa9477411b976745330a8d9e7b52a5496644ff1",
+      "actual_sha256": "01f718d5c8c319e22a738cb33fa9477411b976745330a8d9e7b52a5496644ff1",
+      "size_bytes": 10572,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/policy_invariance.json",
+      "expected_sha256": "9bac5e99af1e6629ce3675360ee208a04f4befa00c084b53182963bdb984e006",
+      "actual_sha256": "9bac5e99af1e6629ce3675360ee208a04f4befa00c084b53182963bdb984e006",
+      "size_bytes": 8809,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/calibration/snapshots_and_mc_targets.pt",
+      "expected_sha256": "5962f2c2d14dc4a4cb9448ccaf1025d9831d754b4f8ecb00f8634ce5b652d859",
+      "actual_sha256": "5962f2c2d14dc4a4cb9448ccaf1025d9831d754b4f8ecb00f8634ce5b652d859",
+      "size_bytes": 22414919,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/manifest.json",
+      "expected_sha256": "db65c300ade4b10ea06f6983a50723023b47fed5484d59877e2386a39454efbf",
+      "actual_sha256": "db65c300ade4b10ea06f6983a50723023b47fed5484d59877e2386a39454efbf",
+      "size_bytes": 2297,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/ppo/first_rollout.pt",
+      "expected_sha256": "9f3a69369b2660517853c88056b68b2f6b6c07e48e94071e5f700352cf006114",
+      "actual_sha256": "9f3a69369b2660517853c88056b68b2f6b6c07e48e94071e5f700352cf006114",
+      "size_bytes": 823783,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/ppo/training_history.jsonl",
+      "expected_sha256": "9482e3099720ccb9f017904e00c0402bee48a3c97e45513e78f7ba023ae05689",
+      "actual_sha256": "9482e3099720ccb9f017904e00c0402bee48a3c97e45513e78f7ba023ae05689",
+      "size_bytes": 184503,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/ppo/training_summary.json",
+      "expected_sha256": "bd0ef31c8ba86274656ba5ce05d13563c8ebeeacfb22bc7b92cacf017b1c2437",
+      "actual_sha256": "bd0ef31c8ba86274656ba5ce05d13563c8ebeeacfb22bc7b92cacf017b1c2437",
+      "size_bytes": 3216,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/critic_calibration_retention_v1/seed42/weight_integrity.json",
+      "expected_sha256": "96e11df88a90ab9c0f310832da1006025bc76fe8a1b19e9eabbb39a127a56ec9",
+      "actual_sha256": "96e11df88a90ab9c0f310832da1006025bc76fe8a1b19e9eabbb39a127a56ec9",
+      "size_bytes": 3215,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/arm_registry.json",
+      "expected_sha256": "e4c9a39a0c16d57d78bbed34fff76c061cbe33098cd843732ef16b118c94f748",
+      "actual_sha256": "e4c9a39a0c16d57d78bbed34fff76c061cbe33098cd843732ef16b118c94f748",
+      "size_bytes": 1811,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/dependency_inventory.json",
+      "expected_sha256": "9e1bc614046c08b320d175125c698dff1099a169b3ab73b86b5fb1a300de31b2",
+      "actual_sha256": "9e1bc614046c08b320d175125c698dff1099a169b3ab73b86b5fb1a300de31b2",
+      "size_bytes": 97031,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/baseline_vs_current_test_results.json",
+      "expected_sha256": "b695f8a21cb9747d170c2534d7a38f0614c3a903b9bffc422a4b7d02edd71f9b",
+      "actual_sha256": "b695f8a21cb9747d170c2534d7a38f0614c3a903b9bffc422a4b7d02edd71f9b",
+      "size_bytes": 7442,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/fp32_equivalence.json",
+      "expected_sha256": "3f4afcb91d0f616feb427f5a01c2cc55169d08e599be8fc79076de1097ba60e9",
+      "actual_sha256": "3f4afcb91d0f616feb427f5a01c2cc55169d08e599be8fc79076de1097ba60e9",
+      "size_bytes": 2588,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/regression_test_results.json",
+      "expected_sha256": "29432685db51e99e12a937b00eb319ae2002f15a54fed0146d45a43a3b5cb3e5",
+      "actual_sha256": "29432685db51e99e12a937b00eb319ae2002f15a54fed0146d45a43a3b5cb3e5",
+      "size_bytes": 1304,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/autocast_compatibility_note.md",
+      "expected_sha256": "12d63116291ad3017131b7ba1bc9e35d707cbe36f8c6a7e85e53f08d24e9ac49",
+      "actual_sha256": "12d63116291ad3017131b7ba1bc9e35d707cbe36f8c6a7e85e53f08d24e9ac49",
+      "size_bytes": 459,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/baseline_0e2e.log",
+      "expected_sha256": "85cda24b8308f82b0d32e31b77f8aee45bee75f68936b15bdf2bf9a90763316b",
+      "actual_sha256": "85cda24b8308f82b0d32e31b77f8aee45bee75f68936b15bdf2bf9a90763316b",
+      "size_bytes": 8239,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/current_pre_repair_2c434ff.log",
+      "expected_sha256": "26b0d81e40a0671b9099ec83cd109806170b2bc7f89e41ba07c0017a668f7fce",
+      "actual_sha256": "26b0d81e40a0671b9099ec83cd109806170b2bc7f89e41ba07c0017a668f7fce",
+      "size_bytes": 8245,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/fixed_current_targeted_regressions.log",
+      "expected_sha256": "baaab80620fd9315463cba0fbc14f9bcfcc9be7bbf829409591d4f21c35309cb",
+      "actual_sha256": "baaab80620fd9315463cba0fbc14f9bcfcc9be7bbf829409591d4f21c35309cb",
+      "size_bytes": 128,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/run_ppo_ablation_arms.py",
+      "expected_sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22",
+      "actual_sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22",
+      "size_bytes": 84306,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/run_r1_retention_1024.py",
+      "expected_sha256": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f",
+      "actual_sha256": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f",
+      "size_bytes": 109868,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/test_ppo_retention_repeat.py",
+      "expected_sha256": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd",
+      "actual_sha256": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd",
+      "size_bytes": 13219,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/test_work3_training_runtime.py",
+      "expected_sha256": "1a6b11f269d4fbca3cd543f6ff4b731ca42091b08a38958c0c90598ee6a0a7c2",
+      "actual_sha256": "1a6b11f269d4fbca3cd543f6ff4b731ca42091b08a38958c0c90598ee6a0a7c2",
+      "size_bytes": 118360,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/source_versions/work3_lightning.py",
+      "expected_sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f",
+      "actual_sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f",
+      "size_bytes": 20468,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/engineering/test_fixture_repairs.md",
+      "expected_sha256": "88fa36b5c2a43e33e740aca6d1cb41f4d2167327ab083334a3c1c01f20b3b679",
+      "actual_sha256": "88fa36b5c2a43e33e740aca6d1cb41f4d2167327ab083334a3c1c01f20b3b679",
+      "size_bytes": 1291,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/environment_versions.json",
+      "expected_sha256": "e0c3e2b6bad1fe1bd86ac3ad677a094bcd7c09e20efad264c7d774f01b037b57",
+      "actual_sha256": "e0c3e2b6bad1fe1bd86ac3ad677a094bcd7c09e20efad264c7d774f01b037b57",
+      "size_bytes": 527,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/manifest.json",
+      "expected_sha256": "75f5d45a1316b6027540468ffa3dee5a0689e88beb98b9c558a2a5d47493a55b",
+      "actual_sha256": "75f5d45a1316b6027540468ffa3dee5a0689e88beb98b9c558a2a5d47493a55b",
+      "size_bytes": 2498,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/runs/discarded_preflight_attempt_0001/dependency_inventory.json",
+      "expected_sha256": "9e1bc614046c08b320d175125c698dff1099a169b3ab73b86b5fb1a300de31b2",
+      "actual_sha256": "9e1bc614046c08b320d175125c698dff1099a169b3ab73b86b5fb1a300de31b2",
+      "size_bytes": 97031,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/runs/discarded_preflight_attempt_0001/environment_versions.json",
+      "expected_sha256": "e0c3e2b6bad1fe1bd86ac3ad677a094bcd7c09e20efad264c7d774f01b037b57",
+      "actual_sha256": "e0c3e2b6bad1fe1bd86ac3ad677a094bcd7c09e20efad264c7d774f01b037b57",
+      "size_bytes": 527,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/runs/discarded_runs.json",
+      "expected_sha256": "8e84b557dd400e604a8a472217b6caf945e041e431cfe1befcf90765b3670830",
+      "actual_sha256": "8e84b557dd400e604a8a472217b6caf945e041e431cfe1befcf90765b3670830",
+      "size_bytes": 1378,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/source_binding.json",
+      "expected_sha256": "5dd6d50176946fe5f15373fad8115b55bc18d5dfd675c3ed9980ad489baae645",
+      "actual_sha256": "5dd6d50176946fe5f15373fad8115b55bc18d5dfd675c3ed9980ad489baae645",
+      "size_bytes": 6238,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/training/initialization_verification.json",
+      "expected_sha256": "5b6e3c31b667b33dfd4ba19fcfe23515cb30a8e2890aca8267aefbb5ecc1e8b1",
+      "actual_sha256": "5b6e3c31b667b33dfd4ba19fcfe23515cb30a8e2890aca8267aefbb5ecc1e8b1",
+      "size_bytes": 646,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/engineering_closeout_r1_1024_v1/ppo_seed43/training/resolved_config.yaml",
+      "expected_sha256": "15993a31fbb9d1cb4b96c8d40d908560fdd5640ff42b57c7bf26e191acaea511",
+      "actual_sha256": "15993a31fbb9d1cb4b96c8d40d908560fdd5640ff42b57c7bf26e191acaea511",
+      "size_bytes": 2102,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_ablation_arms_v1/seed42/arm_registry.json",
+      "expected_sha256": "78073445d9a1dec0a1c7481eb351b2042430b8b2a3221c54144e3952823d44ed",
+      "actual_sha256": "78073445d9a1dec0a1c7481eb351b2042430b8b2a3221c54144e3952823d44ed",
+      "size_bytes": 2784,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_ablation_arms_v1/seed42/comparison_by_point.csv",
+      "expected_sha256": "3380b56e02290a20a6332fb00128f720d1a6ce2016bd3f17f8952d75a3ac2a5f",
+      "actual_sha256": "3380b56e02290a20a6332fb00128f720d1a6ce2016bd3f17f8952d75a3ac2a5f",
+      "size_bytes": 3812,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/first_update.pt",
+      "expected_sha256": "fb458633bfa72f5abba0693faf03f5cda7ebf185453727b74e956de2f3e74358",
+      "actual_sha256": "fb458633bfa72f5abba0693faf03f5cda7ebf185453727b74e956de2f3e74358",
+      "size_bytes": 1287083,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/first_update_pre.pt",
+      "expected_sha256": "449d61247ad78057a6c13b62183534f668739071c34112ab5c1a8db98ba9fc10",
+      "actual_sha256": "449d61247ad78057a6c13b62183534f668739071c34112ab5c1a8db98ba9fc10",
+      "size_bytes": 1287083,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0000.pt",
+      "expected_sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6",
+      "actual_sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6",
+      "size_bytes": 1287659,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0008.pt",
+      "expected_sha256": "d2b94c7733e4d3297b2e11d3ea7f16f310eee45f4e7e0f3196269707d820907f",
+      "actual_sha256": "d2b94c7733e4d3297b2e11d3ea7f16f310eee45f4e7e0f3196269707d820907f",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0128.pt",
+      "expected_sha256": "f742a8d4c288a4c2eb545a4e847d768cb0c567efd77261b8959224852351065b",
+      "actual_sha256": "f742a8d4c288a4c2eb545a4e847d768cb0c567efd77261b8959224852351065b",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0256.pt",
+      "expected_sha256": "99a5af43926ecca64e3ba7525a740d87714c94296eb5fd02c34ebe6d789f3e54",
+      "actual_sha256": "99a5af43926ecca64e3ba7525a740d87714c94296eb5fd02c34ebe6d789f3e54",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/checkpoints/step0512.pt",
+      "expected_sha256": "271a8b24e0d7f2a2d6e884d390b02f03606a91a2dcec82404b2c35313d02069b",
+      "actual_sha256": "271a8b24e0d7f2a2d6e884d390b02f03606a91a2dcec82404b2c35313d02069b",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/first_rollout.pt",
+      "expected_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "actual_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "size_bytes": 911445,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/first_rollout_pairing.json",
+      "expected_sha256": "b129157d24f241d9b07483408db27bf6ec608de3a1d8dc1c9fccc42811ab7680",
+      "actual_sha256": "b129157d24f241d9b07483408db27bf6ec608de3a1d8dc1c9fccc42811ab7680",
+      "size_bytes": 1235,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/first_update.json",
+      "expected_sha256": "84985c56948d7be334651465a1aab9aaee9abd2e507857b9c6117e5bf5deed1a",
+      "actual_sha256": "84985c56948d7be334651465a1aab9aaee9abd2e507857b9c6117e5bf5deed1a",
+      "size_bytes": 1220,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/minibatch_indices.jsonl",
+      "expected_sha256": "95648197ef589203ef7e0f0383529b5e4c2e065ee07c37c634ad459a4751de43",
+      "actual_sha256": "95648197ef589203ef7e0f0383529b5e4c2e065ee07c37c634ad459a4751de43",
+      "size_bytes": 49053,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/pre_sampling_rng.pt",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "actual_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "size_bytes": 27805,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/pre_update_rng.pt",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "actual_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "size_bytes": 27869,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0000.json",
+      "expected_sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e",
+      "actual_sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e",
+      "size_bytes": 8052,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0008.json",
+      "expected_sha256": "4eff83f001c5bf3b716981715af0b6794e68d84661cac4d6e52bcf1cfe8e133d",
+      "actual_sha256": "4eff83f001c5bf3b716981715af0b6794e68d84661cac4d6e52bcf1cfe8e133d",
+      "size_bytes": 8035,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0128.json",
+      "expected_sha256": "052e2a25b1be7da20befb301f1be61817acd0efe44d0c8b145057e0c9f10d5a0",
+      "actual_sha256": "052e2a25b1be7da20befb301f1be61817acd0efe44d0c8b145057e0c9f10d5a0",
+      "size_bytes": 8079,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0256.json",
+      "expected_sha256": "0a5d12777a18eaebeb5290402d6b24bb157bf10e67ffc65c15b2b32b0efa15f6",
+      "actual_sha256": "0a5d12777a18eaebeb5290402d6b24bb157bf10e67ffc65c15b2b32b0efa15f6",
+      "size_bytes": 8079,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/probe/step0512.json",
+      "expected_sha256": "77a164644860b204b4464251107ffbe16e8b0f35071aa7a83fcbb084682f393e",
+      "actual_sha256": "77a164644860b204b4464251107ffbe16e8b0f35071aa7a83fcbb084682f393e",
+      "size_bytes": 8166,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/runs/ppo_run.json",
+      "expected_sha256": "cbcc9bf7a2383b5d8e2216962a5e645271ec7759c7ca591e65d8b059ebc9b55a",
+      "actual_sha256": "cbcc9bf7a2383b5d8e2216962a5e645271ec7759c7ca591e65d8b059ebc9b55a",
+      "size_bytes": 957,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/shaping_audit_summary.json",
+      "expected_sha256": "beee4cb70b24aec99627f340a7ff9f4ffc953240cd72c81f31b5e0571b916777",
+      "actual_sha256": "beee4cb70b24aec99627f340a7ff9f4ffc953240cd72c81f31b5e0571b916777",
+      "size_bytes": 3317,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/shaping_events.jsonl",
+      "expected_sha256": "ca46b516b0b2c7bf70e4ee2c95768db7e8ba220856193d4824b64684eda2aa4a",
+      "actual_sha256": "ca46b516b0b2c7bf70e4ee2c95768db7e8ba220856193d4824b64684eda2aa4a",
+      "size_bytes": 279058,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/training_history.jsonl",
+      "expected_sha256": "bb96788f5b673db44f6fda6641ae4765333965835650fec7bde447aca76bc846",
+      "actual_sha256": "bb96788f5b673db44f6fda6641ae4765333965835650fec7bde447aca76bc846",
+      "size_bytes": 534397,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/training_summary.json",
+      "expected_sha256": "723459ed5217646a7c237129044d9224f528aab77a4600d42c45a20884114429",
+      "actual_sha256": "723459ed5217646a7c237129044d9224f528aab77a4600d42c45a20884114429",
+      "size_bytes": 4410,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0008_NOMINAL.json",
+      "expected_sha256": "4d8f6c0cc5973c6a40315f0ea2905282acb1d03b1b72625f3778b91089eefb14",
+      "actual_sha256": "4d8f6c0cc5973c6a40315f0ea2905282acb1d03b1b72625f3778b91089eefb14",
+      "size_bytes": 166250,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0128_NOMINAL.json",
+      "expected_sha256": "f579be468bf8246034e3c0ee22ea3a3c6da31d84c40be5f58ad2f3d62924d2c5",
+      "actual_sha256": "f579be468bf8246034e3c0ee22ea3a3c6da31d84c40be5f58ad2f3d62924d2c5",
+      "size_bytes": 166253,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0256_NOMINAL.json",
+      "expected_sha256": "5755598a50b94dadc38bb9b176351cf447359f3c6911aebea1ebd598f647bd0b",
+      "actual_sha256": "5755598a50b94dadc38bb9b176351cf447359f3c6911aebea1ebd598f647bd0b",
+      "size_bytes": 166254,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R1/trajectories/step0512_NOMINAL.json",
+      "expected_sha256": "6a8f0816a79d59d508241fff2e28c5138ce231de1e7bdf693dfd57bf0fb0daa7",
+      "actual_sha256": "6a8f0816a79d59d508241fff2e28c5138ce231de1e7bdf693dfd57bf0fb0daa7",
+      "size_bytes": 191402,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/first_update.pt",
+      "expected_sha256": "121163e1a2a3deceec405a6786371adf165636358685532265435809c01b64fa",
+      "actual_sha256": "121163e1a2a3deceec405a6786371adf165636358685532265435809c01b64fa",
+      "size_bytes": 1287083,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/first_update_pre.pt",
+      "expected_sha256": "6709c9c7e6efe15166af5210c1499a88ad27905117bfd3738418f5d4a1b20588",
+      "actual_sha256": "6709c9c7e6efe15166af5210c1499a88ad27905117bfd3738418f5d4a1b20588",
+      "size_bytes": 1287083,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0000.pt",
+      "expected_sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f",
+      "actual_sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f",
+      "size_bytes": 1287659,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0008.pt",
+      "expected_sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336",
+      "actual_sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0128.pt",
+      "expected_sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889",
+      "actual_sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0256.pt",
+      "expected_sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c",
+      "actual_sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/checkpoints/step0512.pt",
+      "expected_sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140",
+      "actual_sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/first_rollout.pt",
+      "expected_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "actual_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "size_bytes": 911445,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/first_rollout_pairing.json",
+      "expected_sha256": "192a4b3cc565735df06f070dbf1bff2d79852ee94f1ad528c4588f3066dac6e5",
+      "actual_sha256": "192a4b3cc565735df06f070dbf1bff2d79852ee94f1ad528c4588f3066dac6e5",
+      "size_bytes": 1235,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/first_update.json",
+      "expected_sha256": "ea7e9b2c6ef31401584db0c15f79ed206b4817a9e881430b55258e9afc8d4bdc",
+      "actual_sha256": "ea7e9b2c6ef31401584db0c15f79ed206b4817a9e881430b55258e9afc8d4bdc",
+      "size_bytes": 1186,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/minibatch_indices.jsonl",
+      "expected_sha256": "85af386f761b8c62470252796a2dea014d6a668b93fa3a607d4fe79139ec632d",
+      "actual_sha256": "85af386f761b8c62470252796a2dea014d6a668b93fa3a607d4fe79139ec632d",
+      "size_bytes": 48977,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/pre_sampling_rng.pt",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "actual_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "size_bytes": 27805,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/pre_update_rng.pt",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "actual_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "size_bytes": 27869,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0000.json",
+      "expected_sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd",
+      "actual_sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd",
+      "size_bytes": 8052,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0008.json",
+      "expected_sha256": "2c405a5b1647af868c98a66216906d94bff1a9f72070ab12ba882d50f729c8df",
+      "actual_sha256": "2c405a5b1647af868c98a66216906d94bff1a9f72070ab12ba882d50f729c8df",
+      "size_bytes": 8018,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0128.json",
+      "expected_sha256": "8e8e3ab489a8a16dc747e2c32e0b3577cdbef03752647e7641966396869b782c",
+      "actual_sha256": "8e8e3ab489a8a16dc747e2c32e0b3577cdbef03752647e7641966396869b782c",
+      "size_bytes": 8109,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0256.json",
+      "expected_sha256": "1a11b713e189b393316284ec7f8dfea596a5bc9e3d3b6e293fafed3379dab6dd",
+      "actual_sha256": "1a11b713e189b393316284ec7f8dfea596a5bc9e3d3b6e293fafed3379dab6dd",
+      "size_bytes": 8007,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/probe/step0512.json",
+      "expected_sha256": "2277dd614a37d8158703dc2a115afc9f392eb77f8d26cab91657535cb3622ff0",
+      "actual_sha256": "2277dd614a37d8158703dc2a115afc9f392eb77f8d26cab91657535cb3622ff0",
+      "size_bytes": 8027,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/runs/ppo_run.json",
+      "expected_sha256": "5d4d660099be613d63673ada7bef31c0b920eab6c556e747646eed1c73ad3293",
+      "actual_sha256": "5d4d660099be613d63673ada7bef31c0b920eab6c556e747646eed1c73ad3293",
+      "size_bytes": 925,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/shaping_audit_summary.json",
+      "expected_sha256": "962ade78c6ac03027819abe9109b5ef8486f328f84cdfa3ec16d500abb101761",
+      "actual_sha256": "962ade78c6ac03027819abe9109b5ef8486f328f84cdfa3ec16d500abb101761",
+      "size_bytes": 3378,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/shaping_events.jsonl",
+      "expected_sha256": "13d181a624306362dd5fc362a1fe5308a525bb5601788fbae84c1dee0a71f9ad",
+      "actual_sha256": "13d181a624306362dd5fc362a1fe5308a525bb5601788fbae84c1dee0a71f9ad",
+      "size_bytes": 284449,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/training_history.jsonl",
+      "expected_sha256": "6a89c26b14df99d13eefd80fad84bb94d2f94ee536a20e3b51b692a72fb8ee23",
+      "actual_sha256": "6a89c26b14df99d13eefd80fad84bb94d2f94ee536a20e3b51b692a72fb8ee23",
+      "size_bytes": 531963,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/training_summary.json",
+      "expected_sha256": "081cf39f9a935eb64e1a908096c65b24a1e30f2a38a2899c0d5ccfae8f3eba1c",
+      "actual_sha256": "081cf39f9a935eb64e1a908096c65b24a1e30f2a38a2899c0d5ccfae8f3eba1c",
+      "size_bytes": 4422,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0008_NOMINAL.json",
+      "expected_sha256": "ef82ded93421d83398cecc4f7463e41eb4297707dada51ea7e141785d86c694d",
+      "actual_sha256": "ef82ded93421d83398cecc4f7463e41eb4297707dada51ea7e141785d86c694d",
+      "size_bytes": 166250,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0128_NOMINAL.json",
+      "expected_sha256": "49decf74d5225f2538cc41b2a408d24e4cc6cef1823217daeeb5e3ad4595e602",
+      "actual_sha256": "49decf74d5225f2538cc41b2a408d24e4cc6cef1823217daeeb5e3ad4595e602",
+      "size_bytes": 251937,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0256_NOMINAL.json",
+      "expected_sha256": "631a26a64390713a255c8dae86b2fbc0d580d15cabd07172db26a60b2de3a8f8",
+      "actual_sha256": "631a26a64390713a255c8dae86b2fbc0d580d15cabd07172db26a60b2de3a8f8",
+      "size_bytes": 253156,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/R4/trajectories/step0512_NOMINAL.json",
+      "expected_sha256": "94e1ad6d3bc289813c020402aa43d406ca67411a52b35eabb7cd3c8b2ffa0815",
+      "actual_sha256": "94e1ad6d3bc289813c020402aa43d406ca67411a52b35eabb7cd3c8b2ffa0815",
+      "size_bytes": 250916,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/first_update.pt",
+      "expected_sha256": "10e29cd418120c6edafd7b4b7a4c1f87b1fd4c04795c655ff1c91a183cba614f",
+      "actual_sha256": "10e29cd418120c6edafd7b4b7a4c1f87b1fd4c04795c655ff1c91a183cba614f",
+      "size_bytes": 1287083,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/first_update_pre.pt",
+      "expected_sha256": "1060039a9f30da1ebe8ca732120424f726947ef1a4820943d337ca8c236c51fa",
+      "actual_sha256": "1060039a9f30da1ebe8ca732120424f726947ef1a4820943d337ca8c236c51fa",
+      "size_bytes": 1287083,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0000.pt",
+      "expected_sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "actual_sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "size_bytes": 1287659,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0008.pt",
+      "expected_sha256": "f976a4aa8486685977a954a780c0943c5c1ceec9152e842cceabc5563ec75b78",
+      "actual_sha256": "f976a4aa8486685977a954a780c0943c5c1ceec9152e842cceabc5563ec75b78",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0128.pt",
+      "expected_sha256": "97bd49d11b8190f0c0867fd926ef5ccbb4fae409ef7e51a51c0422e22e5dd261",
+      "actual_sha256": "97bd49d11b8190f0c0867fd926ef5ccbb4fae409ef7e51a51c0422e22e5dd261",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0256.pt",
+      "expected_sha256": "4b28d7001bd34e79ba28abff0edeb396d0324e59bdac65b979e92aea49e5be4c",
+      "actual_sha256": "4b28d7001bd34e79ba28abff0edeb396d0324e59bdac65b979e92aea49e5be4c",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/checkpoints/step0512.pt",
+      "expected_sha256": "def6316a5b26fa807bf6889e31758721a0bf76ffb2dcc081ee67a42b9159d761",
+      "actual_sha256": "def6316a5b26fa807bf6889e31758721a0bf76ffb2dcc081ee67a42b9159d761",
+      "size_bytes": 1287595,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/first_rollout.pt",
+      "expected_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "actual_sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "size_bytes": 911445,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/first_rollout_pairing.json",
+      "expected_sha256": "a2f003b44f24222fcbfe357df41afbb43b5fcb1fb3851df6dc2d500f06bba65f",
+      "actual_sha256": "a2f003b44f24222fcbfe357df41afbb43b5fcb1fb3851df6dc2d500f06bba65f",
+      "size_bytes": 1236,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/first_update.json",
+      "expected_sha256": "015cca3cf6b8d33364552e45ba1065a9b14c944227cab5b4140b513174ada248",
+      "actual_sha256": "015cca3cf6b8d33364552e45ba1065a9b14c944227cab5b4140b513174ada248",
+      "size_bytes": 1186,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/minibatch_indices.jsonl",
+      "expected_sha256": "14613b3ac14b3bd4214969f38946d782cf525c6521a61b3a44abd2cd923b4bfa",
+      "actual_sha256": "14613b3ac14b3bd4214969f38946d782cf525c6521a61b3a44abd2cd923b4bfa",
+      "size_bytes": 49006,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/pre_sampling_rng.pt",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "actual_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "size_bytes": 27805,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/pre_update_rng.pt",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "actual_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "size_bytes": 27869,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0000.json",
+      "expected_sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5",
+      "actual_sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5",
+      "size_bytes": 8053,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0008.json",
+      "expected_sha256": "38344a5447d6ed7771f9ab61219d0ed1984abcef704e06fbad54977e60a05d09",
+      "actual_sha256": "38344a5447d6ed7771f9ab61219d0ed1984abcef704e06fbad54977e60a05d09",
+      "size_bytes": 7983,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0128.json",
+      "expected_sha256": "a2aa7362eaf325fb3a14501ebdeaed68c4a7145f9fb3372cbee4f431ec3b7cd3",
+      "actual_sha256": "a2aa7362eaf325fb3a14501ebdeaed68c4a7145f9fb3372cbee4f431ec3b7cd3",
+      "size_bytes": 7846,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0256.json",
+      "expected_sha256": "059796b6cd36abe2329cffcc4209b2b3d84aecf0bb965103ccdb37b179c0dbe9",
+      "actual_sha256": "059796b6cd36abe2329cffcc4209b2b3d84aecf0bb965103ccdb37b179c0dbe9",
+      "size_bytes": 7888,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/probe/step0512.json",
+      "expected_sha256": "c56be584d65902e0a3b5ac162a02abe451de94946e00bc7f9c893fb4e123cb09",
+      "actual_sha256": "c56be584d65902e0a3b5ac162a02abe451de94946e00bc7f9c893fb4e123cb09",
+      "size_bytes": 7873,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/runs/ppo_run.json",
+      "expected_sha256": "bb973d15f3a5b443cd4faae33a89f40a75265589a4ae7a3c1b3fe092f5a03647",
+      "actual_sha256": "bb973d15f3a5b443cd4faae33a89f40a75265589a4ae7a3c1b3fe092f5a03647",
+      "size_bytes": 926,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/shaping_audit_summary.json",
+      "expected_sha256": "63c354d2eae76d9241b5fc7508a072ad7ade4eab16e2a1579947021e2f3775b3",
+      "actual_sha256": "63c354d2eae76d9241b5fc7508a072ad7ade4eab16e2a1579947021e2f3775b3",
+      "size_bytes": 3383,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/shaping_events.jsonl",
+      "expected_sha256": "eb7dd2037617159e641f8a1efb996ef02fbb2f159ed57dc2a019b139e626e891",
+      "actual_sha256": "eb7dd2037617159e641f8a1efb996ef02fbb2f159ed57dc2a019b139e626e891",
+      "size_bytes": 282654,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/training_history.jsonl",
+      "expected_sha256": "cd13e71177e267db43ba7cb6c55a2c1498ccf55063c58a1d1230fdddcf1d31de",
+      "actual_sha256": "cd13e71177e267db43ba7cb6c55a2c1498ccf55063c58a1d1230fdddcf1d31de",
+      "size_bytes": 529437,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/training_summary.json",
+      "expected_sha256": "77bf9ef62cfd2e5256102c01c348c454600f040c21a872eab39b692dd4bd27f9",
+      "actual_sha256": "77bf9ef62cfd2e5256102c01c348c454600f040c21a872eab39b692dd4bd27f9",
+      "size_bytes": 4391,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0008_NOMINAL.json",
+      "expected_sha256": "cf0934078c5dfc3dcd3b97b37927afdf7e22fd813ba7de06b1786c31ec4551ae",
+      "actual_sha256": "cf0934078c5dfc3dcd3b97b37927afdf7e22fd813ba7de06b1786c31ec4551ae",
+      "size_bytes": 166252,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0128_NOMINAL.json",
+      "expected_sha256": "8c9f708c576bf845719c60b62babcb0afa2686799d1e794017464067fce56556",
+      "actual_sha256": "8c9f708c576bf845719c60b62babcb0afa2686799d1e794017464067fce56556",
+      "size_bytes": 245818,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0256_NOMINAL.json",
+      "expected_sha256": "2b8fb2f631c4afbca703ab8212616124a606632aa9c6e8bb493ea344e586e471",
+      "actual_sha256": "2b8fb2f631c4afbca703ab8212616124a606632aa9c6e8bb493ea344e586e471",
+      "size_bytes": 237886,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/REF/trajectories/step0512_NOMINAL.json",
+      "expected_sha256": "354f15defc04a42cca9f6f82dad6c5560a31e1b72c0a00592e8ecf2c6caa1ef7",
+      "actual_sha256": "354f15defc04a42cca9f6f82dad6c5560a31e1b72c0a00592e8ecf2c6caa1ef7",
+      "size_bytes": 246730,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/action_order_comparison.csv",
+      "expected_sha256": "d95d3935e2c8edd1308f3e4333aa4244d8f98653b8f48d0197fd6d4913f15cfb",
+      "actual_sha256": "d95d3935e2c8edd1308f3e4333aa4244d8f98653b8f48d0197fd6d4913f15cfb",
+      "size_bytes": 1979,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/arm_registry.json",
+      "expected_sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2",
+      "actual_sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2",
+      "size_bytes": 3256,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/binary_artifact_inventory.json",
+      "expected_sha256": "db1f90d87a98862b0da7cf924962b07225c37b45e51593168e4f333d4912d312",
+      "actual_sha256": "db1f90d87a98862b0da7cf924962b07225c37b45e51593168e4f333d4912d312",
+      "size_bytes": 9119,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/comparison_by_point.csv",
+      "expected_sha256": "a94c746f40d1a39b3478e3071ffcb924c2aaf8efd00c8f1147a223619dbc46f8",
+      "actual_sha256": "a94c746f40d1a39b3478e3071ffcb924c2aaf8efd00c8f1147a223619dbc46f8",
+      "size_bytes": 4730,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/cross_seed_summary.csv",
+      "expected_sha256": "f32c4a36d6691f8ae94540be34bce1acda864cba6b9d815a97694b31bd6d9d9c",
+      "actual_sha256": "f32c4a36d6691f8ae94540be34bce1acda864cba6b9d815a97694b31bd6d9d9c",
+      "size_bytes": 1614,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/cycle_comparison.csv",
+      "expected_sha256": "6347361764b56d43e336df53f3b40790adbdb4e49c3a9d93dc0655a8dbb3e2e2",
+      "actual_sha256": "6347361764b56d43e336df53f3b40790adbdb4e49c3a9d93dc0655a8dbb3e2e2",
+      "size_bytes": 8855,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/dependency_inventory.json",
+      "expected_sha256": "a89af1aafccdbe0c1f9898e9dcf4f48aa89a4c5d2241d35a38e06dcb490245d1",
+      "actual_sha256": "a89af1aafccdbe0c1f9898e9dcf4f48aa89a4c5d2241d35a38e06dcb490245d1",
+      "size_bytes": 9645,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/interpretation_errata.md",
+      "expected_sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "actual_sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "size_bytes": 1805,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/manifest.json",
+      "expected_sha256": "30d30a91163f28cc2816df1b6ec9f077bd78aa1b3f2f3d3ee34f439750b74f57",
+      "actual_sha256": "30d30a91163f28cc2816df1b6ec9f077bd78aa1b3f2f3d3ee34f439750b74f57",
+      "size_bytes": 4400,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/pairing_verification.json",
+      "expected_sha256": "226b974be1e0247f3ec0f3789e24c4ff81f9e9820c63887c6c26c0b7708fead1",
+      "actual_sha256": "226b974be1e0247f3ec0f3789e24c4ff81f9e9820c63887c6c26c0b7708fead1",
+      "size_bytes": 3997,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/parameter_change_metrics.csv",
+      "expected_sha256": "46842f62eb989f30086ff765f5eafc7afbb9b455fedae867e179cbf664109428",
+      "actual_sha256": "46842f62eb989f30086ff765f5eafc7afbb9b455fedae867e179cbf664109428",
+      "size_bytes": 5845,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/policy_probe_metrics.csv",
+      "expected_sha256": "4e475b2e99eaea1cfb104142dbd843a07ee7cd3ca0a57b9b5527bf7f67b268f6",
+      "actual_sha256": "4e475b2e99eaea1cfb104142dbd843a07ee7cd3ca0a57b9b5527bf7f67b268f6",
+      "size_bytes": 2502,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/r4_gradient_preflight.json",
+      "expected_sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5",
+      "actual_sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5",
+      "size_bytes": 400,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/regression_test_results.json",
+      "expected_sha256": "07adf4ed3ef01632e9acfeed4911e9bb88fd6e4cf82528120207716e291ab000",
+      "actual_sha256": "07adf4ed3ef01632e9acfeed4911e9bb88fd6e4cf82528120207716e291ab000",
+      "size_bytes": 2301,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/resolved_configs/R1.yaml",
+      "expected_sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "actual_sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "size_bytes": 872,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/resolved_configs/R4.yaml",
+      "expected_sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "actual_sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "size_bytes": 881,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/resolved_configs/REF.yaml",
+      "expected_sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "actual_sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "size_bytes": 830,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/dependency_inventory.json",
+      "expected_sha256": "041867ee81f14f4febb1b3490a1fbb5107ab441232c69d9f85285a6ab273f3a1",
+      "actual_sha256": "041867ee81f14f4febb1b3490a1fbb5107ab441232c69d9f85285a6ab273f3a1",
+      "size_bytes": 9645,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/interpretation_errata.md",
+      "expected_sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "actual_sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "size_bytes": 1805,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/resolved_configs/R1.yaml",
+      "expected_sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "actual_sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "size_bytes": 872,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/resolved_configs/R4.yaml",
+      "expected_sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "actual_sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "size_bytes": 881,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_001/resolved_configs/REF.yaml",
+      "expected_sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "actual_sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "size_bytes": 830,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/R1/probe/step0000.json",
+      "expected_sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e",
+      "actual_sha256": "e3dc8ab1ac56ce2214e25a8d620cd99f490d273e30214fef6119d4397b0c6f7e",
+      "size_bytes": 8052,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/R4/probe/step0000.json",
+      "expected_sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd",
+      "actual_sha256": "6400a9ec26438fe5328f200127649e27ee34461ebf83d159a18b893e490ea7cd",
+      "size_bytes": 8052,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/checkpoints/step0000.pt",
+      "expected_sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "actual_sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "size_bytes": 1287659,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/first_rollout.pt",
+      "expected_sha256": "3e0a269b5d4e7aa1a14e039f49049aeb5d61a0a3f3f0a446039ba2e5d90cd3dd",
+      "actual_sha256": "3e0a269b5d4e7aa1a14e039f49049aeb5d61a0a3f3f0a446039ba2e5d90cd3dd",
+      "size_bytes": 911381,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/first_rollout_pairing.json",
+      "expected_sha256": "fe11d60ea46ace8995d3ac2f8f64110f70ca8c504e71cd02367cd8f8cdbe5c77",
+      "actual_sha256": "fe11d60ea46ace8995d3ac2f8f64110f70ca8c504e71cd02367cd8f8cdbe5c77",
+      "size_bytes": 1250,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/minibatch_indices.jsonl",
+      "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "actual_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/pre_sampling_rng.pt",
+      "expected_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "actual_sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "size_bytes": 27805,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/pre_update_rng.pt",
+      "expected_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "actual_sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "size_bytes": 27869,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/probe/step0000.json",
+      "expected_sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5",
+      "actual_sha256": "f81db205bbd878f4491cc5b309fb0aaa32b9fc6e2c7654a0041e9c8fc9dc5da5",
+      "size_bytes": 8053,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/runs/ppo_run.json",
+      "expected_sha256": "dd4b83d472490c019a1f2ebb09eb4fc30ef36803ab36fb14fd44a8c4c87f3b5a",
+      "actual_sha256": "dd4b83d472490c019a1f2ebb09eb4fc30ef36803ab36fb14fd44a8c4c87f3b5a",
+      "size_bytes": 935,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/shaping_events.jsonl",
+      "expected_sha256": "27d545dd6cde50f9c2dbcec7f4e766836b798dff1140a47b139fbba8124dadce",
+      "actual_sha256": "27d545dd6cde50f9c2dbcec7f4e766836b798dff1140a47b139fbba8124dadce",
+      "size_bytes": 4344,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/training_history.jsonl",
+      "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "actual_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/REF/training_summary.json",
+      "expected_sha256": "b74740245f58008feefa060ee92930ea2ef736249252efd5bda17950186476d7",
+      "actual_sha256": "b74740245f58008feefa060ee92930ea2ef736249252efd5bda17950186476d7",
+      "size_bytes": 2601,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/arm_registry.json",
+      "expected_sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2",
+      "actual_sha256": "8b589d02b2f3bedd53c49b242bdf483551f9d34010dd7aeb0d27ec8c006680f2",
+      "size_bytes": 3256,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/comparison_by_point.csv",
+      "expected_sha256": "c57067b869fa970b4db13cd0fc72efa85d97c5904bb1666a58bee5cd473a0041",
+      "actual_sha256": "c57067b869fa970b4db13cd0fc72efa85d97c5904bb1666a58bee5cd473a0041",
+      "size_bytes": 757,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/dependency_inventory.json",
+      "expected_sha256": "1edc1fe8693d625fc7285ea0a93b6571c673624e415d967f4f752027d717b236",
+      "actual_sha256": "1edc1fe8693d625fc7285ea0a93b6571c673624e415d967f4f752027d717b236",
+      "size_bytes": 9645,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/interpretation_errata.md",
+      "expected_sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "actual_sha256": "6b337d1026971a7d931b83489fe31178f777430dab2c70a7832ebacf001561f7",
+      "size_bytes": 1805,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/manifest.json",
+      "expected_sha256": "2b83206ede5e792681a584ec4487f05ddf5a75d94582c40b8e0c3efeea45e86f",
+      "actual_sha256": "2b83206ede5e792681a584ec4487f05ddf5a75d94582c40b8e0c3efeea45e86f",
+      "size_bytes": 3984,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/pairing_verification.json",
+      "expected_sha256": "dea4ffa1469c34451dba6acbef915b64ec9c0137323e528cb5e1eb3a1a7bd89c",
+      "actual_sha256": "dea4ffa1469c34451dba6acbef915b64ec9c0137323e528cb5e1eb3a1a7bd89c",
+      "size_bytes": 1471,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/r4_gradient_preflight.json",
+      "expected_sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5",
+      "actual_sha256": "dc5b4641f5b3271f18aae8d7a0ef57a5553c0adbcc6b6b86193bbc0e66d98ac5",
+      "size_bytes": 400,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/resolved_configs/R1.yaml",
+      "expected_sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "actual_sha256": "ad316f4c549a649b8762b6af3bc46371f569d199fa4ee64f67ad31e7e781f31d",
+      "size_bytes": 872,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/resolved_configs/R4.yaml",
+      "expected_sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "actual_sha256": "de012a8069a0000f5d8aae1c6294f4969d8da9a6bb5659dae3b99de7ea5f273a",
+      "size_bytes": 881,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/resolved_configs/REF.yaml",
+      "expected_sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "actual_sha256": "9c9e0d835f2deebd3568a9cc21575c379316ca19b93ce666dabdf1d9dfdf7902",
+      "size_bytes": 830,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/shared_step0000_NOMINAL.json",
+      "expected_sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577",
+      "actual_sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577",
+      "size_bytes": 166259,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/shared_step0000_verification.json",
+      "expected_sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337",
+      "actual_sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337",
+      "size_bytes": 601,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/source_binding.json",
+      "expected_sha256": "7a031fba201cca11aa5b4acb95e6a081420be45a165b7087a338fa2a71c84ade",
+      "actual_sha256": "7a031fba201cca11aa5b4acb95e6a081420be45a165b7087a338fa2a71c84ade",
+      "size_bytes": 9376,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/root/verification.json",
+      "expected_sha256": "df9231768898089f48325335b8b86fa0f7942868fa2f30cdfbbd60c85b4a9d06",
+      "actual_sha256": "df9231768898089f48325335b8b86fa0f7942868fa2f30cdfbbd60c85b4a9d06",
+      "size_bytes": 164,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/evaluate_REF_--point_0.log",
+      "expected_sha256": "1122b254e7bcd82ea77071b8d9fec907530b02cadbea1d16330cfd82df7bdcda",
+      "actual_sha256": "1122b254e7bcd82ea77071b8d9fec907530b02cadbea1d16330cfd82df7bdcda",
+      "size_bytes": 270,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/fatal_error.json",
+      "expected_sha256": "54c89eb23e67f80857ff4fbd0d8bb5997966a7c696e8650eaa408ba57324f5ba",
+      "actual_sha256": "54c89eb23e67f80857ff4fbd0d8bb5997966a7c696e8650eaa408ba57324f5ba",
+      "size_bytes": 52,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/probe_R1_--point_0.log",
+      "expected_sha256": "8f3382ed3e346aa284e68b1578333b2a690447e410b582cc2989834ebebceeb0",
+      "actual_sha256": "8f3382ed3e346aa284e68b1578333b2a690447e410b582cc2989834ebebceeb0",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/probe_R4_--point_0.log",
+      "expected_sha256": "851d896911159976b99be6d84ac0beeed9283ea1a9a63b53e276f9bacf7ec2d3",
+      "actual_sha256": "851d896911159976b99be6d84ac0beeed9283ea1a9a63b53e276f9bacf7ec2d3",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/probe_REF_--point_0.log",
+      "expected_sha256": "6aa4acd7a86ae74b0035e527c5e6eb15174cba9ce81bdf0ec6c5e82b2d01c98b",
+      "actual_sha256": "6aa4acd7a86ae74b0035e527c5e6eb15174cba9ce81bdf0ec6c5e82b2d01c98b",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/r4-preflight_main.log",
+      "expected_sha256": "c67d55ee0ad69e4264e1fc15d0ff0ec02b32cf17bb2a0781a547febe0d939c65",
+      "actual_sha256": "c67d55ee0ad69e4264e1fc15d0ff0ec02b32cf17bb2a0781a547febe0d939c65",
+      "size_bytes": 620,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/stage_results.json",
+      "expected_sha256": "ccaa04777650de1c3899ece248eaf1f9b6e3891712693ec415df11a9f4878b11",
+      "actual_sha256": "ccaa04777650de1c3899ece248eaf1f9b6e3891712693ec415df11a9f4878b11",
+      "size_bytes": 1138,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_attempt_002/runs/train_REF.log",
+      "expected_sha256": "77a75f0ab9604e8ee2989d391aa5b1e42165f4417e1591e45547856855fa4e0e",
+      "actual_sha256": "77a75f0ab9604e8ee2989d391aa5b1e42165f4417e1591e45547856855fa4e0e",
+      "size_bytes": 356,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/discarded_runs.json",
+      "expected_sha256": "0f8a114169dd9fe9e14c5c8b1aef84a759c6981c650ca387efe6447e0f992e46",
+      "actual_sha256": "0f8a114169dd9fe9e14c5c8b1aef84a759c6981c650ca387efe6447e0f992e46",
+      "size_bytes": 486,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_128.log",
+      "expected_sha256": "c93fbb1e22928d74b63014cb3b7b56f9d706df0948e3ef7656528565d7937cee",
+      "actual_sha256": "c93fbb1e22928d74b63014cb3b7b56f9d706df0948e3ef7656528565d7937cee",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_256.log",
+      "expected_sha256": "c2e0e91d150540c4a3e14c02cd042bf4705c904d10bc974a59d0e4dffcc30efe",
+      "actual_sha256": "c2e0e91d150540c4a3e14c02cd042bf4705c904d10bc974a59d0e4dffcc30efe",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_512.log",
+      "expected_sha256": "bccff144e2e9603d8579cb267d99b778c80bedb16d1ce3d2b7d6d35fcb0d6c48",
+      "actual_sha256": "bccff144e2e9603d8579cb267d99b778c80bedb16d1ce3d2b7d6d35fcb0d6c48",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R1_--point_8.log",
+      "expected_sha256": "6ff91be3e3518a92b3c77daa48b3f3926225c55093ecf7c2cc833558dae21ac5",
+      "actual_sha256": "6ff91be3e3518a92b3c77daa48b3f3926225c55093ecf7c2cc833558dae21ac5",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_128.log",
+      "expected_sha256": "f4577f18984d96f680f579b8211f7b4a26d0f95d86bee952fa2b9b175eeddc7c",
+      "actual_sha256": "f4577f18984d96f680f579b8211f7b4a26d0f95d86bee952fa2b9b175eeddc7c",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_256.log",
+      "expected_sha256": "b451d8f8d5828d762b34e0ed696b6fed56fc08dcf85750085c5d5eb7bf5838b3",
+      "actual_sha256": "b451d8f8d5828d762b34e0ed696b6fed56fc08dcf85750085c5d5eb7bf5838b3",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_512.log",
+      "expected_sha256": "88d6eb742cec8d8253a2d89ce47b5e5215361c3634505cb7dac657cbe4b25357",
+      "actual_sha256": "88d6eb742cec8d8253a2d89ce47b5e5215361c3634505cb7dac657cbe4b25357",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_R4_--point_8.log",
+      "expected_sha256": "fe4743f329cfc98efec071dc3857e08667ac6fd9033c2b85bb4384511cd04ed4",
+      "actual_sha256": "fe4743f329cfc98efec071dc3857e08667ac6fd9033c2b85bb4384511cd04ed4",
+      "size_bytes": 269,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_0.log",
+      "expected_sha256": "ccafd26ca1e7000b0c769a3368dbe2073e81c018ebdc4dbaf0f4b1b861b714e0",
+      "actual_sha256": "ccafd26ca1e7000b0c769a3368dbe2073e81c018ebdc4dbaf0f4b1b861b714e0",
+      "size_bytes": 270,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_128.log",
+      "expected_sha256": "87259d2a8aceda6326564a767849b9863e8117e384ea853c5ce311b30c96f0b2",
+      "actual_sha256": "87259d2a8aceda6326564a767849b9863e8117e384ea853c5ce311b30c96f0b2",
+      "size_bytes": 270,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_256.log",
+      "expected_sha256": "23ba9a9eae82db271cb06c34b23498735adbb7eac830fd9769e373bf3be4feaa",
+      "actual_sha256": "23ba9a9eae82db271cb06c34b23498735adbb7eac830fd9769e373bf3be4feaa",
+      "size_bytes": 270,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_512.log",
+      "expected_sha256": "89596d721d27739711b87e9ef7a9f178cc7850742c4e8d5e39150e2083688873",
+      "actual_sha256": "89596d721d27739711b87e9ef7a9f178cc7850742c4e8d5e39150e2083688873",
+      "size_bytes": 270,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/evaluate_REF_--point_8.log",
+      "expected_sha256": "ed355d9add8cc9a0c892d920f5d38a79062a11b60d4e2f349192f5efbf174c04",
+      "actual_sha256": "ed355d9add8cc9a0c892d920f5d38a79062a11b60d4e2f349192f5efbf174c04",
+      "size_bytes": 270,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_0.log",
+      "expected_sha256": "9caeb8df649154887612aea6254681aae5359241eaae19baec1bd1bf85903262",
+      "actual_sha256": "9caeb8df649154887612aea6254681aae5359241eaae19baec1bd1bf85903262",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_128.log",
+      "expected_sha256": "048b17a2251e6ccfde709cbee47c96fa3de6ce2390bbcb6fcfac658e61eae90e",
+      "actual_sha256": "048b17a2251e6ccfde709cbee47c96fa3de6ce2390bbcb6fcfac658e61eae90e",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_256.log",
+      "expected_sha256": "d6ebe46f87e34586b0bca6deaa87e7a29d2d6c11b86056de7f3388a7568b5c8d",
+      "actual_sha256": "d6ebe46f87e34586b0bca6deaa87e7a29d2d6c11b86056de7f3388a7568b5c8d",
+      "size_bytes": 139,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_512.log",
+      "expected_sha256": "e0c9bae091b3f9da0644c8b0b626b024d419d21ebee0ed97204da7e7a3124fbb",
+      "actual_sha256": "e0c9bae091b3f9da0644c8b0b626b024d419d21ebee0ed97204da7e7a3124fbb",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R1_--point_8.log",
+      "expected_sha256": "9dc47d80d650b14b78b79a2ba877354fa6e7a1f8e80d7667c1fdd2fbbbb84244",
+      "actual_sha256": "9dc47d80d650b14b78b79a2ba877354fa6e7a1f8e80d7667c1fdd2fbbbb84244",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_0.log",
+      "expected_sha256": "413e6ce1f07d5611a6961452a7300376c4ef5f5ec31554bb98a59d78f385ec5d",
+      "actual_sha256": "413e6ce1f07d5611a6961452a7300376c4ef5f5ec31554bb98a59d78f385ec5d",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_128.log",
+      "expected_sha256": "e5ea6d50b464dbea33e4d8ebb79d05b3578c6596a80821c5882c9d07e1263245",
+      "actual_sha256": "e5ea6d50b464dbea33e4d8ebb79d05b3578c6596a80821c5882c9d07e1263245",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_256.log",
+      "expected_sha256": "ab8c0e4b9fab793e1a31beeead6efe8245c74ac724726e532b223b2a20238512",
+      "actual_sha256": "ab8c0e4b9fab793e1a31beeead6efe8245c74ac724726e532b223b2a20238512",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_512.log",
+      "expected_sha256": "98a7dd52c91b18616096b21d79a9b5b38210b6ad45d0bcb494a1c2be71e9b2f2",
+      "actual_sha256": "98a7dd52c91b18616096b21d79a9b5b38210b6ad45d0bcb494a1c2be71e9b2f2",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_R4_--point_8.log",
+      "expected_sha256": "b6f09f92643672ffa77ea67fc73dc8e1279fc8df99482c0ef97ec2da719e0729",
+      "actual_sha256": "b6f09f92643672ffa77ea67fc73dc8e1279fc8df99482c0ef97ec2da719e0729",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_0.log",
+      "expected_sha256": "7b8c579c77195350831cf0e659a98ab1ed30100855f9cbe09a7f408bff48f75d",
+      "actual_sha256": "7b8c579c77195350831cf0e659a98ab1ed30100855f9cbe09a7f408bff48f75d",
+      "size_bytes": 139,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_128.log",
+      "expected_sha256": "d93d42e5ae8e1562577c01ec818703b534eb771ff8c858a2ba0ec553ce69a97b",
+      "actual_sha256": "d93d42e5ae8e1562577c01ec818703b534eb771ff8c858a2ba0ec553ce69a97b",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_256.log",
+      "expected_sha256": "c2606c0dca1bfc44a1f6941be641fc91c1e216220c1d4826b7cb827f35f9c5fd",
+      "actual_sha256": "c2606c0dca1bfc44a1f6941be641fc91c1e216220c1d4826b7cb827f35f9c5fd",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_512.log",
+      "expected_sha256": "e96da3a4b74b59a2f41e6866fcdd35f0741da7566ab6bbce3092fd79df8e70a4",
+      "actual_sha256": "e96da3a4b74b59a2f41e6866fcdd35f0741da7566ab6bbce3092fd79df8e70a4",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/probe_REF_--point_8.log",
+      "expected_sha256": "765b7f68f5dcb3d879e6760024b990f94272b58a6b44cdf51ec200d5a8911b73",
+      "actual_sha256": "765b7f68f5dcb3d879e6760024b990f94272b58a6b44cdf51ec200d5a8911b73",
+      "size_bytes": 140,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/r4-preflight_main.log",
+      "expected_sha256": "4127f76361a8640e97c6e0ba59c48dc2e8e86c537168a4e71f82e06dd0fdf0d7",
+      "actual_sha256": "4127f76361a8640e97c6e0ba59c48dc2e8e86c537168a4e71f82e06dd0fdf0d7",
+      "size_bytes": 620,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/stage_results.json",
+      "expected_sha256": "352875722bb3f76de6d94069a5d6ec03f05d157e917a8c99a861cb13abaac6d8",
+      "actual_sha256": "352875722bb3f76de6d94069a5d6ec03f05d157e917a8c99a861cb13abaac6d8",
+      "size_bytes": 6125,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/train_R1.log",
+      "expected_sha256": "83b64f75d1b02ce5da3744eff23ed26fb342563fcd96f6f37a00e6d01b72ff42",
+      "actual_sha256": "83b64f75d1b02ce5da3744eff23ed26fb342563fcd96f6f37a00e6d01b72ff42",
+      "size_bytes": 518,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/train_R4.log",
+      "expected_sha256": "06a2626bb0ba3d9702618c50aacd1c070c9fb49e51197d801b0074c4ca6a47ed",
+      "actual_sha256": "06a2626bb0ba3d9702618c50aacd1c070c9fb49e51197d801b0074c4ca6a47ed",
+      "size_bytes": 538,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/runs/train_REF.log",
+      "expected_sha256": "45f1be6d4f262c11d6095a6d03b5b8fb94292f4316abaccaefa28b7069f8ae86",
+      "actual_sha256": "45f1be6d4f262c11d6095a6d03b5b8fb94292f4316abaccaefa28b7069f8ae86",
+      "size_bytes": 531,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/shared_step0000_NOMINAL.json",
+      "expected_sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577",
+      "actual_sha256": "6a4888736609a88d5f45aefe6e6c0ff95f3f22da3f84c178fbc8a4315f8ab577",
+      "size_bytes": 166259,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/shared_step0000_verification.json",
+      "expected_sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337",
+      "actual_sha256": "720b0fba1748d76699e5f242aeea1b12bf2c3a48e9ec773ff72622f6ef17e337",
+      "size_bytes": 601,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/source_binding.json",
+      "expected_sha256": "faa51eed8b3a819d11b07599e4ea9db134b76eefaca1da88547bab0832f0e65e",
+      "actual_sha256": "faa51eed8b3a819d11b07599e4ea9db134b76eefaca1da88547bab0832f0e65e",
+      "size_bytes": 15594,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/summary.md",
+      "expected_sha256": "555837e3cc563d4852d25e1f455cf90d620974e5c44d04b24026185f205c979f",
+      "actual_sha256": "555837e3cc563d4852d25e1f455cf90d620974e5c44d04b24026185f205c979f",
+      "size_bytes": 6648,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/trajectory_comparison.csv",
+      "expected_sha256": "b2d827fbcab10003f2e4356cf10b4b0c034bde30e1f197aa91556d109e6e8dfa",
+      "actual_sha256": "b2d827fbcab10003f2e4356cf10b4b0c034bde30e1f197aa91556d109e6e8dfa",
+      "size_bytes": 358525,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/trajectory_verification.json",
+      "expected_sha256": "8158b87af3c4888671f392ba613814278a4dbf0f2dc037bb1c930e9aba4a14ed",
+      "actual_sha256": "8158b87af3c4888671f392ba613814278a4dbf0f2dc037bb1c930e9aba4a14ed",
+      "size_bytes": 24244,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/verification.json",
+      "expected_sha256": "c1e9fec26268eed17e5e22cb4e8b49ca5239c75b74bd0d92c8cbc0cc538d2c2d",
+      "actual_sha256": "c1e9fec26268eed17e5e22cb4e8b49ca5239c75b74bd0d92c8cbc0cc538d2c2d",
+      "size_bytes": 45609,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/ppo_retention_repeat_v1/ppo_seed43/weight_integrity.json",
+      "expected_sha256": "6acc6401b456842d65cb3d1e3955bad31cb4bcc6dc25f7adeed9f932aeea5a44",
+      "actual_sha256": "6acc6401b456842d65cb3d1e3955bad31cb4bcc6dc25f7adeed9f932aeea5a44",
+      "size_bytes": 21492,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json",
+      "expected_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "actual_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+      "size_bytes": 123120,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/run_bc_ppo_retention.py",
+      "expected_sha256": "93b99f9b559b03efd7b51ffb5d3d23cdbc60895cd652c64250a4753d6dfe7991",
+      "actual_sha256": "93b99f9b559b03efd7b51ffb5d3d23cdbc60895cd652c64250a4753d6dfe7991",
+      "size_bytes": 113324,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/run_critic_calibration_retention.py",
+      "expected_sha256": "fc9ab1c62c3d43dc7caa201e6aae53ff6c4c91bffc112e88ce91d60cffc8c78a",
+      "actual_sha256": "fc9ab1c62c3d43dc7caa201e6aae53ff6c4c91bffc112e88ce91d60cffc8c78a",
+      "size_bytes": 108256,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/run_ppo_ablation_arms.py",
+      "expected_sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22",
+      "actual_sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22",
+      "size_bytes": 84306,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/run_ppo_retention_repeat.py",
+      "expected_sha256": "0e3ad3873cc5ba9f563441c53d2cc041102686d2f07b646c94025117a98ccdb6",
+      "actual_sha256": "0e3ad3873cc5ba9f563441c53d2cc041102686d2f07b646c94025117a98ccdb6",
+      "size_bytes": 64745,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/run_r1_retention_1024.py",
+      "expected_sha256": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f",
+      "actual_sha256": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f",
+      "size_bytes": 109868,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/verify_shaping_trace.py",
+      "expected_sha256": "8c7f167d32d3e369635ad9761bc1eb6bbce1401a1df0d2e7b82babb0dc45ba6e",
+      "actual_sha256": "8c7f167d32d3e369635ad9761bc1eb6bbce1401a1df0d2e7b82babb0dc45ba6e",
+      "size_bytes": 31230,
+      "passed": true
+    },
+    {
+      "member": "repo/work3_4060/verify_trajectory_facts.py",
+      "expected_sha256": "6b1a7c8d9fc04203f472a27891dd16f72dc603f129acb26a1eb7008eff2d22b0",
+      "actual_sha256": "6b1a7c8d9fc04203f472a27891dd16f72dc603f129acb26a1eb7008eff2d22b0",
+      "size_bytes": 32534,
+      "passed": true
+    }
+  ],
+  "prior_registered_pt_count": 34,
+  "prior_registered_pt_verified_count": 34,
+  "prior_registered_pt_all_verified": true
+}

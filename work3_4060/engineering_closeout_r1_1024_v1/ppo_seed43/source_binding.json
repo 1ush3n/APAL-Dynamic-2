@@ -1,0 +1,144 @@
+{
+  "git_freeze": {
+    "head": "792ad6054342ca4b740791bf5c00be93a8abd2cf",
+    "branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "worktree_entries": [],
+    "clean": true
+  },
+  "ppo_sampling_seed": 43,
+  "bc_and_calibration_source_seed": 42,
+  "calibrated_model": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\calibrated_model.pt",
+    "sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+    "full_model_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+    "policy_subset_fingerprint": "0989e9bf8e2fed71ee630bc1d2d9da251d7d9cae5dec6c0e502ec54b8bcd1aee",
+    "critic_subset_fingerprint": "d600297254a057d96cea7fc57d2859e9d1965abaa1ac8bcc3748ff7e8081c95f"
+  },
+  "old_seed43_r1_first_rollout": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_rollout.pt",
+    "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98"
+  },
+  "old_seed43_r1_first_update": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43\\R1\\first_update.json",
+    "sha256": "84985c56948d7be334651465a1aab9aaee9abd2e507857b9c6117e5bf5deed1a"
+  },
+  "source_hyperparameter_validation": {
+    "source_conflicts": {},
+    "budget_source_and_override": {
+      "total_env_steps": 512,
+      "max_decisions": 512,
+      "effective_total_env_steps": 1024,
+      "effective_max_decisions": 1024
+    }
+  },
+  "source_code_hashes": {
+    "work3_lightning": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\training\\work3_lightning.py",
+      "sha256": "6221e53759c6e048b2296858c8571d68bb6f686a5d122b660bb3e1f5adb2821f",
+      "size_bytes": 20468
+    },
+    "work3_vector_env": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\training\\work3_vector_env.py",
+      "sha256": "c632351b43ddc71044de968148e1503c8832af1464f6c0f7d347f5e747513eb8",
+      "size_bytes": 46971
+    },
+    "work3_actor_critic": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\models\\work3\\actor_critic.py",
+      "sha256": "8d569427a84df65e64b445717c5abbb7de61362f5a19f73162daa6d4b5141aa5",
+      "size_bytes": 59595
+    },
+    "work3_graph_builder": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\models\\work3\\graph_builder.py",
+      "sha256": "9037e16f4d4c9305f8ef4e64b6a5bf4086060ac53c176dc63e0acc2ba785a3e6",
+      "size_bytes": 34888
+    },
+    "work3_ppo_buffer": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\models\\work3\\ppo_buffer.py",
+      "sha256": "accebee88cf0b845413e8724e0c35ade833635e625cac5654ce727afcd35959b",
+      "size_bytes": 41814
+    },
+    "work3_ppo_trainer": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\models\\work3\\ppo_trainer.py",
+      "sha256": "51e43d0f42d22642a87862c5cf80ca1b7018d7a5fa7585689444db7bc85fd427",
+      "size_bytes": 25473
+    },
+    "work3_environment": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\envs\\work3\\environment.py",
+      "sha256": "96c013e2d37b1da410a3b7e101148f747bb4ace930540b50d79240e0485dcbf8",
+      "size_bytes": 73457
+    },
+    "work3_core_types": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\envs\\work3\\core_types.py",
+      "sha256": "3fc05a4bdfb70885add48986b31b5d49358cd05e0b7fe305329b9b81f5f2a301",
+      "size_bytes": 40496
+    },
+    "ablation_runner": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_ppo_ablation_arms.py",
+      "sha256": "980c2cc99dc3a84f6affaf6d779037edf061d96376b8c95b1f668c3803653e22",
+      "size_bytes": 84306
+    },
+    "calibration_loader": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_critic_calibration_retention.py",
+      "sha256": "fc9ab1c62c3d43dc7caa201e6aae53ff6c4c91bffc112e88ce91d60cffc8c78a",
+      "size_bytes": 108256
+    },
+    "common_retention_runtime": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_bc_ppo_retention.py",
+      "sha256": "93b99f9b559b03efd7b51ffb5d3d23cdbc60895cd652c64250a4753d6dfe7991",
+      "size_bytes": 113324
+    },
+    "seed43_pairing_runtime": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_ppo_retention_repeat.py",
+      "sha256": "0e3ad3873cc5ba9f563441c53d2cc041102686d2f07b646c94025117a98ccdb6",
+      "size_bytes": 64745
+    },
+    "bc_reproduction_protocol": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_protocol.py",
+      "sha256": "7c8a8c91a0b49ab90234f797de987ae0b7413a094c0ee7e8ce66579358e289b6",
+      "size_bytes": 45793
+    },
+    "trajectory_verifier": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\verify_trajectory_facts.py",
+      "sha256": "6b1a7c8d9fc04203f472a27891dd16f72dc603f129acb26a1eb7008eff2d22b0",
+      "size_bytes": 32534
+    },
+    "shaping_verifier": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\verify_shaping_trace.py",
+      "sha256": "8c7f167d32d3e369635ad9761bc1eb6bbce1401a1df0d2e7b82babb0dc45ba6e",
+      "size_bytes": 31230
+    },
+    "objective_evaluator": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\utils\\work3\\objective_evaluator.py",
+      "sha256": "f1963a179385b10499b0183f0e576ea52e693c1ac5fba1f1d0acb878fce4ea49",
+      "size_bytes": 12058
+    },
+    "new_r1_runner": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_r1_retention_1024.py",
+      "sha256": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f",
+      "size_bytes": 109868
+    },
+    "training_runtime_tests": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\tests\\work3\\test_work3_training_runtime.py",
+      "sha256": "1a6b11f269d4fbca3cd543f6ff4b731ca42091b08a38958c0c90598ee6a0a7c2",
+      "size_bytes": 118360
+    },
+    "retention_contract_tests": {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\tests\\test_ppo_retention_repeat.py",
+      "sha256": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd",
+      "size_bytes": 13219
+    }
+  },
+  "post_training_report_revision": {
+    "scope": "report_serialization_only",
+    "source_commit": "1797556d30767c9ba16902aa2333f2bcb42d1530",
+    "script_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\run_r1_retention_1024.py",
+    "script_sha256_after_report_only": "2e394020465d6ccb97d136b6e9a4e280ca88b0eeeb9c3889be62db4bb5958a78",
+    "script_sha256_used_for_training": "c89b0731d72a34bfd5943103d02e13f99d7bbe2d22906c1d50fd1b8a803a679f",
+    "summary": "训练完成后仅修复异构行CSV列并集与报告源修订追踪；更新的测试文件只覆盖报告序列化和哈希门禁。训练采样、模型、优化器、评估、环境与已保存物理事实未变化。",
+    "training_completed_before_revision": true,
+    "revision_recorded_at_utc": "2026-10-21T12:19:43.369990+00:00",
+    "test_sha256_after_report_only": "88f8af4ce5344edb3baffc263e77c732b586a2d32390fa6afa3b22063a5e291d",
+    "test_file": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\tests\\test_ppo_retention_repeat.py",
+    "test_sha256_used_before_report_revision": "7020dc184e95dfe026e2405d452246608e2d3e23e7c9ed987387a3be9022efcd"
+  }
+}

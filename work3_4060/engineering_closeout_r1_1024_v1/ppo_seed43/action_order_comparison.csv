@@ -1,0 +1,7 @@
+﻿point,initial_action_count,current_action_count,branch_task_sequence_equal,first_branch_task_difference_index,worker_order_difference_count_at_aligned_task,physical_task_schedule_difference_count,dimensions_reported_separately
+0,210,210,True,,0,0,True
+128,210,210,False,54,43,0,True
+256,210,210,False,61,45,0,True
+512,210,210,False,11,57,35,True
+768,210,210,False,8,65,35,True
+1024,210,210,False,8,44,35,True
