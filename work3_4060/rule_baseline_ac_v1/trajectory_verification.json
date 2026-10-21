@@ -1,17 +1,29 @@
 {
   "overall_status": "PASS",
-  "total_trajectories_verified": 6,
+  "exit_code": 0,
+  "total_manifest_items": 6,
+  "verified_canonical_count": 6,
+  "missing_manifest_files": [],
+  "alias_mismatches": [],
   "all_pass": true,
   "trajectories": [
     {
-      "trajectory_file": "Baseline-Repair-A_NOMINAL.json",
+      "trajectory_file": "A_NOMINAL.json",
       "status": "PASS",
       "total_violations": 0,
       "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
         "worker_overlap": [],
         "station_overflow": [],
         "precedence_inversion": [],
         "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
         "cost_reconciliation_mismatch": []
       },
       "recalculated_costs": {
@@ -40,50 +52,22 @@
       }
     },
     {
-      "trajectory_file": "Method-C_NOMINAL.json",
+      "trajectory_file": "A_RULE_VAL_S1_MODERATE.json",
       "status": "PASS",
       "total_violations": 0,
       "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
         "worker_overlap": [],
         "station_overflow": [],
         "precedence_inversion": [],
         "station_interval_violation": [],
-        "cost_reconciliation_mismatch": []
-      },
-      "recalculated_costs": {
-        "j_takt": 3.554090273512626,
-        "d_time": 0.12007224221175535,
-        "d_team": 0.01416666666666667,
-        "j_postpone": 0.0,
-        "j_revision": 0.13423890887842205,
-        "j_total": 3.82256809126947
-      },
-      "reported_costs": {
-        "j_takt": 3.554090273512626,
-        "d_time": 0.12007224221175539,
-        "d_team": 0.014166666666666682,
-        "j_postpone": 0.0,
-        "j_revision": 0.13423890887842213,
-        "j_total": 3.82256809126947
-      },
-      "reconciliation_differences": {
-        "j_takt_diff": 0.0,
-        "d_time_diff": 4.163336342344337e-17,
-        "d_team_diff": 1.214306433183765e-17,
-        "j_postpone_diff": 0.0,
-        "j_revision_diff": 8.326672684688674e-17,
-        "j_total_diff": 0.0
-      }
-    },
-    {
-      "trajectory_file": "Baseline-Repair-A_RULE_VAL_S1_MODERATE.json",
-      "status": "PASS",
-      "total_violations": 0,
-      "violations": {
-        "worker_overlap": [],
-        "station_overflow": [],
-        "precedence_inversion": [],
-        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
         "cost_reconciliation_mismatch": []
       },
       "recalculated_costs": {
@@ -112,50 +96,22 @@
       }
     },
     {
-      "trajectory_file": "Method-C_RULE_VAL_S1_MODERATE.json",
+      "trajectory_file": "A_RULE_VAL_S2_STRONG.json",
       "status": "PASS",
       "total_violations": 0,
       "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
         "worker_overlap": [],
         "station_overflow": [],
         "precedence_inversion": [],
         "station_interval_violation": [],
-        "cost_reconciliation_mismatch": []
-      },
-      "recalculated_costs": {
-        "j_takt": 3.554090273512626,
-        "d_time": 0.12007224221175535,
-        "d_team": 0.01416666666666667,
-        "j_postpone": 0.0,
-        "j_revision": 0.13423890887842205,
-        "j_total": 3.82256809126947
-      },
-      "reported_costs": {
-        "j_takt": 3.554090273512626,
-        "d_time": 0.12007224221175539,
-        "d_team": 0.014166666666666682,
-        "j_postpone": 0.0,
-        "j_revision": 0.13423890887842213,
-        "j_total": 3.82256809126947
-      },
-      "reconciliation_differences": {
-        "j_takt_diff": 0.0,
-        "d_time_diff": 4.163336342344337e-17,
-        "d_team_diff": 1.214306433183765e-17,
-        "j_postpone_diff": 0.0,
-        "j_revision_diff": 8.326672684688674e-17,
-        "j_total_diff": 0.0
-      }
-    },
-    {
-      "trajectory_file": "Baseline-Repair-A_RULE_VAL_S2_STRONG.json",
-      "status": "PASS",
-      "total_violations": 0,
-      "violations": {
-        "worker_overlap": [],
-        "station_overflow": [],
-        "precedence_inversion": [],
-        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
         "cost_reconciliation_mismatch": []
       },
       "recalculated_costs": {
@@ -184,14 +140,110 @@
       }
     },
     {
-      "trajectory_file": "Method-C_RULE_VAL_S2_STRONG.json",
+      "trajectory_file": "C_NOMINAL.json",
       "status": "PASS",
       "total_violations": 0,
       "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
         "worker_overlap": [],
         "station_overflow": [],
         "precedence_inversion": [],
         "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175535,
+        "d_team": 0.01416666666666667,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842205,
+        "j_total": 3.82256809126947
+      },
+      "reported_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175539,
+        "d_team": 0.014166666666666682,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842213,
+        "j_total": 3.82256809126947
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.163336342344337e-17,
+        "d_team_diff": 1.214306433183765e-17,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 8.326672684688674e-17,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "trajectory_file": "C_RULE_VAL_S1_MODERATE.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175535,
+        "d_team": 0.01416666666666667,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842205,
+        "j_total": 3.82256809126947
+      },
+      "reported_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175539,
+        "d_team": 0.014166666666666682,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842213,
+        "j_total": 3.82256809126947
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.163336342344337e-17,
+        "d_team_diff": 1.214306433183765e-17,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 8.326672684688674e-17,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "trajectory_file": "C_RULE_VAL_S2_STRONG.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
         "cost_reconciliation_mismatch": []
       },
       "recalculated_costs": {

@@ -143,12 +143,29 @@ def run_shaping_audit(
     return summary_path, summary_data
 
 
-def verify_checkpoint(weights_path: Path) -> None:
+def verify_checkpoint(weights_path: Path, run_json_path: Path | None = None) -> None:
     logger.info(f"=== Verifying Method C Checkpoint Contract on {weights_path} ===")
     profile = build_method_profile("C")
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64).to("cpu")
     ckpt = torch.load(weights_path, map_location="cpu", weights_only=False)
     _validate_formal_checkpoint_contract(profile, ckpt, actor)
+
+    if run_json_path is not None and run_json_path.is_file():
+        with run_json_path.open("r", encoding="utf-8") as f:
+            run_data = json.load(f)
+        ckpt_meta = ckpt.get("run_metadata", {})
+        if run_data.get("method_variant") != "C" or ckpt_meta.get("method_variant") != "C":
+            raise ValueError(f"Method variant mismatch: run.json={run_data.get('method_variant')}, ckpt={ckpt_meta.get('method_variant')}")
+        if int(run_data.get("seed", -1)) != 42 or int(ckpt_meta.get("seed", -1)) != 42:
+            raise ValueError(f"Seed mismatch: run.json={run_data.get('seed')}, ckpt={ckpt_meta.get('seed')}")
+        if int(run_data.get("total_decisions", -1)) != 4096:
+            raise ValueError(f"Total decisions in run.json is {run_data.get('total_decisions')}, expected 4096")
+        if ckpt_meta.get("resolved_runtime_config_sha256") != run_data.get("resolved_runtime_config_sha256"):
+            raise ValueError("Runtime config sha256 mismatch between checkpoint and run.json")
+        if ckpt_meta.get("data_fingerprint") != run_data.get("data_fingerprint"):
+            raise ValueError("Data fingerprint mismatch between checkpoint and run.json")
+        logger.info("Cross-verification of run.json against checkpoint parameters PASS!")
+
     logger.info("Method C checkpoint contract strictly verified PASS!")
 
 
@@ -305,6 +322,106 @@ def evaluate_minimal_comparison(
     return results_rows, full_eval_data
 
 
+def load_trajectory_facts_for_export(base_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    traj_dir = base_dir / "trajectories"
+    scenarios = [
+        (
+            "NOMINAL",
+            ["Baseline-Repair-A_NOMINAL.json", "A_NOMINAL.json"],
+            ["Model-C-RuleBaseline_NOMINAL.json", "Method-C_NOMINAL.json", "C_NOMINAL.json"],
+        ),
+        (
+            "RULE_VAL_S1_MODERATE",
+            ["Baseline-Repair-A_RULE_VAL_S1_MODERATE.json", "A_RULE_VAL_S1_MODERATE.json"],
+            ["Model-C-RuleBaseline_RULE_VAL_S1_MODERATE.json", "Method-C_RULE_VAL_S1_MODERATE.json", "C_RULE_VAL_S1_MODERATE.json"],
+        ),
+        (
+            "RULE_VAL_S2_STRONG",
+            ["Baseline-Repair-A_RULE_VAL_S2_STRONG.json", "A_RULE_VAL_S2_STRONG.json"],
+            ["Model-C-RuleBaseline_RULE_VAL_S2_STRONG.json", "Method-C_RULE_VAL_S2_STRONG.json", "C_RULE_VAL_S2_STRONG.json"],
+        ),
+    ]
+
+    results_rows: list[dict[str, Any]] = []
+    full_eval_data: dict[str, Any] = {}
+
+    for s_id, a_names, c_names in scenarios:
+        path_a = None
+        for name in a_names:
+            p = traj_dir / name
+            if p.is_file():
+                path_a = p
+                break
+        if path_a is None:
+            raise FileNotFoundError(f"Missing trajectory file for A on scenario {s_id}")
+
+        path_c = None
+        for name in c_names:
+            p = traj_dir / name
+            if p.is_file():
+                path_c = p
+                break
+        if path_c is None:
+            raise FileNotFoundError(f"Missing trajectory file for C on scenario {s_id}")
+
+        with path_a.open("r", encoding="utf-8") as f:
+            res_a = json.load(f)
+        with path_c.open("r", encoding="utf-8") as f:
+            res_c = json.load(f)
+
+        delta_j = float(res_a["objective_j_total"]) - float(res_c["objective_j_total"])
+        if abs(delta_j) <= 1e-12:
+            winner = "TIE"
+        elif res_a["objective_j_total"] < res_c["objective_j_total"]:
+            winner = "A_BETTER"
+        else:
+            winner = "C_BETTER"
+
+        row = {
+            "scenario_id": s_id,
+            "is_nominal": s_id == "NOMINAL",
+            "a_j_total": float(res_a["objective_j_total"]),
+            "a_j_takt": float(res_a["j_takt"]),
+            "a_d_time": float(res_a["d_time"]),
+            "a_d_team": float(res_a["d_team"]),
+            "a_j_postpone": float(res_a["j_postpone"]),
+            "a_j_revision": float(res_a["j_revision"]),
+            "a_makespan": float(res_a["makespan"]),
+            "a_completed_tasks": int(res_a["completed_tasks"]),
+            "a_success": bool(res_a["success"]),
+            "a_feasible": bool(res_a["feasible"]),
+            "a_violations": int(res_a.get("constraint_violation_count", 0)),
+            "a_hits": int(res_a.get("actual_disturbance_hits", 0)),
+            "a_decisions": int(res_a.get("decisions", 0)),
+            "c_j_total": float(res_c["objective_j_total"]),
+            "c_j_takt": float(res_c["j_takt"]),
+            "c_d_time": float(res_c["d_time"]),
+            "c_d_team": float(res_c["d_team"]),
+            "c_j_postpone": float(res_c["j_postpone"]),
+            "c_j_revision": float(res_c["j_revision"]),
+            "c_makespan": float(res_c["makespan"]),
+            "c_completed_tasks": int(res_c["completed_tasks"]),
+            "c_success": bool(res_c["success"]),
+            "c_feasible": bool(res_c["feasible"]),
+            "c_violations": int(res_c.get("constraint_violation_count", 0)),
+            "c_hits": int(res_c.get("actual_disturbance_hits", 0)),
+            "c_decisions": int(res_c.get("decisions", 0)),
+            "delta_j_a_minus_c": delta_j,
+            "winner": winner,
+        }
+        results_rows.append(row)
+        full_eval_data[s_id] = {
+            "A": res_a,
+            "C": res_c,
+            "comparison": {
+                "delta_j_a_minus_c": delta_j,
+                "winner": winner,
+            },
+        }
+
+    return results_rows, full_eval_data
+
+
 def export_reports(
     results_rows: list[dict[str, Any]],
     full_eval_data: dict[str, Any],
@@ -370,7 +487,7 @@ def export_reports(
         "ledger_reconciliation": ("原始账本对账", "sum(raw_reward) + J_total == 0 且 五分项之和 - J_total == 0 严格成立"),
     }
 
-    # Compute Summary Aggregation
+    # Compute Summary Aggregation dynamically
     nom_row = [r for r in results_rows if r["is_nominal"]][0]
     val_rows = [r for r in results_rows if not r["is_nominal"]]
 
@@ -385,8 +502,12 @@ def export_reports(
     val_a_makespan_mean = sum(r["a_makespan"] for r in val_rows) / len(val_rows)
     val_c_makespan_mean = sum(r["c_makespan"] for r in val_rows) / len(val_rows)
 
+    pct_diff = abs(val_c_j_mean - val_a_j_mean) / val_c_j_mean * 100 if val_c_j_mean > 0 else 0.0
+    makespan_diff = val_c_makespan_mean - val_a_makespan_mean
+
     all_a_feas = all(r["a_feasible"] and r["a_success"] and r["a_completed_tasks"] == 210 and r["a_violations"] == 0 for r in results_rows)
     all_c_feas = all(r["c_feasible"] and r["c_success"] and r["c_completed_tasks"] == 210 and r["c_violations"] == 0 for r in results_rows)
+    feas_winner = "平局" if (all_a_feas and all_c_feas) else ("A" if all_a_feas else ("C" if all_c_feas else "无"))
 
     lines = [
         "# Work-3 规则基准重建与最小 A/C 对比实验报告",
@@ -428,11 +549,11 @@ def export_reports(
         "| 统计聚合维度 | 规则基准 A | 强化学习 C | 差值 $\\Delta (A - C)$ | 胜出者 | 备注说明 |",
         "| :--- | :--- | :--- | :--- | :--- | :--- |",
         f"| **名义场景总费用** $J_{{\\text{{nom}}}}$ | `{nom_row['a_j_total']:.6e}` | `{nom_row['c_j_total']:.6f}` | `{nom_row['a_j_total'] - nom_row['c_j_total']:+.6f}` | **A** | A 在名义场景下 0 偏离，C 存在基础计划漂移 |",
-        f"| **验证集平均总费用** $\\text{{Mean}}(J_{{\\text{{val}}}})$ | `{val_a_j_mean:.6f}` | `{val_c_j_mean:.6f}` | `{val_a_j_mean - val_c_j_mean:+.6f}` | **A** | A 平均费用低 93.5% |",
+        f"| **验证集平均总费用** $\\text{{Mean}}(J_{{\\text{{val}}}})$ | `{val_a_j_mean:.6f}` | `{val_c_j_mean:.6f}` | `{val_a_j_mean - val_c_j_mean:+.6f}` | **A** | A 平均费用低 {pct_diff:.2f}% |",
         f"| **验证集累加总费用** $\\text{{Sum}}(J_{{\\text{{val}}}})$ | `{val_a_j_sum:.6f}` | `{val_c_j_sum:.6f}` | `{val_a_j_sum - val_c_j_sum:+.6f}` | **A** | 两验证场景合计费用 |",
-        f"| **扰动净增量均值** $\\text{{Mean}}(\\Delta J)$ | `{delta_j_a_mean:.6f}` | `{delta_j_c_mean:.6f}` | `{delta_j_a_mean - delta_j_c_mean:+.6f}` | **A** | $\\Delta J = J_{{\\text{{val}}}} - J_{{\\text{{nom}}}}$ |",
-        f"| **验证集平均工期** $\\text{{Mean}}(\\text{{Makespan}})$ | `{val_a_makespan_mean:.2f}h` | `{val_c_makespan_mean:.2f}h` | `{val_a_makespan_mean - val_c_makespan_mean:+.2f}h` | **A** | A 保持 $11 H_0 = 572.42\\text{{h}}$，C 延迟 50.14h |",
-        f"| **物理约束可行率** | `{'100% (PASS)' if all_a_feas else 'FAIL'}` | `{'100% (PASS)' if all_c_feas else 'FAIL'}` | `0.0%` | **平局** | 6 条正式轨迹 100% 物理可行，0 违规 |",
+        f"| **扰动净增量均值** $\\text{{Mean}}(\\Delta J)$ | `{delta_j_a_mean:.6f}` | `{delta_j_c_mean:.6f}` | `{delta_j_a_mean - delta_j_c_mean:+.6f}` | 不适用 | $\\Delta J = J_{{\\text{{val}}}} - J_{{\\text{{nom}}}}$；C 为 0.0h 系因名义排程已落后于恢复时刻，不判定胜者 |",
+        f"| **验证集平均工期** $\\text{{Mean}}(\\text{{Makespan}})$ | `{val_a_makespan_mean:.2f}h` | `{val_c_makespan_mean:.2f}h` | `{val_a_makespan_mean - val_c_makespan_mean:+.2f}h` | **A** | A 保持 $11 H_0 = 572.42\\text{{h}}$，C 延迟 {makespan_diff:.2f}h |",
+        f"| **物理约束可行率** | `{'100% (PASS)' if all_a_feas else 'FAIL'}` | `{'100% (PASS)' if all_c_feas else 'FAIL'}` | `0.0%` | **{feas_winner}** | 6 条正式轨迹 100% 物理可行，0 违规 |",
     ])
 
     lines.extend([
@@ -466,6 +587,7 @@ def export_reports(
             f"| `{check_id}` | {name} | **{status}** | {desc} |"
         )
 
+    # 5. Core mechanisms
     lines.extend([
         "",
         "## 5. 核心机制剖析与客观结论",
@@ -475,25 +597,51 @@ def export_reports(
         "2. **名义物理闭环完全达成**：规则策略 A 在名义场景下实现了 0 违规、0 偏离、0 延迟，$J_{\\text{total}} \\le 10^{-9}$，证实了基于局部工序偏移生成全线多架次绝对时刻计划的可行性与自洽性。",
         "",
         "### 5.2 扰动冲击传导与多周期工期回补机制",
-        "1. **非瓶颈站位扰动的局部吸收**：在 Val S1（Station 1，$\\rho=0.20$）中，扰动使工序 4 开工推迟至 114.48h，但因 Station 1 物理排程留有天然余裕，站位仍在 $H_0$ 名义边界前清空，产生 $J_{\\text{takt}} = 0.0$。",
-        "2. **瓶颈站位强扰动的节拍击穿**：在 Val S2（Station 3，$\\rho=0.60$）中，工序 27 材料到位推迟至 239.37h，直接造成周期 4 转站推迟 3.74h，产生严格正的节拍超期惩罚 $J_{\\text{takt}} = 0.550123$，彻底解决了旧版场景下的虚假吸收缺陷。",
-        "3. **周期回补机制（Cycle Catch-up）**：**为什么 A 在 Val S2 出现周期 4 转站延迟后，最终全线工期仍能保持在 $11 H_0 = 572.42\\text{h}$？**",
-        "   - 在 `nominal_anchored_v1` 规则下，转站时刻定义为 $P_q = \\max\\{P_q^0, P_{q-1}, F_q\\}$；",
-        "   - 虽然周期 4 的实际转站时刻推迟至 $P_4 > P_4^0$；但后续周期 5~11 的瓶颈站位实际作业工时均小于名义节拍 $H_0$（站位清空时刻 $F_q < q \\cdot H_0$）；",
-        "   - 只要后续周期的 $F_q \\le q \\cdot H_0$，转站时钟在 $P_q$ 处便自然回落并重新锚定回名义节拍边界 $P_q^0 = q \\cdot H_0$；",
-        "   - 因此，局部站位的偶发超期被后序周期的多周期节拍缓冲自然消化，最终整机总工期未发生连锁滞后。",
+        "1. **v1 扰动标定参数与物理响应**：",
+        "   - **适度扰动 `RULE_VAL_S1_MODERATE`**：作用于飞机 1 在 Station 1 的非瓶颈工序 `1_4`（标准工时 6.6h，名义开工 14.23h，完工 20.83h）。扰动发生时刻 $\\tau = 31.22\\text{h}$，开工可用性下界推迟至恢复时刻 $R = 62.45\\text{h}$。因 Station 1 站内后续工序量较少，站位清空时刻为 69.05h，远早于周期 2 的名义转站边界 $P_2^0 = 104.08\\text{h}$，故转站时刻未受延迟，产生 $J_{\\text{takt}} = 0.0$。",
+        "   - **强扰动 `RULE_VAL_S2_STRONG`**：作用于飞机 1 在 Station 2 的核心瓶颈工序 `1_27`（标准工时 50.1h，流水耗时 49.44h，名义开工 106.67h，完工 156.11h）。扰动发生时刻 $\\tau = 93.67\\text{h}$，开工可用性下界推迟至恢复时刻 $R = 187.34\\text{h}$。工序开工被迫推迟至 187.34h，完工延后至 236.78h，直接击穿周期 4 名义转站边界 $P_4^0 = 208.15\\text{h}$，造成周期 4 转站推迟 28.63h，产生严格正的节拍超期惩罚 $J_{\\text{takt}} = 0.550123$。",
+        "   - *注：请勿与旧草稿中引用的 v2 场景标定值（114.48h 与 239.37h）混淆，当前冻结报告严格以 v1 事实为准。*",
+        "",
+        "2. **周期 1–11 转站与回补全景追踪表 (Val S2)**：",
+        "下表展示了规则策略 A 在强扰动 `RULE_VAL_S2_STRONG` 下，全线 11 个生产周期的实际转站时刻、转站延迟与清空时刻：",
+        "",
+        "| 周期序号 $q$ | 名义转站时刻 $P_q^0$ (h) | 实际转站时刻 $P_q$ (h) | 转站推迟量 $\\Delta P_q$ (h) | 瓶颈站位清空 $F_q$ (h) | 运行状态说明与回补机制 |",
+        "| :---: | :---: | :---: | :---: | :---: | :--- |",
+        "| 周期 1 | 52.0378 | 52.0378 | 0.0000 | 14.23 (Station 0) | 飞机 0 进站 Station 0，瓶颈 Station 2 尚未进机，按时转站 |",
+        "| 周期 2 | 104.0757 | 104.0757 | 0.0000 | 66.27 (Station 0) | 飞机 0 进站 Station 1，飞机 1 进站 Station 0，按时转站 |",
+        "| 周期 3 | 156.1135 | 156.1135 | 0.0000 | 156.11 (Station 2) | 飞机 0 首进 Station 2，名义工时于 156.11h 准时清空，按时转站 |",
+        "| 周期 4 | 208.1514 | 236.7786 | +28.6272 | 236.78 (Station 2) | **扰动击穿**：飞机 1 在 Station 2 遇到工序 `1_27` 材料延迟（$R=187.34\\text{h}$，工时 49.44h），清空推迟至 236.78h，转站推迟 28.63h |",
+        "| 周期 5 | 260.1892 | 288.8164 | +28.6272 | 288.82 (Station 2) | 飞机 2 进站 Station 2，受前序推迟于 236.78h 开工，清空推迟 28.63h，推迟量严格横向传递 |",
+        "| 周期 6 | 312.2271 | 340.8543 | +28.6272 | 340.85 (Station 2) | 飞机 3 进站 Station 2，推迟量严格横向传递 |",
+        "| 周期 7 | 364.2649 | 392.8921 | +28.6272 | 392.89 (Station 2) | 飞机 4 进站 Station 2，推迟量严格横向传递 |",
+        "| 周期 8 | 416.3028 | 444.9300 | +28.6272 | 444.93 (Station 2) | 飞机 5 进站 Station 2，推迟量严格横向传递 |",
+        "| 周期 9 | 468.3406 | 496.9678 | +28.6272 | 496.97 (Station 2) | 飞机 6（最后一架）进站 Station 2，推迟量严格横向传递 |",
+        "| 周期 10 | 520.3784 | 520.3784 | 0.0000 | 503.52 (Station 3) | **完成多周期回补（Catch-up）**：所有 7 架飞机均已离开瓶颈 Station 2；后序站位负荷低，$F_{10}=503.52\\text{h} < P_{10}^0$ 且 $P_9=496.97\\text{h} < P_{10}^0$。$P_{10} = \\max(P_{10}^0, P_9, F_{10}) = P_{10}^0$，转站延迟瞬间归零！ |",
+        "| 周期 11 | 572.4163 | 572.4163 | 0.0000 | 525.88 (Station 4) | 仅 Station 4 清空，全线整机出站，总工期严格闭合于名义工期 $11 H_0 = 572.42\\text{h}$ |",
+        "",
+        "3. **多周期回补机制（Cycle Catch-up）深度解析**：",
+        "   - 转站推进公式遵循 $P_q = \\max\\{P_q^0, P_{q-1}, F_q\\}$；",
+        "   - 在周期 4~9 中，由于 7 架飞机流水通过 Station 2，瓶颈工序不可压缩，推迟量以 $28.63\\text{h}$ 稳定传递；",
+        "   - 进入周期 10 后，最后一架飞机已完成 Station 2 装配并移至 Station 3，瓶颈站位排空。剩余工序负荷极轻，Station 3 于 503.52h 即已清空；",
+        "   - 因 $F_{10} = 503.52\\text{h} < P_{10}^0$ 且 $P_9 = 496.97\\text{h} < P_{10}^0$，时钟自然重新锚定到名义边界 $P_{10}^0 = 520.38\\text{h}$，转站延迟归零；",
+        "   - 因此，整线总工期（Makespan）完全没有延误，严格保持在 $11 H_0 = 572.42\\text{h}$。",
         "",
         "### 5.3 动作机制、计划修订与训练批次剖析",
-        "1. **ADVANCE 动作定位**：C 策略在各场景中执行了约 185 次 `ADVANCE_TO_NEXT_EVENT` 动作。**不可将其武断定性为'空转'或'不利动作'**：在基于离散事件驱动的生产线仿真环境中，当当前决策时刻无合法工序可开工（如在制槽位已满或前驱未完工）时，`ADVANCE_TO_NEXT_EVENT` 是推进仿真时间到下一个事件点（工序完工或材料到达）的唯一标准机制动作。",
+        "1. **ADVANCE 动作定位**：C 策略在各场景中执行了约 185 次 `ADVANCE_TO_NEXT_EVENT` 动作。**不可将其定性为'空转'或'不利动作'**：在基于离散事件驱动的脉动线仿真环境中，当当前决策时刻无合法工序可开工（在制槽位已满或前驱未完工）时，`ADVANCE_TO_NEXT_EVENT` 是推进仿真时间到下一个事件点（工序完工或材料到达）的标准合法机制动作。",
         "2. **计划修订费用 $J_{\\text{revision}}$ 构成拆解**：",
-        "   - 费用公式：$J_{\\text{revision}} = \\frac{1}{N} \\sum \\left( w_{\\text{rev,time}} |\\Delta t| + w_{\\text{rev,team}} \\mathbf{1}(\\Delta \\text{team}) \\right)$；",
-        "   - C 策略在各场景产生 $J_{\\text{revision}} \\approx 0.057 \\sim 0.077$，源于策略网络在交互过程中对已预约工序开工时间与团队的动态微调惩罚；",
+        "   - 费用公式：$J_{\\text{revision}} = \\frac{1}{N} \\sum \\left( w_{\\text{rev,time}} |\\Delta t| + w_{\\text{rev,team}} \\mathbf{1}(\\Delta \\text{team}) \\right)$（其中 $w_{\\text{rev,time}} = 0.20, w_{\\text{rev,team}} = 0.05, N = 210$）；",
+        "   - C 策略在各场景产生 $J_{\\text{revision}} = 0.134239$，源于策略网络在交互过程中对已预约工序开工时间与团队的动态微调惩罚；",
         "   - 规则 A 严格冻结基准计划，未触发计划变动，故 $J_{\\text{revision}} = 0.0$。",
         "3. **15 个 Episode 构成辨析**：势函数塑形审计中读取的 15 个 batch 实际包含 **14 个自然完工批次和 1 个截断批次**（发生在达到 4096 决策步上限时的段尾结算）。所有 14 个完工批次均满足望远镜恒等式与终局零势，截断批次正确完成段尾 bootstrap 价值估计，八项审计全部 PASS。",
         "",
         "### 5.4 学习方法与规则基准对比的客观定位",
-        "1. **客观呈现负向结果**：在 4096 决策试训预算下，A 策略的总费用（$0.0000 \\sim 0.5512$）全面优于 C 策略（$3.8226 \\sim 4.6738$）；",
-        "2. **主要差距在于基准保持能力**：C 的总费用差距在无扰动的名义场景就已体现（$J_{\\text{total}} = 3.8226$），说明当前简短预算下的学习策略尚未学会'在无扰动时紧密贴合基准'的调度策略，产生了较多的工序时间与团队偏离；",
+        "1. **客观呈现负向结果**：在 4096 决策试训预算下，A 策略的总费用（$0.0000 \\sim 0.5512$）全面优于 C 策略（$3.8226$）；",
+        "2. **C 策略指标在受扰场景下完全恒定的物理根因（Invariance）**：",
+        "   - 在名义场景下，C 策略生成的排程自身存在严重的基准漂移（Nominal Drift）：工序 `1_4` 实际开工时刻被推迟至 72.71h（基准为 14.23h），工序 `1_27` 实际开工时刻被推迟至 194.41h（基准为 106.67h）；",
+        "   - 当引入外生扰动时，Val S1 的恢复下界为 $R_1 = 62.45\\text{h}$，Val S2 的恢复下界为 $R_2 = 187.34\\text{h}$；",
+        "   - 由于 C 策略自发排定的开工时刻（72.71h 与 194.41h）已经严格晚于扰动恢复时刻（$72.71 > 62.45$，$194.41 > 187.34$），外生扰动给出的开工下界约束 $t_{\\text{start}} \\ge R$ 在 C 策略的仿真环境中是**自然满足且非紧的（inactive constraint）**；",
+        "   - 因此，C 策略在受扰场景中观察到的可用工序集合和状态演化与名义场景完全相同，执行了完全一致的动作序列，产生完全一致的费用分项与工期，从而 $\\Delta J_C = 0.0$；",
+        "   - 这证明了 C 策略当前的总费用劣势（3.8226 vs A 的 0.0000~0.5512）主要源于**短预算试训下模型未能学会保持无扰动基准（Nominal Conformance）**，而非扰动处理能力不足；",
         "3. **保持客观真实，不人为调权**：本轮实验保留全部原始数据，不通过调整目标权重、删除基准 A 或筛选有利扰动来粉饰排序，如实为后续长预算训练与策略架构迭代提供真实的基线锚点。",
     ])
 
@@ -545,21 +693,16 @@ def main() -> None:
     # 1. Shaping audit
     audit_summary_path, audit_summary = run_shaping_audit(seed=args.seed)
 
-    # 2. Checkpoint verification
-    verify_checkpoint(weights_path)
+    # 2. Checkpoint verification with cross-check to run.json
+    verify_checkpoint(weights_path, run_json_path)
 
-    # 3. Evaluation or reload
+    # 3. Evaluation or reload directly from trajectory facts
     if mode in ("all", "evaluate-only"):
         results_rows, full_eval_data = evaluate_minimal_comparison(weights_path)
     else:  # export-only
         base_dir = REPO_ROOT / "work3_4060/rule_baseline_ac_v1"
-        verif_path = base_dir / "verification.json"
-        if not verif_path.is_file():
-            raise FileNotFoundError(f"Cannot run export-only without {verif_path}")
-        with verif_path.open("r", encoding="utf-8") as f:
-            verif_data = json.load(f)
-        results_rows = verif_data["comparison_results"]
-        full_eval_data = {}
+        logger.info(f"Export-only mode: reloading complete trajectory facts directly from {base_dir / 'trajectories'}...")
+        results_rows, full_eval_data = load_trajectory_facts_for_export(base_dir)
 
     # 4. Export reports
     export_reports(results_rows, full_eval_data, audit_summary, weights_path, run_json_path)
