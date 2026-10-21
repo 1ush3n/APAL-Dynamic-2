@@ -1,0 +1,63 @@
+{
+  "step": 128,
+  "metrics": {
+    "schema_version": "c_reproduction_teacher_metrics_v1",
+    "sample_count": 210,
+    "teacher_decision_kind_counts": {
+      "stay": 210
+    },
+    "nll_mean": 5.233857031949863,
+    "nll_finite": true,
+    "decision_kind_accuracy": 1.0,
+    "task_accuracy_conditional": 0.8095238095238095,
+    "branch_accuracy_conditional": 1.0,
+    "team_accuracy_unordered_conditional": 0.8761904761904762,
+    "align_accuracy_conditional": 1.0,
+    "full_physical_action_accuracy": 0.7047619047619048,
+    "conditional_denominators": {
+      "task": 210,
+      "branch": 210,
+      "team": 210,
+      "align": 210
+    },
+    "accuracy_scopes": {
+      "task_accuracy_conditional": "教师推进/不推进前缀固定为不推进后的工序头；非独立贪婪全流程",
+      "branch_accuracy_conditional": "教师工序前缀固定的分支头；非独立贪婪全流程",
+      "team_accuracy_unordered_conditional": "教师工序前缀固定的指针头，按无序团队集合比较",
+      "align_accuracy_conditional": "教师工序与团队前缀固定的对齐头",
+      "full_physical_action_accuracy": "正式贪心入口的完整物理动作元组（含推进门控）"
+    },
+    "first_full_action_divergence": {
+      "sample_id": 8,
+      "decision_index": 9,
+      "sim_time": 52.037844126999545,
+      "cycle": 2,
+      "teacher": [
+        "stay",
+        "1_2",
+        [
+          12,
+          72
+        ],
+        1
+      ],
+      "greedy": [
+        "stay",
+        "0_8",
+        [
+          18,
+          22
+        ],
+        1
+      ]
+    },
+    "first_task_divergence": {
+      "sample_id": 8,
+      "decision_index": 9,
+      "sim_time": 52.037844126999545,
+      "cycle": 2,
+      "teacher_task": "1_2",
+      "greedy_task": "0_8"
+    }
+  }
+}

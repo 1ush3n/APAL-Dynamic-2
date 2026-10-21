@@ -1,0 +1,74 @@
+{
+  "schema_version": "offline_s1_decomposition_v1",
+  "source": {
+    "a": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\trajectories\\A_RULE_VAL_S1_MODERATE.json",
+    "bc": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S1_MODERATE.json",
+    "a_sha256": "74cf9091d516940b85701834734c9a07db59d935395c6c3aca187e1d30bc3fcb",
+    "bc_sha256": "b7b5f6449253d9f1fd2a45dfea30649503acdccc9c011ccb77aabb488a6e7b4c",
+    "note": "纯离线复用，不新增 S1 轨迹。"
+  },
+  "cost_components": {
+    "a": {
+      "j_takt": 2.7308692267343145e-15,
+      "d_time": 0.0002830294512078102,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0002830294512077898
+    },
+    "bc": {
+      "j_takt": 2.7308692267343145e-15,
+      "d_time": 0.00017977870162401704,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.00017977870162399608
+    },
+    "delta_a_minus_bc": {
+      "j_takt": 0.0,
+      "d_time": 0.00010325074958379319,
+      "d_team": 0.0,
+      "j_postpone": 0.0,
+      "j_revision": 0.0001032507495837937
+    },
+    "j_total_delta_a_minus_bc": 0.00020650149916758698
+  },
+  "deviation_totals": {
+    "a_sum_h0": 0.2971809237682007,
+    "bc_sum_h0": 0.18876763670521787,
+    "a_d_time": 0.0002830294512078102,
+    "bc_d_time": 0.00017977870162401704
+  },
+  "changed_tasks": [
+    {
+      "task_key": "1_15",
+      "a_deviation_h0": 0.04545339684954729,
+      "bc_deviation_h0": 1.024075960025368e-16,
+      "a_minus_bc": 0.04545339684954718
+    },
+    {
+      "task_key": "1_16",
+      "a_deviation_h0": 0.04545339684954725,
+      "bc_deviation_h0": 6.827173066835786e-17,
+      "a_minus_bc": 0.04545339684954718
+    },
+    {
+      "task_key": "1_4",
+      "a_deviation_h0": 0.11536733636999019,
+      "bc_deviation_h0": 0.18876763670519586,
+      "a_minus_bc": -0.07340030033520567
+    },
+    {
+      "task_key": "1_6",
+      "a_deviation_h0": 0.04545339684954732,
+      "bc_deviation_h0": 0.0,
+      "a_minus_bc": 0.04545339684954732
+    },
+    {
+      "task_key": "1_7",
+      "a_deviation_h0": 0.04545339684954718,
+      "bc_deviation_h0": 0.0,
+      "a_minus_bc": 0.04545339684954718
+    }
+  ],
+  "target_task": "1_4",
+  "explanation_scope": "只解释这一条既有轨迹上的可重算差异；目标开工更晚不等于全局更差，也不据此宣称普遍优越性。"
+}

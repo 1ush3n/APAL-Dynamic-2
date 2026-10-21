@@ -1,0 +1,54 @@
+{
+  "source": {
+    "bc_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+    "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "expected_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "unchanged": true,
+    "original_c_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b"
+  },
+  "checkpoints": {
+    "entries": [
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0000.pt",
+        "sha256": "c784ff07d9ef1bb77baef93b3e3716f5b1563e009188a908cb0a0c6010164db3",
+        "actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+        "recomputed_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+        "consistent": true,
+        "training_decisions": 0,
+        "optimizer_steps": 0
+      },
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0128.pt",
+        "sha256": "737cf8136c382bdfbba873b510b7ce0e98371f3d48ff25635250704db405f14b",
+        "actor_fingerprint": "1c1cf9687b7f6647666bde8d9f5e23a654af79ef7d014142af22de5c60662de4",
+        "recomputed_fingerprint": "1c1cf9687b7f6647666bde8d9f5e23a654af79ef7d014142af22de5c60662de4",
+        "consistent": true,
+        "training_decisions": 128,
+        "optimizer_steps": 64
+      },
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0256.pt",
+        "sha256": "65c19c988156b26348eacf087f12deeed123764524d349f630ad3f8e84dcd6f5",
+        "actor_fingerprint": "0b31a7d0370c70f6f4e6616f27736870b8f824fabff1cd13200a2e8cc9c34088",
+        "recomputed_fingerprint": "0b31a7d0370c70f6f4e6616f27736870b8f824fabff1cd13200a2e8cc9c34088",
+        "consistent": true,
+        "training_decisions": 256,
+        "optimizer_steps": 128
+      },
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42\\checkpoints\\step0512.pt",
+        "sha256": "057e4923ae06069ce4925da9c33fb3de09c9d686a7af4566497414e34685ceed",
+        "actor_fingerprint": "032870b5705240feee6df49f10493bac510c4dfaf48ea25d9075d27cfec40d79",
+        "recomputed_fingerprint": "032870b5705240feee6df49f10493bac510c4dfaf48ea25d9075d27cfec40d79",
+        "consistent": true,
+        "training_decisions": 512,
+        "optimizer_steps": 256
+      }
+    ],
+    "all_consistent": true
+  },
+  "evaluation": {
+    "fresh_processes": true,
+    "note": "每个评估点由独立子进程加载 CPU 权重并设 1/1 线程，训练进程不参与评估。"
+  }
+}

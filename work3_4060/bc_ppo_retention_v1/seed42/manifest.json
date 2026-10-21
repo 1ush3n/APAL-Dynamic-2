@@ -1,0 +1,65 @@
+{
+  "task": "Work-3 BC 初始化后的 PPO 基准保持性诊断",
+  "schema_version": "bc_ppo_retention_manifest_v1",
+  "reference_commit": "72de395e36846a669f26a7d2fcfa82d768300bd9",
+  "run_context": {
+    "head": "72de395e36846a669f26a7d2fcfa82d768300bd9",
+    "branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "worktree_dirty": true,
+    "worktree_entries": [
+      "?? work3_4060/bc_ppo_retention_v1/",
+      "?? work3_4060/run_bc_ppo_retention.py"
+    ]
+  },
+  "output_dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42",
+  "instance": {
+    "baseline_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+    "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+    "h0": 52.037844126999545,
+    "transfer_policy": "nominal_anchored_v1",
+    "scenario": "NOMINAL",
+    "disturbance": "none"
+  },
+  "budget": {
+    "training_decisions": 512,
+    "rollout_steps": 8,
+    "checkpoints": [
+      0,
+      128,
+      256,
+      512
+    ],
+    "evaluation_decision_limit": 4096,
+    "optimizer_updates_planned": 256
+  },
+  "weights": {
+    "init_bc_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "init_bc_actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "original_c_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b"
+  },
+  "scope": {
+    "new_trajectories": "step0000 / step0128 / step0256 / step0512 各一条 Nominal",
+    "no_disturbance_rerun": true,
+    "no_bc_regularization": true,
+    "no_value_calibration": true
+  },
+  "artifacts_expected": [
+    "manifest.json",
+    "resolved_config.yaml",
+    "initialization_verification.json",
+    "parameter_groups.json",
+    "training_history.jsonl",
+    "first_rollout.pt",
+    "first_update_diagnostics.json",
+    "checkpoints/{step0000,step0128,step0256,step0512}.pt",
+    "trajectories/{step0000,step0128,step0256,step0512}_NOMINAL.json",
+    "evaluation_results.csv",
+    "cycle_comparison.csv",
+    "trajectory_verification.json",
+    "shaping_events.jsonl",
+    "shaping_audit_summary.json",
+    "weight_integrity.json",
+    "verification.json",
+    "summary.md"
+  ]
+}

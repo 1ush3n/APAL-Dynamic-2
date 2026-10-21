@@ -1,0 +1,27 @@
+{
+  "schema_version": "bc_ppo_discarded_runs_v1",
+  "note": "训练只成功执行一次；以下为启动期实现错误导致的废弃尝试，均未产生任何 optimizer.step，因此不构成不同的训练曲线；修复后从同一 BC 初始化、同一 seed=42、同一 512 决策预算重新开始。",
+  "discarded": [
+    {
+      "attempt": 1,
+      "stage": "train",
+      "outcome": "process_aborted_before_updates",
+      "reason": "Windows 上 OpenMP 线程亲和性报错（OMP Error #135），进程在创建环境 worker 前中止。与训练逻辑无关；未产生任何参数更新。",
+      "optimizer_steps_performed": 0
+    },
+    {
+      "attempt": 2,
+      "stage": "train",
+      "outcome": "attribute_error_before_updates",
+      "reason": "实现错误：优化器参数集合取自 LightningModule 而非其 objective（optimized_parameters 属性位置错误）。在第一次 optimizer.step 之前抛出，未产生任何参数更新。",
+      "optimizer_steps_performed": 0
+    },
+    {
+      "attempt": 3,
+      "stage": "report",
+      "outcome": "path_error_in_offline_analysis",
+      "reason": "实现错误：离线 S1 分析的 A 轨迹路径指向对齐干预目录而非 rule_baseline_ac_v1。仅影响报告渲染，不触及模型与轨迹。",
+      "optimizer_steps_performed": 0
+    }
+  ]
+}
