@@ -1,11 +1,11 @@
 {
   "metadata": {
     "task": "Work-3 Minimal A/C Comparison under Rule Baseline",
-    "date": "2026-10-20",
+    "date": "2026-10-21",
     "seed": 42,
     "device": "cuda:0",
     "eval_device": "cpu",
-    "weights_path": "work3_4060\\rule_baseline_ac_v1\\seed42\\C\\weights.pt",
+    "weights_path": "D:\\OneDrive\\\u7814\u7a76\u751f\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\seed42\\C\\weights.pt",
     "weights_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
     "baseline_path": "D:\\OneDrive\\\u7814\u7a76\u751f\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
     "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414"

@@ -36,6 +36,11 @@ from data_loader import load_data
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_TRANSFER_POLICIES: frozenset[str] = frozenset(
+    {"actual_cleared_v0", "nominal_anchored_v1"}
+)
+DEFAULT_LEGACY_TRANSFER_POLICY: str = "actual_cleared_v0"
+
 
 @dataclass(frozen=True)
 class SingleAircraftTask:
@@ -131,7 +136,13 @@ class MultiAircraftBaseline:
         self.tasks = tasks
         self.station_workers = {int(k): list(v) for k, v in station_workers.items()}
         self.metadata = dict(metadata) if metadata else {}
-        self.transfer_policy = self.metadata.get("transfer_policy", "actual_cleared_v0")
+        raw_policy = self.metadata.get("transfer_policy", DEFAULT_LEGACY_TRANSFER_POLICY)
+        if raw_policy not in SUPPORTED_TRANSFER_POLICIES:
+            raise ValueError(
+                f"不支持的转站模式: {raw_policy!r}。支持集合: {sorted(SUPPORTED_TRANSFER_POLICIES)}"
+            )
+        self.transfer_policy: str = str(raw_policy)
+        self.metadata["transfer_policy"] = self.transfer_policy
 
         # 快速索引缓存
         self._tasks_by_aircraft: dict[int, list[MultiAircraftTask]] = {}
@@ -181,18 +192,22 @@ class MultiAircraftBaseline:
         return self.station_workers.get(station_id, [])
 
     def to_json_dict(self) -> dict[str, Any]:
-        """转换为可导出的 JSON 字典。"""
+        """转换为可导出的 JSON 字典，严格保留来源元数据与转站策略。"""
+        meta = dict(self.metadata)
+        meta.update({
+            "num_aircraft": self.num_aircraft,
+            "num_stations": self.num_stations,
+            "h0": self.h0,
+            "total_cycles": self.total_cycles,
+            "physical_tasks_per_aircraft": self.physical_tasks_per_aircraft,
+            "total_physical_tasks": self.total_tasks_count,
+            "transfer_policy": self.transfer_policy,
+        })
+        if "version" not in meta:
+            meta["version"] = f"work3_baseline_k{self.num_aircraft}_s{self.num_stations}_v1"
         return {
-            "metadata": {
-                "version": "work3_k10_baseline_v1",
-                "num_aircraft": self.num_aircraft,
-                "num_stations": self.num_stations,
-                "h0": self.h0,
-                "total_cycles": self.total_cycles,
-                "physical_tasks_per_aircraft": self.physical_tasks_per_aircraft,
-                "total_physical_tasks": self.total_tasks_count,
-            },
-            "station_workers": self.station_workers,
+            "metadata": meta,
+            "station_workers": {int(k): list(v) for k, v in self.station_workers.items()},
             "tasks": {k: v.to_dict() for k, v in self.tasks.items()},
         }
 
@@ -212,6 +227,11 @@ class MultiAircraftBaseline:
             data = json.load(f)
 
         meta = data["metadata"]
+        raw_policy = meta.get("transfer_policy", DEFAULT_LEGACY_TRANSFER_POLICY)
+        if raw_policy not in SUPPORTED_TRANSFER_POLICIES:
+            raise ValueError(
+                f"基准文件 {path} 包含不支持的转站模式: {raw_policy!r}。支持集合: {sorted(SUPPORTED_TRANSFER_POLICIES)}"
+            )
         station_workers = {int(k): v for k, v in data["station_workers"].items()}
         tasks: dict[str, MultiAircraftTask] = {}
         for key, d in data["tasks"].items():

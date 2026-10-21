@@ -1,0 +1,128 @@
+[
+  {
+    "scenario_id": "RULE_TRAIN_S1_RHO10",
+    "valid": true,
+    "split": "train",
+    "timing": "EARLY",
+    "intensity": "LOW",
+    "aircraft_id": 1,
+    "station_id": 1,
+    "target_task_key": "1_3",
+    "rho": 0.1,
+    "tau": 47.037844126999545,
+    "delta": 62.241628539699505,
+    "recovery_time": 109.27947266669905,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_3"
+    ],
+    "description": "Station 1 early task material delay rho=0.10",
+    "timing_reference": "nominal_exit_referenced_postexit_v2"
+  },
+  {
+    "scenario_id": "RULE_TRAIN_S2_RHO25",
+    "valid": true,
+    "split": "train",
+    "timing": "MID",
+    "intensity": "MED",
+    "aircraft_id": 2,
+    "station_id": 2,
+    "target_task_key": "2_8",
+    "rho": 0.25,
+    "tau": 151.11353238099863,
+    "delta": 70.04730515874942,
+    "recovery_time": 221.16083753974806,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_8"
+    ],
+    "description": "Station 2 task material delay rho=0.25",
+    "timing_reference": "nominal_exit_referenced_postexit_v2"
+  },
+  {
+    "scenario_id": "RULE_TRAIN_S3_RHO50",
+    "valid": true,
+    "split": "train",
+    "timing": "MID",
+    "intensity": "HIGH",
+    "aircraft_id": 2,
+    "station_id": 3,
+    "target_task_key": "2_27",
+    "rho": 0.5,
+    "tau": 203.15137650799818,
+    "delta": 83.05676619049927,
+    "recovery_time": 286.20814269849745,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "2_27"
+    ],
+    "description": "Station 3 bottleneck task material delay rho=0.50",
+    "timing_reference": "nominal_exit_referenced_postexit_v2"
+  },
+  {
+    "scenario_id": "RULE_TRAIN_S4_RHO75",
+    "valid": true,
+    "split": "train",
+    "timing": "LATE",
+    "intensity": "HIGH",
+    "aircraft_id": 3,
+    "station_id": 4,
+    "target_task_key": "3_10",
+    "rho": 0.75,
+    "tau": 307.22706476199727,
+    "delta": 96.06622722224921,
+    "recovery_time": 403.2932919842465,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "3_10"
+    ],
+    "description": "Station 4 task material delay rho=0.75",
+    "timing_reference": "nominal_exit_referenced_postexit_v2"
+  },
+  {
+    "scenario_id": "RULE_VAL_S1_MODERATE",
+    "valid": true,
+    "split": "val",
+    "timing": "EARLY",
+    "intensity": "MED",
+    "aircraft_id": 1,
+    "station_id": 1,
+    "target_task_key": "1_4",
+    "rho": 0.2,
+    "tau": 47.037844126999545,
+    "delta": 67.44541295239945,
+    "recovery_time": 114.483257079399,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_4"
+    ],
+    "description": "Validation 1: Station 1 moderate critical path delay rho=0.20",
+    "timing_reference": "nominal_exit_referenced_postexit_v2"
+  },
+  {
+    "scenario_id": "RULE_VAL_S2_STRONG",
+    "valid": true,
+    "split": "val",
+    "timing": "MID",
+    "intensity": "HIGH",
+    "aircraft_id": 1,
+    "station_id": 3,
+    "target_task_key": "1_27",
+    "rho": 0.6,
+    "tau": 151.11353238099863,
+    "delta": 88.26055060319928,
+    "recovery_time": 239.3740829841979,
+    "candidate_count": 1,
+    "affected_count": 1,
+    "affected_task_keys": [
+      "1_27"
+    ],
+    "description": "Validation 2: Station 3 strong bottleneck delay rho=0.60",
+    "timing_reference": "nominal_exit_referenced_postexit_v2"
+  }
+]

@@ -268,6 +268,17 @@ def build_deterministic_station_schedule(
                 ready_queue.append(succ)
         ready_queue.sort()
 
+    if len(scheduled_tasks) != len(station_tasks):
+        unscheduled = sorted(st_tids - set(scheduled_tasks.keys()))
+        cycle_details = [
+            f"task {tid} (in-degree={in_deg.get(tid, 0)}, unresolved_preds={[p for p in in_preds.get(tid, []) if p not in scheduled_tasks]})"
+            for tid in unscheduled
+        ]
+        raise RuntimeError(
+            f"站位 {station_id} 拓扑排程未完成全部工序！输入工序数: {len(station_tasks)}, 已排数: {len(scheduled_tasks)}。"
+            f"未排工序存在环依赖或未解决局部前驱: {cycle_details}"
+        )
+
     f_m = max((t["end"] for t in scheduled_tasks.values()), default=0.0)
     return scheduled_tasks, f_m
 
@@ -530,6 +541,26 @@ def generate_rule_baseline(
                     "ao_code": t_info["ao_code"],
                     "predecessors": list(t_info["predecessors"]),
                 }
+
+    # 严格校验单机模板任务集合闭包与多架次覆盖
+    template_task_ids = {int(k) for k in rule_template_data["tasks"].keys()}
+    if len(template_task_ids) != len(selected_tids):
+        raise RuntimeError(f"单机模板任务数 ({len(template_task_ids)}) 不等于所选任务数 ({len(selected_tids)})")
+    for tid in selected_tids:
+        preds = task_craft[tid]["predecessors"]
+        for p in preds:
+            if p not in selected_tids:
+                raise RuntimeError(f"工艺图前驱闭包不成立：工序 {tid} 的前驱 {p} 不在所选物理工序集合中！")
+
+    expected_total_tasks = num_aircraft * len(selected_tids)
+    if len(expanded_tasks) != expected_total_tasks:
+        raise RuntimeError(
+            f"展开后工序总数 ({len(expanded_tasks)}) 不等于预期 ({expected_total_tasks})"
+        )
+    for k in range(num_aircraft):
+        ac_tasks = [t for t in expanded_tasks.values() if t["aircraft_id"] == k]
+        if len(ac_tasks) != len(selected_tids):
+            raise RuntimeError(f"飞机 {k} 展开工序数 ({len(ac_tasks)}) 缺失，预期 {len(selected_tids)}")
 
     baseline_json_data = {
         "metadata": {

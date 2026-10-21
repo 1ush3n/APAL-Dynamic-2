@@ -1,0 +1,223 @@
+{
+  "overall_status": "PASS",
+  "total_trajectories_verified": 6,
+  "all_pass": true,
+  "trajectories": [
+    {
+      "trajectory_file": "Baseline-Repair-A_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598408e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 2.0952919245598414e-17,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0,
+        "j_total": 2.751822145979913e-15
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 6.162975822039155e-33,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "trajectory_file": "Method-C_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175535,
+        "d_team": 0.01416666666666667,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842205,
+        "j_total": 3.82256809126947
+      },
+      "reported_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175539,
+        "d_team": 0.014166666666666682,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842213,
+        "j_total": 3.82256809126947
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.163336342344337e-17,
+        "d_team_diff": 1.214306433183765e-17,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 8.326672684688674e-17,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "trajectory_file": "Baseline-Repair-A_RULE_VAL_S1_MODERATE.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.0002830294512078102,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0002830294512077898,
+        "j_total": 0.000566058902418331
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.0002830294512078106,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0002830294512077898,
+        "j_total": 0.000566058902418331
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 3.7947076036992655e-19,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "trajectory_file": "Method-C_RULE_VAL_S1_MODERATE.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175535,
+        "d_team": 0.01416666666666667,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842205,
+        "j_total": 3.82256809126947
+      },
+      "reported_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175539,
+        "d_team": 0.014166666666666682,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842213,
+        "j_total": 3.82256809126947
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.163336342344337e-17,
+        "d_team_diff": 1.214306433183765e-17,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 8.326672684688674e-17,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "trajectory_file": "Baseline-Repair-A_RULE_VAL_S2_STRONG.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 0.5501232694860628,
+        "d_time": 0.0005239269233200782,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0005239269233200583,
+        "j_total": 0.5511711233327029
+      },
+      "reported_costs": {
+        "j_takt": 0.5501232694860628,
+        "d_time": 0.0005239269233200769,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0005239269233200583,
+        "j_total": 0.5511711233327029
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 1.3010426069826053e-18,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      }
+    },
+    {
+      "trajectory_file": "Method-C_RULE_VAL_S2_STRONG.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175535,
+        "d_team": 0.01416666666666667,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842205,
+        "j_total": 3.82256809126947
+      },
+      "reported_costs": {
+        "j_takt": 3.554090273512626,
+        "d_time": 0.12007224221175539,
+        "d_team": 0.014166666666666682,
+        "j_postpone": 0.0,
+        "j_revision": 0.13423890887842213,
+        "j_total": 3.82256809126947
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 4.163336342344337e-17,
+        "d_team_diff": 1.214306433183765e-17,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 8.326672684688674e-17,
+        "j_total_diff": 0.0
+      }
+    }
+  ]
+}

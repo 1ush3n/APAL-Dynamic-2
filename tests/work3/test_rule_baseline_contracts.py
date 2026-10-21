@@ -180,3 +180,111 @@ def test_reject_bad_craft_partition():
             worker_skills=worker_skills,
             max_slots=3,
         )
+
+
+def test_reject_cyclic_graph_in_station_schedule():
+    """验证当站内工序出现两节点环依赖 (A -> B -> A) 时，排程算法明确拒绝并抛出异常。"""
+    pool_csv_path = REPO_ROOT / "data/worker_pool_fixed.csv"
+    worker_effs, worker_skills = load_worker_pool(pool_csv_path)
+
+    cyclic_tasks = [
+        {
+            "task_id": 101,
+            "ao_code": "CYCLE_A",
+            "demand": 1,
+            "skill": 0,
+            "standard_duration": 1.0,
+            "predecessors": [102],
+        },
+        {
+            "task_id": 102,
+            "ao_code": "CYCLE_B",
+            "demand": 1,
+            "skill": 0,
+            "standard_duration": 1.0,
+            "predecessors": [101],
+        },
+    ]
+
+    with pytest.raises(RuntimeError, match="拓扑排程未完成全部工序.*环依赖"):
+        build_deterministic_station_schedule(
+            station_id=1,
+            station_tasks=cyclic_tasks,
+            station_workers=[12, 72],
+            worker_efficiencies=worker_effs,
+            worker_skills=worker_skills,
+            max_slots=3,
+        )
+
+
+def test_zero_duration_physical_task_schedule():
+    """验证包含零工时工序时，排程算法正常完成且工序起止时刻一致。"""
+    pool_csv_path = REPO_ROOT / "data/worker_pool_fixed.csv"
+    worker_effs, worker_skills = load_worker_pool(pool_csv_path)
+
+    zero_dur_tasks = [
+        {
+            "task_id": 201,
+            "ao_code": "ZERO_TASK",
+            "demand": 1,
+            "skill": 0,
+            "standard_duration": 0.0,
+            "predecessors": [],
+        }
+    ]
+
+    sched, f_m = build_deterministic_station_schedule(
+        station_id=1,
+        station_tasks=zero_dur_tasks,
+        station_workers=[12, 72],
+        worker_efficiencies=worker_effs,
+        worker_skills=worker_skills,
+        max_slots=3,
+    )
+    assert 201 in sched
+    assert sched[201]["duration"] == 0.0
+    assert sched[201]["start"] == 0.0
+    assert sched[201]["end"] == 0.0
+    assert f_m == 0.0
+
+
+def test_baseline_serialization_roundtrip_preserves_policy(tmp_path: Path):
+    """R1: 验证多架次基准计划在 load -> save -> load 往返中严格保留 transfer_policy 与元数据。"""
+    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+
+    baseline_path = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json"
+    b1 = MultiAircraftBaseline.load_from_json(baseline_path)
+    assert b1.transfer_policy == "nominal_anchored_v1"
+    assert b1.metadata.get("transfer_policy") == "nominal_anchored_v1"
+    assert b1.metadata.get("version") == "work3_mini210_rule_baseline_v1"
+
+    out_file = tmp_path / "saved_baseline.json"
+    b1.save_to_json(out_file)
+
+    saved_raw = json.loads(out_file.read_text(encoding="utf-8"))
+    assert saved_raw["metadata"]["transfer_policy"] == "nominal_anchored_v1"
+    assert saved_raw["metadata"]["version"] == "work3_mini210_rule_baseline_v1"
+    assert saved_raw["metadata"]["num_aircraft"] == 7
+    assert saved_raw["metadata"]["total_physical_tasks"] == 210
+
+    b2 = MultiAircraftBaseline.load_from_json(out_file)
+    assert b2.transfer_policy == "nominal_anchored_v1"
+    assert b2.metadata["transfer_policy"] == "nominal_anchored_v1"
+    assert b2.num_aircraft == 7
+    assert b2.total_tasks_count == 210
+
+
+def test_baseline_rejects_unknown_transfer_policy(tmp_path: Path):
+    """R1: 验证未知转站模式被显式拒绝，不发生静默降级。"""
+    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+
+    baseline_path = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json"
+    raw_data = json.loads(baseline_path.read_text(encoding="utf-8"))
+    raw_data["metadata"]["transfer_policy"] = "unsupported_magic_clock"
+
+    bad_file = tmp_path / "bad_policy_baseline.json"
+    bad_file.write_text(json.dumps(raw_data), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="不支持的转站模式"):
+        MultiAircraftBaseline.load_from_json(bad_file)
+

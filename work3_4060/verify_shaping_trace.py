@@ -168,11 +168,14 @@ def verify_shaping_trace(
                 transition_events.append(item)
 
     total_transitions = len(transition_events)
+    completed_batches = sum(1 for ep in episode_cost_summaries if ep.get("termination_reason") == "completed")
+    truncated_batches = len(episode_cost_summaries) - completed_batches
+    batch_detail_str = f" (含 {completed_batches} 个完工批次和 {truncated_batches} 个截断批次)" if truncated_batches > 0 else ""
     logger.info(
         f"读取到 {len(raw_lines)} 行记录: "
         f"{total_transitions} 条单步转换, "
         f"{len(segment_end_records)} 条段尾结算, "
-        f"{len(episode_cost_summaries)} 条完工账本"
+        f"{len(episode_cost_summaries)} 条 episode 账本{batch_detail_str}"
     )
     if total_transitions == 0:
         raise ValueError("审计事件文件中未包含任何单步转换事件！")

@@ -71,7 +71,15 @@ class AirLineEnvWork3:
         self.weights: ObjectiveWeights = weights if weights is not None else ObjectiveWeights()
         self.max_steps_per_rollout: int | None = max_steps_per_rollout
         self.step_count: int = 0
-        self._configured_transfer_policy = str(transfer_policy) if transfer_policy is not None else None
+        if transfer_policy is not None:
+            from utils.work3.multi_aircraft_baseline import SUPPORTED_TRANSFER_POLICIES
+            if transfer_policy not in SUPPORTED_TRANSFER_POLICIES:
+                raise ValueError(
+                    f"不支持的环境转站模式覆盖: {transfer_policy!r}。支持集合: {sorted(SUPPORTED_TRANSFER_POLICIES)}"
+                )
+            self._configured_transfer_policy: str | None = str(transfer_policy)
+        else:
+            self._configured_transfer_policy = None
 
         self.state: MultiAircraftState = initialize_multi_aircraft_state(self.baseline_json_path)
         if self._configured_transfer_policy is not None:
@@ -1441,13 +1449,16 @@ class AirLineEnvWork3:
                         latest_finish = t.actual_end
 
         current_q = self.state.current_cycle
-        if getattr(self.state, "transfer_policy", "") == "nominal_anchored_v1":
+        policy = getattr(self.state, "transfer_policy", "actual_cleared_v0")
+        if policy == "nominal_anchored_v1":
             nominal_boundary = float(current_q) * float(self.state.h0)
             # P_q = max(P_q^0, P_{q-1}, F_q) (Section 5.1)
             transfer_time = max(nominal_boundary, float(self.state.last_transfer_time), float(latest_finish))
-        else:
+        elif policy == "actual_cleared_v0":
             # H0只用于超期费用和基准比较，不构成实际转站的等待下界 (actual_cleared_v0)
             transfer_time = max(latest_finish, self.state.current_time)
+        else:
+            raise ValueError(f"未知转站时钟模式: {policy!r}")
 
         self._transfer_scheduled_for_cycle = current_q
         self.event_queue.push(

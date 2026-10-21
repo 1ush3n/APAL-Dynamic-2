@@ -100,9 +100,12 @@ def compute_cycle_heuristic_cmax(state: MultiAircraftState) -> float:
     estimated_pq = max(current_time, max_station_finish)
 
     # 若运行在名义锚定脉动模式 (nominal_anchored_v1)，转站时刻绝不早于当前周期名义边界 P_q^0 = q * H0 (Section 5.2)
-    if getattr(state, "transfer_policy", "") == "nominal_anchored_v1":
+    policy = getattr(state, "transfer_policy", "actual_cleared_v0")
+    if policy == "nominal_anchored_v1":
         nominal_boundary = float(state.current_cycle) * float(state.h0)
         estimated_pq = max(estimated_pq, nominal_boundary)
+    elif policy != "actual_cleared_v0":
+        raise ValueError(f"未知转站时钟模式: {policy!r}")
 
     # 确保绝不发生时间倒退
     return max(current_time, estimated_pq)

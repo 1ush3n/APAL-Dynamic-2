@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import sys
 from typing import Any
 
@@ -39,14 +40,28 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def generate_and_calibrate_scenarios() -> None:
-    dest_dir = REPO_ROOT / "work3_4060/rule_baseline_ac_v1"
+def generate_and_calibrate_scenarios(version: str = "v1") -> None:
+    if version == "v1":
+        dest_dir = REPO_ROOT / "work3_4060/rule_baseline_ac_v1"
+        timing_ref = "nominal_entry_referenced_preentry_v1"
+    elif version == "v2":
+        dest_dir = REPO_ROOT / "work3_4060/rule_baseline_ac_v2"
+        timing_ref = "nominal_exit_referenced_postexit_v2"
+    else:
+        raise ValueError(f"Unknown version: {version}")
+
     dest_dir.mkdir(parents=True, exist_ok=True)
     baseline_path = dest_dir / "mini210_rule_baseline.json"
+    if not baseline_path.is_file():
+        v1_baseline = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json"
+        if v1_baseline.is_file():
+            shutil.copy2(v1_baseline, baseline_path)
+        else:
+            raise FileNotFoundError(f"Source baseline not found: {v1_baseline}")
     
     baseline = MultiAircraftBaseline.load_from_json(baseline_path)
     h0 = float(baseline.h0)
-    print(f"[PrepareScenarios] Loaded rule baseline with H0 = {h0:.6f}h, tasks = {len(baseline.tasks)}")
+    print(f"\n[PrepareScenarios] Loaded {version} baseline with H0 = {h0:.6f}h, tasks = {len(baseline.tasks)}")
 
     # 4 Train scenarios + 2 Validation scenarios
     # Each scenario defines:
@@ -143,7 +158,11 @@ def generate_and_calibrate_scenarios() -> None:
         # P_q^0: nominal entry for plane at station
         p_entry = (plane + station - 1) * h0
         tau = max(0.0, p_entry - 5.0)
-        recovery_time = p_entry + rho * h0
+        if version == "v1":
+            recovery_time = p_entry + rho * h0
+        else:  # v2: exit-referenced R = P_q^0 + rho * H0
+            p_exit = (plane + station) * h0
+            recovery_time = p_exit + rho * h0
         delta = recovery_time - tau
 
         # Contract assertions
@@ -167,7 +186,7 @@ def generate_and_calibrate_scenarios() -> None:
             "affected_count": 1,
             "affected_task_keys": [task_key],
             "description": spec["description"],
-            "timing_reference": "nominal_anchored_v1_relative",
+            "timing_reference": timing_ref,
         }
         scenarios_list.append(scen_dict)
         if spec["split"] == "train":
@@ -279,11 +298,14 @@ def generate_and_calibrate_scenarios() -> None:
         "validation_sha256": sha256_file(val_path),
         "results": calibration_records,
         "acceptance_criteria": {
-            "all_feasible": True,
-            "all_completed_210": True,
-            "validation_measurable_impact": True,
-            "validation_has_positive_j_takt": True,
-            "nominal_j_total_near_zero": True,
+            "all_feasible": all(r["feasible"] for r in calibration_records.values()),
+            "all_completed_210": all(r["completed_tasks"] == 210 for r in calibration_records.values()),
+            "validation_measurable_impact": any(
+                (r["j_takt"] > 1e-6 or r["d_time"] > 1e-6 or abs(r.get("makespan_delta_vs_nominal", 0.0)) > 1e-6)
+                for sid, r in calibration_records.items() if r.get("split") == "val"
+            ),
+            "validation_has_positive_j_takt": has_positive_j_takt,
+            "nominal_j_total_near_zero": calibration_records["NOMINAL"]["j_total"] <= 1e-9,
         },
     }
 
@@ -294,4 +316,7 @@ def generate_and_calibrate_scenarios() -> None:
 
 
 if __name__ == "__main__":
-    generate_and_calibrate_scenarios()
+    print("=== Generating & Calibrating Rule Scenarios v1 ===")
+    generate_and_calibrate_scenarios("v1")
+    print("\n=== Generating & Calibrating Rule Scenarios v2 (Offline A Only) ===")
+    generate_and_calibrate_scenarios("v2")

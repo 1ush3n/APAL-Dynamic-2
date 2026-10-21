@@ -18,7 +18,7 @@
       "1_3"
     ],
     "description": "Station 1 early task material delay rho=0.10",
-    "timing_reference": "nominal_anchored_v1_relative"
+    "timing_reference": "nominal_entry_referenced_preentry_v1"
   },
   {
     "scenario_id": "RULE_TRAIN_S2_RHO25",
@@ -39,7 +39,7 @@
       "2_8"
     ],
     "description": "Station 2 task material delay rho=0.25",
-    "timing_reference": "nominal_anchored_v1_relative"
+    "timing_reference": "nominal_entry_referenced_preentry_v1"
   },
   {
     "scenario_id": "RULE_TRAIN_S3_RHO50",
@@ -60,7 +60,7 @@
       "2_27"
     ],
     "description": "Station 3 bottleneck task material delay rho=0.50",
-    "timing_reference": "nominal_anchored_v1_relative"
+    "timing_reference": "nominal_entry_referenced_preentry_v1"
   },
   {
     "scenario_id": "RULE_TRAIN_S4_RHO75",
@@ -81,7 +81,7 @@
       "3_10"
     ],
     "description": "Station 4 task material delay rho=0.75",
-    "timing_reference": "nominal_anchored_v1_relative"
+    "timing_reference": "nominal_entry_referenced_preentry_v1"
   },
   {
     "scenario_id": "RULE_VAL_S1_MODERATE",
@@ -102,7 +102,7 @@
       "1_4"
     ],
     "description": "Validation 1: Station 1 moderate critical path delay rho=0.20",
-    "timing_reference": "nominal_anchored_v1_relative"
+    "timing_reference": "nominal_entry_referenced_preentry_v1"
   },
   {
     "scenario_id": "RULE_VAL_S2_STRONG",
@@ -123,6 +123,6 @@
       "1_27"
     ],
     "description": "Validation 2: Station 3 strong bottleneck delay rho=0.60",
-    "timing_reference": "nominal_anchored_v1_relative"
+    "timing_reference": "nominal_entry_referenced_preentry_v1"
   }
 ]
