@@ -1,0 +1,35 @@
+{
+  "schema_version": "ppo_ablation_r0_v1",
+  "rule": "不更新参数，正常随机采样 512 步；模型恒为校准副本",
+  "seed": 42,
+  "device": "cpu",
+  "samples": 210,
+  "cumulative_raw_cost_total": 0.006403775033417512,
+  "env_cumulative_cost": 0.006403775033417512,
+  "completed_tasks": 210,
+  "episode_terminated": true,
+  "checkpoints": [
+    {
+      "decisions": 0,
+      "cumulative_raw_cost": 0.0,
+      "completed_tasks": 0
+    },
+    {
+      "decisions": 8,
+      "cumulative_raw_cost": -0.0,
+      "completed_tasks": 8
+    },
+    {
+      "decisions": 128,
+      "cumulative_raw_cost": 0.002590422278455526,
+      "completed_tasks": 121
+    }
+  ],
+  "action_counts": {
+    "stay": 210,
+    "postpone": 0,
+    "advance": 0,
+    "align1": 210
+  },
+  "note": "R0 的 5 个“评估点”是同一未更新模型的采样前缀累计费用；greedy 评估只有一条（模型未变），作为 step0000 的对照。"
+}

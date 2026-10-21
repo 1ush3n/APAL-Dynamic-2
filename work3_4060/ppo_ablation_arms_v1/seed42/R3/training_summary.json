@@ -1,0 +1,105 @@
+{
+  "arm": "R3",
+  "change": "advantage_center_only",
+  "stop_reason": "budget_exhausted",
+  "training_decisions": 512,
+  "optimizer_steps": 257,
+  "segments": 65,
+  "episodes_started": 2,
+  "episodes_completed": 1,
+  "elapsed_seconds": 83.8653927000014,
+  "seeds": {
+    "python": [
+      2147483648,
+      3564348608,
+      1266698288
+    ],
+    "numpy": 42,
+    "torch": 42,
+    "cuda": 42
+  },
+  "learning_rate": 0.0003,
+  "entropy_coefficient": 0.01,
+  "advantage_mode": "center_only",
+  "detach_value": false,
+  "device": "cuda:0",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "peak_reserved_mib": 34.0,
+    "budget_mib": 6144.0,
+    "budget_exceeded": false
+  },
+  "checkpoints": [
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\R3\\checkpoints\\step0000.pt",
+      "sha256": "d6bf398686adb4b7b373e4d85e4d4132c2783743f2457fe0716e6c89d086c29e",
+      "actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+      "training_decisions": 0,
+      "optimizer_steps": 0,
+      "step_index": 0,
+      "tag": "step0000"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\R3\\checkpoints\\step0008.pt",
+      "sha256": "ebec3de9531d1d883d66fd369c967772841c48788447e2403778d46ea88143d3",
+      "actor_fingerprint": "f76942e91192e01665004b32edbd056182a68e047c73ee7523d8c214a3b424ab",
+      "training_decisions": 8,
+      "optimizer_steps": 4,
+      "step_index": 1,
+      "tag": "step0008"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\R3\\checkpoints\\step0128.pt",
+      "sha256": "21bbe934dca63240857bd17ef0946e277c49e74ae555c0db7886fe48a134efe7",
+      "actor_fingerprint": "d2a79a8406b32247e95400d841f91295ae0ceb8d9e74c27ca693f9df227399f4",
+      "training_decisions": 128,
+      "optimizer_steps": 64,
+      "step_index": 2,
+      "tag": "step0128"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\R3\\checkpoints\\step0256.pt",
+      "sha256": "a337b6d11b089886fb9c498243a3d6cdf3ce4717762649f8eb8ffc165ea29cfa",
+      "actor_fingerprint": "db1c4ba62a335381031b2207469e49e2d4e1bcfdf8de06f10d723365d190e373",
+      "training_decisions": 256,
+      "optimizer_steps": 129,
+      "step_index": 3,
+      "tag": "step0256"
+    },
+    {
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42\\R3\\checkpoints\\step0512.pt",
+      "sha256": "a027d5f69064e5314b7697607c9c39ee13f2b31e7781253f6b50fc27594e2197",
+      "actor_fingerprint": "d46e72357dac5486cf6f9dcb071cd296a4bc02b3130849ae7f69c9917e2391b0",
+      "training_decisions": 512,
+      "optimizer_steps": 257,
+      "step_index": 4,
+      "tag": "step0512"
+    }
+  ],
+  "hyperparameters": {
+    "method_variant": "C",
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "beta_shaping": 1.0,
+    "learning_rate": 0.0003,
+    "clip_epsilon": 0.2,
+    "value_coefficient": 0.5,
+    "entropy_coefficient": 0.01,
+    "ppo_epochs": 1,
+    "batch_size": 2,
+    "rollout_steps": 8,
+    "num_envs": 1,
+    "max_grad_norm": 0.5,
+    "optimizer": "AdamW",
+    "optimizer_eps": 1e-05,
+    "weight_decay": 0.0001,
+    "normalize_advantages": true,
+    "amp_dtype": "fp32",
+    "disturbance_enabled": false,
+    "scenario": "NOMINAL",
+    "warmup_mode": "none",
+    "seed": 42,
+    "total_env_steps": 512,
+    "max_decisions": 512
+  }
+}

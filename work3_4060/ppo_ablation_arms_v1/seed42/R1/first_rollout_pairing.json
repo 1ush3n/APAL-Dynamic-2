@@ -1,0 +1,12 @@
+{
+  "arm": "R1",
+  "compared_to": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\first_rollout.pt",
+  "paired": true,
+  "same_states": true,
+  "same_actions": true,
+  "max_abs_log_prob_difference": 5.7220458984375e-06,
+  "tolerance": 0.0001,
+  "tolerance_note": "判据以“状态逐元素相等 + 动作签名逐项相等”为主；log-prob 只做 1e-4 的数值一致性检查。CUDA 归约顺序不确定，同一策略同一步的 log-prob 可有 ~1e-5 量级抖动，这与仓库既有的重放一致性容差 1e-4 同量级，不代表采样事件不同。",
+  "steps_compared": 8,
+  "note": "同一策略与同一初始随机状态 → 首段 8 步采样事件应一致；8 步之后允许自然分化。"
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "ppo_ablation_repairs_v1",
+  "arms": {
+    "R1": {
+      "episode_cost_run_id_fixed": 3,
+      "run_json_regenerated": true
+    },
+    "R2": {
+      "episode_cost_run_id_fixed": 3,
+      "run_json_regenerated": true
+    },
+    "R3": {
+      "episode_cost_run_id_fixed": 2,
+      "run_json_regenerated": true
+    },
+    "R4": {
+      "episode_cost_run_id_fixed": 3,
+      "run_json_regenerated": true
+    }
+  }
+}

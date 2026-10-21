@@ -1,0 +1,34 @@
+{
+  "arm": "R3",
+  "decisions_at_first_update": 8,
+  "minibatch_permutation": [
+    2,
+    1,
+    6,
+    0,
+    4,
+    5,
+    7,
+    3
+  ],
+  "first_minibatch_samples": [
+    2,
+    1
+  ],
+  "optimizer_step": 1,
+  "total_loss": -0.006871235556900501,
+  "clipped_grad_norm": 0.1553194224834442,
+  "pre_clip_group_grad_norm": {
+    "shared": 0.1002593652060915,
+    "policy": 0.023800829186126488,
+    "value": 0.11621405227834777
+  },
+  "parameter_delta_norm": {
+    "shared": 0.054882006363493246,
+    "policy": 0.021457224403010493,
+    "value": 0.01706094267114242
+  },
+  "lr": 0.0003,
+  "updates_in_first_segment": 4,
+  "pre_update_rng_saved": true
+}
