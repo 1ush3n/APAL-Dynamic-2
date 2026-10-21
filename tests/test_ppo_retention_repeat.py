@@ -190,17 +190,23 @@ def test_source_hash_allows_only_documented_report_only_runner_revision(tmp_path
     from work3_4060.run_r1_retention_1024 import _source_hash_status, sha256
 
     script = tmp_path / "runner.py"
+    tests = tmp_path / "tests.py"
     script.write_text("report-only revision", encoding="utf-8")
+    tests.write_text("report-only test", encoding="utf-8")
     binding = {
-        "source_code_hashes": {"new_r1_runner": {"path": str(script), "sha256": "old"}},
+        "source_code_hashes": {
+            "new_r1_runner": {"path": str(script), "sha256": "old"},
+            "retention_contract_tests": {"path": str(tests), "sha256": "old"},
+        },
         "post_training_report_revision": {
             "scope": "report_serialization_only",
             "script_sha256_after_report_only": sha256(script),
+            "test_sha256_after_report_only": sha256(tests),
         },
     }
-    assert _source_hash_status(binding) == {"new_r1_runner": True}
+    assert _source_hash_status(binding) == {"new_r1_runner": True, "retention_contract_tests": True}
     binding["post_training_report_revision"]["scope"] = "training_logic_changed"
-    assert _source_hash_status(binding) == {"new_r1_runner": False}
+    assert _source_hash_status(binding) == {"new_r1_runner": False, "retention_contract_tests": False}
 
 
 def test_legacy_writer_paths_are_rebound_inside_new_output_root(monkeypatch: pytest.MonkeyPatch) -> None:

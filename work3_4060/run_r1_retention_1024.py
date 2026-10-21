@@ -1471,12 +1471,16 @@ def _write_recovery_draft(out: Path) -> None:
 
 def _source_hash_status(source_binding: Mapping[str, Any]) -> dict[str, bool]:
     revision = source_binding.get("post_training_report_revision", {})
+    revision_hashes = {
+        "new_r1_runner": revision.get("script_sha256_after_report_only"),
+        "retention_contract_tests": revision.get("test_sha256_after_report_only"),
+    }
     results = {}
     for name, item in source_binding["source_code_hashes"].items():
         path = Path(item["path"])
         expected = item.get("sha256")
-        if name == "new_r1_runner" and revision.get("scope") == "report_serialization_only":
-            expected = revision.get("script_sha256_after_report_only")
+        if name in revision_hashes and revision.get("scope") == "report_serialization_only":
+            expected = revision_hashes[name]
         results[name] = path.is_file() and expected == sha256(path)
     return results
 
@@ -1548,8 +1552,14 @@ def _finalize(out: Path, source_binding: Mapping[str, Any], stage_results: Mappi
     }
     protocol_checks = {
         "fixed_source_and_dependencies_unchanged": source_unchanged and old_sources_unchanged,
-        "report_only_source_revision_documented": source_binding.get("post_training_report_revision", {}).get("scope")
-        in {None, "report_serialization_only"},
+        "report_only_source_revision_documented": (
+            source_binding.get("post_training_report_revision") is None
+            or (
+                source_binding["post_training_report_revision"].get("scope") == "report_serialization_only"
+                and bool(source_binding["post_training_report_revision"].get("source_commit"))
+                and source_binding["post_training_report_revision"].get("training_completed_before_revision") is True
+            )
+        ),
         "regression_suite_passed": read_json(out / "engineering" / "regression_test_results.json").get("status") == "PASS",
         "fp32_equivalence_passed": read_json(out / "engineering" / "fp32_equivalence.json").get("status") == "PASS",
         "pretraining_archive_verified": archive_pre.get("all_members_verified_after_readback") is True,
