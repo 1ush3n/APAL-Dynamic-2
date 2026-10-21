@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 import torch
@@ -126,6 +128,46 @@ def test_r1_report_gates_distinguish_failed_protocol_from_incomplete_evidence() 
         objective_statuses=statuses,
         physical_status="INCOMPLETE",
     ) == "INCOMPLETE"
+
+
+def test_r1_runner_imports_repository_modules_when_started_by_file_path() -> None:
+    root = Path(__file__).resolve().parents[1]
+    script = root / "work3_4060" / "run_r1_retention_1024.py"
+    result = subprocess.run(
+        [sys.executable, str(script), "--worker", "evaluate", "--output",
+         str(root / "work3_4060" / "engineering_closeout_r1_1024_v1" / "ppo_seed43"),
+         "--point", "7"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=45,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "ValueError" in result.stderr
+    assert "ModuleNotFoundError" not in result.stderr
+
+
+def test_discarded_preflight_record_copies_and_hashes_preserved_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import json
+    from work3_4060 import run_r1_retention_1024 as runner
+
+    source = tmp_path / "preserved_preflight"
+    source.mkdir()
+    (source / "dependency_inventory.json").write_text('{"files": []}\n', encoding="utf-8")
+    destination = tmp_path / "experiment"
+    monkeypatch.setattr(runner, "DISCARDED_PREFLIGHT", source)
+    result = runner._record_discarded_preflight(destination)
+
+    assert result is not None
+    assert result["environment_decisions"] == 0
+    assert result["optimizer_steps"] == 0
+    copied = destination / "runs" / "discarded_preflight_attempt_0001" / "dependency_inventory.json"
+    assert copied.read_bytes() == (source / "dependency_inventory.json").read_bytes()
+    saved = json.loads((destination / "runs" / "discarded_runs.json").read_text(encoding="utf-8"))
+    assert saved["discarded_runs"][0]["preserved_files"][0]["sha256"] == runner.sha256(copied)
 
 
 def test_legacy_writer_paths_are_rebound_inside_new_output_root(monkeypatch: pytest.MonkeyPatch) -> None:

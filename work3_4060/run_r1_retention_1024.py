@@ -25,9 +25,13 @@ import torch
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 BASE = ROOT / "work3_4060"
 OUTPUT_ROOT = BASE / "engineering_closeout_r1_1024_v1" / "ppo_seed43"
 ARCHIVE_ROOT = ROOT.parent / "work3_local_archives"
+DISCARDED_PREFLIGHT = ARCHIVE_ROOT / "discarded_preflight_attempt_0001"
+DISCARDED_PREFLIGHT_COMMIT = "074fe078181e64a2300da37d0b31eadd976cb1dc"
 CAL_ROOT = BASE / "critic_calibration_retention_v1" / "seed42"
 CAL_DIR = CAL_ROOT / "calibration"
 CAL_PPO = CAL_ROOT / "ppo"
@@ -163,6 +167,45 @@ def _classify_protocol_status(
     complete = all(checks.values()) and physical_status == "PASS" and shaping_status == "PASS" \
         and all(status == "PASS" for status in objective_statuses.values())
     return "PASS" if complete else "INCOMPLETE"
+
+
+def _record_discarded_preflight(out: Path) -> dict[str, Any] | None:
+    if not DISCARDED_PREFLIGHT.is_dir():
+        return None
+    (out / "runs").mkdir(parents=True, exist_ok=True)
+    preserved = out / "runs" / "discarded_preflight_attempt_0001"
+    if preserved.exists():
+        raise FileExistsError(f"拒绝覆盖已保存的废弃预检记录：{preserved}")
+    shutil.copytree(DISCARDED_PREFLIGHT, preserved)
+    original_files = {
+        path.relative_to(DISCARDED_PREFLIGHT): path
+        for path in DISCARDED_PREFLIGHT.rglob("*") if path.is_file()
+    }
+    if any(sha256(path) != sha256(preserved / relative) for relative, path in original_files.items()):
+        raise IOError("废弃预检副本哈希与外部保留原件不一致")
+    files = [
+        {"path": str(path.relative_to(preserved).as_posix()), "size_bytes": path.stat().st_size,
+         "sha256": sha256(path)}
+        for path in sorted(preserved.rglob("*")) if path.is_file()
+    ]
+    record = {
+        "attempt": "discarded_preflight_attempt_0001",
+        "source_commit": DISCARDED_PREFLIGHT_COMMIT,
+        "failure_stage": "校准初始化时导入仓库模块失败；训练子进程未启动",
+        "failure": "ModuleNotFoundError: No module named 'work3_4060'",
+        "preserved_original_path": str(DISCARDED_PREFLIGHT.resolve()),
+        "preserved_copy_path": str(preserved.resolve()),
+        "preserved_files": files,
+        "training_started": False,
+        "environment_decisions": 0,
+        "optimizer_steps": 0,
+        "offline_diagnostic_updates": 0,
+        "evaluation_decisions": 0,
+        "observed_entrypoint_wall_seconds": 3.039,
+        "retry_authorization": "本轮提示词允许实现错误修复后从相同来源/seed/预算重启一次",
+    }
+    write_json(out / "runs" / "discarded_runs.json", {"discarded_runs": [record]})
+    return record
 
 
 def inventory_dependency_paths(
@@ -1537,14 +1580,20 @@ def _finalize(out: Path, source_binding: Mapping[str, Any], stage_results: Mappi
     else:
         production = "PASS"
     memory = summary.get("gpu", {})
+    discarded_path = out / "runs" / "discarded_runs.json"
+    discarded_runs = read_json(discarded_path).get("discarded_runs", []) if discarded_path.is_file() else []
     run_counts = {
         "training_environment_decisions": int(summary.get("training_decisions", 0)),
         "optimizer_steps": optimizer_steps,
         "offline_fp32_diagnostic_updates": 1,
         "evaluation_decisions": sum(int(row["decisions"]) for row in report["trajectory_rows"]),
         "evaluation_episodes": len(report["trajectory_rows"]),
-        "discarded_environment_decisions": 0,
-        "discarded_optimizer_steps": 0,
+        "discarded_runs": len(discarded_runs),
+        "discarded_environment_decisions": sum(int(item.get("environment_decisions", 0)) for item in discarded_runs),
+        "discarded_optimizer_steps": sum(int(item.get("optimizer_steps", 0)) for item in discarded_runs),
+        "discarded_offline_diagnostic_updates": sum(int(item.get("offline_diagnostic_updates", 0)) for item in discarded_runs),
+        "discarded_evaluation_decisions": sum(int(item.get("evaluation_decisions", 0)) for item in discarded_runs),
+        "discarded_entrypoint_wall_seconds": sum(float(item.get("observed_entrypoint_wall_seconds", 0.0)) for item in discarded_runs),
         "training_segments": len(history),
         "episodes_started": summary.get("episodes_started"),
         "episodes_completed": summary.get("episodes_completed"),
@@ -1639,6 +1688,7 @@ def _write_summary(out: Path, verification: Mapping[str, Any], report: Mapping[s
     lines += ["", "## 训练与工程证据", "",
               f"- 环境决策 {run_counts['training_environment_decisions']}；optimizer.step {run_counts['optimizer_steps']}；段数 {run_counts['training_segments']}；停止原因 `{run_counts['stop_reason']}`；耗时 {run_counts['elapsed_seconds']} 秒。",
               f"- 峰值显存 allocated/reserved：{run_counts['peak_allocated_mib']}/{run_counts['peak_reserved_mib']} MiB。评估另计 {run_counts['evaluation_episodes']} 条、{run_counts['evaluation_decisions']} 个决策；离线 FP32 更新不计入主训练。",
+              f"- 废弃实现尝试 {run_counts['discarded_runs']} 次：环境决策 {run_counts['discarded_environment_decisions']}、optimizer.step {run_counts['discarded_optimizer_steps']}、评估决策 {run_counts['discarded_evaluation_decisions']}、入口耗时 {run_counts['discarded_entrypoint_wall_seconds']} 秒；明细见 `runs/discarded_runs.json`。",
               f"- 首段动作/RNG/GAE 配对：{verification['protocol_checks']['first_rollout_paired']}；首个 mini-batch 身份配对：{verification['protocol_checks']['first_minibatch_identity_matches']}。",
               f"- R1 AdamW 所有实际学习率均核验为 {verification['optimizer_contract']['expected_lr']:.17g}；观测范围 {verification['optimizer_contract']['observed_lr_min']}–{verification['optimizer_contract']['observed_lr_max']}。",
               f"- 物理事实核验：{verification['physical_verifier_status']}；塑形审计：{verification['shaping_audit_status']}。", "",
@@ -1658,6 +1708,7 @@ def _write_summary(out: Path, verification: Mapping[str, Any], report: Mapping[s
 def run_all(out_arg: Path) -> int:
     out = resolve_output_root(out_arg)
     config, source_binding, _initialization = prepare_run(out)
+    _record_discarded_preflight(out)
     stage_results: dict[str, Any] = {}
     try:
         regression_evidence = _write_engineering_evidence(out)
