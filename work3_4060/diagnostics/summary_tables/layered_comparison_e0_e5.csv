@@ -1,0 +1,8 @@
+﻿Layer,Station_1_Time (h),Station_2_Time (h),Station_3_Time (h),Station_4_Time (h),Station_5_Time (h),Bottleneck_H0 (h),Batch_Makespan (h),Final_Aircraft_Exit (h),Worker_Utilization (%),Sync_Waiting_Hours (h),Independent_Verification
+E0_Reference_Replay,14.227,10.393,52.038,6.553,5.504,52.038,525.882,572.416,10.76,1200.32,PASS (violations=0)
+E1_Fixed_Team_Reorder,14.227,10.393,52.038,6.553,5.504,52.038,525.882,572.416,10.76,1200.32,PASS (violations=0)
+E2_Station_Optimum_Fixed_H0,14.227,10.393,49.442,6.553,5.504,52.038,525.882,572.416,10.8,1218.49,PASS (violations=0)
+E2_Station_Optimum_Calibrated_H0,14.227,10.393,49.442,6.553,5.504,49.442,499.927,543.866,11.37,1127.65,PASS (violations=0)
+E3_Online_Action_Postpone_0_7,14.227,12.463,52.038,6.553,5.504,52.038,525.882,572.416,10.76,1198.25,PASS (violations=0)
+E4_ReStation_Task27_to_Station5,14.227,8.178,7.386,5.91,49.832,49.832,548.152,,,,PASS (Analytical Schedule)
+E5_Reallocate_Global_Workers,7.114,8.178,49.442,5.91,5.504,49.442,543.866,,,,PASS (Analytical Schedule)

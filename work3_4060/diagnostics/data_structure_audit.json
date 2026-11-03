@@ -1,0 +1,524 @@
+{
+  "raw_datasets": {
+    "283": {
+      "name": "283",
+      "total_nodes": 290,
+      "milestone_virtual_nodes": 7,
+      "physical_nodes": 283,
+      "precedence_edges_count": 54,
+      "missing_predecessor_refs": 0,
+      "skill_distribution_physical": {
+        "0": 90,
+        "4": 78,
+        "3": 48,
+        "2": 38,
+        "1": 29
+      },
+      "demand_distribution_physical": {
+        "2": 147,
+        "1": 127,
+        "3": 5,
+        "5": 4
+      },
+      "duration_stats_physical": {
+        "min": 0.41,
+        "max": 50.1,
+        "mean": 2.4079858657243816,
+        "median": 1.6,
+        "sum": 681.46,
+        "zero_count": 0,
+        "missing_count": 0
+      },
+      "top5_longest_tasks": [
+        {
+          "ao": "AEQJ00-0080",
+          "duration": 50.1,
+          "skill": 4,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "AYQJ00-0130",
+          "duration": 36.2,
+          "skill": 3,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "AYQJ00-0140",
+          "duration": 18.1,
+          "skill": 3,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BMYY00-0121",
+          "duration": 14.8,
+          "skill": 0,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BMZY00-0130",
+          "duration": 14.8,
+          "skill": 0,
+          "demand": 2,
+          "fixed_station": null
+        }
+      ],
+      "fixed_station_tasks": [
+        {
+          "ao": "AAQS00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 1.7,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FAQJ00-3450",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.9,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FDQJ00-2000",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.1,
+          "skill": 1,
+          "demand": 2
+        },
+        {
+          "ao": "ABQJ00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 3.8,
+          "skill": 2,
+          "demand": 2
+        }
+      ]
+    },
+    "680": {
+      "name": "680",
+      "total_nodes": 715,
+      "milestone_virtual_nodes": 35,
+      "physical_nodes": 680,
+      "precedence_edges_count": 122,
+      "missing_predecessor_refs": 0,
+      "skill_distribution_physical": {
+        "1": 174,
+        "0": 163,
+        "4": 161,
+        "2": 134,
+        "3": 48
+      },
+      "demand_distribution_physical": {
+        "2": 528,
+        "1": 142,
+        "3": 6,
+        "5": 4
+      },
+      "duration_stats_physical": {
+        "min": 0.41,
+        "max": 51.35,
+        "mean": 4.561014705882353,
+        "median": 2.0,
+        "sum": 3101.49,
+        "zero_count": 0,
+        "missing_count": 0
+      },
+      "top5_longest_tasks": [
+        {
+          "ao": "BRHSC1-1090",
+          "duration": 51.35,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRZYF1-0420",
+          "duration": 50.75,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRYYF1-0440",
+          "duration": 50.75,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRHSC1-0630",
+          "duration": 50.25,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRHSC1-1080",
+          "duration": 50.25,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        }
+      ],
+      "fixed_station_tasks": [
+        {
+          "ao": "AAQS00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 1.7,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FAQJ00-3450",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.9,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FDQJ00-2000",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.1,
+          "skill": 1,
+          "demand": 2
+        },
+        {
+          "ao": "ABQJ00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 3.8,
+          "skill": 2,
+          "demand": 2
+        }
+      ]
+    },
+    "2338": {
+      "name": "2338",
+      "total_nodes": 2402,
+      "milestone_virtual_nodes": 64,
+      "physical_nodes": 2338,
+      "precedence_edges_count": 653,
+      "missing_predecessor_refs": 1,
+      "skill_distribution_physical": {
+        "0": 636,
+        "4": 613,
+        "1": 459,
+        "2": 451,
+        "3": 179
+      },
+      "demand_distribution_physical": {
+        "2": 2159,
+        "1": 158,
+        "3": 15,
+        "5": 6
+      },
+      "duration_stats_physical": {
+        "min": 0.3,
+        "max": 51.9,
+        "mean": 3.479153122326775,
+        "median": 1.8,
+        "sum": 8134.26,
+        "zero_count": 0,
+        "missing_count": 0
+      },
+      "top5_longest_tasks": [
+        {
+          "ao": "BRHXB1-1240",
+          "duration": 51.9,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRHSC1-1090",
+          "duration": 51.35,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRHXB1-1210",
+          "duration": 51.1,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRZYF1-0420",
+          "duration": 50.75,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRYYF1-0440",
+          "duration": 50.75,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        }
+      ],
+      "fixed_station_tasks": [
+        {
+          "ao": "AAQS00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 1.7,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FAQJ00-3450",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.9,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FDQJ00-2000",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.1,
+          "skill": 1,
+          "demand": 2
+        },
+        {
+          "ao": "ABQJ00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 3.8,
+          "skill": 2,
+          "demand": 2
+        },
+        {
+          "ao": "C-12",
+          "type": 1,
+          "fixed_station": 2,
+          "duration": 0.0,
+          "skill": -1,
+          "demand": 0
+        }
+      ]
+    },
+    "3182": {
+      "name": "3182",
+      "total_nodes": 3299,
+      "milestone_virtual_nodes": 117,
+      "physical_nodes": 3182,
+      "precedence_edges_count": 834,
+      "missing_predecessor_refs": 1,
+      "skill_distribution_physical": {
+        "0": 852,
+        "4": 801,
+        "1": 598,
+        "2": 592,
+        "3": 339
+      },
+      "demand_distribution_physical": {
+        "2": 2974,
+        "1": 186,
+        "3": 16,
+        "5": 6
+      },
+      "duration_stats_physical": {
+        "min": 0.2,
+        "max": 51.9,
+        "mean": 3.4058170961659333,
+        "median": 1.9,
+        "sum": 10837.31,
+        "zero_count": 0,
+        "missing_count": 0
+      },
+      "top5_longest_tasks": [
+        {
+          "ao": "BRHXB1-1240",
+          "duration": 51.9,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRHSC1-1090",
+          "duration": 51.35,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRHXB1-1210",
+          "duration": 51.1,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRZYF1-0420",
+          "duration": 50.75,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        },
+        {
+          "ao": "BRYYF1-0440",
+          "duration": 50.75,
+          "skill": 1,
+          "demand": 2,
+          "fixed_station": null
+        }
+      ],
+      "fixed_station_tasks": [
+        {
+          "ao": "AAQS00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 1.7,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FAQJ00-3450",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.9,
+          "skill": 0,
+          "demand": 2
+        },
+        {
+          "ao": "FDQJ00-2000",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 2.1,
+          "skill": 1,
+          "demand": 2
+        },
+        {
+          "ao": "ABQJ00-0010",
+          "type": 2,
+          "fixed_station": 1,
+          "duration": 3.8,
+          "skill": 2,
+          "demand": 2
+        },
+        {
+          "ao": "C-12",
+          "type": 1,
+          "fixed_station": 2,
+          "duration": 0.0,
+          "skill": -1,
+          "demand": 0
+        }
+      ]
+    }
+  },
+  "nesting_analysis": {
+    "283_in_680": true,
+    "283_not_in_680_count": 0,
+    "680_in_2338": true,
+    "680_not_in_2338_count": 0,
+    "2338_in_3182": true,
+    "2338_not_in_3182_count": 0,
+    "283_in_3182": true
+  },
+  "reference_schedules": {
+    "283": {
+      "name": "283",
+      "total_tasks_scheduled": 290,
+      "tasks_per_station": {
+        "0": 7,
+        "1": 7,
+        "2": 5,
+        "3": 5,
+        "4": 5,
+        "5": 261
+      },
+      "work_hours_per_station": {
+        "0": 0.0,
+        "1": 12.673452791258235,
+        "2": 6.251323001485903,
+        "3": 58.948006049473605,
+        "4": 10.032841063534509,
+        "5": 553.9516577232346
+      },
+      "schedule_makespan": 254.2867323298869
+    },
+    "680": {
+      "name": "680",
+      "total_tasks_scheduled": 715,
+      "tasks_per_station": {
+        "0": 35,
+        "1": 41,
+        "2": 48,
+        "3": 79,
+        "4": 182,
+        "5": 330
+      },
+      "work_hours_per_station": {
+        "0": 0.0,
+        "1": 267.98135667208703,
+        "2": 278.0060690285442,
+        "3": 546.4479871197661,
+        "4": 574.7957906902125,
+        "5": 1306.173325852975
+      },
+      "schedule_makespan": 449.18630954112496
+    },
+    "2338": {
+      "name": "2338",
+      "total_tasks_scheduled": 2402,
+      "tasks_per_station": {
+        "0": 64,
+        "1": 284,
+        "2": 304,
+        "3": 392,
+        "4": 413,
+        "5": 945
+      },
+      "work_hours_per_station": {
+        "0": 0.0,
+        "1": 1052.8328873041723,
+        "2": 1229.0233537735953,
+        "3": 1223.41141398969,
+        "4": 1568.911873736109,
+        "5": 2631.2543595786815
+      },
+      "schedule_makespan": 933.5808728111188
+    },
+    "3182": {
+      "name": "3182",
+      "total_tasks_scheduled": 3299,
+      "tasks_per_station": {
+        "0": 117,
+        "1": 338,
+        "2": 350,
+        "3": 424,
+        "4": 526,
+        "5": 1544
+      },
+      "work_hours_per_station": {
+        "0": 0.0,
+        "1": 1363.649684975853,
+        "2": 1435.140039124401,
+        "3": 1360.487323894233,
+        "4": 1769.872299798833,
+        "5": 4261.753715760427
+      },
+      "schedule_makespan": 1597.745699595726
+    }
+  },
+  "mini210_audit": {
+    "num_tasks_in_json": 210,
+    "h0": 292.5726004548256,
+    "num_aircraft": 7
+  }
+}

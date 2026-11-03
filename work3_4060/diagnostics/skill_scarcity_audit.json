@@ -1,0 +1,225 @@
+[
+  {
+    "station_name": "Station_1",
+    "num_tasks": 8,
+    "num_workers": 2,
+    "workers": [
+      12,
+      72
+    ],
+    "worker_skills_count": {
+      "0": 2,
+      "1": 2,
+      "2": 2,
+      "3": 0,
+      "4": 0
+    },
+    "task_skills_count": {
+      "0": 6,
+      "1": 1,
+      "2": 1,
+      "3": 0,
+      "4": 0
+    },
+    "total_standard_work_hours": 28.454324426236564,
+    "longest_task": "ABQJ00-0010",
+    "longest_task_est_dur": 3.4832331442763533,
+    "lower_bound_longest_task": 3.4832331442763533,
+    "lower_bound_total_load": 12.940211130986652,
+    "lower_bound_skill_load": 7.80244224317903,
+    "bottleneck_skill": 0,
+    "station_lower_bound": 12.940211130986652,
+    "lockup_risks": [
+      {
+        "scarce_skill": 0,
+        "qualified_workers": [
+          12,
+          72
+        ],
+        "num_tasks_needing_scarce_skill": 6,
+        "other_tasks_competing_for_same_workers": 2
+      },
+      {
+        "scarce_skill": 1,
+        "qualified_workers": [
+          12,
+          72
+        ],
+        "num_tasks_needing_scarce_skill": 1,
+        "other_tasks_competing_for_same_workers": 7
+      },
+      {
+        "scarce_skill": 2,
+        "qualified_workers": [
+          12,
+          72
+        ],
+        "num_tasks_needing_scarce_skill": 1,
+        "other_tasks_competing_for_same_workers": 7
+      }
+    ]
+  },
+  {
+    "station_name": "Station_2",
+    "num_tasks": 5,
+    "num_workers": 4,
+    "workers": [
+      10,
+      18,
+      22,
+      65
+    ],
+    "worker_skills_count": {
+      "0": 4,
+      "1": 3,
+      "2": 4,
+      "3": 2,
+      "4": 2
+    },
+    "task_skills_count": {
+      "0": 4,
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 1
+    },
+    "total_standard_work_hours": 24.526921427927718,
+    "longest_task": "AEQJ00-0010",
+    "longest_task_est_dur": 8.058330355511801,
+    "lower_bound_longest_task": 8.058330355511801,
+    "lower_bound_total_load": 5.718453906790817,
+    "lower_bound_skill_load": 7.655413837736211,
+    "bottleneck_skill": 4,
+    "station_lower_bound": 8.058330355511801,
+    "lockup_risks": [
+      {
+        "scarce_skill": 4,
+        "qualified_workers": [
+          10,
+          22
+        ],
+        "num_tasks_needing_scarce_skill": 1,
+        "other_tasks_competing_for_same_workers": 4
+      }
+    ]
+  },
+  {
+    "station_name": "Station_3",
+    "num_tasks": 5,
+    "num_workers": 6,
+    "workers": [
+      0,
+      47,
+      50,
+      51,
+      66,
+      76
+    ],
+    "worker_skills_count": {
+      "0": 6,
+      "1": 6,
+      "2": 5,
+      "3": 3,
+      "4": 2
+    },
+    "task_skills_count": {
+      "0": 4,
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 1
+    },
+    "total_standard_work_hours": 115.38264213054309,
+    "longest_task": "AEQJ00-0080",
+    "longest_task_est_dur": 48.793365566967026,
+    "lower_bound_longest_task": 48.793365566967026,
+    "lower_bound_total_load": 20.425530602417993,
+    "lower_bound_skill_load": 46.353697288618676,
+    "bottleneck_skill": 4,
+    "station_lower_bound": 48.793365566967026,
+    "lockup_risks": [
+      {
+        "scarce_skill": 4,
+        "qualified_workers": [
+          0,
+          66
+        ],
+        "num_tasks_needing_scarce_skill": 1,
+        "other_tasks_competing_for_same_workers": 4
+      }
+    ]
+  },
+  {
+    "station_name": "Station_4",
+    "num_tasks": 4,
+    "num_workers": 2,
+    "workers": [
+      6,
+      55
+    ],
+    "worker_skills_count": {
+      "0": 2,
+      "1": 2,
+      "2": 0,
+      "3": 0,
+      "4": 0
+    },
+    "task_skills_count": {
+      "0": 4,
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0
+    },
+    "total_standard_work_hours": 13.105972451983547,
+    "longest_task": "AJCP00-0160",
+    "longest_task_est_dur": 2.2729028305955783,
+    "lower_bound_longest_task": 2.2729028305955783,
+    "lower_bound_total_load": 5.912253196251594,
+    "lower_bound_skill_load": 5.912253196251594,
+    "bottleneck_skill": 0,
+    "station_lower_bound": 5.912253196251594,
+    "lockup_risks": []
+  },
+  {
+    "station_name": "Station_5",
+    "num_tasks": 8,
+    "num_workers": 11,
+    "workers": [
+      1,
+      25,
+      28,
+      33,
+      36,
+      44,
+      45,
+      53,
+      56,
+      70,
+      77
+    ],
+    "worker_skills_count": {
+      "0": 11,
+      "1": 8,
+      "2": 8,
+      "3": 6,
+      "4": 5
+    },
+    "task_skills_count": {
+      "0": 6,
+      "1": 0,
+      "2": 1,
+      "3": 1,
+      "4": 0
+    },
+    "total_standard_work_hours": 20.61103443226623,
+    "longest_task": "ABHS00-2180",
+    "longest_task_est_dur": 1.9793343753062616,
+    "lower_bound_longest_task": 1.9793343753062616,
+    "lower_bound_total_load": 1.9137109684485267,
+    "lower_bound_skill_load": 1.3824979772304553,
+    "bottleneck_skill": 0,
+    "station_lower_bound": 1.9793343753062616,
+    "lockup_risks": []
+  }
+]

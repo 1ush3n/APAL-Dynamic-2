@@ -1,0 +1,7 @@
+﻿factor,type,is_legal_strategy,bottleneck_h0,batch_makespan,final_exit,worker_utilization_pct,sync_waiting_hours,explanation
+F0_Strict_Baseline,Production Baseline,True,52.038,525.882,572.416,10.76,1200.32,"Strict constraints active: partitioned worker pool, skill restrictions, concurrency<=3, sync takt."
+F1_Relax_Worker_Pool,Hypothetical System (Global Pooling),False,45.441,465.12,499.851,12.37,940.15,"Assigning top global skill 4 workers (22, 44) to task 27 reduces its duration from 49.44h to 45.44h."
+F2_Relax_Concurrency_Limit,System Relaxation (max_slots >= 10),False,52.038,525.882,572.416,10.76,1200.32,"Zero impact because station worker counts (2, 4, 6, 2) naturally cap concurrency to <= 3."
+F3_Relax_Skill_Qualifications,Hypothetical System (Universal Skills),False,49.442,499.927,543.866,11.37,1127.65,"Skill relaxation allows optimal teaming in St 2 and St 3, identical to E2."
+F4_Relax_Synchronization,Regime Relaxation (Asynchronous Pull Line),False,52.038,404.776,404.776,13.98,0.0,Completely eliminates 1200h of synchronization waiting! Cuts makespan by 121.1h (-23.0%).
+F1_plus_F4_GlobalPool_and_PullLine,Joint System Relaxation,False,45.441,354.21,354.21,15.97,0.0,Synergistic impact: global pooling accelerates bottleneck task 27; pull line eliminates all sync waiting.
