@@ -1,0 +1,1250 @@
+{
+  "num_sites_evaluated": 24,
+  "sampled_sites": [
+    {
+      "site_index": 1,
+      "step": 16,
+      "current_time": 52.037844126999545,
+      "target_task": "1_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.822014766531862,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.5989778992147569,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": 0.0,
+      "delta_penalty": -0.000553324737608385
+    },
+    {
+      "site_index": 2,
+      "step": 43,
+      "current_time": 105.09216804635277,
+      "target_task": "2_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.750169852050219,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5941504618117577,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.07239823921925126
+    },
+    {
+      "site_index": 3,
+      "step": 55,
+      "current_time": 117.40900129775655,
+      "target_task": "2_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.7502255058362555,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5942895962768494,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.0723425854332147
+    },
+    {
+      "site_index": 4,
+      "step": 83,
+      "current_time": 184.9703724120519,
+      "target_task": "3_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.7499123440652524,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5935066918493411,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.07265574720421775
+    },
+    {
+      "site_index": 5,
+      "step": 93,
+      "current_time": 243.85420975253396,
+      "target_task": "3_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.751883004497355,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5984333429295973,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.07068508677211538
+    },
+    {
+      "site_index": 6,
+      "step": 121,
+      "current_time": 265.04804214056037,
+      "target_task": "3_26",
+      "target_task_duration": 8.178272552975228,
+      "target_station": 1,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 675.7166944372045,
+        "final_aircraft_exit_time": 675.7166944372045,
+        "station_clearances": {
+          "station_0": 517.5326041335513,
+          "station_1": 534.8587939443108,
+          "station_2": 644.7449852073511,
+          "station_3": 662.6477275189493,
+          "station_4": 675.7166944372045
+        },
+        "j_total": 3.7814286791275333,
+        "j_takt": 3.5137581526164214,
+        "d_time": 0.5983429829444457,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 182.84839904582722,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -2.098796620507983,
+      "delta_penalty": -0.04113941214193684
+    },
+    {
+      "site_index": 7,
+      "step": 132,
+      "current_time": 268.9186290400391,
+      "target_task": "2_27",
+      "target_task_duration": 49.44236659895083,
+      "target_station": 2,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 668.5336462738354,
+        "final_aircraft_exit_time": 668.5336462738354,
+        "station_clearances": {
+          "station_0": 510.3495559701822,
+          "station_1": 527.6757457809417,
+          "station_2": 637.561937043982,
+          "station_3": 655.4646793555802,
+          "station_4": 668.5336462738354
+        },
+        "j_total": 3.639509213989849,
+        "j_takt": 3.3757230690368885,
+        "d_time": 0.5886320290490683,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 175.6653508824581,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -9.28184478387709,
+      "delta_penalty": -0.18305887727962133
+    },
+    {
+      "site_index": 8,
+      "step": 145,
+      "current_time": 330.1216650417518,
+      "target_task": "4_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.751817125651653,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.598268645815342,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.07075096561781713
+    },
+    {
+      "site_index": 9,
+      "step": 155,
+      "current_time": 335.04276264163605,
+      "target_task": "4_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 676.7770655867586,
+        "final_aircraft_exit_time": 676.7770655867586,
+        "station_clearances": {
+          "station_0": 518.5929752831054,
+          "station_1": 535.9191650938649,
+          "station_2": 645.8053563569051,
+          "station_3": 663.7080986685033,
+          "station_4": 676.7770655867586
+        },
+        "j_total": 3.802622112853836,
+        "j_takt": 3.5341350757450236,
+        "d_time": 0.6003842594386986,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 183.90877019538127,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -1.0384254709539391,
+      "delta_penalty": -0.01994597841563417
+    },
+    {
+      "site_index": 10,
+      "step": 184,
+      "current_time": 355.21409542984264,
+      "target_task": "5_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.7496224965493252,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5927820730595228,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.07294559472014495
+    },
+    {
+      "site_index": 11,
+      "step": 195,
+      "current_time": 366.26773049269036,
+      "target_task": "5_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.7499166336397196,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5935174157855087,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.07265145762975056
+    },
+    {
+      "site_index": 12,
+      "step": 206,
+      "current_time": 420.14532049683675,
+      "target_task": "5_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.7518887364945153,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5984476729224985,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.0706793547749549
+    },
+    {
+      "site_index": 13,
+      "step": 232,
+      "current_time": 438.3756069944826,
+      "target_task": "4_27",
+      "target_task_duration": 49.44236659895083,
+      "target_station": 2,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.9846209374808,
+        "final_aircraft_exit_time": 674.9846209374808,
+        "station_clearances": {
+          "station_0": 516.8005306338276,
+          "station_1": 534.1267204445871,
+          "station_2": 644.0129117076274,
+          "station_3": 661.9156540192256,
+          "station_4": 674.9846209374808
+        },
+        "j_total": 3.7833528215846197,
+        "j_takt": 3.4996900544466154,
+        "d_time": 0.638323584511678,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 182.11632554610352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -2.8308701202316797,
+      "delta_penalty": -0.03921526968485045
+    },
+    {
+      "site_index": 14,
+      "step": 245,
+      "current_time": 444.6293082387975,
+      "target_task": "6_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.7498224794605046,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5932820303374718,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.07274561180896555
+    },
+    {
+      "site_index": 15,
+      "step": 256,
+      "current_time": 455.70179680524217,
+      "target_task": "6_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 674.1773203706432,
+        "final_aircraft_exit_time": 674.1773203706432,
+        "station_clearances": {
+          "station_0": 515.99323006699,
+          "station_1": 533.3194198777495,
+          "station_2": 643.2056111407898,
+          "station_3": 661.108353452388,
+          "station_4": 674.1773203706432
+        },
+        "j_total": 3.7502159862025897,
+        "j_takt": 3.4841763339921825,
+        "d_time": 0.5942657971926845,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 181.3090249792659,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -3.638170687069305,
+      "delta_penalty": -0.0723521050668805
+    },
+    {
+      "site_index": 16,
+      "step": 269,
+      "current_time": 503.0178569298065,
+      "target_task": "6_5",
+      "target_task_duration": 3.638170687069278,
+      "target_station": 0,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 675.4291094465782,
+        "final_aircraft_exit_time": 675.4291094465782,
+        "station_clearances": {
+          "station_0": 517.245019142925,
+          "station_1": 534.5712089536845,
+          "station_2": 644.4574002167247,
+          "station_3": 662.360142528323,
+          "station_4": 675.4291094465782
+        },
+        "j_total": 3.7763240129386793,
+        "j_takt": 3.508231694027467,
+        "d_time": 0.5993974639446964,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 182.5608140552009,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -2.3863816111343112,
+      "delta_penalty": -0.046244078330790916
+    },
+    {
+      "site_index": 17,
+      "step": 295,
+      "current_time": 522.4383492376858,
+      "target_task": "6_26",
+      "target_task_duration": 8.178272552975228,
+      "target_station": 1,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 682.5281573464025,
+        "final_aircraft_exit_time": 682.5281573464025,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 534.858793944311,
+          "station_2": 651.5564481165491,
+          "station_3": 669.4591904281473,
+          "station_4": 682.5281573464025
+        },
+        "j_total": 3.9159295461443677,
+        "j_takt": 3.6446525627033277,
+        "d_time": 0.6073591252692672,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 189.6598619550252,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": 4.712666288690002,
+      "delta_penalty": 0.09336145487489755
+    },
+    {
+      "site_index": 18,
+      "step": 306,
+      "current_time": 526.3089361371643,
+      "target_task": "5_27",
+      "target_task_duration": 49.44236659895083,
+      "target_station": 2,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 675.3451091830333,
+        "final_aircraft_exit_time": 675.3451091830333,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 644.3733999531798,
+          "station_3": 662.2761422647781,
+          "station_4": 675.3451091830333
+        },
+        "j_total": 3.7758641500705843,
+        "j_takt": 3.506617479123792,
+        "d_time": 0.602283344033648,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 182.47681379165599,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -2.4703818746792194,
+      "delta_penalty": -0.04670394119888588
+    },
+    {
+      "site_index": 19,
+      "step": 319,
+      "current_time": 580.7005092296793,
+      "target_task": "3_11",
+      "target_task_duration": 1.6584764761123505,
+      "target_station": 4,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 676.467534917532,
+        "final_aircraft_exit_time": 676.467534917532,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 645.4958256876786,
+          "station_3": 663.3985679992768,
+          "station_4": 676.467534917532
+        },
+        "j_total": 3.7966733361226677,
+        "j_takt": 3.528186891795067,
+        "d_time": 0.599787539390431,
+        "d_team": 0.28571428571428575,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 183.59923952615472,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -1.3479561401804858,
+      "delta_penalty": -0.025894755146802506
+    },
+    {
+      "site_index": 20,
+      "step": 336,
+      "current_time": 591.0558180785838,
+      "target_task": "5_17",
+      "target_task_duration": 1.9563987863105872,
+      "target_station": 3,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 675.9757451805657,
+        "final_aircraft_exit_time": 675.9757451805657,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 662.9067782623105,
+          "station_4": 675.9757451805657
+        },
+        "j_total": 3.78476374788383,
+        "j_takt": 3.5187362747447897,
+        "d_time": 0.5942353495142673,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 183.1074497891884,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -1.839745877146811,
+      "delta_penalty": -0.037804343385640315
+    },
+    {
+      "site_index": 21,
+      "step": 345,
+      "current_time": 596.0691358894155,
+      "target_task": "5_17",
+      "target_task_duration": 1.9563987863105872,
+      "target_station": 3,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 675.9757451805657,
+        "final_aircraft_exit_time": 675.9757451805657,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 662.9067782623105,
+          "station_4": 675.9757451805657
+        },
+        "j_total": 3.7849472523495264,
+        "j_takt": 3.5187362747447897,
+        "d_time": 0.5946941106785091,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 183.1074497891884,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -1.839745877146811,
+      "delta_penalty": -0.03762083891994372
+    },
+    {
+      "site_index": 22,
+      "step": 362,
+      "current_time": 653.2877928093311,
+      "target_task": "6_17",
+      "target_task_duration": 1.9563987863105872,
+      "target_station": 3,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 675.8590922714019,
+        "final_aircraft_exit_time": 675.8590922714019,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 662.7901253531467,
+          "station_4": 675.8590922714019
+        },
+        "j_total": 3.822003355330865,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.5989493712122645,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -1.956398786310615,
+      "delta_penalty": -0.0005647359386049544
+    },
+    {
+      "site_index": 23,
+      "step": 374,
+      "current_time": 661.365563130105,
+      "target_task": "5_11",
+      "target_task_duration": 1.6584764761123505,
+      "target_station": 4,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 676.467534917532,
+        "final_aircraft_exit_time": 676.467534917532,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 676.467534917532
+        },
+        "j_total": 3.8226483286830892,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.5999665664975875,
+        "d_team": 0.28571428571428575,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -1.3479561401804858,
+      "delta_penalty": 8.023741361906644e-05
+    },
+    {
+      "site_index": 24,
+      "step": 391,
+      "current_time": 673.2112259533873,
+      "target_task": "6_23",
+      "target_task_duration": 1.2776411371532181,
+      "target_station": 4,
+      "arm_a_advance": {
+        "makespan_last_task": 677.8154910577125,
+        "final_aircraft_exit_time": 677.8154910577125,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 677.8154910577125
+        },
+        "j_total": 3.82256809126947,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6003612110587767,
+        "d_team": 0.2833333333333334,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "arm_b_immediate": {
+        "makespan_last_task": 676.7770655867587,
+        "final_aircraft_exit_time": 676.7770655867587,
+        "station_clearances": {
+          "station_0": 519.6314007540593,
+          "station_1": 536.9575905648188,
+          "station_2": 646.8437818278591,
+          "station_3": 664.7465241394573,
+          "station_4": 676.7770655867587
+        },
+        "j_total": 3.8226958116041616,
+        "j_takt": 3.554090273512626,
+        "d_time": 0.6000852738002687,
+        "d_team": 0.28571428571428575,
+        "j_postpone": 0.0,
+        "takt_violation_hours": 184.9471956663352,
+        "num_transfers": 11,
+        "verifier_status": "PASS",
+        "violations_count": 13
+      },
+      "delta_makespan": -1.0384254709538254,
+      "delta_penalty": 0.00012772033469143906
+    }
+  ],
+  "whole_trajectory_comparison": {
+    "pure_ppo": {
+      "makespan_last_task": 677.8154910577125,
+      "final_aircraft_exit_time": 677.8154910577125,
+      "station_clearances": {
+        "station_0": 519.6314007540593,
+        "station_1": 536.9575905648188,
+        "station_2": 646.8437818278591,
+        "station_3": 664.7465241394573,
+        "station_4": 677.8154910577125
+      },
+      "j_total": 3.82256809126947,
+      "j_takt": 3.554090273512626,
+      "d_time": 0.6003612110587767,
+      "d_team": 0.2833333333333334,
+      "j_postpone": 0.0,
+      "takt_violation_hours": 184.9471956663352,
+      "num_transfers": 11,
+      "verifier_status": "PASS",
+      "violations_count": 13
+    },
+    "intervention": {
+      "makespan_last_task": 528.475031673507,
+      "final_aircraft_exit_time": 572.416285396995,
+      "station_clearances": {
+        "station_0": 327.6384752768869,
+        "station_1": 372.44318144197206,
+        "station_2": 466.7615994073008,
+        "station_3": 474.89358336898766,
+        "station_4": 528.475031673507
+      },
+      "j_total": 0.14912440560456247,
+      "j_takt": 0.08344395979518478,
+      "d_time": 0.049320162142491866,
+      "d_team": 0.45952380952380956,
+      "j_postpone": 0.0,
+      "takt_violation_hours": 4.342243773161442,
+      "num_transfers": 11,
+      "verifier_status": "PASS",
+      "violations_count": 13
+    },
+    "interventions_applied": 153,
+    "delta_makespan": -149.34045938420547,
+    "delta_penalty": -3.6734436856649078
+  }
+}

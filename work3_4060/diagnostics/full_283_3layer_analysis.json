@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "dataset": "real_283_k10_baseline",
+    "source_csv": "data/283.csv",
+    "evaluator": "diag_full_283_analysis.py"
+  },
+  "root_cause_analysis": {
+    "total_tasks_per_aircraft": 283,
+    "station_counts": {
+      "1": 8,
+      "2": 5,
+      "3": 5,
+      "4": 4,
+      "5": 261
+    },
+    "station_durations": {
+      "1": 14.227162283880471,
+      "2": 12.276352767455348,
+      "3": 58.331658722613284,
+      "4": 6.552986090134932,
+      "5": 626.7782082593642
+    },
+    "st_workers": {
+      "1": 2,
+      "2": 4,
+      "3": 6,
+      "4": 2,
+      "5": 11
+    },
+    "st5_tasks_count": 261,
+    "st5_tasks_work_hours": 626.7782082593642,
+    "st5_earliest_possible_station_distribution": {
+      "1": 261
+    },
+    "csv_restricted_station_counts": {
+      "nan": 286,
+      "1.0": 4
+    }
+  },
+  "layer_a_original_baseline": {
+    "nominal_h0": 292.5726004548256,
+    "completed_tasks": 2830,
+    "transfer_count": 14,
+    "makespan_last_task": 4096.016406367558,
+    "final_aircraft_exit_time": 4096.016406367558,
+    "station_clearances_ac0": {
+      "station_1": 14.227162329533499,
+      "station_2": 301.3083683746616,
+      "station_3": 635.7707069519689,
+      "station_4": 884.270787472726,
+      "station_5": 1462.863002274128
+    },
+    "idle_worker_hours_per_cycle_stations_1_4": {
+      "station_1": 556.6908762505842,
+      "station_2": 1135.3473301399583,
+      "station_3": 1451.6825664750472,
+      "station_4": 572.0392286931527
+    },
+    "total_idle_worker_hours_per_cycle": 3715.7600015587427,
+    "total_idle_worker_hours_14_cycles": 52020.6400218224,
+    "j_total": 1.3119167182893081e-12,
+    "j_takt": 2.137170762049653e-15
+  },
+  "layer_b_fixed_station_optimization": {
+    "station_5_work_duration": 626.784,
+    "concurrency_limit": 3,
+    "slot_concurrency_lower_bound_h": 208.928,
+    "wasted_workers_due_to_slots": 5,
+    "max_potential_h0_reduction_within_fixed_station": 83.642,
+    "verdict": "INTRA_STATION_BOUND_CONSTRAINED_BY_CONCURRENCY_SLOTS"
+  },
+  "layer_c_legal_station_reassignment": {
+    "total_line_work_hours": 718.1663681234481,
+    "total_line_workers": 25,
+    "station_parallel_task_capacities": {
+      "station_1": 1,
+      "station_2": 2,
+      "station_3": 3,
+      "station_4": 1,
+      "station_5": 3
+    },
+    "total_simultaneous_line_tasks": 10,
+    "achievable_balanced_takt_hours": 71.81663681234481,
+    "baseline_h0": 292.57,
+    "potential_takt_reduction_hours": 220.75336318765517,
+    "potential_throughput_multiplier": 4.073847133283038,
+    "verdict": "SUBSTANTIAL_POTENTIAL_VIA_PREPRODUCTION_REASSIGNMENT"
+  }
+}
