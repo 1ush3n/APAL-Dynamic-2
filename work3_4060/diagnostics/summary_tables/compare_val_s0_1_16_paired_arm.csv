@@ -1,0 +1,12 @@
+metric,control,treatment,difference
+Scenario ID,COMPARE_VAL_S0_EARLY_M,COMPARE_VAL_S0_EARLY_M,-
+Target Task,1_16 (Station 0),1_16 (Postponed to Station 1),-
+Verification Status,PASS,PASS,0 violations in both
+Makespan (h),679.388956,669.106701,-10.282255
+Delta P_max (h),10.282255,0.000000,-10.282255
+J_total,0.00006510,0.10051377,0.10044867
+J_takt,0.00000000,0.00000000,0.00000000
+D_time,0.00006510,0.00001879,-0.00004631
+D_team,0.00000000,0.00023810,0.00023810
+J_postpone,0.00000000,0.10000000,0.10000000
+J_revision,0.00000000,0.00025689,0.00025689

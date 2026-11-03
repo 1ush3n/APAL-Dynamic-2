@@ -1,0 +1,86 @@
+{
+  "scenario_id": "COMPARE_VAL_S0_EARLY_M",
+  "target_task": "1_16",
+  "h0": 292.5726004548256,
+  "split_check": {
+    "control": {
+      "step": 16,
+      "time": 14.227162329533499,
+      "cycle": 2,
+      "status": "0",
+      "actual_start": null,
+      "can_reserve": true,
+      "can_postpone": true,
+      "action_chosen": "STATION_EXECUTE",
+      "team_if_execute": [
+        72,
+        12
+      ]
+    },
+    "treatment": {
+      "step": 16,
+      "time": 14.227162329533499,
+      "cycle": 2,
+      "status": "0",
+      "actual_start": null,
+      "can_reserve": true,
+      "can_postpone": true,
+      "action_chosen": "POSTPONE",
+      "team_if_execute": [
+        72,
+        12
+      ]
+    }
+  },
+  "verification": {
+    "control": {
+      "status": "PASS",
+      "violations_count": 0,
+      "recalculated_j_total": 6.510390671106151e-05,
+      "env_cumulative_cost": 6.51039067110615e-05,
+      "ledger_diff": 1.3552527156068805e-20
+    },
+    "treatment": {
+      "status": "PASS",
+      "violations_count": 0,
+      "recalculated_j_total": 0.10051377390505084,
+      "env_cumulative_cost": 0.10051377390505083,
+      "ledger_diff": 1.3877787807814457e-17
+    }
+  },
+  "metrics": {
+    "makespan_control": 679.3889559067779,
+    "makespan_treatment": 669.1067013402608,
+    "delta_makespan": -10.282254566517167,
+    "delta_p_max_control": 10.282254566517196,
+    "delta_p_max_treatment": 0.0,
+    "delta_p_max_diff": -10.282254566517196,
+    "j_total_control": 6.51039067110615e-05,
+    "j_total_treatment": 0.10051377390505083,
+    "delta_j_total": 0.10044866999833976,
+    "j_takt_control": 0.0,
+    "j_takt_treatment": 0.0,
+    "delta_j_takt": 0.0,
+    "d_time_control": 6.51039067110615e-05,
+    "d_time_treatment": 1.879171483794844e-05,
+    "delta_d_time": -4.631219187311306e-05,
+    "d_team_control": 0.0,
+    "d_team_treatment": 0.00023809523809523812,
+    "delta_d_team": 0.00023809523809523812,
+    "j_postpone_control": 0.0,
+    "j_postpone_treatment": 0.1,
+    "delta_j_postpone": 0.1,
+    "j_revision_control": 0.0,
+    "j_revision_treatment": 0.00025688695211764683,
+    "delta_j_revision": 0.00025688695211764683
+  },
+  "task_1_16_treatment": {
+    "current_station": 1,
+    "actual_start": 37.44407121833589,
+    "actual_end": 38.81088086211333,
+    "assigned_team": [
+      10,
+      18
+    ]
+  }
+}
