@@ -1,0 +1,12 @@
+cycle,nominal_transfer_time_h,scenario_transfer_time_h,cycle_delay_h,status_note
+1,52.037844,52.037844,+0.000000,Pre-disturbance: normal operation
+2,104.075688,104.075688,+0.000000,Pre-disturbance: normal operation
+3,156.113532,156.113532,+0.000000,Pre-disturbance: normal operation
+4,208.151377,236.778605,+28.627229,Full-line bottleneck delay steady transfer (+28.63h)
+5,260.189221,288.816450,+28.627229,Full-line bottleneck delay steady transfer (+28.63h)
+6,312.227065,340.854294,+28.627229,Full-line bottleneck delay steady transfer (+28.63h)
+7,364.264909,392.892138,+28.627229,Full-line bottleneck delay steady transfer (+28.63h)
+8,416.302753,444.929982,+28.627229,Full-line bottleneck delay steady transfer (+28.63h)
+9,468.340597,496.967826,+28.627229,Full-line bottleneck delay steady transfer (+28.63h)
+10,520.378441,520.378441,+0.000000,Line draining catch-up: recovered to nominal
+11,572.416285,572.416285,+0.000000,Final completion: makespan unchanged

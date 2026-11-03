@@ -1,0 +1,3 @@
+experiment,target_count,postponed_count,batch_completed,makespan_h,j_total,cost_postpone,cost_takt,cost_team,cost_time,cost_revision,steps
+five_pairs_joint,10,10,True,572.416285,1.005380,1.0000,2.730869e-15,0.002381,0.000309,0.002690,220
+all_17_joint,17,17,True,572.416285,1.865889,1.7000,1.562784e-01,0.004048,0.000758,0.004805,227

@@ -1,0 +1,4 @@
+preset_site,split_task,action_ctrl,action_treat,ctrl_completed,treat_completed,ctrl_makespan_h,treat_makespan_h,delta_makespan_h,ctrl_j_total,treat_j_total,delta_j_total,delta_cost_postpone,delta_cost_takt,delta_cost_revision,delta_cost_team,delta_cost_time,treat_postponed_task_start_station,treat_postponed_task_team
+Preset_Site_1_Nominal_Task_0_7,0_7,STATION_EXECUTE,POSTPONE,True,True,572.416285,572.416285,+0.000000,0.000000,0.100476,+0.100476,+0.1000,+0.000000e+00,+0.000238,+0.000238,+0.000000,1,"[10, 18]"
+Preset_Site_2_Moderate_Task_1_7,1_7,STATION_EXECUTE,POSTPONE,True,True,572.416285,572.416285,+0.000000,0.000566,0.100861,+0.100295,+0.1000,+0.000000e+00,+0.000147,+0.000238,-0.000091,1,"[10, 18]"
+Preset_Site_3_Strong_Task_0_18,0_18,STATION_EXECUTE,POSTPONE,True,True,572.416285,572.416285,+0.000000,0.551171,0.651696,+0.100525,+0.1000,+0.000000e+00,+0.000263,+0.000238,+0.000024,2,"[47, 50]"

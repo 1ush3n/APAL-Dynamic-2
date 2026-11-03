@@ -1,0 +1,6 @@
+pair,aircraft_id,predecessor_u,successor_v,v_postponed,u_unlocked_and_postponed,batch_completed,makespan_h,j_total,cost_postpone,cost_takt,cost_team,cost_time,cost_revision,steps
+6->7,0,6,7,True,True,True,572.416285,0.200953,0.2000,2.730869e-15,0.000476,0.000000,0.000477,212
+15->16,0,15,16,True,True,True,572.416285,0.200954,0.2000,2.730869e-15,0.000476,0.000001,0.000477,212
+8->9,0,8,9,True,True,True,572.416285,0.222907,0.2000,2.177745e-02,0.000476,0.000088,0.000565,212
+12->13,0,12,13,True,True,True,572.416285,0.201339,0.2000,2.730869e-15,0.000476,0.000193,0.000669,212
+20->21,0,20,21,True,True,True,572.416285,0.201320,0.2000,2.730869e-15,0.000476,0.000184,0.000660,212

@@ -1,0 +1,520 @@
+{
+  "static_eligibility_per_aircraft": {
+    "0": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      25,
+      26,
+      28,
+      29
+    ],
+    "1": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      25,
+      26,
+      28,
+      29
+    ],
+    "2": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      25,
+      26,
+      28,
+      29
+    ],
+    "3": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      25,
+      26,
+      28,
+      29
+    ],
+    "4": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      25,
+      26,
+      28,
+      29
+    ],
+    "5": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      25,
+      26,
+      28,
+      29
+    ],
+    "6": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      25,
+      26,
+      28,
+      29
+    ]
+  },
+  "static_count_per_aircraft": 17,
+  "total_static_count": 119,
+  "initial_legal_count": 2,
+  "initial_legal_tasks": [
+    "0_7",
+    "0_16"
+  ],
+  "pair_witnesses": {
+    "6->7": {
+      "pair": [
+        6,
+        7
+      ],
+      "aircraft_id": 0,
+      "u_postponed": true,
+      "v_postponed": true,
+      "terminated": true,
+      "all_completed": true,
+      "completed_count": 210,
+      "total_tasks": 210,
+      "witness_events": [
+        {
+          "phase": "pre_v_postpone",
+          "time": 0.0,
+          "step": 0,
+          "u_status": "READY",
+          "v_status": "UNREADY",
+          "u_can_postpone": false,
+          "u_error": "工序 0_6 仍有本站未完成后继 [7]，禁止后移",
+          "v_can_postpone": true,
+          "v_error": null
+        },
+        {
+          "phase": "post_v_postpone_u_unlock_check",
+          "time": 0.0,
+          "step": 1,
+          "u_status": "READY",
+          "v_status": "POSTPONED",
+          "u_can_postpone": true,
+          "u_error": null
+        },
+        {
+          "phase": "post_u_postpone",
+          "time": 0.0,
+          "step": 2,
+          "u_status": "POSTPONED",
+          "v_status": "POSTPONED",
+          "u_station": 1,
+          "v_station": 1
+        }
+      ],
+      "costs": {
+        "cumulative_cost": 0.2009532047889198,
+        "cost_takt": 2.7308692267343145e-15,
+        "cost_time": 4.1191826807441054e-07,
+        "cost_team": 0.00047619047619047624,
+        "cost_postpone": 0.2,
+        "cost_revision": 0.0004766023944585297,
+        "makespan": 572.416285396995
+      },
+      "final_step_count": 212
+    },
+    "15->16": {
+      "pair": [
+        15,
+        16
+      ],
+      "aircraft_id": 0,
+      "u_postponed": true,
+      "v_postponed": true,
+      "terminated": true,
+      "all_completed": true,
+      "completed_count": 210,
+      "total_tasks": 210,
+      "witness_events": [
+        {
+          "phase": "pre_v_postpone",
+          "time": 0.0,
+          "step": 0,
+          "u_status": "READY",
+          "v_status": "UNREADY",
+          "u_can_postpone": false,
+          "u_error": "工序 0_15 仍有本站未完成后继 [16]，禁止后移",
+          "v_can_postpone": true,
+          "v_error": null
+        },
+        {
+          "phase": "post_v_postpone_u_unlock_check",
+          "time": 0.0,
+          "step": 1,
+          "u_status": "READY",
+          "v_status": "POSTPONED",
+          "u_can_postpone": true,
+          "u_error": null
+        },
+        {
+          "phase": "post_u_postpone",
+          "time": 0.0,
+          "step": 2,
+          "u_status": "POSTPONED",
+          "v_status": "POSTPONED",
+          "u_station": 1,
+          "v_station": 1
+        }
+      ],
+      "costs": {
+        "cumulative_cost": 0.20095352926693263,
+        "cost_takt": 2.7308692267343145e-15,
+        "cost_time": 5.741572744757886e-07,
+        "cost_team": 0.00047619047619047624,
+        "cost_postpone": 0.2,
+        "cost_revision": 0.0004767646334649311,
+        "makespan": 572.416285396995
+      },
+      "final_step_count": 212
+    },
+    "8->9": {
+      "pair": [
+        8,
+        9
+      ],
+      "aircraft_id": 0,
+      "u_postponed": true,
+      "v_postponed": true,
+      "terminated": true,
+      "all_completed": true,
+      "completed_count": 210,
+      "total_tasks": 210,
+      "witness_events": [
+        {
+          "phase": "pre_v_postpone",
+          "time": 52.037844126999545,
+          "step": 8,
+          "u_status": "READY",
+          "v_status": "UNREADY",
+          "u_can_postpone": false,
+          "u_error": "工序 0_8 仍有本站未完成后继 [9]，禁止后移",
+          "v_can_postpone": true,
+          "v_error": null
+        },
+        {
+          "phase": "post_v_postpone_u_unlock_check",
+          "time": 52.037844126999545,
+          "step": 9,
+          "u_status": "READY",
+          "v_status": "POSTPONED",
+          "u_can_postpone": true,
+          "u_error": null
+        },
+        {
+          "phase": "post_u_postpone",
+          "time": 52.037844126999545,
+          "step": 10,
+          "u_status": "POSTPONED",
+          "v_status": "POSTPONED",
+          "u_station": 2,
+          "v_station": 2
+        }
+      ],
+      "costs": {
+        "cumulative_cost": 0.22290670534912257,
+        "cost_takt": 0.021777452847388936,
+        "cost_time": 8.843577467637385e-05,
+        "cost_team": 0.00047619047619047624,
+        "cost_postpone": 0.2,
+        "cost_revision": 0.0005646262508668293,
+        "makespan": 572.416285396995
+      },
+      "final_step_count": 212
+    },
+    "12->13": {
+      "pair": [
+        12,
+        13
+      ],
+      "aircraft_id": 0,
+      "u_postponed": true,
+      "v_postponed": true,
+      "terminated": true,
+      "all_completed": true,
+      "completed_count": 210,
+      "total_tasks": 210,
+      "witness_events": [
+        {
+          "phase": "pre_v_postpone",
+          "time": 104.07568825399909,
+          "step": 21,
+          "u_status": "READY",
+          "v_status": "UNREADY",
+          "u_can_postpone": false,
+          "u_error": "工序 0_12 仍有本站未完成后继 [13]，禁止后移",
+          "v_can_postpone": true,
+          "v_error": null
+        },
+        {
+          "phase": "post_v_postpone_u_unlock_check",
+          "time": 104.07568825399909,
+          "step": 22,
+          "u_status": "READY",
+          "v_status": "POSTPONED",
+          "u_can_postpone": true,
+          "u_error": null
+        },
+        {
+          "phase": "post_u_postpone",
+          "time": 104.07568825399909,
+          "step": 23,
+          "u_status": "POSTPONED",
+          "v_status": "POSTPONED",
+          "u_station": 3,
+          "v_station": 3
+        }
+      ],
+      "costs": {
+        "cumulative_cost": 0.20133858966747817,
+        "cost_takt": 2.7308692267343145e-15,
+        "cost_time": 0.00019310435754727918,
+        "cost_team": 0.00047619047619047624,
+        "cost_postpone": 0.2,
+        "cost_revision": 0.0006692948337377346,
+        "makespan": 572.416285396995
+      },
+      "final_step_count": 212
+    },
+    "20->21": {
+      "pair": [
+        20,
+        21
+      ],
+      "aircraft_id": 0,
+      "u_postponed": true,
+      "v_postponed": true,
+      "terminated": true,
+      "all_completed": true,
+      "completed_count": 210,
+      "total_tasks": 210,
+      "witness_events": [
+        {
+          "phase": "pre_v_postpone",
+          "time": 156.11353238099863,
+          "step": 39,
+          "u_status": "READY",
+          "v_status": "UNREADY",
+          "u_can_postpone": false,
+          "u_error": "工序 0_20 仍有本站未完成后继 [21]，禁止后移",
+          "v_can_postpone": true,
+          "v_error": null
+        },
+        {
+          "phase": "post_v_postpone_u_unlock_check",
+          "time": 156.11353238099863,
+          "step": 40,
+          "u_status": "READY",
+          "v_status": "POSTPONED",
+          "u_can_postpone": true,
+          "u_error": null
+        },
+        {
+          "phase": "post_u_postpone",
+          "time": 156.11353238099863,
+          "step": 41,
+          "u_status": "POSTPONED",
+          "v_status": "POSTPONED",
+          "u_station": 4,
+          "v_station": 4
+        }
+      ],
+      "costs": {
+        "cumulative_cost": 0.20131980809788466,
+        "cost_takt": 2.7308692267343145e-15,
+        "cost_time": 0.00018371357275052456,
+        "cost_team": 0.00047619047619047624,
+        "cost_postpone": 0.2,
+        "cost_revision": 0.0006599040489409803,
+        "makespan": 572.416285396995
+      },
+      "final_step_count": 212
+    }
+  },
+  "joint_postponement_capacity": {
+    "five_pairs_joint": {
+      "target_tasks": [
+        "0_6",
+        "0_7",
+        "0_15",
+        "0_16",
+        "0_8",
+        "0_9",
+        "0_12",
+        "0_13",
+        "0_20",
+        "0_21"
+      ],
+      "postponed_count": 10,
+      "postponed_tasks": [
+        "0_12",
+        "0_13",
+        "0_15",
+        "0_16",
+        "0_20",
+        "0_21",
+        "0_6",
+        "0_7",
+        "0_8",
+        "0_9"
+      ],
+      "all_completed": true,
+      "completed_count": 210,
+      "makespan": 572.416285396995,
+      "cumulative_cost": 1.0053802599519246,
+      "cost_postpone": 0.9999999999999999,
+      "cost_takt": 2.7308692267343145e-15,
+      "cost_team": 0.0023809523809523816,
+      "cost_time": 0.0003091775950088404,
+      "cost_revision": 0.0026901299759612015,
+      "witness_log": [
+        {
+          "u": 6,
+          "v": 7,
+          "time": 0.0,
+          "station": 1
+        },
+        {
+          "u": 15,
+          "v": 16,
+          "time": 0.0,
+          "station": 1
+        },
+        {
+          "u": 8,
+          "v": 9,
+          "time": 52.037844126999545,
+          "station": 2
+        },
+        {
+          "u": 12,
+          "v": 13,
+          "time": 104.07568825399909,
+          "station": 3
+        },
+        {
+          "u": 20,
+          "v": 21,
+          "time": 156.11353238099863,
+          "station": 4
+        }
+      ],
+      "steps": 220
+    },
+    "all_17_joint": {
+      "target_count": 17,
+      "postponed_count": 17,
+      "postponed_tasks": [
+        "0_10",
+        "0_12",
+        "0_13",
+        "0_15",
+        "0_16",
+        "0_17",
+        "0_18",
+        "0_20",
+        "0_21",
+        "0_25",
+        "0_26",
+        "0_28",
+        "0_29",
+        "0_6",
+        "0_7",
+        "0_8",
+        "0_9"
+      ],
+      "all_completed": true,
+      "completed_count": 210,
+      "makespan": 572.416285396995,
+      "cumulative_cost": 1.8658890689329728,
+      "cost_postpone": 1.7000000000000004,
+      "cost_takt": 0.156278448392771,
+      "cost_team": 0.004047619047619049,
+      "cost_time": 0.0007576912224819995,
+      "cost_revision": 0.00480531027010103,
+      "steps": 227
+    }
+  }
+}
