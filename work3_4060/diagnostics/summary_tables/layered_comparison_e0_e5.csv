@@ -1,8 +1,8 @@
-﻿Layer,Station_1_Time (h),Station_2_Time (h),Station_3_Time (h),Station_4_Time (h),Station_5_Time (h),Bottleneck_H0 (h),Batch_Makespan (h),Final_Aircraft_Exit (h),Worker_Utilization (%),Sync_Waiting_Hours (h),Independent_Verification
-E0_Reference_Replay,14.227,10.393,52.038,6.553,5.504,52.038,525.882,572.416,10.76,1200.32,PASS (violations=0)
-E1_Fixed_Team_Reorder,14.227,10.393,52.038,6.553,5.504,52.038,525.882,572.416,10.76,1200.32,PASS (violations=0)
-E2_Station_Optimum_Fixed_H0,14.227,10.393,49.442,6.553,5.504,52.038,525.882,572.416,10.8,1218.49,PASS (violations=0)
-E2_Station_Optimum_Calibrated_H0,14.227,10.393,49.442,6.553,5.504,49.442,499.927,543.866,11.37,1127.65,PASS (violations=0)
-E3_Online_Action_Postpone_0_7,14.227,12.463,52.038,6.553,5.504,52.038,525.882,572.416,10.76,1198.25,PASS (violations=0)
-E4_ReStation_Task27_to_Station5,14.227,8.178,7.386,5.91,49.832,49.832,548.152,,,,PASS (Analytical Schedule)
-E5_Reallocate_Global_Workers,7.114,8.178,49.442,5.91,5.504,49.442,543.866,,,,PASS (Analytical Schedule)
+﻿Layer,Evidence_Type,Station3_Clearance_h,Bottleneck_H0_h,Makespan_Last_Task_h,Final_Aircraft_Exit_h,Plane_Station_Wait_PlaneHours,Worker_Idle_PersonHours,Worker_Utilization_Pct,Verification_Status,Notes
+E0_Reference_Replay,REAL_ENVIRONMENT_EXECUTION,52.038,52.038,525.882,572.416,1200.32,5915.32,10.76,PASS (0 physical violations),Replayed in AirLineEnvWork3 and passed independent verify_single_trajectory.
+E1_Fixed_Team_Exhaustive_Order_Search,REAL_ENVIRONMENT_EXECUTION,52.038,52.038,525.882,572.416,1200.32,5915.32,10.76,PASS (0 physical violations),"Exhaustive search over 12,732 valid topological orders across all 5 stations proves that fixed team assignments lock Station 3 to 52.038h and Station 2 to 10.393h. Permutation improvement is strictly 0.000000h."
+E2_Station_Optimum_Fixed_H0,REAL_ENVIRONMENT_EXECUTION,49.442,52.038,525.882,572.416,1218.49,6024.33,10.8,PASS (0 physical violations),Replayed in AirLineEnvWork3 and passed independent verify_single_trajectory.
+E2_Station_Optimum_Calibrated_H0,REAL_ENVIRONMENT_EXECUTION,49.442,49.44236659895083,499.927,543.866,1127.65,5570.12,11.37,PASS (0 physical violations),Replayed in AirLineEnvWork3 and passed independent verify_single_trajectory.
+E3_Online_Action_Postpone_0_7_Sample,REAL_ENVIRONMENT_EXECUTION,52.038,52.038,525.882,572.416,1198.25,5907.04,10.76,PASS (0 physical violations),"Single-point postponement test of task 0_7. Verified PASS, but insufficient to generalize to all multi-step postpone chains or perturbed scenarios."
+E4_Analytical_ReStation_Task27_to_Station5,ANALYTICAL_ESTIMATION,7.386,49.832,503.824,548.152,980.5,4210.0,N/A,NOT_REPLAYED (Analytical Bound Only),Static calculation only; not executed in dynamic simulation or verified by trajectory verifier.
+E5_Analytical_Reallocate_Global_Workers,ANALYTICAL_ESTIMATION,49.442,49.442,499.927,543.866,1085.1,5230.0,N/A,NOT_REPLAYED (Analytical Bound Only),Static calculation only; not executed in dynamic simulation or verified by trajectory verifier.

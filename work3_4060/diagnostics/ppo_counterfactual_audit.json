@@ -1,0 +1,1623 @@
+{
+  "total_steps": 395,
+  "total_advances": 185,
+  "advances_forced_by_worker_busy": 48,
+  "advances_with_immediate_work_possible": 137,
+  "verifier_result": {
+    "trajectory_file": "tmpkaa0fs1o.json",
+    "status": "PASS",
+    "total_violations": 0,
+    "violations": {
+      "schema_violation": [],
+      "non_finite_value": [],
+      "task_set_mismatch": [],
+      "aircraft_set_mismatch": [],
+      "cycle_set_mismatch": [],
+      "step_rewards_violation": [],
+      "worker_overlap": [],
+      "station_overflow": [],
+      "precedence_inversion": [],
+      "station_interval_violation": [],
+      "scenario_binding_violation": [],
+      "revision_history_invalid": [],
+      "cost_reconciliation_mismatch": []
+    },
+    "recalculated_costs": {
+      "j_takt": 3.554090273512626,
+      "d_time": 0.12007224221175535,
+      "d_team": 0.01416666666666667,
+      "j_postpone": 0.0,
+      "j_revision": 0.13423890887842205,
+      "j_total": 3.82256809126947
+    },
+    "reported_costs": {
+      "j_takt": 3.554090273512626,
+      "d_time": 0.12007224221175539,
+      "d_team": 0.014166666666666682,
+      "j_postpone": 0.0,
+      "j_revision": 0.13423890887842213,
+      "j_total": 3.822568091269464
+    },
+    "reconciliation_differences": {
+      "j_takt_diff": 0.0,
+      "d_time_diff": 4.163336342344337e-17,
+      "d_team_diff": 1.214306433183765e-17,
+      "j_postpone_diff": 0.0,
+      "j_revision_diff": 8.326672684688674e-17,
+      "j_total_diff": 6.217248937900877e-15
+    }
+  },
+  "sample_advances": [
+    {
+      "step": 2,
+      "current_time": 0.0,
+      "candidate_count": 6,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 4,
+      "current_time": 1.6276026757941506,
+      "candidate_count": 5,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 6,
+      "current_time": 4.404101358031231,
+      "candidate_count": 4,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 8,
+      "current_time": 5.447681897216892,
+      "candidate_count": 3,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 10,
+      "current_time": 5.993407500277284,
+      "candidate_count": 2,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 12,
+      "current_time": 9.631578187346562,
+      "candidate_count": 1,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 16,
+      "current_time": 52.037844126999545,
+      "candidate_count": 11,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "1_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "0_8",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            18,
+            65
+          ]
+        },
+        {
+          "task_key": "0_9",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            18,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "step": 18,
+      "current_time": 52.59948453124001,
+      "candidate_count": 10,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "1_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "0_9",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            22,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "step": 20,
+      "current_time": 53.79417740506029,
+      "candidate_count": 9,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "1_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "0_9",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            22,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "step": 22,
+      "current_time": 54.89774963596207,
+      "candidate_count": 8,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "1_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        }
+      ]
+    },
+    {
+      "step": 25,
+      "current_time": 63.0760221889373,
+      "candidate_count": 6,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 26,
+      "current_time": 64.44283183271473,
+      "candidate_count": 6,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 28,
+      "current_time": 64.70362486473145,
+      "candidate_count": 5,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 30,
+      "current_time": 67.48012354696853,
+      "candidate_count": 4,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 32,
+      "current_time": 68.52370408615418,
+      "candidate_count": 3,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 34,
+      "current_time": 69.06942968921457,
+      "candidate_count": 2,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 36,
+      "current_time": 72.70760037628385,
+      "candidate_count": 1,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 40,
+      "current_time": 104.07568825399909,
+      "candidate_count": 16,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_8",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            10,
+            18,
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "1_9",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            10,
+            18,
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "1_18",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            10,
+            18,
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "1_25",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            10,
+            18,
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "1_26",
+          "station": 1,
+          "skill": 4,
+          "demand": 2,
+          "qualified_free_workers": [
+            10,
+            22
+          ]
+        },
+        {
+          "task_key": "0_12",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        },
+        {
+          "task_key": "0_13",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        }
+      ]
+    },
+    {
+      "step": 43,
+      "current_time": 105.09216804635277,
+      "candidate_count": 14,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_8",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "1_9",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "0_12",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        },
+        {
+          "task_key": "0_13",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        }
+      ]
+    },
+    {
+      "step": 45,
+      "current_time": 105.66926545150324,
+      "candidate_count": 13,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_9",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "0_12",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        },
+        {
+          "task_key": "0_13",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        }
+      ]
+    },
+    {
+      "step": 47,
+      "current_time": 106.86395832532351,
+      "candidate_count": 12,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "1_9",
+          "station": 1,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            22,
+            65
+          ]
+        },
+        {
+          "task_key": "0_12",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        },
+        {
+          "task_key": "0_13",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        }
+      ]
+    },
+    {
+      "step": 49,
+      "current_time": 107.96753055622528,
+      "candidate_count": 11,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "0_12",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        },
+        {
+          "task_key": "0_13",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        }
+      ]
+    },
+    {
+      "step": 50,
+      "current_time": 108.84228766862847,
+      "candidate_count": 11,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "0_12",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            0,
+            47,
+            50,
+            51,
+            66,
+            76
+          ]
+        },
+        {
+          "task_key": "0_13",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            0,
+            47,
+            50,
+            51,
+            66,
+            76
+          ]
+        },
+        {
+          "task_key": "0_27",
+          "station": 2,
+          "skill": 4,
+          "demand": 2,
+          "qualified_free_workers": [
+            0,
+            66
+          ]
+        }
+      ]
+    },
+    {
+      "step": 53,
+      "current_time": 116.14580310920051,
+      "candidate_count": 9,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "0_13",
+          "station": 2,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            47,
+            50,
+            51,
+            76
+          ]
+        }
+      ]
+    },
+    {
+      "step": 55,
+      "current_time": 117.40900129775655,
+      "candidate_count": 8,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        }
+      ]
+    },
+    {
+      "step": 56,
+      "current_time": 117.51261275297794,
+      "candidate_count": 8,
+      "verdict": "AVOIDABLE_ADVANCE",
+      "feasible_immediate_tasks": [
+        {
+          "task_key": "2_2",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_3",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_4",
+          "station": 0,
+          "skill": 1,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_5",
+          "station": 0,
+          "skill": 2,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_6",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_7",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_15",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        },
+        {
+          "task_key": "2_16",
+          "station": 0,
+          "skill": 0,
+          "demand": 2,
+          "qualified_free_workers": [
+            12,
+            72
+          ]
+        }
+      ]
+    },
+    {
+      "step": 59,
+      "current_time": 166.85136789670736,
+      "candidate_count": 6,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 60,
+      "current_time": 168.18364723620004,
+      "candidate_count": 6,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 62,
+      "current_time": 168.4789705725015,
+      "candidate_count": 5,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    },
+    {
+      "step": 64,
+      "current_time": 171.25546925473859,
+      "candidate_count": 4,
+      "verdict": "FORCED_ADVANCE_WORKERS_BUSY",
+      "feasible_immediate_tasks": []
+    }
+  ]
+}

@@ -1,7 +1,7 @@
-﻿factor,type,is_legal_strategy,bottleneck_h0,batch_makespan,final_exit,worker_utilization_pct,sync_waiting_hours,explanation
-F0_Strict_Baseline,Production Baseline,True,52.038,525.882,572.416,10.76,1200.32,"Strict constraints active: partitioned worker pool, skill restrictions, concurrency<=3, sync takt."
-F1_Relax_Worker_Pool,Hypothetical System (Global Pooling),False,45.441,465.12,499.851,12.37,940.15,"Assigning top global skill 4 workers (22, 44) to task 27 reduces its duration from 49.44h to 45.44h."
-F2_Relax_Concurrency_Limit,System Relaxation (max_slots >= 10),False,52.038,525.882,572.416,10.76,1200.32,"Zero impact because station worker counts (2, 4, 6, 2) naturally cap concurrency to <= 3."
-F3_Relax_Skill_Qualifications,Hypothetical System (Universal Skills),False,49.442,499.927,543.866,11.37,1127.65,"Skill relaxation allows optimal teaming in St 2 and St 3, identical to E2."
-F4_Relax_Synchronization,Regime Relaxation (Asynchronous Pull Line),False,52.038,404.776,404.776,13.98,0.0,Completely eliminates 1200h of synchronization waiting! Cuts makespan by 121.1h (-23.0%).
-F1_plus_F4_GlobalPool_and_PullLine,Joint System Relaxation,False,45.441,354.21,354.21,15.97,0.0,Synergistic impact: global pooling accelerates bottleneck task 27; pull line eliminates all sync waiting.
+﻿factor,evidence_type,is_legal_strategy,bottleneck_h0,makespan_last_task,final_aircraft_exit_time,plane_station_waiting_hours,worker_idle_person_hours,worker_utilization_pct,explanation
+F0_Strict_Baseline,REAL_ENVIRONMENT_EXECUTION,True,52.038,525.882,572.416,1200.32,5915.32,10.76,"Strict production baseline: partitioned 25 workers, skill restrictions, concurrency<=3, nominal sync clock."
+F1_Relax_Worker_Pool,THEORETICAL_BOUND_ANALYTICAL,False,45.441,465.12,499.851,940.15,4635.0,12.37,"Assigning top global skill 4 workers (22, 44) to task 27 reduces its duration from 49.44h to 45.44h."
+F2_Relax_Concurrency_Limit,ANALYTICAL_PROOF,False,52.038,525.882,572.416,1200.32,5915.32,10.76,"Zero impact: Station staffing (2, 4, 6, 2) naturally caps concurrent tasks to <= 3. Concurrency is an inactive constraint."
+F3_Relax_Skill_Qualifications,THEORETICAL_BOUND_ANALYTICAL,False,49.442,499.927,543.866,1127.65,5570.12,11.37,Allows optimal teaming in St 2 (7.42h) and St 3 (49.44h). Bottleneck remains limited by Task 27 at 49.44h.
+F4_Relax_Synchronous_Takt_Clock,RECURRENCE_MODEL_RELAXATION,False,52.038,404.776,404.776,412.18,2035.4,13.98,Removes nominal H0 time barrier; transfers immediately when all active stations clear. (Note: stations still transfer synchronously).
+F1_plus_F4_GlobalPool_and_ClearedPulse,THEORETICAL_BOUND_ANALYTICAL,False,45.441,354.21,354.21,320.0,1580.0,15.97,Global pooling accelerates bottleneck task 27 to 45.44h; cleared-pulse transfer avoids waiting for rigid nominal clock.

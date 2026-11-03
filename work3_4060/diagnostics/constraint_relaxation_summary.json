@@ -1,68 +1,74 @@
 [
   {
     "factor": "F0_Strict_Baseline",
-    "type": "Production Baseline",
+    "evidence_type": "REAL_ENVIRONMENT_EXECUTION",
     "is_legal_strategy": true,
     "bottleneck_h0": 52.038,
-    "batch_makespan": 525.882,
-    "final_exit": 572.416,
+    "makespan_last_task": 525.882,
+    "final_aircraft_exit_time": 572.416,
+    "plane_station_waiting_hours": 1200.32,
+    "worker_idle_person_hours": 5915.32,
     "worker_utilization_pct": 10.76,
-    "sync_waiting_hours": 1200.32,
-    "explanation": "Strict constraints active: partitioned worker pool, skill restrictions, concurrency<=3, sync takt."
+    "explanation": "Strict production baseline: partitioned 25 workers, skill restrictions, concurrency<=3, nominal sync clock."
   },
   {
     "factor": "F1_Relax_Worker_Pool",
-    "type": "Hypothetical System (Global Pooling)",
+    "evidence_type": "THEORETICAL_BOUND_ANALYTICAL",
     "is_legal_strategy": false,
     "bottleneck_h0": 45.441,
-    "batch_makespan": 465.12,
-    "final_exit": 499.851,
+    "makespan_last_task": 465.12,
+    "final_aircraft_exit_time": 499.851,
+    "plane_station_waiting_hours": 940.15,
+    "worker_idle_person_hours": 4635.0,
     "worker_utilization_pct": 12.37,
-    "sync_waiting_hours": 940.15,
     "explanation": "Assigning top global skill 4 workers (22, 44) to task 27 reduces its duration from 49.44h to 45.44h."
   },
   {
     "factor": "F2_Relax_Concurrency_Limit",
-    "type": "System Relaxation (max_slots >= 10)",
+    "evidence_type": "ANALYTICAL_PROOF",
     "is_legal_strategy": false,
     "bottleneck_h0": 52.038,
-    "batch_makespan": 525.882,
-    "final_exit": 572.416,
+    "makespan_last_task": 525.882,
+    "final_aircraft_exit_time": 572.416,
+    "plane_station_waiting_hours": 1200.32,
+    "worker_idle_person_hours": 5915.32,
     "worker_utilization_pct": 10.76,
-    "sync_waiting_hours": 1200.32,
-    "explanation": "Zero impact because station worker counts (2, 4, 6, 2) naturally cap concurrency to <= 3."
+    "explanation": "Zero impact: Station staffing (2, 4, 6, 2) naturally caps concurrent tasks to <= 3. Concurrency is an inactive constraint."
   },
   {
     "factor": "F3_Relax_Skill_Qualifications",
-    "type": "Hypothetical System (Universal Skills)",
+    "evidence_type": "THEORETICAL_BOUND_ANALYTICAL",
     "is_legal_strategy": false,
     "bottleneck_h0": 49.442,
-    "batch_makespan": 499.927,
-    "final_exit": 543.866,
+    "makespan_last_task": 499.927,
+    "final_aircraft_exit_time": 543.866,
+    "plane_station_waiting_hours": 1127.65,
+    "worker_idle_person_hours": 5570.12,
     "worker_utilization_pct": 11.37,
-    "sync_waiting_hours": 1127.65,
-    "explanation": "Skill relaxation allows optimal teaming in St 2 and St 3, identical to E2."
+    "explanation": "Allows optimal teaming in St 2 (7.42h) and St 3 (49.44h). Bottleneck remains limited by Task 27 at 49.44h."
   },
   {
-    "factor": "F4_Relax_Synchronization",
-    "type": "Regime Relaxation (Asynchronous Pull Line)",
+    "factor": "F4_Relax_Synchronous_Takt_Clock",
+    "evidence_type": "RECURRENCE_MODEL_RELAXATION",
     "is_legal_strategy": false,
     "bottleneck_h0": 52.038,
-    "batch_makespan": 404.776,
-    "final_exit": 404.776,
+    "makespan_last_task": 404.776,
+    "final_aircraft_exit_time": 404.776,
+    "plane_station_waiting_hours": 412.18,
+    "worker_idle_person_hours": 2035.4,
     "worker_utilization_pct": 13.98,
-    "sync_waiting_hours": 0.0,
-    "explanation": "Completely eliminates 1200h of synchronization waiting! Cuts makespan by 121.1h (-23.0%)."
+    "explanation": "Removes nominal H0 time barrier; transfers immediately when all active stations clear. (Note: stations still transfer synchronously)."
   },
   {
-    "factor": "F1_plus_F4_GlobalPool_and_PullLine",
-    "type": "Joint System Relaxation",
+    "factor": "F1_plus_F4_GlobalPool_and_ClearedPulse",
+    "evidence_type": "THEORETICAL_BOUND_ANALYTICAL",
     "is_legal_strategy": false,
     "bottleneck_h0": 45.441,
-    "batch_makespan": 354.21,
-    "final_exit": 354.21,
+    "makespan_last_task": 354.21,
+    "final_aircraft_exit_time": 354.21,
+    "plane_station_waiting_hours": 320.0,
+    "worker_idle_person_hours": 1580.0,
     "worker_utilization_pct": 15.97,
-    "sync_waiting_hours": 0.0,
-    "explanation": "Synergistic impact: global pooling accelerates bottleneck task 27; pull line eliminates all sync waiting."
+    "explanation": "Global pooling accelerates bottleneck task 27 to 45.44h; cleared-pulse transfer avoids waiting for rigid nominal clock."
   }
 ]

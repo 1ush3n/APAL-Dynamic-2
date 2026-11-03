@@ -1,0 +1,87 @@
+{
+  "Station_1": {
+    "num_tasks": 8,
+    "total_permutations": 40320,
+    "valid_topological_orders": 10080,
+    "baseline_order": [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "15",
+      "16"
+    ],
+    "baseline_makespan": 14.227162,
+    "best_order_makespan": 14.227162,
+    "worst_order_makespan": 14.227162,
+    "improvement_possible": 0.0
+  },
+  "Station_2": {
+    "num_tasks": 5,
+    "total_permutations": 120,
+    "valid_topological_orders": 60,
+    "baseline_order": [
+      "8",
+      "9",
+      "18",
+      "25",
+      "26"
+    ],
+    "baseline_makespan": 10.393067,
+    "best_order_makespan": 10.393067,
+    "worst_order_makespan": 12.263461,
+    "improvement_possible": 0.0
+  },
+  "Station_3": {
+    "num_tasks": 5,
+    "total_permutations": 120,
+    "valid_topological_orders": 60,
+    "baseline_order": [
+      "12",
+      "13",
+      "27",
+      "28",
+      "29"
+    ],
+    "baseline_makespan": 52.037844,
+    "best_order_makespan": 52.037844,
+    "worst_order_makespan": 52.037844,
+    "improvement_possible": 0.0
+  },
+  "Station_4": {
+    "num_tasks": 4,
+    "total_permutations": 24,
+    "valid_topological_orders": 12,
+    "baseline_order": [
+      "10",
+      "17",
+      "20",
+      "21"
+    ],
+    "baseline_makespan": 6.552986,
+    "best_order_makespan": 6.552986,
+    "worst_order_makespan": 6.552986,
+    "improvement_possible": 0.0
+  },
+  "Station_5": {
+    "num_tasks": 8,
+    "total_permutations": 40320,
+    "valid_topological_orders": 2520,
+    "baseline_order": [
+      "11",
+      "14",
+      "19",
+      "22",
+      "23",
+      "24",
+      "30",
+      "125"
+    ],
+    "baseline_makespan": 4.408541,
+    "best_order_makespan": 4.408541,
+    "worst_order_makespan": 6.998321,
+    "improvement_possible": 0.0
+  }
+}

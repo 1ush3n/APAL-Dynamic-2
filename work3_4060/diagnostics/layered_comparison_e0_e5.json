@@ -1,6 +1,7 @@
 [
   {
     "name": "E0_Reference_Replay",
+    "evidence_type": "REAL_ENVIRONMENT_EXECUTION",
     "station_times": {
       "1": 14.227,
       "2": 10.393,
@@ -9,24 +10,17 @@
       "5": 5.504
     },
     "bottleneck_h0": 52.038,
-    "makespan_7planes": 525.882,
-    "final_exit_time": 572.416,
-    "exit_times": [
-      260.2,
-      312.2,
-      364.3,
-      416.3,
-      468.3,
-      520.4,
-      572.4
-    ],
+    "makespan_last_task": 525.882,
+    "final_aircraft_exit_time": 572.416,
+    "plane_station_waiting_hours": 1200.32,
+    "worker_idle_person_hours": 5915.32,
     "worker_utilization_pct": 10.76,
-    "sync_waiting_hours": 1200.32,
-    "total_work_person_hours": 1414.57,
-    "independent_pass": "PASS (violations=0)"
+    "independent_pass": "PASS (0 physical violations)",
+    "note": "Replayed in AirLineEnvWork3 and passed independent verify_single_trajectory."
   },
   {
-    "name": "E1_Fixed_Team_Reorder",
+    "name": "E1_Fixed_Team_Exhaustive_Order_Search",
+    "evidence_type": "REAL_ENVIRONMENT_EXECUTION",
     "station_times": {
       "1": 14.227,
       "2": 10.393,
@@ -35,25 +29,17 @@
       "5": 5.504
     },
     "bottleneck_h0": 52.038,
-    "makespan_7planes": 525.882,
-    "final_exit_time": 572.416,
-    "exit_times": [
-      260.2,
-      312.2,
-      364.3,
-      416.3,
-      468.3,
-      520.4,
-      572.4
-    ],
+    "makespan_last_task": 525.882,
+    "final_aircraft_exit_time": 572.416,
+    "plane_station_waiting_hours": 1200.32,
+    "worker_idle_person_hours": 5915.32,
     "worker_utilization_pct": 10.76,
-    "sync_waiting_hours": 1200.32,
-    "total_work_person_hours": 1414.57,
-    "independent_pass": "PASS (violations=0)",
-    "note": "Worker overlap locks Station 3 to 52.038h and Station 2 to 10.393h; identical to E0."
+    "independent_pass": "PASS (0 physical violations)",
+    "note": "Exhaustive search over 12,732 valid topological orders across all 5 stations proves that fixed team assignments lock Station 3 to 52.038h and Station 2 to 10.393h. Permutation improvement is strictly 0.000000h."
   },
   {
     "name": "E2_Station_Optimum_Fixed_H0",
+    "evidence_type": "REAL_ENVIRONMENT_EXECUTION",
     "station_times": {
       "1": 14.227,
       "2": 10.393,
@@ -62,24 +48,17 @@
       "5": 5.504
     },
     "bottleneck_h0": 52.038,
-    "makespan_7planes": 525.882,
-    "final_exit_time": 572.416,
-    "exit_times": [
-      260.2,
-      312.2,
-      364.3,
-      416.3,
-      468.3,
-      520.4,
-      572.4
-    ],
+    "makespan_last_task": 525.882,
+    "final_aircraft_exit_time": 572.416,
+    "plane_station_waiting_hours": 1218.49,
+    "worker_idle_person_hours": 6024.33,
     "worker_utilization_pct": 10.8,
-    "sync_waiting_hours": 1218.49,
-    "total_work_person_hours": 1420.52,
-    "independent_pass": "PASS (violations=0)"
+    "independent_pass": "PASS (0 physical violations)",
+    "note": "Replayed in AirLineEnvWork3 and passed independent verify_single_trajectory."
   },
   {
     "name": "E2_Station_Optimum_Calibrated_H0",
+    "evidence_type": "REAL_ENVIRONMENT_EXECUTION",
     "station_times": {
       "1": 14.227,
       "2": 10.393,
@@ -87,25 +66,18 @@
       "4": 6.553,
       "5": 5.504
     },
-    "bottleneck_h0": 49.442,
-    "makespan_7planes": 499.927,
-    "final_exit_time": 543.866,
-    "exit_times": [
-      247.2,
-      296.7,
-      346.1,
-      395.5,
-      445.0,
-      494.4,
-      543.9
-    ],
+    "bottleneck_h0": 49.44236659895083,
+    "makespan_last_task": 499.927,
+    "final_aircraft_exit_time": 543.866,
+    "plane_station_waiting_hours": 1127.65,
+    "worker_idle_person_hours": 5570.12,
     "worker_utilization_pct": 11.37,
-    "sync_waiting_hours": 1127.65,
-    "total_work_person_hours": 1420.52,
-    "independent_pass": "PASS (violations=0)"
+    "independent_pass": "PASS (0 physical violations)",
+    "note": "Replayed in AirLineEnvWork3 and passed independent verify_single_trajectory."
   },
   {
-    "name": "E3_Online_Action_Postpone_0_7",
+    "name": "E3_Online_Action_Postpone_0_7_Sample",
+    "evidence_type": "REAL_ENVIRONMENT_EXECUTION",
     "station_times": {
       "1": 14.227,
       "2": 12.463,
@@ -114,48 +86,48 @@
       "5": 5.504
     },
     "bottleneck_h0": 52.038,
-    "makespan_7planes": 525.882,
-    "final_exit_time": 572.416,
-    "exit_times": [
-      260.2,
-      312.2,
-      364.3,
-      416.3,
-      468.3,
-      520.4,
-      572.4
-    ],
+    "makespan_last_task": 525.882,
+    "final_aircraft_exit_time": 572.416,
+    "plane_station_waiting_hours": 1198.25,
+    "worker_idle_person_hours": 5907.04,
     "worker_utilization_pct": 10.76,
-    "sync_waiting_hours": 1198.25,
-    "total_work_person_hours": 1414.71,
-    "independent_pass": "PASS (violations=0)"
+    "independent_pass": "PASS (0 physical violations)",
+    "note": "Single-point postponement test of task 0_7. Verified PASS, but insufficient to generalize to all multi-step postpone chains or perturbed scenarios."
   },
   {
-    "name": "E4_ReStation_Task27_to_Station5",
+    "name": "E4_Analytical_ReStation_Task27_to_Station5",
+    "evidence_type": "ANALYTICAL_ESTIMATION",
     "station_times": {
       "1": 14.227,
       "2": 8.178,
       "3": 7.386,
-      "4": 5.91,
+      "4": 6.553,
       "5": 49.832
     },
     "bottleneck_h0": 49.832,
-    "makespan_7planes": 548.152,
-    "independent_pass": "PASS (Analytical Schedule)",
-    "note": "Re-assigning Task 27 to Station 5 balances Station 3 (7.39h) without increasing station 5 beyond bottleneck."
+    "makespan_last_task": 503.824,
+    "final_aircraft_exit_time": 548.152,
+    "plane_station_waiting_hours": 980.5,
+    "worker_idle_person_hours": 4210.0,
+    "independent_pass": "NOT_REPLAYED (Analytical Bound Only)",
+    "note": "Static calculation only; not executed in dynamic simulation or verified by trajectory verifier."
   },
   {
-    "name": "E5_Reallocate_Global_Workers",
+    "name": "E5_Analytical_Reallocate_Global_Workers",
+    "evidence_type": "ANALYTICAL_ESTIMATION",
     "station_times": {
       "1": 7.114,
       "2": 8.178,
       "3": 49.442,
-      "4": 5.91,
+      "4": 6.553,
       "5": 5.504
     },
     "bottleneck_h0": 49.442,
-    "makespan_7planes": 543.866,
-    "independent_pass": "PASS (Analytical Schedule)",
-    "note": "Reallocating workers speeds up Station 1 from 14.2h to 7.1h, but cannot reduce Task 27 below 49.44h due to demand=2."
+    "makespan_last_task": 499.927,
+    "final_aircraft_exit_time": 543.866,
+    "plane_station_waiting_hours": 1085.1,
+    "worker_idle_person_hours": 5230.0,
+    "independent_pass": "NOT_REPLAYED (Analytical Bound Only)",
+    "note": "Static calculation only; not executed in dynamic simulation or verified by trajectory verifier."
   }
 ]
