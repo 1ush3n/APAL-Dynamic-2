@@ -36,6 +36,7 @@ if str(ROOT_DIR) not in sys.path:
 
 import numpy as np
 import torch
+from omegaconf import OmegaConf
 import lightning.pytorch as pl
 
 from envs.work3.environment import AirLineEnvWork3
@@ -50,7 +51,7 @@ from models.work3.actor_critic import ActorCriticWork3
 from models.work3.graph_builder import GRAPH_FEATURE_VERSION
 from models.work3.potential_shaping import PotentialRewardShaper
 from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
-from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
+from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION, QUERY_PPO_CHECKPOINT_VERSION
 from models.work3.time_head import TimeResidualHead
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
@@ -146,13 +147,25 @@ def create_work3_single_env_runtime(
     *,
     num_envs: int = 1,
     worker_torch_num_threads: int = 1,
+    condition_queries: bool = False,
+    objective_weights: dict[str, Any] | None = None,
+    raw_data_path: str | Path | None = None,
+    seed: int | None = None,
 ) -> Work3VectorEnv:
     """构造FP32 spawn环境worker池；策略与PPO优化器仍由调用方持有。"""
+    from utils.work3.objective_evaluator import ObjectiveWeights
+    env_kwargs: dict[str, Any] = {"baseline_json_path": str(Path(baseline_path))}
+    if objective_weights is not None:
+        env_kwargs["weights"] = ObjectiveWeights(**objective_weights)
+    if raw_data_path is not None:
+        env_kwargs["raw_data_path"] = Path(raw_data_path)
     environment = Work3VectorEnv(
-        env_kwargs={"baseline_json_path": str(Path(baseline_path))},
+        env_kwargs=env_kwargs,
         num_envs=num_envs,
         worker_torch_num_threads=worker_torch_num_threads,
         start_method="spawn",
+        condition_queries=condition_queries,
+        seed=seed,
     )
     active_environments = _ACTIVE_TRAINING_ENVS.get()
     if active_environments is not None:
@@ -747,6 +760,8 @@ def run_training(
     warmup_mode: str = "none",
     r3_e04_audit: bool = False,
     shaping_audit: bool = False,
+    objective_weights: dict[str, Any] | None = None,
+    raw_data_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
@@ -754,7 +769,13 @@ def run_training(
         raise ValueError("run_mode必须是'smoke'或'pilot'；正式训练预算尚未定义")
     if warmup_mode not in {"none", "uniform_baseline"}:
         raise ValueError("warmup_mode必须为none或uniform_baseline")
-    validate_time_head_initialization(time_head_initialization, time_head_ckpt)
+    profile = build_method_profile(method_variant)
+    if profile.use_condition_queries:
+        beta_shaping, time_loss_coef, time_auxiliary_epochs = 0.0, 0.0, 0
+    if not profile.use_condition_queries:
+        validate_time_head_initialization(time_head_initialization, time_head_ckpt)
+    elif time_head_ckpt is not None:
+        raise ValueError("QUERY不接受时间预测头检查点")
     if run_mode == "smoke" and warmup_mode != "none":
         raise ValueError("smoke只能使用warmup_mode=none")
     if (
@@ -810,7 +831,6 @@ def run_training(
         amp_dtype,
         torch_device,
     )
-    profile = build_method_profile(method_variant)
     torch.set_num_threads(main_num_threads)
     _seed_everything(seed, deterministic=deterministic)
 
@@ -844,6 +864,8 @@ def run_training(
     output_ckpt = Path(output_ckpt)
     report_path = Path(report_path) if report_path is not None else output_ckpt.with_suffix(".run.json")
     paired_report_path = Path(paired_report_path) if paired_report_path is not None else None
+    if output_ckpt.exists() or report_path.exists():
+        raise FileExistsError("输出已存在，请使用新的检查点及报告路径")
     if paired_report_path is not None and not paired_report_path.is_file():
         raise FileNotFoundError(f"配对训练报告不存在：{paired_report_path}")
 
@@ -869,6 +891,10 @@ def run_training(
         baseline_path,
         num_envs=num_envs,
         worker_torch_num_threads=env_num_threads,
+        condition_queries=profile.use_condition_queries,
+        objective_weights=objective_weights,
+        raw_data_path=raw_data_path,
+        seed=seed,
     )
 
     # 2. 初始化Actor与共享图表征上的时间预测头
@@ -877,6 +903,7 @@ def run_training(
         task_feat_dim=8,
         hidden_dim=64,
         max_station_workers=16,
+        condition_queries=profile.use_condition_queries,
     ).to(torch_device)
     time_head = (
         TimeResidualHead(in_dim=actor_critic.hidden_dim, hidden_dim=64).to(torch_device)
@@ -940,6 +967,8 @@ def run_training(
         "warmup_mode": warmup_mode,
         "method_variant": profile.name,
         "method_profile": asdict(profile),
+        "policy_input_semantics": actor_critic.input_semantics(),
+        "objective_weights": dict(objective_weights or {}),
         "time_head_initialization": time_head_initialization_source,
         "seed": int(seed),
         "seed_role": "training_initialization_and_episode_schedule",
@@ -991,7 +1020,7 @@ def run_training(
     total_env_steps = 0
     warmup_env_steps = 0
     start_time = run_started
-    pending_time_labels = PendingTimeLabelCache()
+    pending_time_labels = PendingTimeLabelCache() if profile.use_time_auxiliary else None
     scenario_log: list[dict[str, Any]] = []
     infrastructure_interruptions: dict[int, str] = {}
     cycle_time_labels: list[dict[str, Any]] = []
@@ -1262,11 +1291,12 @@ def run_training(
             if state.done:
                 record_unlabelled_cycles(state.worker_id, state.episode_id)
                 actual_reason = getattr(state, "termination_reason", None) or reason
-                pending_time_labels.discard_episode(
-                    state.episode_id,
-                    worker_id=state.worker_id,
-                    reason=actual_reason,
-                )
+                if pending_time_labels is not None:
+                    pending_time_labels.discard_episode(
+                        state.episode_id,
+                        worker_id=state.worker_id,
+                        reason=actual_reason,
+                    )
                 if shaper is not None and state.predictor_version is not None:
                     shaper.end_episode(
                         worker_id=state.worker_id,
@@ -1327,11 +1357,12 @@ def run_training(
         state.termination_reason = "worker_infrastructure_interrupted"
         infrastructure_interruptions[worker_id] = reason
         record_unlabelled_cycles(worker_id, state.episode_id)
-        pending_time_labels.discard_episode(
-            state.episode_id,
-            worker_id=worker_id,
-            reason=state.termination_reason or "worker_infrastructure_interrupted",
-        )
+        if pending_time_labels is not None:
+            pending_time_labels.discard_episode(
+                state.episode_id,
+                worker_id=worker_id,
+                reason=state.termination_reason or "worker_infrastructure_interrupted",
+            )
         if shaper is not None and state.predictor_version is not None:
             shaper.end_episode(
                 worker_id=worker_id,
@@ -1437,7 +1468,7 @@ def run_training(
                 episode_step_counts[ep_key] = ep_step + 1
                 snapshot = state.snapshot
                 cmax_est = snapshot.estimated_cmax
-                if cmax_est is None:
+                if cmax_est is None and not profile.use_condition_queries:
                     raise RuntimeError("环境worker快照缺少启发式完工预测")
                 state_features = snapshot.state_features
                 graph_snapshot = snapshot.graph_snapshot
@@ -1494,6 +1525,8 @@ def run_training(
                                 worker_id=state.worker_id,
                                 episode_id=state.episode_id,
                             )
+                elif profile.use_condition_queries:
+                    phi_current = 0.0
                 else:
                     phi_current = compute_heuristic_potential(
                         cmax_est,
@@ -1700,17 +1733,19 @@ def run_training(
                                 f"末尾周期记录脉动时刻 {last_rec.transfer_time} 与动作后快照 last_transfer_time {snapshot.last_transfer_time} 不一致！"
                             )
                     for rec in step_records:
-                        label_count = pending_time_labels.pending_cycle_counts(
-                            state.episode_id,
-                            worker_id=worker_id,
-                        ).get(rec.cycle_id, 0)
-                        label_available = pending_time_labels.attach_transfer(
-                            episode_id=state.episode_id,
-                            worker_id=worker_id,
-                            cycle_id=rec.cycle_id,
-                            actual_transfer_time=rec.transfer_time,
-                            cycle_record=rec,
-                        )
+                        label_count, label_available = 0, False
+                        if pending_time_labels is not None:
+                            label_count = pending_time_labels.pending_cycle_counts(
+                                state.episode_id,
+                                worker_id=worker_id,
+                            ).get(rec.cycle_id, 0)
+                            label_available = pending_time_labels.attach_transfer(
+                                episode_id=state.episode_id,
+                                worker_id=worker_id,
+                                cycle_id=rec.cycle_id,
+                                actual_transfer_time=rec.transfer_time,
+                                cycle_record=rec,
+                            )
                         if profile.use_time_auxiliary:
                             cycle_time_labels.append({
                                 "worker_id": worker_id,
@@ -1725,7 +1760,7 @@ def run_training(
                             rec.transfer_time
                         )
 
-                if terminated:
+                if terminated or profile.use_condition_queries:
                     phi_next = 0.0
                 else:
                     next_cmax_est = snapshot.estimated_cmax
@@ -1789,17 +1824,20 @@ def run_training(
                         phi_current=context["phi_current"],
                         phi_next=phi_next,
                     )
+                elif profile.use_condition_queries:
+                    shaped_reward = raw_reward
                 else:
                     shaped_reward = raw_reward + beta_shaping * (
                         gamma * float(phi_next) - float(context["phi_current"])
                     )
                 if done:
                     record_unlabelled_cycles(worker_id, state.episode_id)
-                    pending_time_labels.discard_episode(
-                        state.episode_id,
-                        worker_id=worker_id,
-                        reason=state.termination_reason or ("completed" if terminated else "truncated"),
-                    )
+                    if pending_time_labels is not None:
+                        pending_time_labels.discard_episode(
+                            state.episode_id,
+                            worker_id=worker_id,
+                            reason=state.termination_reason or ("completed" if terminated else "truncated"),
+                        )
                     if shaper is not None and state.predictor_version is not None:
                         shaper.end_episode(
                             worker_id=worker_id,
@@ -1845,9 +1883,9 @@ def run_training(
                     episode_id=state.episode_id,
                     segment_id=iter_idx,
                     predictor_version=pred_ver,
-                    predictor_source="frozen_snapshot" if (shaper is not None and pred_ver is not None) else "heuristic",
-                    time_input_source="predicted_time" if profile.use_corrected_time_input else ("heuristic_time" if snapshot.time_features is not None else "none"),
-                    phi_source="learned_phi" if (profile.use_learned_time_shaping and shaper is not None) else "heuristic_phi",
+                    predictor_source="none" if profile.use_condition_queries else ("frozen_snapshot" if (shaper is not None and pred_ver is not None) else "heuristic"),
+                    time_input_source="exact_conditions" if profile.use_condition_queries else ("predicted_time" if profile.use_corrected_time_input else "heuristic_time"),
+                    phi_source="none" if profile.use_condition_queries else ("learned_phi" if (profile.use_learned_time_shaping and shaper is not None) else "heuristic_phi"),
                 ))
                 step_raw_rewards.append(raw_reward)
                 step_shaped_rewards.append(shaped_reward)
@@ -1943,7 +1981,7 @@ def run_training(
                 if state.episode_id != key[1]:
                     raise RuntimeError(f"rollout段尾状态与episode不一致：{key}")
                 snapshot = state.snapshot
-                if snapshot.estimated_cmax is None:
+                if snapshot.estimated_cmax is None and not profile.use_condition_queries:
                     raise RuntimeError("rollout结束时环境worker快照缺少时间预测")
                 if profile.use_corrected_time_input and time_head is not None:
                     eval_actor = actor_critic
@@ -2147,8 +2185,8 @@ def run_training(
             "method_variant": profile.name,
             "scenario_ids": sorted({item["scenario_id"] for item in scenario_log}),
             "scenario_log_count": len(scenario_log),
-            "cache_stats": pending_time_labels.stats(),
-            "cache_discard_reasons": dict(pending_time_labels.discard_reasons),
+            "cache_stats": (pending_time_labels.stats() if pending_time_labels is not None else {}),
+            "cache_discard_reasons": (dict(pending_time_labels.discard_reasons) if pending_time_labels is not None else {}),
         }
         history.append(iter_log)
         logger.info(
@@ -2157,8 +2195,8 @@ def run_training(
             iter_log["sampling_replay_sample_count"],
             iter_log["time_supervision_status"],
             iter_log["time_label_count"],
-            iter_log["cache_stats"]["waiting_current_samples"],
-            iter_log["cache_stats"]["waiting_next_samples"],
+            iter_log["cache_stats"].get("waiting_current_samples", 0),
+            iter_log["cache_stats"].get("waiting_next_samples", 0),
         )
 
         logger.info(
@@ -2394,11 +2432,11 @@ def run_training(
         ),
         "sampling_replay_scope": "first_pre_update_minibatch_per_rollout",
         "checkpoint_path": str(output_ckpt),
-        "checkpoint_version": PPO_CHECKPOINT_VERSION,
+        "checkpoint_version": QUERY_PPO_CHECKPOINT_VERSION if profile.use_condition_queries else PPO_CHECKPOINT_VERSION,
         "checkpoint_role": "model_weights",
         "resume_capability": "non_exact",
-        "cache_stats": pending_time_labels.stats(),
-        "cache_discard_reasons": dict(pending_time_labels.discard_reasons),
+        "cache_stats": (pending_time_labels.stats() if pending_time_labels is not None else {}),
+        "cache_discard_reasons": (dict(pending_time_labels.discard_reasons) if pending_time_labels is not None else {}),
         "history": history,
         "scenario_log": scenario_log,
     }
@@ -2562,9 +2600,9 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=None, help="学习率")
     parser.add_argument(
         "--method",
-        choices=("B", "C", "D", "E", "F", "G"),
+        choices=("QUERY", "B", "C", "D", "E", "F", "G"),
         default=None,
-        help="B固定站位、C/D主方法或E/F/G消融配置",
+        help="QUERY开题正式方法；B/C/D/E/F/G为历史对照",
     )
     parser.add_argument("--baseline", type=Path, default=None)
     parser.add_argument("--scenarios", type=Path, default=None)
@@ -2655,16 +2693,16 @@ def main() -> None:
         env_num_threads=int(runtime_config.runtime.env_num_threads),
         ppo_epochs=int(runtime_config.ppo.epochs),
         batch_size=int(runtime_config.ppo.batch_size),
-        time_auxiliary_epochs=int(runtime_config.ppo.time_auxiliary_epochs),
-        time_auxiliary_batch_size=int(runtime_config.ppo.time_auxiliary_batch_size),
+        time_auxiliary_epochs=int(runtime_config.ppo.get("time_auxiliary_epochs", 0)),
+        time_auxiliary_batch_size=int(runtime_config.ppo.get("time_auxiliary_batch_size", 1)),
         lr=float(runtime_config.ppo.learning_rate),
         clip_eps=float(runtime_config.ppo.clip_epsilon),
         vf_coef=float(runtime_config.ppo.value_coefficient),
         ent_coef=float(runtime_config.ppo.entropy_coefficient),
         gamma=float(runtime_config.ppo.gamma),
         gae_lambda=float(runtime_config.ppo.gae_lambda),
-        beta_shaping=float(runtime_config.ppo.shaping_coefficient),
-        time_loss_coef=float(runtime_config.ppo.time_loss_coefficient),
+        beta_shaping=float(runtime_config.ppo.get("shaping_coefficient", 0.0)),
+        time_loss_coef=float(runtime_config.ppo.get("time_loss_coefficient", 0.0)),
         seed=int(runtime_config.runtime.seed),
         deterministic=bool(runtime_config.runtime.deterministic),
         main_num_threads=int(runtime_config.runtime.main_num_threads),
@@ -2679,10 +2717,10 @@ def main() -> None:
         scenario_split_path=Path(runtime_config.runtime.scenario_split_path),
         time_head_ckpt=(
             None
-            if runtime_config.paths.time_head_checkpoint is None
-            else Path(runtime_config.paths.time_head_checkpoint)
+            if runtime_config.paths.get("time_head_checkpoint") is None
+            else Path(runtime_config.paths.get("time_head_checkpoint"))
         ),
-        time_head_initialization=str(runtime_config.runtime.time_head_initialization),
+        time_head_initialization=str(runtime_config.runtime.get("time_head_initialization", "random_no_pretraining")),
         device=str(runtime_config.runtime.device),
         amp_dtype=str(runtime_config.runtime.amp_dtype),
         warmup_mode=str(runtime_config.runtime.warmup_mode),
@@ -2693,6 +2731,9 @@ def main() -> None:
         resolved_config_sha256=config_sha256,
         r3_e04_audit=bool(args.r3_e04_audit or is_r3_e04_audit_enabled()),
         shaping_audit=bool(args.shaping_audit),
+        objective_weights=(OmegaConf.to_container(runtime_config.objective, resolve=True)
+                           if "objective" in runtime_config else None),
+        raw_data_path=runtime_config.paths.get("raw_data"),
     )
 
 

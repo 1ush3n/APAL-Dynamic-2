@@ -2,6 +2,40 @@
 
 本项目面向 Aircraft Pulse Assembly Lines（APAL）初始调度与动态重调度，核心组件包括异构图注意力网络、指针网络、PPO、PyTorch Geometric 与 PyTorch Lightning。
 
+## 当前开题方案对应入口（2026-11-15）
+
+| 研究内容 | 方法与实际入口 |
+| --- | --- |
+| 一：无扰动静态排程 | `train.py experiment=initial_homogeneous_graphsage_strict`：共享同构图传播，工序、站位与具体团队自回归选择，确定性时间分配。组合配置默认使用 680 训练池。 |
+| 二：延迟开工后计划修复 | `train.py experiment=reschedule_task_delay_r5_full_x`：异构图与联合决策，沿用冻结、继承、人员绑定及稳定性目标。需要已有初始模型及 R5 数据清单，不能用工作三基准替代。 |
+| 三：多架次协同动态调度 | `python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml`：QUERY，分层融合＋准确条件查询＋自回归联合决策，现有 Lightning 与 CPU spawn worker 训练链。 |
+
+工作三在模板站位与既有合法后移范围内生成无扰动批次安排，也能在已指派、执行中受到扰动后继续调度；这不等同于工作一的自由初始分站。两种转站模式从原基准继承，未修改物理规则。
+
+最短检查流程如下，先激活 `rag_env`，从仓库根目录运行；输出已存在时需换路径，避免覆盖研究结果：
+
+```powershell
+conda activate rag_env
+python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml
+python -m scripts.work3.evaluate_query --checkpoint outputs/work3/query/checkpoints/smoke_method_query_weights.pt --report outputs/work3/query/undisturbed.json
+python -m scripts.work3.evaluate_query --checkpoint outputs/work3/query/checkpoints/smoke_method_query_weights.pt --report outputs/work3/query/disturbed.json --scenario-id EARLY_LOW_S0
+python -m pytest tests/work3/test_scheduling_queries.py -q
+```
+
+默认是两 worker、8 步的通路烟测，评估也受 120 秒预算限制；烟测权重不具备研究效果结论资格。受扰训练使用同一入口，例如在新的输出目录中执行：
+
+```powershell
+python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml --set runtime.run_mode=pilot --set runtime.successful_batch_target=1 --set runtime.total_env_steps=10000 --set runtime.max_wall_seconds=3600 --set paths.checkpoint_dir=outputs/work3/query_pilot/checkpoints --set paths.report_dir=outputs/work3/query_pilot
+```
+
+GPU 小内存运行追加 `--set runtime.device=cuda --set runtime.amp_dtype=bf16`；小批次由 `ppo.batch_size` 控制，缓存始终在 CPU。当前查询完整枚举合法团队，不把未穷尽结果冒充最优；大规模后段吞吐尚需单独评测。
+
+QUERY 不创建时间残差头、时间标签缓存或预测势函数。时间量来自已揭示的物料、前序和已承诺日历，逐人查询保留真实前缀；PPO 重放只读采样数值、图和掩码。检查点记录方法、输入语义、查询版本和程序指纹，旧权重只能显式热启动可对应参数，不续接旧输入投影或优化器。
+
+LLM 暂不配置 API。默认使用 `conf/work3/condition_program.json` 的离线已核验只读计划，实际绑定当前飞机—工序实例并进入评分。可选预编译入口为 `python -m envs.work3.query_program --help`；新生成计划先标记待语义核验，不能直接进入正式查询。本轮仅验证离线与 mock 通路，未验证真实服务。
+
+工作三历史 B/C/D/E/F/G 的含义保留：使用 `conf/work3/train_pilot.yaml` 与原 `scripts/work3/evaluate_c_vs_d.py`。时间头、监督和势函数文件继续服务历史复现；APCF 等扩展不是本轮正式方案新增内容。下文保留原有工程与历史实验说明，以本节及 [迁移记录](docs/work3_query_migration.md) 为当前方法入口依据。
+
 ## 环境
 
 - Python 环境：`rag_env`

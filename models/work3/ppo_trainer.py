@@ -38,6 +38,7 @@ from models.work3.ppo_buffer import RolloutBufferWork3
 
 logger = logging.getLogger(__name__)
 PPO_CHECKPOINT_VERSION = "work3_actor_time_v3"
+QUERY_PPO_CHECKPOINT_VERSION = "work3_actor_query_v1"
 
 
 class PPOTrainerWork3:
@@ -57,6 +58,8 @@ class PPOTrainerWork3:
         create_optimizer: bool = True,
     ) -> None:
         self.actor_critic = actor_critic
+        if actor_critic.condition_queries and time_head is not None:
+            raise ValueError("QUERY方法不接受时间辅助头")
         self.clip_eps = float(clip_eps)
         self.vf_coef = float(vf_coef)
         self.ent_coef = float(ent_coef)
@@ -499,7 +502,7 @@ class PPOTrainerWork3:
     ) -> None:
         """保存推理/热启动权重；不承诺恢复完整训练状态。"""
         checkpoint: dict[str, Any] = {
-            "checkpoint_version": PPO_CHECKPOINT_VERSION,
+            "checkpoint_version": QUERY_PPO_CHECKPOINT_VERSION if self.actor_critic.condition_queries else PPO_CHECKPOINT_VERSION,
             "checkpoint_role": "model_weights",
             "resume_capability": "non_exact",
             "graph_feature_version": GRAPH_FEATURE_VERSION,
@@ -508,6 +511,7 @@ class PPOTrainerWork3:
             "graph_feature_schema_hash": get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA),
             "actor_critic_state": self.actor_critic.state_dict(),
             "run_metadata": dict(metadata or {}),
+            "policy_input_semantics": self.actor_critic.input_semantics(),
         }
         if self.optimizer is not None:
             checkpoint["optimizer_state"] = self.optimizer.state_dict()
@@ -524,6 +528,10 @@ class PPOTrainerWork3:
     def load_checkpoint(self, path: str) -> None:
         """加载模型/优化器权重；此操作不恢复环境和采样状态，不能精确续训。"""
         checkpoint = torch.load(path, map_location=self.device, weights_only=False)
+        expected_semantics = self.actor_critic.input_semantics()
+        observed_semantics = checkpoint.get("policy_input_semantics", {"method_id": "historical_time_v3"})
+        if observed_semantics != expected_semantics:
+            raise ValueError("检查点输入语义不匹配；仅允许显式骨干热启动")
         validate_checkpoint_graph_feature_schema(checkpoint)
         self.actor_critic.load_state_dict(checkpoint["actor_critic_state"])
         if self.time_head is not None:

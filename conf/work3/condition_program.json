@@ -1,0 +1,8 @@
+{
+  "description": "对当前候选工序实例，读取已揭示的前序、物料、绑定人员资格与日历，完整查询合法团队及两种既有对齐下的连续执行窗口；逐人选择必须保留已选成员。不增加生产限制，不修改现场，也不预测未定转站。",
+  "version": "work3_conditions_v1",
+  "scope": "current_candidate_instance",
+  "api": "team_completions",
+  "args": {"task_key": "$candidate.task_key"},
+  "review": "offline_verified_retrieval_only"
+}

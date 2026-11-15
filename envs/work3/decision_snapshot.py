@@ -16,6 +16,8 @@ from envs.work3.core_types import TaskStatus
 
 if TYPE_CHECKING:
     from envs.work3.environment import AirLineEnvWork3
+    from envs.work3.scheduling_queries import CompletionTable
+    from envs.work3.query_program import ConditionProgram
     from models.work3.graph_builder import MultiAircraftGraphBuilder
 
 
@@ -94,6 +96,9 @@ class DecisionSnapshot:
     candidate_aircraft_ids: tuple[int, ...] = ()
     candidate_station_ids: tuple[int, ...] = ()
     next_cycle_station_mask: tuple[bool, ...] = ()
+    query_tables: tuple[CompletionTable, ...] = ()
+    query_version: str | None = None
+    query_program_hashes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         # 输入形状：[32]、[2/7/12]、[N, 8]；快照拥有独立CPU副本。
@@ -124,6 +129,12 @@ class DecisionSnapshot:
         )
         reserved = tuple(bool(value) for value in self.reserved_flags)
         candidate_count = len(keys)
+        if self.query_version is not None:
+            from envs.work3.scheduling_queries import QUERY_VERSION
+            if self.query_version != QUERY_VERSION or len(self.query_tables) != candidate_count:
+                raise ValueError("调度条件快照版本或候选数量不一致")
+            if tuple(table.task_key for table in self.query_tables) != keys:
+                raise ValueError("调度条件与候选工序顺序不一致")
         assert len(set(keys)) == candidate_count
         assert task_features.shape[0] == candidate_count
         assert len(masks) == candidate_count
@@ -256,6 +267,8 @@ def build_decision_snapshot(
     episode_index: int,
     estimated_cmax: float | None,
     allow_postpone: bool = True,
+    condition_queries: bool = False,
+    query_program: ConditionProgram | None = None,
 ) -> DecisionSnapshot:
     """由CPU环境进程或兼容入口构造一致的策略决策快照。"""
     from models.work3.actor_critic import extract_candidate_task_features
@@ -300,13 +313,27 @@ def build_decision_snapshot(
                 workers=station_workers,
             )
         )
+    query_tables = ()
+    query_version = None
+    program_hashes = ()
+    if condition_queries:
+        from envs.work3.scheduling_queries import QUERY_VERSION
+        from envs.work3.query_program import load_condition_program
+        from models.work3.actor_critic import extract_compact_state_features
+        program = query_program if query_program is not None else load_condition_program()
+        query_tables = tuple(program.execute(env, key) for key in candidate_keys)
+        program_hashes = (program.fingerprint,)
+        query_version = QUERY_VERSION
+        estimated_cmax = None
+        state_features = extract_compact_state_features(env.state, None)
+        time_features = torch.zeros(2)
     return DecisionSnapshot(
         worker_id=int(worker_id),
         episode_id=int(episode_id),
         episode_index=int(episode_index),
         state_features=state_features,
         time_features=time_features,
-        graph_snapshot=graph_builder.build_graph(env),
+        graph_snapshot=graph_builder.build_graph(env, include_role_facts=condition_queries),
         candidate_task_keys=candidate_keys,
         candidate_task_features=extract_candidate_task_features(env.state, candidates),
         branch_masks=branch_masks,
@@ -331,4 +358,7 @@ def build_decision_snapshot(
         candidate_aircraft_ids=tuple(int(task.aircraft_id) for task in candidates),
         candidate_station_ids=tuple(int(task.current_station) for task in candidates),
         next_cycle_station_mask=tuple(bool(m) for m in env.state.get_next_cycle_station_mask()),
+        query_tables=query_tables,
+        query_version=query_version,
+        query_program_hashes=program_hashes,
     )

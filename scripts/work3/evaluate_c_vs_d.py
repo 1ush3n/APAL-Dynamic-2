@@ -360,6 +360,8 @@ def build_formal_evaluation_agent(
 ) -> FormalEvaluationAgent:
     """加载正式profile模型；缺检查点仅在显式调试模式允许随机权重。"""
     profile = build_method_profile(method_variant)
+    if profile.use_condition_queries:
+        raise ValueError("QUERY方法请使用scripts.work3.evaluate_query入口")
     torch_device = torch.device(device)
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64).to(torch_device)
     time_head: TimeResidualHead | None = None

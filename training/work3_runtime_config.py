@@ -103,7 +103,11 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
     """检查工作三运行所需配置及跨平台运行边界。"""
     if not isinstance(config, DictConfig):
         raise TypeError("工作三运行配置必须是OmegaConf DictConfig")
-    missing = [key for key in _REQUIRED_CONFIG_KEYS if OmegaConf.select(config, key) is None]
+    query_method = OmegaConf.select(config, "runtime.method_profile") == "QUERY"
+    historical_keys = {"runtime.time_head_initialization", "ppo.shaping_coefficient",
+                       "ppo.time_loss_coefficient", "ppo.time_auxiliary_epochs", "ppo.time_auxiliary_batch_size"}
+    missing = [key for key in _REQUIRED_CONFIG_KEYS
+               if not (query_method and key in historical_keys) and OmegaConf.select(config, key) is None]
     if missing:
         raise ValueError(f"缺少必需配置: {', '.join(missing)}")
 
@@ -122,12 +126,13 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
             raise ValueError("pilot必须配置正整数runtime.successful_batch_target")
     elif successful_batch_target is not None:
         raise ValueError("smoke不得设置runtime.successful_batch_target")
-    if config.runtime.method_profile not in {"B", "C", "D", "E", "F", "G"}:
-        raise ValueError("runtime.method_profile仅支持B、C、D、E、F或G")
-    validate_time_head_initialization(
-        str(config.runtime.time_head_initialization),
-        OmegaConf.select(config, "paths.time_head_checkpoint"),
-    )
+    if config.runtime.method_profile not in {"QUERY", "B", "C", "D", "E", "F", "G"}:
+        raise ValueError("runtime.method_profile仅支持QUERY或历史B/C/D/E/F/G")
+    if not query_method:
+        validate_time_head_initialization(str(config.runtime.time_head_initialization),
+                                         OmegaConf.select(config, "paths.time_head_checkpoint"))
+    elif OmegaConf.select(config, "paths.time_head_checkpoint") is not None:
+        raise ValueError("QUERY不接受时间预测头权重")
     if type(config.runtime.seed) is not int:
         raise ValueError("runtime.seed必须是整数")
     if type(config.runtime.deterministic) is not bool:
@@ -162,8 +167,9 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
     _positive_int(config, "ppo.steps_per_iter")
     _positive_int(config, "ppo.epochs", allow_zero=True)
     _positive_int(config, "ppo.batch_size")
-    _positive_int(config, "ppo.time_auxiliary_epochs", allow_zero=True)
-    _positive_int(config, "ppo.time_auxiliary_batch_size")
+    if not query_method:
+        _positive_int(config, "ppo.time_auxiliary_epochs", allow_zero=True)
+        _positive_int(config, "ppo.time_auxiliary_batch_size")
     for key in (
         "ppo.learning_rate",
         "ppo.clip_epsilon",
@@ -174,7 +180,8 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
         "ppo.shaping_coefficient",
         "ppo.time_loss_coefficient",
     ):
-        _finite_number(config, key, minimum=0.0)
+        if not (query_method and key in historical_keys):
+            _finite_number(config, key, minimum=0.0)
     for key in ("ppo.gamma", "ppo.gae_lambda"):
         if _finite_number(config, key, minimum=0.0) > 1.0:
             raise ValueError(f"配置 {key}必须位于[0, 1]")

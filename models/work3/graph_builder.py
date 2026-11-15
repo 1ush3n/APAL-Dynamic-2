@@ -342,7 +342,7 @@ class MultiAircraftGraphBuilder:
         self.base_task_x_np = self.base_task_x.numpy()
         self.base_worker_x_np = self.base_worker_x.numpy()
 
-    def build_graph(self, env: AirLineEnvWork3) -> HeteroData:
+    def build_graph(self, env: AirLineEnvWork3, *, include_role_facts: bool = False) -> HeteroData:
         """从当前仿真环境状态构建完整的 PyG HeteroData 异构图。"""
         state: MultiAircraftState = env.state
         current_time = float(state.current_time)
@@ -350,6 +350,7 @@ class MultiAircraftGraphBuilder:
 
         # 1. 刷新 Task 特征 (使用 NumPy 极速批量更新)
         task_x_np = self.base_task_x_np.copy()
+        role_facts = np.zeros((self.num_tasks, 7), dtype=np.float32) if include_role_facts else None
         assigned_ts_src: list[int] = []
         assigned_ts_dst: list[int] = []
         done_by_src: list[int] = []
@@ -495,6 +496,11 @@ class MultiAircraftGraphBuilder:
                 assigned_ts_src.append(idx)
                 assigned_ts_dst.append(st)
                 if t_rt.status != TaskStatus.COMPLETED and getattr(t_rt, "is_physical", True):
+                    if role_facts is not None:
+                        role_facts[idx, 0] = 1.0
+                        role_facts[idx, 1] = float(t_rt.standard_duration) / h0
+                        if 0 <= t_rt.skill < 5:
+                            role_facts[idx, 2 + t_rt.skill] = float(t_rt.demand)
                     task_indices_by_aircraft[t_rt.aircraft_id].append(idx)
                     ac_id = t_rt.aircraft_id
                     ac_obj = state.aircraft.get(ac_id)
@@ -703,6 +709,8 @@ class MultiAircraftGraphBuilder:
             torch.tensor(ac_current_task_indices[k], dtype=torch.long)
             for k in range(state.num_aircraft)
         ]
+        if role_facts is not None:
+            data.role_task_facts = torch.from_numpy(role_facts)
         data._ac_next_task_indices = [
             torch.tensor(ac_next_task_indices[k], dtype=torch.long)
             for k in range(state.num_aircraft)

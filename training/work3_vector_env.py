@@ -18,6 +18,7 @@ import numpy as np
 import torch
 
 from envs.work3.decision_snapshot import DecisionSnapshot, build_decision_snapshot
+from envs.work3.query_program import load_condition_program
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import extract_compact_state_features
@@ -142,6 +143,7 @@ def _trajectory_audit(
         "transfer_history": tuple(float(item) for item in env.state.transfer_history),
         "cumulative_cost": float(env.cumulative_cost),
         "cost_breakdown": {
+            "cost_makespan": float(env.cost_makespan),
             "cost_takt": float(env.cost_takt),
             "cost_time": float(env.cost_time),
             "cost_team": float(env.cost_team),
@@ -368,12 +370,13 @@ def _worker_main(
                         "torch_cpu": torch.get_rng_state(),
                     }
                 elif command == "snapshot":
-                    estimated_cmax = compute_cycle_heuristic_cmax(env.state)
+                    condition_queries = bool(request.get("condition_queries", False))
+                    estimated_cmax = None if condition_queries else compute_cycle_heuristic_cmax(env.state)
                     state_features = extract_compact_state_features(
                         env.state,
                         estimated_cmax,
                     )
-                    urgency = compute_time_urgency_vector(
+                    urgency = torch.zeros(2) if condition_queries else compute_time_urgency_vector(
                         estimated_r=max(0.0, estimated_cmax - env.state.current_time),
                         current_time=env.state.current_time,
                         last_transfer_time=env.state.last_transfer_time,
@@ -396,6 +399,8 @@ def _worker_main(
                         episode_index=episode_index,
                         estimated_cmax=estimated_cmax,
                         allow_postpone=bool(request.get("allow_postpone", True)),
+                        condition_queries=condition_queries,
+                        query_program=request.get("query_program"),
                     )
                 elif command == "step":
                     action = request.get("action")
@@ -483,6 +488,7 @@ class Work3VectorEnv:
         startup_timeout_seconds: float = 60.0,
         request_timeout_seconds: float = 300.0,
         seed: int | None = None,
+        condition_queries: bool = False,
     ) -> None:
         if type(num_envs) is not int or num_envs < 1:
             raise ValueError("num_envs必须为正整数")
@@ -495,6 +501,8 @@ class Work3VectorEnv:
         if startup_timeout_seconds <= 0 or request_timeout_seconds <= 0:
             raise ValueError("worker超时必须为正数")
         self._num_envs = num_envs
+        self.condition_queries = condition_queries
+        self.query_program = load_condition_program() if condition_queries else None
         self._request_id = 0
         self._closed = False
         self._request_timeout_seconds = float(request_timeout_seconds)
@@ -920,6 +928,8 @@ class Work3VectorEnv:
                         "episode_id": self._episode_ids[worker_id],
                         "episode_index": self._episode_indices[worker_id],
                         "allow_postpone": allow_postpone,
+                        "condition_queries": self.condition_queries,
+                        "query_program": self.query_program,
                     },
                 )
             }
@@ -938,6 +948,8 @@ class Work3VectorEnv:
                         "episode_id": self._episode_ids[worker_id],
                         "episode_index": self._episode_indices[worker_id],
                         "allow_postpone": allow_postpone,
+                        "condition_queries": self.condition_queries,
+                        "query_program": self.query_program,
                     },
                 )
                 for worker_id in range(self._num_envs)

@@ -103,6 +103,7 @@ class AirLineEnvWork3:
         # 累计成本与单步奖励记账账本 (Task 3.2 / 里程碑 M2)
         self.cumulative_cost: float = 0.0
         self.cost_takt: float = 0.0
+        self.cost_makespan: float = 0.0
         self.cost_time: float = 0.0
         self.cost_team: float = 0.0
         self.cost_postpone: float = 0.0
@@ -139,6 +140,7 @@ class AirLineEnvWork3:
 
         self.cumulative_cost = 0.0
         self.cost_takt = 0.0
+        self.cost_makespan = 0.0
         self.cost_time = 0.0
         self.cost_team = 0.0
         self.cost_postpone = 0.0
@@ -794,6 +796,7 @@ class AirLineEnvWork3:
     def step(self, action: dict[str, Any]) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         """执行单步调度动作。"""
         cost_before = self.cumulative_cost
+        time_before = float(self.state.current_time)
         self.state.recent_events_count = 0
         self.state.recent_material_delays = 0
         self.state.recent_worker_disturbances = 0
@@ -1021,6 +1024,9 @@ class AirLineEnvWork3:
         )
         obs = self._get_observation()
 
+        elapsed_cost = self.weights.w_makespan * (self.state.current_time - time_before) / self.state.h0
+        self.cost_makespan += elapsed_cost
+        self.cumulative_cost += elapsed_cost
         cost_after = self.cumulative_cost
         step_cost = cost_after - cost_before
         reward = -step_cost
@@ -1029,6 +1035,7 @@ class AirLineEnvWork3:
         info["step_cost"] = step_cost
         info["cumulative_cost"] = cost_after
         info["cost_breakdown"] = {
+            "cost_makespan": self.cost_makespan,
             "cost_takt": self.cost_takt,
             "cost_time": self.cost_time,
             "cost_team": self.cost_team,

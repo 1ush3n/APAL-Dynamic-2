@@ -47,6 +47,11 @@ class ObjectiveWeights:
     # 未锁定时沿用已有时间/团队目标权重；正式实验可显式覆盖。
     w_revision_time: float | None = None
     w_revision_team: float | None = None
+    w_makespan: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.w_makespan) or self.w_makespan < 0.0:
+            raise ValueError("实际工期权重必须是非负有限数")
 
 
 @dataclass(frozen=True)
@@ -75,6 +80,7 @@ class ObjectiveBreakdown:
     revision_team: float         # 相邻正式安排团队变化（已归一化）
     j_revision: float            # 时间/团队相邻修订加权费用
     num_revisions: int           # 正式修订次数
+    makespan_h0: float = 0.0
 
     def to_dict(self) -> dict[str, float | int]:
         return asdict(self)
@@ -121,6 +127,9 @@ def build_objective_report(
             + revision_team_weight * metrics_unweighted["r_w"]
         ),
     }
+    if weights.w_makespan:
+        metrics_unweighted["makespan_h0"] = breakdown.makespan_h0
+        cost_components_weighted["makespan"] = weights.w_makespan * breakdown.makespan_h0
     component_total = sum(cost_components_weighted.values())
     if not math.isclose(
         component_total,
@@ -286,12 +295,14 @@ def evaluate_trajectory_objective(
     j_revision = revision_time_weight * revision_time + revision_team_weight * revision_team
 
     # 5. 加权综合总成本；修订权重缺省分别继承w_t与w_w。
+    makespan_h0 = float(state.current_time) / h0 if weights.w_makespan else 0.0
     j_total = (
         weights.w_h * j_takt
         + weights.w_t * d_time
         + weights.w_w * d_team
         + weights.w_p * j_postpone
         + j_revision
+        + weights.w_makespan * makespan_h0
     )
 
     return ObjectiveBreakdown(
@@ -310,4 +321,5 @@ def evaluate_trajectory_objective(
         revision_team=revision_team,
         j_revision=j_revision,
         num_revisions=num_revisions,
+        makespan_h0=makespan_h0,
     )

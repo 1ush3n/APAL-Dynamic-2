@@ -1,0 +1,43 @@
+runtime:
+  run_mode: smoke
+  method_profile: QUERY
+  seed: 42
+  deterministic: true
+  num_envs: 2
+  start_method: spawn
+  total_env_steps: 8
+  successful_batch_target: null
+  max_wall_seconds: 120.0
+  settle_timeout_seconds: 10.0
+  device: cpu
+  amp_dtype: fp32
+  warmup_mode: none
+  main_num_threads: 1
+  env_num_threads: 1
+  dataloader_num_workers: 0
+  scenario_pool_path: data/work3/scenarios_9class.json
+  scenario_split_path: data/work3/experiment_splits/train.json
+paths:
+  baseline: data/work3/real_283_k10_baseline.json
+  raw_data: data/283.csv
+  checkpoint_dir: outputs/work3/query/checkpoints
+  report_dir: outputs/work3/query
+ppo:
+  steps_per_iter: 8
+  epochs: 1
+  batch_size: 8
+  learning_rate: 0.0003
+  clip_epsilon: 0.2
+  value_coefficient: 0.5
+  entropy_coefficient: 0.01
+  gamma: 1.0
+  gae_lambda: 0.95
+objective:
+  w_makespan: 1.0
+  w_h: 1.0
+  w_t: 0.20
+  w_w: 0.05
+  w_p: 1.0
+  lambda_1: 0.10
+  lambda_2: 0.20
+  normalize_by_n: true
