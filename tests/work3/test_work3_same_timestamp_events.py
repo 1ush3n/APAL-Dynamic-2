@@ -543,6 +543,10 @@ def test_recovery_time_is_hidden_until_tau_then_bounds_reservation() -> None:
 
 def test_pulse_boundary_disturbance_keeps_aircraft_task_identity() -> None:
     env = _new_env()
+    # 转站事件只有在当前占用站位清空后才有效，保留生产放行守卫。
+    for task in env.state.get_tasks_for_station(0):
+        task.status = TaskStatus.COMPLETED
+        task.actual_end = 0.0
     target = next(
         task
         for task in env.state.tasks.values()
