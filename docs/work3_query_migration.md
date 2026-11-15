@@ -1,5 +1,7 @@
 # 开题方案代码迁移与整理：完整修改及审阅报告（2026-11-15）
 
+> 版本说明：本报告保留d82f258首轮实施及发布记录。独立审阅指出的F1、F2、F3与G1，以及本轮修正和新验证，见末尾“独立审阅后的修正记录”；该节优先于首轮能力描述。历史验证结果不自动计作本轮复验。
+
 基线：`837194591b67c83e9cd2943d987de19e84a2c996`。本地分支：`work3-query-migration-20261115`。
 原有未跟踪目录 `research_diagnostics/` 保留，不属于本次改动。
 
@@ -9,11 +11,11 @@
 
 研究内容一、二仅核查现有入口及组合配置，没有改写它们的环境、训练器或资源配置。工作三保留原有事件驱动环境；新的实际时间代价通过可选权重进入该环境，历史配置默认权重为0。LLM部分按用户后续要求缩减为离线与mock通路验证，真实API未配置、未调用。
 
-审阅时应同时阅读源码及本报告的限制：部分接口状态只保留类型表达，并没有实现对应的新算法；目前的查询程序只支持一种检索计划；完整规模吞吐、长训练收益、Linux运行及全部历史测试一致性均未完成验收。
+审阅时应同时阅读源码及本报告的限制：部分接口状态只保留类型表达，并没有实现对应的新算法；首轮仅支持一种固定检索计划，本轮补为有限结构化计划，仍不代表通用语义理解；完整规模吞吐、长训练收益、Linux运行及全部历史测试一致性均未完成验收。
 
-## 完整文件清单与职责
+## 首轮完整文件清单与职责
 
-以下20个文件构成本次提交范围；不包含用户已有的研究诊断目录、数据、模型或临时输出。
+以下20个文件构成首轮提交范围；不包含用户已有的研究诊断目录、数据、模型或临时输出。本轮另增加两个离线计划示例，见末节。
 
 | 文件 | 类型 | 主要职责及审阅重点 |
 | --- | --- | --- |
@@ -205,7 +207,7 @@ GPU检查在新训练命令后追加 `--set runtime.device=cuda --set runtime.am
 
 以上均应保留为审阅上下文，而不是在报告中表述为已完成能力。
 
-## 本轮发布与复验记录
+## 首轮发布与复验记录
 
 2026-11-15按用户要求，将本报告扩展为完整审阅报告，并将代码组织为三个独立目的的提交。提交范围共20个文件，未加入 `research_diagnostics/`，没有上传本轮临时模型、测试日志、密钥或API配置。
 
@@ -232,3 +234,117 @@ git diff 837194591b67c83e9cd2943d987de19e84a2c996...HEAD --stat
 ```
 
 独立审阅应以固定代码提交与基准之间的差异为源码证据，结合报告提交阅读。没有创建或自动合并PR，其他AI需要自行完成代码审阅；本报告不是第三方审阅结论。
+
+## 独立审阅后的修正记录（2026-11-15）
+
+修正起点为 `d82f25826d3c3707688225e0870224a981fec5fe`。用户提供的独立审阅定位了F1、F2、F3及G1；本轮先把三个问题写入原查询回归文件，在Windows的rag_env中得到3项预期失败，再修复。没有修改图编码、分层网络参数尺寸、资格/后移规则、转站模式或奖励权重来消除这些问题。
+
+### F2：等待原因与真正起作用的搜索跳转一致
+
+`AirLineEnvWork3._find_team_earliest_slot` 和 `_next_station_conflict_end` 新增可选 `wait_causes` 输出容器，记录实际发生的人员跳转、容量跳转及已知冲突工序。查询直接使用共享搜索提供的记录，删除原来只检查初始区间的推断。默认物理调用不需要传入容器，最早窗口的扫描、端点、容差和迭代保护规则不变。
+
+真实680反例中，三个占用均经正常 `env.step` 提交：人员先忙到10，站位再满到20，结果为start=20、duration=3，人员/站位等待标记均为1，冲突包含三道相关工序。再加入同队[21,30)的正常预约，验证“人员→站位→人员”继续推迟到30；容量升为3时，两例均可在10开工。没有通过直接伪造站位占用来代替此反例。
+
+### F1：数值输入契约与程序来源分离
+
+`ActorCriticWork3.input_semantics` 不再包含说明/程序指纹，而是保留方法、查询接口、状态/图/分层字段与布局，并显式记录 `relative_now_h0_v1` 归一化约定。程序指纹继续保存于快照、动作记录、训练配置与检查点的独立来源字段。
+
+采样检查快照自己的接口版本和来源指纹完整性；PPO检查记录自己的方法、字段布局、归一化、张量形状、有限性和动作/前缀掩码，不再要求该样本来自Actor当前唯一的程序。旧样本的条件仍按采样原值重放，不追溯改写F2修正前的旧数值。
+
+加载已发布v1格式时，显式移除旧元数据中错误绑定的 `query_program_hash`；只有已知v1接口允许补全原本隐含的归一化字段，其余schema必须匹配。回归中重建了d82f258的元数据格式进行兼容检查，没有覆盖或修改用户有效旧模型。错误字段、错误归一化、错误接口及非有限原始条件仍被拒绝；旧时间输入也未因此获得兼容资格。
+
+测试覆盖同义说明修改后加载原权重、旧新来源混合重放，以及两种不同检索范围计划产生的样本混合重放。采样与重放在参数未更新时的log_prob保持一致。
+
+### F3：显式继续给定现场，并核对初始费用
+
+`evaluate_query_trajectory(..., reset=True)` 保留原来从零评估的便捷行为；`reset=False` 不清空现有任务、日历、事件、执行前缀或费用。续评估记录 `initial_time`、`initial_environment_steps`、`initial_cost`、`initial_objective` 和 `initial_commitments`，决策快照编号沿用环境已有step_count。
+
+令起始累计费用为C0、最终累计费用为C1、调用时点注入扰动直接结算的费用为E、后续实际step奖励为r：
+
+`增量费用 = C1-C0`；`-Σr+E = C1-C0`。
+
+完整账本另要求C0等于起始状态独立计算的目标、C1等于最终状态独立目标。这样既不把历史费用再次计入续评估奖励，也不会把不一致的人工导入费用伪装成成功。已有历史step_rewards不是重置或丢弃的对象；后续核对从调用时的记录偏移开始。
+
+回归先正常完成0_15并触发第一次脉动，再预约0_18，以 `reset=False` 注入当前时刻的延迟并继续。Actor首次看到的时间及已完工状态不回退，预约团队和对齐保持不变，仅被动顺延；最终两架次十道工序完成、离线，可行性、完整和增量账本均通过。
+
+在调用方已经持有合法的 `env`、`actor` 时，可使用：
+
+```python
+from scripts.work3.evaluate_query import evaluate_query_trajectory
+
+result = evaluate_query_trajectory(env, actor, reset=False, max_decisions=100)
+```
+
+这不是现场状态文件的通用导入器。CLI仍负责新批次评估；本轮未新增未约定的现场序列化格式。继续状态时必须沿用与其累计费用一致的目标权重。
+
+### G1：有限、可区分的对象—关系—条件调用计划
+
+程序执行结构独立使用 `work3_query_plan_v2`；数值接口仍为 `work3_conditions_v1`。旧默认JSON仍可加载，内部转换为“绑定当前候选→团队窗口查询”。新增白名单步骤如下：
+
+| 步骤 | 参数与用途 |
+| --- | --- |
+| `bind_candidate` | 绑定本次全部当前候选 |
+| `bind_tasks` | 非空非负整数 `aircraft_ids`、`task_ids`；按笛卡尔积绑定具体实例，并核对对象存在 |
+| `related_tasks` | 同机直接 `predecessors` / `successors`，明确是否包含自身 |
+| `where` | `material_wait` / `predecessor_known`；用 `negate` 表达否定，仅查询已揭示事实 |
+| `team_completions` | 末步，对选中的当前候选查询原有完整合法团队窗口 |
+
+一个计划2至6步，首步绑定、末步查询，中间只允许上述关系和条件；多次筛选为交集。不支持任意代码、循环、任意新API或任意新增生产约束。未覆盖的候选返回UNKNOWN及 `outside_program_scope` 原因；不删除候选、不改变资格/后移掩码，也不谎称无合法团队。精确窗口仍是完整枚举的原物理结果。
+
+新增两个已核验、针对283数据的离线程序：
+
+1. `conf/work3/program_predecessor_focus.json`：仅检索飞机0工序18及同机直接前序中，前序释放已知的当前候选。
+2. `conf/work3/program_material_focus.json`：仅检索飞机1工序15及同机直接后继中，已揭示物料仍未就绪的当前候选。
+
+在第一次脉动后的同一现场，揭示飞机1工序15的物料释放时刻为100。第一程序给飞机0工序18提供精确窗口，第二程序给飞机1工序15提供从100开始的窗口；另一对象的条件为未知。编号相同的不同飞机实例不会串用。两者候选与合法掩码相同，14维条件确实不同，并通过投影前向钩子验证这些原始数值进入 `task_proj`。直接前序/后继的非空关系、否定筛选和非法API/参数/对象也有回归。
+
+人工计划和mock生成计划在同一现场执行结果相同；编译器缓存键包含计划结构版本、数值接口和说明文字，重复说明不再次生成。可选 `verified_examples` / `llm.example_program_paths` 最多传入三个已核验示例，有限反馈重试保留这些示例。生成结果仍为 `pending_semantic_review`，未经语义核验不能进入运行链。
+
+训练、评估均已接入 `paths.query_program`；未设置时继续默认全候选计划。可用以下覆盖选择已核验程序，并为运行指定新的输出位置：
+
+```powershell
+python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml --set paths.query_program=conf/work3/program_predecessor_focus.json --set paths.checkpoint_dir=outputs/work3/review/checkpoints --set paths.report_dir=outputs/work3/review
+python -m scripts.work3.evaluate_query --checkpoint outputs/work3/review/checkpoints/smoke_method_query_weights.pt --report outputs/work3/review/material_focus.json --set paths.query_program=conf/work3/program_material_focus.json --max-decisions 2
+```
+
+以上补齐的是可区分计划、对象/关系/条件执行及统一数值输入的有限能力。mock不证明LLM真正理解任意说明；复杂例外、任意对象对列表、一般逻辑表达式、多说明撤销替换及新限制仍不支持或未验收。模型不能自动把不支持的文字限制变成物理约束。真实API仍未配置、未调用。
+
+### 本轮实际验证
+
+环境保持Windows、rag_env、Python3.11.15、PyTorch2.12.0+cu132、RTX4060 8GB。没有停止原GPU任务、连接远程服务器或修改依赖声明。
+
+- 初次三个反例：3失败，均为预期问题；修复后3通过。
+- 查询集中回归在中途完整执行16项并通过；后增加两项非空关系/否定检查，不能把该次16项记录改写为18项全跑。
+- 扩展组合回归：**93通过、46未选入，257.97秒**。命令为首轮组合命令再加 `tests/work3/test_work3_f04_physical_constraints.py`；未使用skip或放宽生产约束。
+- 共享窗口的独立端点/容量检查：**14通过、7未选入，46.40秒**，命令见下。
+- 最后补验状态编号、承诺保持和worker程序来源：**2通过、16未选入，55.83秒**。
+- 最后补验契约损坏拒绝、不同计划及关系绑定：**4通过、14未选入，23.07秒**。这些与上面的组合回归有重叠，不相加成独立测试总数。
+- 正常Windows进程通信下，两worker、4步、一次Lightning更新通过，且检查点来源确为配置注入的程序，两个CPU worker均未初始化CUDA。
+- 配置注入程序的GPU BF16烟测：两worker、2步、一次更新，采样/重放最大误差0；显存峰值980,127,744字节，主进程内存峰值1,624,006,656字节；正常报告decision_limit，不标成功。
+- 新评估CLI读取上述权重，并切换到另一来源的物料关注程序，正常加载和运行2步；完整及增量账本为true，`success=false`、`decision_limit`、`makespan=null`。这验证跨程序来源加载，不代表烟测模型已有调度收益。
+
+组合回归的完整命令如下。Windows执行时设置 `OMP_NUM_THREADS=1`、`PYTHONDONTWRITEBYTECODE=1`，使用rag_env的绝对Python路径，并把 `--basetemp` 指向仓库外临时目录：
+
+```powershell
+python -m pytest tests/work3/test_scheduling_queries.py tests/work3/test_environment_actions.py tests/work3/test_work3_worker_mask_replay.py tests/work3/test_work3_same_timestamp_events.py tests/work3/test_work3_p2_1_objective_report.py tests/work3/test_work3_event_reward_accounting.py tests/work3/test_work3_training_runtime.py tests/work3/test_work3_f04_physical_constraints.py -k "not test_work3_training_runtime or runtime_config or runtime_seed or precision_resolver or training_cli_uses_yaml" -q -p no:cacheprovider --tb=short
+```
+
+GPU本轮使用的参数如下；实际 `--output`、`--report` 指向仓库外具名临时文件，记录结果后删除，因此未发布诊断权重：
+
+```powershell
+python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml --set paths.query_program=conf/work3/program_predecessor_focus.json --set runtime.device=cuda --set runtime.amp_dtype=bf16 --set runtime.total_env_steps=2 --set ppo.steps_per_iter=2 --set ppo.batch_size=2
+```
+
+```powershell
+python -m pytest tests/work3/test_work3_f01_feasibility.py -k "station_capacity or team_search or station_conflict_advancement or common_gap or independent_endpoint_oracle or n04" -q -p no:cacheprovider --tb=short
+```
+
+用户独立审阅在Linux受限宿主得到的66通过/1项AF_UNIX权限失败，以及最终10项单进程检查通过，是另一个环境的记录；本轮不改通信实现来绕过该宿主限制，也不声称已在正常Linux环境完成复验。用户报告的96次真实前缀对照和三次受控梯度更新未在本轮重复，不能算作新增证据。
+
+### 审阅边界与清理
+
+F1、F2、F3已有直接回归；G1具备上述有限的真实计划差异与正式配置路径，仍应接受下一次独立审阅。首轮五项历史失败没有在本轮删除或修复；没有进行全库重构、长训练、完整工业批次吞吐验收或跨种子效果实验。有限回归不能证明“没有bug”或完成全部开题实验。
+
+本轮临时模型、报告和pytest临时输出置于仓库外，记录结果后清理具名诊断产物。用户原有 `research_diagnostics/`、数据、已有检查点及历史测试继续保留。新增永久内容只有两个程序JSON，回归仍集中在原查询文件；未增加网络、数据库、执行框架或新的训练器。
+
+本轮修正代码提交为 [`196acec12470231a6133fef6f2a3b94ddbba7283`](https://github.com/1ush3n/APAL-Dynamic-2/commit/196acec12470231a6133fef6f2a3b94ddbba7283)。[相对独立审阅提交d82f258的修正差异](https://github.com/1ush3n/APAL-Dynamic-2/compare/d82f25826d3c3707688225e0870224a981fec5fe...196acec12470231a6133fef6f2a3b94ddbba7283)可单独审阅，本报告随后以独立文档提交保存。发布仍使用 `work3-query-migration-20261115` 分支，不合并基准分支，不强制推送。
