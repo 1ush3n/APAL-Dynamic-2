@@ -1,0 +1,12 @@
+{
+  "description": "仅检索飞机1的工序15及其同机直接后继中，已揭示物料仍未就绪的当前候选工序的合法团队连续窗口；未检索候选仍按原生产规则决策。",
+  "version": "work3_conditions_v1",
+  "plan_version": "work3_query_plan_v2",
+  "steps": [
+    {"api": "bind_tasks", "aircraft_ids": [1], "task_ids": [15]},
+    {"api": "related_tasks", "relation": "successors", "include_self": true},
+    {"api": "where", "predicate": "material_wait", "negate": false},
+    {"api": "team_completions"}
+  ],
+  "review": "offline_verified_retrieval_only"
+}

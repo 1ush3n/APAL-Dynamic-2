@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import json
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,207 @@ import torch
 from envs.work3.core_types import ActionBranch
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import ActorCriticWork3
+
+
+@pytest.mark.parametrize("later_worker", [False, True])
+def test_search_reports_later_station_block_after_waiting_for_workers(later_worker: bool) -> None:
+    from core.constraints import calculate_team_synergy_factor
+    from envs.work3.scheduling_queries import SchedulingQueries
+
+    env = AirLineEnvWork3(baseline_json_path=Path("data") / "work3" / "real_680_k10_baseline.json",
+                         raw_data_path=Path("data") / "680.csv", max_slots_per_station=2)
+    env.reset()
+    for key, team, release, duration in (("0_317", (0, 5), 0.0, 10.0),
+                                         ("0_706", (6, 22), 10.0, 10.0),
+                                         ("0_696", (66, 80), 10.0, 10.0),
+                                         ("0_18", (0, 5), 0.0, 3.0)):
+        task = env.state.tasks[key]
+        task.material_ready_time = release
+        task.standard_duration = duration * sum(env.worker_efficiencies[w] for w in team) * calculate_team_synergy_factor(task.demand) / task.demand
+        if key != "0_18":
+            env.step({"task_key": key, "team": team, "branch": ActionBranch.STATION_EXECUTE, "align": 0})
+    expected_conflicts = {"0_317", "0_706", "0_696"}
+    if later_worker:
+        blocker = next(task for task in env.get_action_candidates()
+                       if task.skill == 0 and task.demand == 2 and env.can_reserve(task) and task.task_key != "0_18")
+        blocker.material_ready_time = 21.0
+        blocker.standard_duration = 9.0 * sum(env.worker_efficiencies[w] for w in (0, 5)) * calculate_team_synergy_factor(2) / 2
+        env.step({"task_key": blocker.task_key, "team": (0, 5), "branch": ActionBranch.STATION_EXECUTE, "align": 0})
+        expected_conflicts.add(blocker.task_key)
+    result = SchedulingQueries(env).fixed_team("0_18", (0, 5), align=0)
+    assert result.start == pytest.approx(30.0 if later_worker else 20.0)
+    assert set(result.reasons) == {"worker", "station"}
+    assert set(result.conflict_keys) == expected_conflicts
+    assert result.features(0.0, env.state.h0)[12] == 1.0
+    env.max_slots_per_station = 3
+    assert SchedulingQueries(env).fixed_team("0_18", (0, 5), align=0).start == pytest.approx(10.0)
+
+
+def test_equivalent_description_keeps_checkpoint_and_mixed_replay_compatible(tmp_path: Path) -> None:
+    from envs.work3.query_program import validate_condition_program
+    from models.work3.ppo_trainer import PPOTrainerWork3
+
+    torch.set_num_threads(1)
+    env = AirLineEnvWork3()
+    env.reset()
+    actor = ActorCriticWork3(condition_queries=True, hidden_dim=16)
+    snapshot = actor.make_decision_snapshot(env, torch.zeros(32), torch.zeros(2))
+    _, lp, _, record = actor.select_snapshot(snapshot, deterministic=True)
+    checkpoint = tmp_path / "program.pt"
+    trainer = PPOTrainerWork3(actor)
+    trainer.save_checkpoint(str(checkpoint))
+    plan = json.loads((Path("conf") / "work3" / "condition_program.json").read_text(encoding="utf-8"))
+    plan["description"] = "读取当前工序团队可执行窗口。"
+    actor.query_program = validate_condition_program(plan)
+    assert actor.query_program.fingerprint != snapshot.query_program_hashes[0]
+    trainer.load_checkpoint(str(checkpoint))
+    legacy = torch.load(checkpoint, weights_only=False)
+    legacy["policy_input_semantics"].pop("condition_normalization", None)
+    legacy["policy_input_semantics"]["query_program_hash"] = snapshot.query_program_hashes[0]
+    torch.save(legacy, checkpoint)
+    trainer.load_checkpoint(str(checkpoint))
+    legacy["policy_input_semantics"]["condition_layout"] = ("错误字段",)
+    torch.save(legacy, checkpoint)
+    with pytest.raises(ValueError, match="语义"):
+        trainer.load_checkpoint(str(checkpoint))
+    new_snapshot = actor.make_decision_snapshot(env, torch.zeros(32), torch.zeros(2))
+    assert new_snapshot.query_tables == snapshot.query_tables
+    _, new_lp, _, new_record = actor.select_snapshot(new_snapshot, deterministic=True)
+    _, replay, _ = actor.evaluate_action_log_probs(torch.stack([snapshot.state_features, new_snapshot.state_features]),
+        torch.stack([snapshot.time_features, new_snapshot.time_features]), [record, new_record])
+    assert replay.tolist() == pytest.approx([lp, new_lp], abs=1e-5)
+    with pytest.raises(ValueError, match="归一化"):
+        actor.evaluate_action_log_probs(snapshot.state_features.unsqueeze(0), snapshot.time_features.unsqueeze(0),
+                                         [{**record, "condition_normalization": "绝对时间"}])
+    with pytest.raises(ValueError):
+        actor.evaluate_action_log_probs(snapshot.state_features.unsqueeze(0), snapshot.time_features.unsqueeze(0),
+                                         [{**record, "query_version": "错误版本"}])
+    damaged = record["query_task_features"].clone()
+    damaged[0, 0] = float("nan")
+    with pytest.raises(ValueError, match="非有限"):
+        actor.evaluate_action_log_probs(snapshot.state_features.unsqueeze(0), snapshot.time_features.unsqueeze(0),
+                                         [{**record, "query_task_features": damaged}])
+
+
+def test_continuation_evaluation_preserves_progress_and_initial_cost(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from .test_work3_m02_disturbed_pulse_trace import _two_aircraft_baseline, TEAMS
+    from scripts.work3.evaluate_query import evaluate_query_trajectory
+    from utils.work3.objective_evaluator import ObjectiveWeights
+
+    path = tmp_path / "continuation.json"
+    _two_aircraft_baseline(path)
+    env = AirLineEnvWork3(baseline_json_path=path, weights=ObjectiveWeights(w_makespan=1.0))
+    env.reset()
+    env.step({"task_key": "0_15", "team": TEAMS[15], "branch": ActionBranch.STATION_EXECUTE, "align": 0})
+    env.step({"task_key": "0_18", "team": TEAMS[18], "branch": ActionBranch.STATION_EXECUTE, "align": 1})
+    before_time, before_cost = env.state.current_time, env.cumulative_cost
+    before_steps = env.step_count
+    scheduled = env.state.tasks["0_18"].scheduled_start
+    actor = ActorCriticWork3(condition_queries=True, hidden_dim=16)
+    seen = []
+    original = actor.select_snapshot
+    def capture(snapshot: object, **kwargs: object) -> tuple:
+        seen.append((snapshot.current_time, env.state.tasks["0_15"].status, env.state.tasks["0_18"].scheduled_start, snapshot.episode_index))
+        return original(snapshot, **kwargs)
+    monkeypatch.setattr(actor, "select_snapshot", capture)
+    result = evaluate_query_trajectory(env, actor, reset=False, max_decisions=100,
+        scenario={"scenario_id": "续调度", "tau": before_time, "recovery_time": 12.0,
+                  "affected_task_keys": ["0_18"], "valid": True})
+    from envs.work3.core_types import TaskStatus
+    assert seen[0][0] == before_time and seen[0][1] == TaskStatus.COMPLETED
+    assert seen[0][2] >= scheduled
+    assert seen[0][3] == before_steps
+    assert tuple(env.state.tasks["0_18"].assigned_team) == tuple(sorted(TEAMS[18]))
+    assert env.state.tasks["0_18"].alignment == 1
+    assert result["initial_cost"] == before_cost and result["initial_time"] == before_time
+    assert result["success"] and result["cost_ledger_matches"] and result["incremental_cost_ledger_matches"]
+
+
+def test_scoped_programs_bind_relations_and_conditions_into_same_policy(tmp_path: Path) -> None:
+    from .test_work3_m02_disturbed_pulse_trace import _two_aircraft_baseline, TEAMS
+    from envs.work3.query_program import load_condition_program, compile_condition_program
+
+    torch.set_num_threads(1)
+    path = tmp_path / "program_batch.json"
+    _two_aircraft_baseline(path)
+    env = AirLineEnvWork3(baseline_json_path=path)
+    env.reset()
+    env.step({"task_key": "0_15", "team": TEAMS[15], "branch": ActionBranch.STATION_EXECUTE, "align": 0})
+    env.load_scenario({"scenario_id": "已揭示物料", "tau": env.state.current_time, "recovery_time": 100.0,
+                       "affected_task_keys": ["1_15"], "valid": True})
+    paths = [Path("conf") / "work3" / name for name in ("program_predecessor_focus.json", "program_material_focus.json")]
+    actor = ActorCriticWork3(condition_queries=True, hidden_dim=16, query_program_path=paths[0])
+    snapshots, records, probabilities = [], [], []
+    scoring_inputs = []
+    handle = actor.task_proj.register_forward_pre_hook(lambda module, inputs: scoring_inputs.append(inputs[0].detach().clone()))
+    for program_path in paths:
+        actor.query_program = load_condition_program(program_path)
+        snapshot = actor.make_decision_snapshot(env, torch.zeros(32), torch.zeros(2))
+        snapshots.append(snapshot)
+        _, lp, _, record = actor.select_snapshot(snapshot, deterministic=True)
+        records.append(record)
+        probabilities.append(lp)
+        raw = json.loads(program_path.read_text(encoding="utf-8"))
+        def mock_generate(text: str, feedback: str) -> dict:
+            assert text == raw["description"] and "已核验检索示例" in feedback
+            return dict(raw)
+        compiled = compile_condition_program(raw["description"], mock_generate, cache_dir=tmp_path, attempts=1,
+                                             verified_examples=(raw,))
+        generated = json.loads(compiled.read_text(encoding="utf-8"))
+        generated["review"] = "offline_verified_retrieval_only"
+        from envs.work3.query_program import validate_condition_program
+        manual = actor.query_program.execute_candidates(env, snapshot.candidate_task_keys)
+        assert validate_condition_program(generated).execute_candidates(env, snapshot.candidate_task_keys) == manual
+    keys = snapshots[0].candidate_task_keys
+    assert keys == snapshots[1].candidate_task_keys and "0_18" in keys and "1_15" in keys
+    for key, left, right in zip(keys, snapshots[0].query_tables, snapshots[1].query_tables):
+        if key == "0_18":
+            assert left.best().start is not None and right.best().start is None
+        if key == "1_15":
+            assert left.best().start is None and right.best().start == 100.0
+    assert not torch.equal(records[0]["query_task_features"], records[1]["query_task_features"])
+    handle.remove()
+    assert snapshots[0].branch_masks == snapshots[1].branch_masks
+    assert all(torch.equal(observed, record["query_task_features"]) for observed, record in zip(scoring_inputs, records))
+    _, replay, _ = actor.evaluate_action_log_probs(torch.stack([s.state_features for s in snapshots]),
+        torch.stack([s.time_features for s in snapshots]), records)
+    assert replay.tolist() == pytest.approx(probabilities, abs=1e-5)
+
+
+@pytest.mark.parametrize("relation", ["predecessors", "successors"])
+def test_program_relation_scope_negation_and_rejections(relation: str) -> None:
+    import copy
+    from envs.work3.query_program import validate_condition_program
+
+    env = AirLineEnvWork3()
+    env.reset()
+    from envs.work3.core_types import TaskStatus
+    child = next(task for task in env.state.tasks.values() if task.aircraft_id == 0 and task.predecessors
+                 and env.state.tasks[f"0_{task.predecessors[0]}"].status != TaskStatus.COMPLETED)
+    parent = env.state.tasks[f"0_{child.predecessors[0]}"]
+    source, target = (child, parent) if relation == "predecessors" else (parent, child)
+    plan = json.loads((Path("conf") / "work3" / "program_material_focus.json").read_text(encoding="utf-8"))
+    plan["steps"] = [{"api": "bind_tasks", "aircraft_ids": [0], "task_ids": [source.task_id]},
+                     {"api": "related_tasks", "relation": relation, "include_self": False},
+                     {"api": "where", "predicate": "material_wait", "negate": True}, {"api": "team_completions"}]
+    keys = (target.task_key, f"1_{target.task_id}")
+    tables = validate_condition_program(plan).execute_candidates(env, keys)
+    assert "outside_program_scope" not in tables[0].unavailable.reasons
+    assert tables[1].unavailable.reasons == ("outside_program_scope",)
+    target.material_ready_time = 100.0
+    assert validate_condition_program(plan).execute_candidates(env, keys)[0].unavailable.reasons == ("outside_program_scope",)
+    bad = copy.deepcopy(plan)
+    bad["steps"][1]["api"] = "eval"
+    with pytest.raises(ValueError, match="白名单"):
+        validate_condition_program(bad)
+    bad = copy.deepcopy(plan)
+    bad["steps"][0]["task_ids"] = [True]
+    with pytest.raises(ValueError, match="整数"):
+        validate_condition_program(bad)
+    bad = copy.deepcopy(plan)
+    bad["steps"][0]["aircraft_ids"] = [999]
+    with pytest.raises(ValueError, match="不存在"):
+        validate_condition_program(bad).execute_candidates(env, keys)
 
 
 def test_query_continuous_slot_prefix_and_read_only() -> None:
@@ -44,10 +246,13 @@ def test_query_policy_replays_without_live_queries_and_updates(tmp_path: Path) -
     from models.work3.ppo_trainer import PPOTrainerWork3
 
     torch.set_num_threads(1)
+    torch.manual_seed(42)
     env = AirLineEnvWork3()
     env.reset()
     task = env.get_action_candidates()[0]
     task.current_station = 1
+    # 两种对齐必须给出不同条件，才能检验对齐查询投影的非零梯度。
+    task.in_station_offset = env.state.h0
     env.state.aircraft[0].current_station = 1
     for index, worker_id in enumerate(env.state.station_worker_bindings[1]):
         env.worker_skills[worker_id] = frozenset({task.skill})
@@ -62,6 +267,7 @@ def test_query_policy_replays_without_live_queries_and_updates(tmp_path: Path) -
     assert action is not None and "query_task_features" in record
     assert len(record["worker_prefixes"]) == 2
     assert record["worker_prefixes"][1] == (action["team"][0],)
+    assert not torch.equal(record["query_alignment_features"][0], record["query_alignment_features"][1])
     from envs.work3.scheduling_queries import SchedulingQueries
     env.state.current_time += 5.0
     def reject_search(*args: object, **kwargs: object) -> None:
@@ -183,8 +389,13 @@ def test_query_training_uses_existing_lightning_and_two_workers(tmp_path: Path, 
     monkeypatch.setattr(training, "PendingTimeLabelCache", reject_time_cache)
     report = training.run_training(method_variant="QUERY", num_envs=2, steps_per_iter=4,
                                    batch_size=4, max_wall_seconds=120.0,
+                                   query_program_path=Path("conf") / "work3" / "program_predecessor_focus.json",
                                    output_ckpt=tmp_path / "query.pt")
     assert report["lightning_optimization_steps"] == 1
+    from envs.work3.query_program import load_condition_program
+    checkpoint = torch.load(tmp_path / "query.pt", weights_only=False)
+    assert checkpoint["query_program_source"] == load_condition_program(Path("conf") / "work3" / "program_predecessor_focus.json").fingerprint
+    assert report["environment_worker_cuda_initialized"] == [False, False]
 
 
 def test_offline_program_binds_real_candidate_and_reuses_plan(tmp_path: Path) -> None:

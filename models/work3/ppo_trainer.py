@@ -512,6 +512,8 @@ class PPOTrainerWork3:
             "actor_critic_state": self.actor_critic.state_dict(),
             "run_metadata": dict(metadata or {}),
             "policy_input_semantics": self.actor_critic.input_semantics(),
+            "query_program_source": (None if self.actor_critic.query_program is None
+                                     else self.actor_critic.query_program.fingerprint),
         }
         if self.optimizer is not None:
             checkpoint["optimizer_state"] = self.optimizer.state_dict()
@@ -529,7 +531,13 @@ class PPOTrainerWork3:
         """加载模型/优化器权重；此操作不恢复环境和采样状态，不能精确续训。"""
         checkpoint = torch.load(path, map_location=self.device, weights_only=False)
         expected_semantics = self.actor_critic.input_semantics()
-        observed_semantics = checkpoint.get("policy_input_semantics", {"method_id": "historical_time_v3"})
+        observed_semantics = dict(checkpoint.get("policy_input_semantics", {"method_id": "historical_time_v3"}))
+        if self.actor_critic.condition_queries:
+            from envs.work3.scheduling_queries import QUERY_VERSION, CONDITION_NORMALIZATION
+            observed_semantics.pop("query_program_hash", None)
+            # 已发布v1只有来源绑定过严；归一化未改变，允许显式补全该历史字段。
+            if observed_semantics.get("query_version") == QUERY_VERSION:
+                observed_semantics.setdefault("condition_normalization", CONDITION_NORMALIZATION)
         if observed_semantics != expected_semantics:
             raise ValueError("检查点输入语义不匹配；仅允许显式骨干热启动")
         validate_checkpoint_graph_feature_schema(checkpoint)

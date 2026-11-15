@@ -32,7 +32,11 @@ GPU 小内存运行追加 `--set runtime.device=cuda --set runtime.amp_dtype=bf1
 
 QUERY 不创建时间残差头、时间标签缓存或预测势函数。时间量来自已揭示的物料、前序和已承诺日历，逐人查询保留真实前缀；PPO 重放只读采样数值、图和掩码。检查点记录方法、输入语义、查询版本和程序指纹，旧权重只能显式热启动可对应参数，不续接旧输入投影或优化器。
 
-LLM 暂不配置 API。默认使用 `conf/work3/condition_program.json` 的离线已核验只读计划，实际绑定当前飞机—工序实例并进入评分。可选预编译入口为 `python -m envs.work3.query_program --help`；新生成计划先标记待语义核验，不能直接进入正式查询。本轮仅验证离线与 mock 通路，未验证真实服务。
+LLM 暂不配置 API。默认使用 `conf/work3/condition_program.json` 的离线已核验只读计划。现支持对象绑定、同机直接前序/后继、物料等待/前序已知条件及否定的有限调用计划；训练和评估均可通过 `--set paths.query_program=conf/work3/program_material_focus.json` 注入已核验程序（另有 `program_predecessor_focus.json` 示例）。范围以外候选返回“未知”，资格、后移及资源硬约束仍由原环境执行。说明或有效检索计划改变不会自行使同一数值契约下的权重失效，程序指纹保留作来源追溯。
+
+可选预编译入口为 `python -m envs.work3.query_program --help`；`llm.example_program_paths` 可指定最多3个已核验示例。新生成计划先标记待语义核验，不能直接进入正式查询。本轮仅验证离线与 mock 通路，未验证真实服务或任意自然语言理解质量。
+
+需要继续调用方已持有的生产现场时，使用 `evaluate_query_trajectory(env, actor, reset=False, max_decisions=100)`；默认 `reset=True` 保持从零评估。续评估记录起始时间、费用和承诺，分别核对完整目标与后续增量，不清空执行前缀。已运行工序不因新注入扰动而重新推迟。
 
 工作三历史 B/C/D/E/F/G 的含义保留：使用 `conf/work3/train_pilot.yaml` 与原 `scripts/work3/evaluate_c_vs_d.py`。时间头、监督和势函数文件继续服务历史复现；APCF 等扩展不是本轮正式方案新增内容。下文保留原有工程与历史实验说明，以本节及 [迁移记录](docs/work3_query_migration.md) 为当前方法入口依据。
 

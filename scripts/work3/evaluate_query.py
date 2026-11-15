@@ -25,17 +25,29 @@ from utils.work3.trajectory_feasibility import check_environment_trajectory_feas
 def evaluate_query_trajectory(
     env: AirLineEnvWork3, actor: ActorCriticWork3, *, scenario: dict[str, Any] | None = None,
     max_decisions: int, max_wall_seconds: float | None = None, amp_dtype: str = "fp32",
+    reset: bool = True,
 ) -> dict[str, Any]:
-    """同一Actor生成无扰动安排，或在已有承诺及已揭示扰动后继续执行。"""
+    """默认从零评估；reset=False继承现场，以初始费用为基准核对后续增量。"""
     if not actor.condition_queries or type(max_decisions) is not int or max_decisions < 1:
         raise ValueError("评估要求QUERY Actor及正整数决策预算")
     if max_wall_seconds is not None and (not math.isfinite(max_wall_seconds) or max_wall_seconds <= 0):
         raise ValueError("时间预算必须为正有限数")
     device = next(actor.parameters()).device
     _, dtype = resolve_work3_precision(amp_dtype, device)
-    env.reset()
+    if type(reset) is not bool:
+        raise TypeError("reset必须为布尔值")
+    if reset:
+        env.reset()
+    initial_time, initial_cost = float(env.state.current_time), float(env.cumulative_cost)
+    initial_environment_steps = int(env.step_count)
+    initial_objective = evaluate_trajectory_objective(env, weights=env.weights).j_total
+    reward_offset = len(env.step_rewards)
+    initial_commitments = {task.task_key: {"status": task.status.name, "station": task.current_station,
+        "team": list(task.assigned_team), "start": task.scheduled_start, "align": task.alignment}
+        for task in env.state.tasks.values() if task.status in (TaskStatus.RESERVED, TaskStatus.RUNNING, TaskStatus.COMPLETED)}
     if scenario is not None:
         env.load_scenario(scenario)
+    scenario_cost = float(env.cumulative_cost) - initial_cost
     actor.eval()
     started = time.monotonic()
     reason = "decision_limit"
@@ -49,7 +61,7 @@ def evaluate_query_trajectory(
             if max_wall_seconds is not None and time.monotonic() - started >= max_wall_seconds:
                 reason = "time_budget"
                 break
-            snapshot = actor.make_decision_snapshot(env, torch.zeros(32), torch.zeros(2), episode_index=index)
+            snapshot = actor.make_decision_snapshot(env, torch.zeros(32), torch.zeros(2), episode_index=int(env.step_count))
             with torch.amp.autocast(device_type=device.type, dtype=dtype, enabled=dtype is not None):
                 action, _, _, _ = actor.select_snapshot(snapshot, deterministic=True)
             _, _, terminated, truncated, info = env.step(action)
@@ -62,8 +74,12 @@ def evaluate_query_trajectory(
         reason = "completed"
     feasible, violations = check_environment_trajectory_feasibility(env)
     objective = evaluate_trajectory_objective(env, weights=env.weights)
-    ledger_matches = (math.isclose(env.cumulative_cost, objective.j_total, rel_tol=1e-8, abs_tol=1e-8)
-                      and math.isclose(-sum(env.step_rewards), objective.j_total, rel_tol=1e-8, abs_tol=1e-8))
+    incremental_cost = float(env.cumulative_cost) - initial_cost
+    incremental_matches = math.isclose(-sum(env.step_rewards[reward_offset:]) + scenario_cost,
+                                      incremental_cost, rel_tol=1e-8, abs_tol=1e-8)
+    initial_matches = math.isclose(initial_cost, initial_objective, rel_tol=1e-8, abs_tol=1e-8)
+    ledger_matches = (initial_matches and incremental_matches
+                      and math.isclose(env.cumulative_cost, objective.j_total, rel_tol=1e-8, abs_tol=1e-8))
     return {
         "method": actor.input_semantics(), "success": complete and feasible and ledger_matches,
         "terminated": complete, "truncated": truncated or reason in {"time_budget", "decision_limit"},
@@ -73,6 +89,12 @@ def evaluate_query_trajectory(
         "partial_current_time": env.state.current_time, "transfer_policy": env.transfer_policy,
         "independent_feasible": feasible, "constraint_violations": violations,
         "cost_ledger_matches": ledger_matches,
+        "reset": reset, "initial_time": initial_time, "initial_cost": initial_cost,
+        "initial_environment_steps": initial_environment_steps,
+        "initial_objective": initial_objective, "initial_cost_ledger_matches": initial_matches,
+        "initial_commitments": initial_commitments, "scenario_cost_delta": scenario_cost,
+        "incremental_cost": incremental_cost, "incremental_cost_ledger_matches": incremental_matches,
+        "remaining_elapsed_time": float(env.state.current_time) - initial_time,
         "objective": build_objective_report(objective, env.weights, h0=env.state.h0),
         "objective_weights": asdict(env.weights), "scenario_id": (scenario or {}).get("scenario_id"),
         "disturbance_results": env.disturbance_event_results,
@@ -96,7 +118,7 @@ def main() -> None:
         raise ValueError("此入口只接受QUERY配置")
     seed_work3_runtime(config.runtime.seed, deterministic=config.runtime.deterministic)
     torch.set_num_threads(config.runtime.main_num_threads)
-    actor = ActorCriticWork3(condition_queries=True).to(config.runtime.device)
+    actor = ActorCriticWork3(condition_queries=True, query_program_path=config.paths.get("query_program")).to(config.runtime.device)
     PPOTrainerWork3(actor, device=config.runtime.device, create_optimizer=False).load_checkpoint(str(args.checkpoint))
     env = AirLineEnvWork3(baseline_json_path=Path(config.paths.baseline),
                          raw_data_path=Path(config.paths.raw_data),

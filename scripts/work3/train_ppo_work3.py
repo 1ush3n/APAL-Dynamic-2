@@ -148,6 +148,7 @@ def create_work3_single_env_runtime(
     num_envs: int = 1,
     worker_torch_num_threads: int = 1,
     condition_queries: bool = False,
+    query_program_path: str | Path | None = None,
     objective_weights: dict[str, Any] | None = None,
     raw_data_path: str | Path | None = None,
     seed: int | None = None,
@@ -165,6 +166,7 @@ def create_work3_single_env_runtime(
         worker_torch_num_threads=worker_torch_num_threads,
         start_method="spawn",
         condition_queries=condition_queries,
+        query_program_path=query_program_path,
         seed=seed,
     )
     active_environments = _ACTIVE_TRAINING_ENVS.get()
@@ -760,6 +762,7 @@ def run_training(
     warmup_mode: str = "none",
     r3_e04_audit: bool = False,
     shaping_audit: bool = False,
+    query_program_path: str | Path | None = None,
     objective_weights: dict[str, Any] | None = None,
     raw_data_path: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -892,6 +895,7 @@ def run_training(
         num_envs=num_envs,
         worker_torch_num_threads=env_num_threads,
         condition_queries=profile.use_condition_queries,
+        query_program_path=query_program_path,
         objective_weights=objective_weights,
         raw_data_path=raw_data_path,
         seed=seed,
@@ -904,6 +908,7 @@ def run_training(
         hidden_dim=64,
         max_station_workers=16,
         condition_queries=profile.use_condition_queries,
+        query_program_path=query_program_path,
     ).to(torch_device)
     time_head = (
         TimeResidualHead(in_dim=actor_critic.hidden_dim, hidden_dim=64).to(torch_device)
@@ -968,6 +973,8 @@ def run_training(
         "method_variant": profile.name,
         "method_profile": asdict(profile),
         "policy_input_semantics": actor_critic.input_semantics(),
+        "query_program_path": None if query_program_path is None else str(Path(query_program_path)),
+        "query_program_source": None if actor_critic.query_program is None else actor_critic.query_program.fingerprint,
         "objective_weights": dict(objective_weights or {}),
         "time_head_initialization": time_head_initialization_source,
         "seed": int(seed),
@@ -2734,6 +2741,7 @@ def main() -> None:
         objective_weights=(OmegaConf.to_container(runtime_config.objective, resolve=True)
                            if "objective" in runtime_config else None),
         raw_data_path=runtime_config.paths.get("raw_data"),
+        query_program_path=runtime_config.paths.get("query_program"),
     )
 
 

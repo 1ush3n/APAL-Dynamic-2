@@ -1073,7 +1073,8 @@ class AirLineEnvWork3:
                 raise ValueError(f"工人 {w} 不具备工序 {task.task_key} 所需技能 {task.skill}！")
 
     def _find_team_earliest_slot(
-        self, station_id: int, team: Sequence[int], search_start: float, duration: float
+        self, station_id: int, team: Sequence[int], search_start: float, duration: float,
+        *, wait_causes: list[tuple[str, tuple[str, ...]]] | None = None,
     ) -> float:
         """寻找团队和站位资源同时可行的最早半开区间起点。"""
         if not math.isfinite(float(duration)):
@@ -1097,6 +1098,11 @@ class AirLineEnvWork3:
                     tolerance=self.tolerance,
                 )
                 team_candidate = max(team_candidate, worker_slot)
+                if wait_causes is not None and worker_slot > candidate + self.tolerance:
+                    wait_causes.append(("worker", tuple(sorted({interval.task_key
+                        for interval in self.state.workers[worker_id].intervals
+                        if interval.end > candidate + self.tolerance
+                        and interval.start < worker_slot - self.tolerance}))))
 
             if team_candidate > candidate + self.tolerance:
                 candidate = team_candidate
@@ -1106,6 +1112,7 @@ class AirLineEnvWork3:
                 station_id,
                 candidate,
                 candidate + duration,
+                wait_causes=wait_causes,
             )
             if conflict_end is None:
                 return candidate
@@ -1127,12 +1134,13 @@ class AirLineEnvWork3:
         station_id: int,
         start: float,
         end: float,
+        *, wait_causes: list[tuple[str, tuple[str, ...]]] | None = None,
     ) -> float | None:
         """返回候选区间内第一次容量超限的相关完工时刻。"""
         if end <= start + self.tolerance:
             return None
 
-        intervals: list[tuple[float, float]] = []
+        intervals: list[tuple[float, float, str]] = []
         for task_key in self._station_occupied_tasks.get(station_id, ()):
             t = self.state.tasks[task_key]
             if t.scheduled_start is None:
@@ -1144,10 +1152,10 @@ class AirLineEnvWork3:
                 continue
             if interval_end <= start + self.tolerance or interval_start >= end - self.tolerance:
                 continue
-            intervals.append((interval_start, interval_end))
+            intervals.append((interval_start, interval_end, task_key))
 
         time_points = {float(start), float(end)}
-        for interval_start, interval_end in intervals:
+        for interval_start, interval_end, _ in intervals:
             if start + self.tolerance < interval_start < end - self.tolerance:
                 time_points.add(interval_start)
             if start + self.tolerance < interval_end < end - self.tolerance:
@@ -1159,13 +1167,15 @@ class AirLineEnvWork3:
                 continue
 
             active_intervals = [
-                (interval_start, interval_end)
-                for interval_start, interval_end in intervals
+                (interval_start, interval_end, task_key)
+                for interval_start, interval_end, task_key in intervals
                 if interval_start <= left + self.tolerance
                 and interval_end > left + self.tolerance
             ]
             if len(active_intervals) >= self.max_slots_per_station:
-                return min(interval_end for _, interval_end in active_intervals)
+                if wait_causes is not None:
+                    wait_causes.append(("station", tuple(sorted(key for _, _, key in active_intervals))))
+                return min(interval_end for _, interval_end, _ in active_intervals)
 
         return None
 

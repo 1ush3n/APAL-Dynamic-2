@@ -489,6 +489,7 @@ class Work3VectorEnv:
         request_timeout_seconds: float = 300.0,
         seed: int | None = None,
         condition_queries: bool = False,
+        query_program_path: str | Path | None = None,
     ) -> None:
         if type(num_envs) is not int or num_envs < 1:
             raise ValueError("num_envs必须为正整数")
@@ -502,7 +503,7 @@ class Work3VectorEnv:
             raise ValueError("worker超时必须为正数")
         self._num_envs = num_envs
         self.condition_queries = condition_queries
-        self.query_program = load_condition_program() if condition_queries else None
+        self.query_program = load_condition_program(None if query_program_path is None else Path(query_program_path)) if condition_queries else None
         self._request_id = 0
         self._closed = False
         self._request_timeout_seconds = float(request_timeout_seconds)

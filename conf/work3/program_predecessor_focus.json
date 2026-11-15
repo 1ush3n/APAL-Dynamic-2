@@ -1,0 +1,12 @@
+{
+  "description": "仅检索飞机0的工序18及其同机直接前序中，前序释放已知的当前候选工序的合法团队连续窗口；未检索候选仍按原生产规则决策。",
+  "version": "work3_conditions_v1",
+  "plan_version": "work3_query_plan_v2",
+  "steps": [
+    {"api": "bind_tasks", "aircraft_ids": [0], "task_ids": [18]},
+    {"api": "related_tasks", "relation": "predecessors", "include_self": true},
+    {"api": "where", "predicate": "predecessor_known", "negate": false},
+    {"api": "team_completions"}
+  ],
+  "review": "offline_verified_retrieval_only"
+}

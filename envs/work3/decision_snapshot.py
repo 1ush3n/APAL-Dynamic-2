@@ -321,7 +321,7 @@ def build_decision_snapshot(
         from envs.work3.query_program import load_condition_program
         from models.work3.actor_critic import extract_compact_state_features
         program = query_program if query_program is not None else load_condition_program()
-        query_tables = tuple(program.execute(env, key) for key in candidate_keys)
+        query_tables = program.execute_candidates(env, candidate_keys)
         program_hashes = (program.fingerprint,)
         query_version = QUERY_VERSION
         estimated_cmax = None

@@ -18,6 +18,7 @@ runtime:
   scenario_pool_path: data/work3/scenarios_9class.json
   scenario_split_path: data/work3/experiment_splits/train.json
 paths:
+  query_program: null
   baseline: data/work3/real_283_k10_baseline.json
   raw_data: data/283.csv
   checkpoint_dir: outputs/work3/query/checkpoints

@@ -133,6 +133,9 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
                                          OmegaConf.select(config, "paths.time_head_checkpoint"))
     elif OmegaConf.select(config, "paths.time_head_checkpoint") is not None:
         raise ValueError("QUERY不接受时间预测头权重")
+    program_path = OmegaConf.select(config, "paths.query_program")
+    if program_path is not None and (not query_method or not isinstance(program_path, str) or not program_path.strip()):
+        raise ValueError("paths.query_program仅支持QUERY的非空程序文件路径")
     if type(config.runtime.seed) is not int:
         raise ValueError("runtime.seed必须是整数")
     if type(config.runtime.deterministic) is not bool:

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 QUERY_VERSION = "work3_conditions_v1"
 METHOD_ID = "hierarchical_condition_query_v1"
 CONDITION_DIM = 14
+CONDITION_NORMALIZATION = "relative_now_h0_v1"
 CONDITION_LAYOUT = (
     "exact", "lower_bound", "unknown", "no_completion", "budget_exhausted",
     "start_delta_h0", "end_delta_h0", "duration_h0", "time_valid",
@@ -122,16 +123,13 @@ class SchedulingQueries:
                 reasons.append("alignment")
             lower = max(lower, target)
         duration = env.duration_for_team(task, team, start_time=lower)
-        start = env._find_team_earliest_slot(task.current_station, team, lower, duration)
-        conflicts = set()
-        for worker_id in team:
-            for interval in env.state.workers[worker_id].intervals:
-                if interval.end > lower + env.tolerance and interval.start < start + duration - env.tolerance:
-                    if "worker" not in reasons:
-                        reasons.append("worker")
-                    conflicts.add(interval.task_key)
-        if env._next_station_conflict_end(task.current_station, lower, lower + duration) is not None:
-            reasons.append("station")
+        wait_causes: list[tuple[str, tuple[str, ...]]] = []
+        start = env._find_team_earliest_slot(task.current_station, team, lower, duration, wait_causes=wait_causes)
+        conflicts: set[str] = set()
+        for reason, keys in wait_causes:
+            if reason not in reasons:
+                reasons.append(reason)
+            conflicts.update(keys)
         return ScheduleCondition(QueryStatus.EXACT, team, start, start + duration,
                                  duration, tuple(reasons), tuple(sorted(conflicts)))
 

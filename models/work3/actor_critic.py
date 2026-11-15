@@ -52,7 +52,7 @@ from envs.work3.decision_snapshot import (
     worker_completion_mask,
 )
 from envs.work3.environment import AirLineEnvWork3
-from envs.work3.scheduling_queries import CONDITION_DIM, CONDITION_LAYOUT, METHOD_ID, QUERY_VERSION, QueryStatus, ScheduleCondition
+from envs.work3.scheduling_queries import CONDITION_DIM, CONDITION_LAYOUT, CONDITION_NORMALIZATION, METHOD_ID, QUERY_VERSION, QueryStatus, ScheduleCondition
 from envs.work3.query_program import load_condition_program
 from models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
 from models.hb_gat_pn import FeatureEmbedder, HeteroGATEncoder
@@ -456,6 +456,7 @@ class ActorCriticWork3(nn.Module):
         hidden_dim: int = 64,
         max_station_workers: int = 16,
         condition_queries: bool = False,
+        query_program_path: str | Path | None = None,
     ) -> None:
         super().__init__()
         self.state_dim = state_dim
@@ -463,7 +464,7 @@ class ActorCriticWork3(nn.Module):
         self.hidden_dim = hidden_dim
         self.max_station_workers = max_station_workers
         self.condition_queries = condition_queries
-        self.query_program = load_condition_program() if condition_queries else None
+        self.query_program = load_condition_program(None if query_program_path is None else Path(query_program_path)) if condition_queries else None
 
         # 图骨干；encoder 保留为旧32维接口的补充状态分支和旧检查点兼容层。
         self.graph_encoder = Work3GraphEncoder(hidden_dim, condition_queries=condition_queries)
@@ -622,7 +623,36 @@ class ActorCriticWork3(nn.Module):
                 "hierarchy_version": "work3_role_sums_v1",
                 "role_fact_layout": ("task_count", "standard_work_h0", "skill_0_demand", "skill_1_demand",
                                      "skill_2_demand", "skill_3_demand", "skill_4_demand"),
-                "query_program_hash": self.query_program.fingerprint}
+                "condition_normalization": CONDITION_NORMALIZATION}
+
+    @staticmethod
+    def _validate_program_sources(hashes: tuple[str, ...]) -> None:
+        """程序指纹仅用于来源追溯，不限制当前Actor只能重放一个来源。"""
+        if not hashes or any(not isinstance(value, str) or len(value) != 64
+                             or any(char not in "0123456789abcdef" for char in value) for value in hashes):
+            raise ValueError("查询程序来源指纹缺失或损坏")
+
+    def _validate_condition_record(self, record: dict[str, Any]) -> None:
+        self._validate_program_sources(tuple(record.get("query_program_hashes", ())))
+        if (record.get("method_id") != METHOD_ID
+            or tuple(record.get("condition_layout", CONDITION_LAYOUT)) != CONDITION_LAYOUT
+            or record.get("condition_normalization", CONDITION_NORMALIZATION) != CONDITION_NORMALIZATION):
+            raise ValueError("PPO条件字段或归一化语义不匹配")
+        def check(value: Any, shape: tuple[int, ...]) -> None:
+            if not isinstance(value, torch.Tensor) or tuple(value.shape) != shape or not torch.isfinite(value).all():
+                raise ValueError("PPO原始条件张量形状错误或含非有限值")
+        check(record.get("query_task_features"), (len(record.get("candidate_task_keys", ())), CONDITION_DIM))
+        if record.get("action_type") != "schedule":
+            return
+        check(record.get("query_branch_features"), (2, CONDITION_DIM))
+        if record.get("branch") == int(ActionBranch.POSTPONE):
+            return
+        conditions = record.get("query_worker_features", ())
+        if len(conditions) != len(record.get("chosen_worker_indices", ())):
+            raise ValueError("PPO逐人条件数量不匹配")
+        for value in conditions:
+            check(value, (self.max_station_workers, CONDITION_DIM))
+        check(record.get("query_alignment_features"), (2, CONDITION_DIM))
 
     def load_warm_start_weights(
         self,
@@ -835,8 +865,8 @@ class ActorCriticWork3(nn.Module):
             )
         if self.condition_queries != (snapshot.query_version == QUERY_VERSION):
             raise ValueError("Actor与快照的调度条件输入语义不一致")
-        if self.condition_queries and snapshot.query_program_hashes != (self.query_program.fingerprint,):
-            raise ValueError("Actor与快照的查询程序版本不一致")
+        if self.condition_queries:
+            self._validate_program_sources(snapshot.query_program_hashes)
         device = next(self.parameters()).device
         state_feat = snapshot.state_features.to(device)
         if time_features_override is not None:
@@ -880,6 +910,8 @@ class ActorCriticWork3(nn.Module):
             "query_version": snapshot.query_version,
             "query_program_hashes": snapshot.query_program_hashes,
             "query_task_features": query_task_features,
+            "condition_layout": CONDITION_LAYOUT,
+            "condition_normalization": CONDITION_NORMALIZATION,
         }
 
         if candidate_count == 0:
@@ -1121,8 +1153,8 @@ class ActorCriticWork3(nn.Module):
         for record in sample_records:
             if self.condition_queries != (record.get("query_version") == QUERY_VERSION):
                 raise ValueError("PPO记录与Actor的调度条件输入语义不一致")
-            if self.condition_queries and tuple(record.get("query_program_hashes", ())) != (self.query_program.fingerprint,):
-                raise ValueError("PPO记录与Actor的查询程序版本不一致")
+            if self.condition_queries:
+                self._validate_condition_record(record)
             act_type = record.get("action_type")
             if act_type not in ("forced_advance", "advance_to_next_event", "schedule", "station_execute", "postpone"):
                 raise ValueError(f"PPO样本缺少合法动作类型 action_type: {act_type!r}")
