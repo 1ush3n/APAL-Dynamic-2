@@ -1,0 +1,3 @@
+# 固定输入按原字节保存，避免检出时换行转换使既有SHA清单失效。
+/data/work3/local_diagnostics/** -text whitespace=cr-at-eol
+/tests/fixtures/** -text whitespace=cr-at-eol

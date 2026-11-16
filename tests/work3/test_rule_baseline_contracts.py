@@ -22,7 +22,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-from work3_4060.build_rule_baseline import (
+from scripts.work3.build_rule_baseline import (
     build_deterministic_station_schedule,
     generate_rule_baseline,
     load_craft_data,
@@ -68,8 +68,8 @@ def test_coordinate_conversion_contract():
 
 def test_reference_partition_craft_validity():
     """验证沿用的 mini210 参考站位分区不违背任何工艺硬约束。"""
-    craft_csv_path = REPO_ROOT / "data/283.csv"
-    mini210_source_path = REPO_ROOT / "work3_4060/data/mini210.json"
+    craft_csv_path = REPO_ROOT / Path("data", "283.csv")
+    mini210_source_path = REPO_ROOT / Path("data", "work3", "local_diagnostics", "mini210.json")
     task_craft, _ = load_craft_data(craft_csv_path)
 
     with mini210_source_path.open("r", encoding="utf-8") as f:
@@ -96,8 +96,8 @@ def test_reference_partition_craft_validity():
 
 def test_rule_baseline_physical_feasibility():
     """验证生成的 mini210_rule_baseline.json 物理无冲突、槽位不超限、前序守恒。"""
-    baseline_path = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json"
-    val_path = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/baseline_validation.json"
+    baseline_path = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "mini210_rule_baseline.json")
+    val_path = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "baseline_validation.json")
 
     assert baseline_path.is_file()
     assert val_path.is_file()
@@ -154,7 +154,7 @@ def test_rule_baseline_generation_idempotence(tmp_path: Path):
 
 def test_reject_bad_craft_partition():
     """验证当输入违背固定站位约束或产生反向跨站环时，生成器显式抛出异常拦截。"""
-    pool_csv_path = REPO_ROOT / "data/worker_pool_fixed.csv"
+    pool_csv_path = REPO_ROOT / Path("data", "worker_pool_fixed.csv")
     worker_effs, worker_skills = load_worker_pool(pool_csv_path)
 
     # 构造人为倒置的任务依赖：工序 B 在站位 1，但其前驱工序 A 在站位 2
@@ -184,7 +184,7 @@ def test_reject_bad_craft_partition():
 
 def test_reject_cyclic_graph_in_station_schedule():
     """验证当站内工序出现两节点环依赖 (A -> B -> A) 时，排程算法明确拒绝并抛出异常。"""
-    pool_csv_path = REPO_ROOT / "data/worker_pool_fixed.csv"
+    pool_csv_path = REPO_ROOT / Path("data", "worker_pool_fixed.csv")
     worker_effs, worker_skills = load_worker_pool(pool_csv_path)
 
     cyclic_tasks = [
@@ -219,7 +219,7 @@ def test_reject_cyclic_graph_in_station_schedule():
 
 def test_zero_duration_physical_task_schedule():
     """验证包含零工时工序时，排程算法正常完成且工序起止时刻一致。"""
-    pool_csv_path = REPO_ROOT / "data/worker_pool_fixed.csv"
+    pool_csv_path = REPO_ROOT / Path("data", "worker_pool_fixed.csv")
     worker_effs, worker_skills = load_worker_pool(pool_csv_path)
 
     zero_dur_tasks = [
@@ -252,7 +252,7 @@ def test_baseline_serialization_roundtrip_preserves_policy(tmp_path: Path):
     """R1: 验证多架次基准计划在 load -> save -> load 往返中严格保留 transfer_policy 与元数据。"""
     from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
-    baseline_path = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json"
+    baseline_path = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "mini210_rule_baseline.json")
     b1 = MultiAircraftBaseline.load_from_json(baseline_path)
     assert b1.transfer_policy == "nominal_anchored_v1"
     assert b1.metadata.get("transfer_policy") == "nominal_anchored_v1"
@@ -278,7 +278,7 @@ def test_baseline_rejects_unknown_transfer_policy(tmp_path: Path):
     """R1: 验证未知转站模式被显式拒绝，不发生静默降级。"""
     from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
-    baseline_path = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json"
+    baseline_path = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "mini210_rule_baseline.json")
     raw_data = json.loads(baseline_path.read_text(encoding="utf-8"))
     raw_data["metadata"]["transfer_policy"] = "unsupported_magic_clock"
 

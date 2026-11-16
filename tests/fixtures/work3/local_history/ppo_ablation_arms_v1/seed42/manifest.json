@@ -1,0 +1,27 @@
+{
+  "task": "Work-3 PPO 保持性消融臂 R0–R4",
+  "reference_commit": "a94eb7da70add9a6622498f6111ab119d609e648",
+  "run_context": {
+    "head": "a94eb7da70add9a6622498f6111ab119d609e648",
+    "branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "worktree_dirty": true
+  },
+  "output_dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_ablation_arms_v1\\seed42",
+  "expected_artifacts": [
+    "manifest.json",
+    "arm_registry.json",
+    "r0_frozen_sampling.json",
+    "comparison_by_point.csv",
+    "cycle_comparison.csv",
+    "update_diagnostics.csv",
+    "verification.json",
+    "summary.md",
+    "R0..R4/checkpoints/{step0000,step0008,step0128,step0256,step0512}.pt",
+    "R0..R4/trajectories/{step0000,step0008,step0128,step0256,step0512}_NOMINAL.json",
+    "R0..R4/training_history.jsonl",
+    "R1..R4/first_update.json",
+    "R0..R4/first_rollout_pairing.json",
+    "R0..R4/pre_update_rng.pt",
+    "R0..R4/minibatch_indices.jsonl"
+  ]
+}

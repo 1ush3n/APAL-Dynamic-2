@@ -198,12 +198,12 @@ def benchmark_ppo_agent_decisions(data_path: Path, seed: int = 42, num_steps: in
 
 def main():
     parser = argparse.ArgumentParser(description="APAL 283 数据集轻量基准与回归标尺")
-    parser.add_argument("--save", action="store_true", help="保存基准数据至 benchmarks/baseline_283_v0.json")
+    parser.add_argument("--save", action="store_true", help="保存基准数据至 tests/fixtures/baseline_283_v0.json")
     parser.add_argument("--check", action="store_true", help="比对当前执行结果与 baseline_283_v0.json")
     parser.add_argument("--data", type=Path, default=PROJECT_ROOT / "data" / "283.csv")
     args = parser.parse_args()
 
-    baseline_file = PROJECT_ROOT / "benchmarks" / "baseline_283_v0.json"
+    baseline_file = PROJECT_ROOT / "tests" / "fixtures" / "baseline_283_v0.json"
 
     print("============================================================")
     print("      APAL-Dynamic-2: 283 数据集热点基准与结果标尺采集")

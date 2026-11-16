@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.profile_diagnostic import run_benchmark
+from runtime.artifacts import create_run_context
 
 def monitor_gpu(stop_event, samples, interval=0.1):
     while not stop_event.is_set():
@@ -84,7 +85,8 @@ def main():
     print(f"  High (>= 50%, PPO Update/Dense): {result['ratio_above_50_pct']:.1f}% of execution time")
     print("=" * 65)
 
-    with open("gpu_utilization_283.json", "w", encoding="utf-8") as f:
+    context = create_run_context(PROJECT_ROOT, experiment_name="gpu_utilization", create_dirs=True)
+    with (context.reports_dir / "gpu_utilization_283.json").open("w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
 
 if __name__ == "__main__":

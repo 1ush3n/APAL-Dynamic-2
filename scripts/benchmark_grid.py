@@ -21,6 +21,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 from scripts.profile_diagnostic import run_benchmark
+from runtime.artifacts import create_run_context
 
 
 def main():
@@ -51,7 +52,8 @@ def main():
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    out_file = PROJECT_ROOT / "benchmark_grid_summary.json"
+    context = create_run_context(PROJECT_ROOT, experiment_name="benchmark_grid", create_dirs=True)
+    out_file = context.reports_dir / "benchmark_grid_summary.json"
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, ensure_ascii=False)
     print(f"\nAll benchmark results written to {out_file}")

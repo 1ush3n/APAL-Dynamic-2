@@ -1,0 +1,41 @@
+# 本轮固定配置：由原 C run.json 解析，并按任务第 4 节固定项核对
+runtime:
+  reference_commit: 72de395e36846a669f26a7d2fcfa82d768300bd9
+  seed: 42
+  device: cuda:0
+  precision: fp32
+  num_envs: 1
+  start_method: spawn
+  total_env_steps: 512
+  max_decisions: 512
+  disturbance_enabled: false
+  scenario: NOMINAL
+  warmup_mode: none
+paths:
+  baseline: D:\OneDrive\研究生\APAL-Dynamic-2\work3_4060\rule_baseline_ac_v1\mini210_rule_baseline.json
+  init_weights: D:\OneDrive\研究生\APAL-Dynamic-2\work3_4060\c_reproduction_diagnostic_v1\seed42\diagnostic_actor.pt
+ppo:
+  steps_per_iter: 8
+  epochs: 1
+  batch_size: 2
+  learning_rate: 0.0003
+  clip_epsilon: 0.2
+  value_coefficient: 0.5
+  entropy_coefficient: 0.01
+  gamma: 0.99
+  gae_lambda: 0.95
+  shaping_coefficient: 1.0
+  max_grad_norm: 0.5
+  optimizer: AdamW
+  optimizer_eps: 1e-05
+  weight_decay: 0.0001
+  normalize_advantages: true
+evaluation:
+  decision_limit: 4096
+  device: cpu
+  threads: 1
+  deterministic: true
+checkpoints:
+  points: [0, 128, 256, 512]
+conflicts:
+  - none

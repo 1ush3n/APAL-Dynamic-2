@@ -15,8 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-import work3_4060.run_critic_calibration_retention as cal
-from work3_4060.c_reproduction_protocol import (
+import scripts.work3.run_critic_calibration_retention as cal
+from scripts.work3.c_reproduction_protocol import (
     actor_fingerprint,
     load_json,
     sha256_file,
@@ -27,12 +27,14 @@ from work3_4060.c_reproduction_protocol import (
 # 1. 只有价值专属参数被校准；策略子集不变；完整指纹按设计改变
 
 
+HISTORY_DIR = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "work3" / "local_history"
+
 def test_only_value_head_is_calibrated() -> None:
-    if not cal.CAL_MODEL.is_file():
+    if not (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "calibrated_model.pt")).is_file():
         pytest.skip("缺少校准副本")
     if not cal.BC_WEIGHTS.is_file():
         pytest.skip("缺少 BC 副本")
-    calibrated, payload = cal.load_calibrated_actor(cal.CAL_MODEL)
+    calibrated, payload = cal.load_calibrated_actor((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "calibrated_model.pt")))
     bc, _ = cal.prev.load_diagnostic_actor(
         cal.BC_WEIGHTS,
         expected_teacher_manifest_sha256=load_json(cal.BC_MANIFEST)["teacher"]["manifest_sha256"],
@@ -52,7 +54,7 @@ def test_only_value_head_is_calibrated() -> None:
     )
     assert value_changed, "价值头必须被更新"
 
-    invariance = load_json(cal.CAL_INVARIANCE)
+    invariance = load_json((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "policy_invariance.json")))
     assert invariance["policy_unchanged"] is True
     assert invariance["greedy_action_mismatch"] == 0
     assert invariance["max_abs_log_prob_difference"] <= cal.POLICY_PROB_TOLERANCE
@@ -95,10 +97,10 @@ def test_non_finite_mc_labels_are_rejected() -> None:
 
 
 def test_holdout_never_trained_and_budget_fixed() -> None:
-    if not cal.CAL_HISTORY.is_file():
+    if not (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "history.jsonl")).is_file():
         pytest.skip("缺少校准历史")
-    rows = [json.loads(line) for line in cal.CAL_HISTORY.read_text(encoding="utf-8").splitlines() if line.strip()]
-    fit = load_json(cal.CAL_FIT)
+    rows = [json.loads(line) for line in (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "history.jsonl")).read_text(encoding="utf-8").splitlines() if line.strip()]
+    fit = load_json((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "fit_metrics.json")))
     holdout = set(fit["samples"]["holdout"])
     for row in rows:
         assert not (set(row["batch_indices"]) & holdout), "留出样本不得进入优化"
@@ -111,7 +113,7 @@ def test_holdout_never_trained_and_budget_fixed() -> None:
 
 
 def test_scans_cover_start_interval_and_end() -> None:
-    fit = load_json(cal.CAL_FIT)
+    fit = load_json((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "fit_metrics.json")))
     steps = [int(scan["step"]) for scan in fit["scans"]]
     assert steps[0] == 0
     assert steps[-1] == fit["calibration_steps"]
@@ -122,15 +124,15 @@ def test_scans_cover_start_interval_and_end() -> None:
 
 
 def test_calibration_state_does_not_leak_into_ppo() -> None:
-    if not cal.CAL_MODEL.is_file():
+    if not (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "calibrated_model.pt")).is_file():
         pytest.skip("缺少校准副本")
-    payload = torch.load(cal.CAL_MODEL, map_location="cpu", weights_only=False)
+    payload = torch.load((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "calibrated_model.pt")), map_location="cpu", weights_only=False)
     assert "optimizer" not in json.dumps(sorted(payload.keys())), "校准优化器状态不得保存进模型"
-    summary = load_json(cal.PPO_SUMMARY)
-    assert summary["calibration"]["model_sha256"] == sha256_file(cal.CAL_MODEL)
+    summary = load_json((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "ppo", "training_summary.json")))
+    assert summary["calibration"]["model_sha256"] == sha256_file((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "calibration", "calibrated_model.pt")))
     assert summary["hyperparameters"]["learning_rate"] == 3e-4
 
-    step0 = torch.load(cal.PPO_CKPT_DIR / "step0000.pt", map_location="cpu", weights_only=False)
+    step0 = torch.load((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "ppo", "checkpoints")) / "step0000.pt", map_location="cpu", weights_only=False)
     assert state_dict_fingerprint(step0["actor_critic_state"]) == payload["actor_fingerprint"], (
         "PPO step0000 必须等于校准副本权重"
     )
@@ -138,7 +140,7 @@ def test_calibration_state_does_not_leak_into_ppo() -> None:
 
 
 def test_first_rollout_pairing_recorded_and_consistent() -> None:
-    pairing = load_json(cal.PPO_PAIRING)
+    pairing = load_json((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "ppo", "first_rollout_pairing.json")))
     assert pairing["paired"] is True
     assert pairing["same_states"] is True
     assert pairing["same_actions"] is True
@@ -158,7 +160,7 @@ def test_ordered_ppo_path_and_no_intervention() -> None:
     evaluate_source = inspect.getsource(cal.stage_evaluate_one)
     assert "scenario=None" in evaluate_source
     assert "FormalEvaluationAgent" in evaluate_source
-    config = cal.PPO_CONFIG.read_text(encoding="utf-8")
+    config = (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "ppo", "resolved_config.yaml")).read_text(encoding="utf-8")
     assert "disturbance_enabled: false" in config
     assert "scenario: NOMINAL" in config
     # 有序 PPO 概率与无序团队边缘评分是两个口径：本模块只做前者，不做 logsumexp 聚合
@@ -169,7 +171,7 @@ def test_ordered_ppo_path_and_no_intervention() -> None:
 
 
 def test_errata_fixed_shift_is_exact() -> None:
-    payload = load_json(cal.OUTPUT_DIR / "errata_verification.json")
+    payload = load_json((HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42")) / "errata_verification.json")
     assert payload["all_within_tolerance"] is True
     for item in payload["episodes"]:
         assert abs(item["residual"]) <= 1e-9
@@ -190,9 +192,9 @@ def test_effect_direction_and_protocol_precedence() -> None:
 
 
 def test_comparison_has_no_percentage_denominator() -> None:
-    if not cal.COMPARISON_CSV.is_file():
+    if not (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "comparison_results.csv")).is_file():
         pytest.skip("缺少对比表")
-    header = cal.COMPARISON_CSV.read_text(encoding="utf-8").splitlines()[0]
+    header = (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "comparison_results.csv")).read_text(encoding="utf-8").splitlines()[0]
     assert "%" not in header and "percent" not in header.lower()
-    rows = [line.split(",") for line in cal.COMPARISON_CSV.read_text(encoding="utf-8").splitlines()[1:] if line]
+    rows = [line.split(",") for line in (HISTORY_DIR / Path("critic_calibration_retention_v1", "seed42", "comparison_results.csv")).read_text(encoding="utf-8").splitlines()[1:] if line]
     assert len(rows) == len(cal.CHECKPOINTS)

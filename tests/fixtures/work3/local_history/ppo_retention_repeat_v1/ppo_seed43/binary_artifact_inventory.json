@@ -1,0 +1,245 @@
+{
+  "root": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\ppo_retention_repeat_v1\\ppo_seed43",
+  "file_count": 34,
+  "files": [
+    {
+      "path": "R1/checkpoints/first_update.pt",
+      "size_bytes": 1287083,
+      "sha256": "fb458633bfa72f5abba0693faf03f5cda7ebf185453727b74e956de2f3e74358",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/checkpoints/first_update_pre.pt",
+      "size_bytes": 1287083,
+      "sha256": "449d61247ad78057a6c13b62183534f668739071c34112ab5c1a8db98ba9fc10",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "32151ffd91758aa512fd29e869a6f6a56675c9cb9883b457db58b1cb33cebab6",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/checkpoints/step0008.pt",
+      "size_bytes": 1287595,
+      "sha256": "d2b94c7733e4d3297b2e11d3ea7f16f310eee45f4e7e0f3196269707d820907f",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/checkpoints/step0128.pt",
+      "size_bytes": 1287595,
+      "sha256": "f742a8d4c288a4c2eb545a4e847d768cb0c567efd77261b8959224852351065b",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/checkpoints/step0256.pt",
+      "size_bytes": 1287595,
+      "sha256": "99a5af43926ecca64e3ba7525a740d87714c94296eb5fd02c34ebe6d789f3e54",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/checkpoints/step0512.pt",
+      "size_bytes": 1287595,
+      "sha256": "271a8b24e0d7f2a2d6e884d390b02f03606a91a2dcec82404b2c35313d02069b",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/first_rollout.pt",
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "purpose": "首段配对采样及回放事实",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "purpose": "首采样前 RNG 状态",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R1/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "purpose": "首更新前 RNG 状态",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/checkpoints/first_update.pt",
+      "size_bytes": 1287083,
+      "sha256": "121163e1a2a3deceec405a6786371adf165636358685532265435809c01b64fa",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/checkpoints/first_update_pre.pt",
+      "size_bytes": 1287083,
+      "sha256": "6709c9c7e6efe15166af5210c1499a88ad27905117bfd3738418f5d4a1b20588",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "37ac6d61f8f8bf290f1d319eb32c52fbba3caddf82bc7bf8cbd431eab0a9d90f",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/checkpoints/step0008.pt",
+      "size_bytes": 1287595,
+      "sha256": "c2702d80775aed9adc5f8bc9b418ef8e4f037d860c44e96eeb56472c60d36336",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/checkpoints/step0128.pt",
+      "size_bytes": 1287595,
+      "sha256": "9e62f12110c7f7e8e477a1bdd677ae930cfd7ae45aff75787c58e1f74b661889",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/checkpoints/step0256.pt",
+      "size_bytes": 1287595,
+      "sha256": "5927e51a00e95ddc14d1095b1431e97efc81b66d6cca3f3f79f0473ea1b0566c",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/checkpoints/step0512.pt",
+      "size_bytes": 1287595,
+      "sha256": "002f15e8a850b1b98f989ba3a7d8591021b4121c2affc63edda717e60209a140",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/first_rollout.pt",
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "purpose": "首段配对采样及回放事实",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "purpose": "首采样前 RNG 状态",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "R4/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "purpose": "首更新前 RNG 状态",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/checkpoints/first_update.pt",
+      "size_bytes": 1287083,
+      "sha256": "10e29cd418120c6edafd7b4b7a4c1f87b1fd4c04795c655ff1c91a183cba614f",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/checkpoints/first_update_pre.pt",
+      "size_bytes": 1287083,
+      "sha256": "1060039a9f30da1ebe8ca732120424f726947ef1a4820943d337ca8c236c51fa",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/checkpoints/step0008.pt",
+      "size_bytes": 1287595,
+      "sha256": "f976a4aa8486685977a954a780c0943c5c1ceec9152e842cceabc5563ec75b78",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/checkpoints/step0128.pt",
+      "size_bytes": 1287595,
+      "sha256": "97bd49d11b8190f0c0867fd926ef5ccbb4fae409ef7e51a51c0422e22e5dd261",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/checkpoints/step0256.pt",
+      "size_bytes": 1287595,
+      "sha256": "4b28d7001bd34e79ba28abff0edeb396d0324e59bdac65b979e92aea49e5be4c",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/checkpoints/step0512.pt",
+      "size_bytes": 1287595,
+      "sha256": "def6316a5b26fa807bf6889e31758721a0bf76ffb2dcc081ee67a42b9159d761",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/first_rollout.pt",
+      "size_bytes": 911445,
+      "sha256": "c8673791a3ed160bd4d806386397709a1f913504e8312bd455fa892718563e98",
+      "purpose": "首段配对采样及回放事实",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "purpose": "首采样前 RNG 状态",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "REF/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "purpose": "首更新前 RNG 状态",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "runs/discarded_attempt_002/root/REF/checkpoints/step0000.pt",
+      "size_bytes": 1287659,
+      "sha256": "80a941c7d6e0fce61e946416de04c80b0b869279eec7200afca03a04787205a1",
+      "purpose": "本轮评估检查点",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "runs/discarded_attempt_002/root/REF/first_rollout.pt",
+      "size_bytes": 911381,
+      "sha256": "3e0a269b5d4e7aa1a14e039f49049aeb5d61a0a3f3f0a446039ba2e5d90cd3dd",
+      "purpose": "首段配对采样及回放事实",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "runs/discarded_attempt_002/root/REF/pre_sampling_rng.pt",
+      "size_bytes": 27805,
+      "sha256": "48813ce711adbbd9ab43496ce1454dbaf6e6efeee922bd0735873b7aa5b0f903",
+      "purpose": "首采样前 RNG 状态",
+      "gitignored_local_only": true
+    },
+    {
+      "path": "runs/discarded_attempt_002/root/REF/pre_update_rng.pt",
+      "size_bytes": 27869,
+      "sha256": "f7d6087ea4e39ca4c335626871e3117fe8df3eeee148f036ccf83b75c8a7b482",
+      "purpose": "首更新前 RNG 状态",
+      "gitignored_local_only": true
+    }
+  ],
+  "note": "PT 文件按仓库忽略规则仅保留本地；此清单绑定文件哈希。废弃尝试中的二进制也保留并计入清单。"
+}

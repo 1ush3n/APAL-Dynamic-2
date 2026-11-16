@@ -9,7 +9,7 @@ defaults:
 
 experiment:
   experiment_name: reschedule_task_delay_r5_full_x_ent40_aligned
-  runs_root: results/02_reschedule_main
+  runs_root: runs
   checkpoint_root: checkpoints
   lr: 1.0e-4
   actor_lr_multiplier: 0.25

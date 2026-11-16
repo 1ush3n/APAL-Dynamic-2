@@ -101,7 +101,7 @@ from scripts.work3.train_ppo_work3 import (
     compute_heuristic_potential,
     compute_online_snapshot_time_inputs,
 )
-from training.work3_lightning import Work3LightningModule
+from training.work3.lightning import Work3LightningModule
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 from utils.work3.trajectory_feasibility import (
     TaskConstraintRecord,

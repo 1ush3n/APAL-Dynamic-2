@@ -1,0 +1,302 @@
+{
+  "description": "沿用的工程资源配置 (显式固化，各站工人完全独立，不随团队选择反向缩减)",
+  "station_workers": {
+    "1": [
+      12,
+      72
+    ],
+    "2": [
+      10,
+      18,
+      22,
+      65
+    ],
+    "3": [
+      0,
+      47,
+      50,
+      51,
+      66,
+      76
+    ],
+    "4": [
+      6,
+      55
+    ],
+    "5": [
+      1,
+      25,
+      28,
+      33,
+      36,
+      44,
+      45,
+      53,
+      56,
+      70,
+      77
+    ]
+  },
+  "workers_detail": {
+    "0": {
+      "worker_id": 0,
+      "efficiency": 1.1095824194223853,
+      "skills": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "assigned_station": 3
+    },
+    "1": {
+      "worker_id": 1,
+      "efficiency": 0.975551375900821,
+      "skills": [
+        0,
+        1
+      ],
+      "assigned_station": 5
+    },
+    "6": {
+      "worker_id": 6,
+      "efficiency": 1.104455880796141,
+      "skills": [
+        0,
+        1
+      ],
+      "assigned_station": 4
+    },
+    "10": {
+      "worker_id": 10,
+      "efficiency": 0.9483192096930325,
+      "skills": [
+        0,
+        2,
+        4
+      ],
+      "assigned_station": 2
+    },
+    "12": {
+      "worker_id": 12,
+      "efficiency": 1.0575460480322658,
+      "skills": [
+        0,
+        1,
+        2
+      ],
+      "assigned_station": 1
+    },
+    "18": {
+      "worker_id": 18,
+      "efficiency": 1.1310524687970327,
+      "skills": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "assigned_station": 2
+    },
+    "22": {
+      "worker_id": 22,
+      "efficiency": 1.1882792097579613,
+      "skills": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "assigned_station": 2
+    },
+    "25": {
+      "worker_id": 25,
+      "efficiency": 0.8778554831407871,
+      "skills": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "assigned_station": 5
+    },
+    "28": {
+      "worker_id": 28,
+      "efficiency": 0.8617157968270192,
+      "skills": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "assigned_station": 5
+    },
+    "33": {
+      "worker_id": 33,
+      "efficiency": 0.9481838824139476,
+      "skills": [
+        0,
+        2,
+        3
+      ],
+      "assigned_station": 5
+    },
+    "36": {
+      "worker_id": 36,
+      "efficiency": 0.8519686021341887,
+      "skills": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "assigned_station": 5
+    },
+    "44": {
+      "worker_id": 44,
+      "efficiency": 1.1329039205580804,
+      "skills": [
+        0,
+        2,
+        3,
+        4
+      ],
+      "assigned_station": 5
+    },
+    "45": {
+      "worker_id": 45,
+      "efficiency": 1.1219057429987207,
+      "skills": [
+        0,
+        1,
+        3
+      ],
+      "assigned_station": 5
+    },
+    "47": {
+      "worker_id": 47,
+      "efficiency": 0.9153312415720977,
+      "skills": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "assigned_station": 3
+    },
+    "50": {
+      "worker_id": 50,
+      "efficiency": 0.8799632809900434,
+      "skills": [
+        0,
+        1
+      ],
+      "assigned_station": 3
+    },
+    "51": {
+      "worker_id": 51,
+      "efficiency": 0.8029449079004023,
+      "skills": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "assigned_station": 3
+    },
+    "53": {
+      "worker_id": 53,
+      "efficiency": 1.0659403426368128,
+      "skills": [
+        0,
+        1,
+        3
+      ],
+      "assigned_station": 5
+    },
+    "55": {
+      "worker_id": 55,
+      "efficiency": 1.1122916124087872,
+      "skills": [
+        0,
+        1
+      ],
+      "assigned_station": 4
+    },
+    "56": {
+      "worker_id": 56,
+      "efficiency": 0.983566310215336,
+      "skills": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "assigned_station": 5
+    },
+    "65": {
+      "worker_id": 65,
+      "efficiency": 1.0214317602631984,
+      "skills": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "assigned_station": 2
+    },
+    "66": {
+      "worker_id": 66,
+      "efficiency": 1.0236828642981655,
+      "skills": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "assigned_station": 3
+    },
+    "70": {
+      "worker_id": 70,
+      "efficiency": 0.8858338691278117,
+      "skills": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "assigned_station": 5
+    },
+    "72": {
+      "worker_id": 72,
+      "efficiency": 1.1413612293072664,
+      "skills": [
+        0,
+        1,
+        2
+      ],
+      "assigned_station": 1
+    },
+    "76": {
+      "worker_id": 76,
+      "efficiency": 0.9174375031066735,
+      "skills": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "assigned_station": 3
+    },
+    "77": {
+      "worker_id": 77,
+      "efficiency": 1.0647666058907581,
+      "skills": [
+        0,
+        2,
+        3
+      ],
+      "assigned_station": 5
+    }
+  }
+}

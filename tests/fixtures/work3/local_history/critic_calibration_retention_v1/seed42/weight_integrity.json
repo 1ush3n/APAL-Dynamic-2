@@ -1,0 +1,59 @@
+{
+  "bc": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+    "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "expected_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "unchanged": true
+  },
+  "calibrated": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\calibrated_model.pt",
+    "sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+    "actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+    "consistent": true,
+    "policy_unchanged": true,
+    "policy_subset_fingerprint": "0989e9bf8e2fed71ee630bc1d2d9da251d7d9cae5dec6c0e502ec54b8bcd1aee"
+  },
+  "checkpoints": {
+    "entries": [
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0000.pt",
+        "sha256": "89e83050a5cd2d3a77c023176b51f39eb9060e278cbe02d70825a758a3e26d91",
+        "actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+        "recomputed": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+        "consistent": true
+      },
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0128.pt",
+        "sha256": "b23f24f40d56477b7a1339c1fe0b040b6b55d878ffea6fb5fe1a1ecb5f9ceb15",
+        "actor_fingerprint": "bd98843ce0553dcfe24ffb1e09e23ce6c8c63a33d0bd954c9edefe5d53b8f686",
+        "recomputed": "bd98843ce0553dcfe24ffb1e09e23ce6c8c63a33d0bd954c9edefe5d53b8f686",
+        "consistent": true
+      },
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0256.pt",
+        "sha256": "b97f6a30250287e3f9b73843cf81a014b8257b49972c4175459cd1b86966aad7",
+        "actor_fingerprint": "c3bc3000b6f967bba5e8ba7efce16a6cace3d79daef851679ed5e2884c4bdd76",
+        "recomputed": "c3bc3000b6f967bba5e8ba7efce16a6cace3d79daef851679ed5e2884c4bdd76",
+        "consistent": true
+      },
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo\\checkpoints\\step0512.pt",
+        "sha256": "2537dc524feb35e7a23bc102fa356e8bfd33cabc0a7a000f2ec83c1e726da30c",
+        "actor_fingerprint": "52590c7db32b026b44e9d22f981bdc2b5d71fb60b4a0e378480fae85b51fcf07",
+        "recomputed": "52590c7db32b026b44e9d22f981bdc2b5d71fb60b4a0e378480fae85b51fcf07",
+        "consistent": true
+      }
+    ],
+    "all_consistent": true
+  },
+  "pairing": {
+    "paired": true,
+    "same_states": true,
+    "same_actions": true,
+    "max_abs_log_prob_difference": 1.9073486328125e-06,
+    "tolerance": 1e-05,
+    "steps_compared": 8,
+    "divergence_note": "策略相同且随机状态匹配时，首段 8 步应得到相同采样事件；首段之后两臂因 critic 不同而自然分化，不强制重放对照动作。",
+    "reason": "matched"
+  }
+}

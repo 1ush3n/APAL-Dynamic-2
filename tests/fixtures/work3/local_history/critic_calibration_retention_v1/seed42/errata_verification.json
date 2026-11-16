@@ -1,0 +1,62 @@
+{
+  "schema_version": "critic_calibration_errata_v1",
+  "beta": 1.0,
+  "gamma": 0.99,
+  "identity": "G_gamma^shaped = G_gamma^raw + beta*(gamma^n*Phi_T - Phi(s_0))；完工段 Phi_T=0",
+  "episodes": [
+    {
+      "episode_id": 0,
+      "steps": 210,
+      "terminated": true,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "phi_start": -0.5,
+      "phi_end": 0.0,
+      "discounted_raw_return": -0.18047938921136747,
+      "discounted_shaped_return": 0.31952061078863225,
+      "observed_shift_shaped_minus_raw": 0.4999999999999997,
+      "expected_shift_minus_beta_phi0": 0.5,
+      "expected_shift_general": 0.5,
+      "residual": -2.7755575615628914e-16,
+      "within_tolerance": true,
+      "undiscounted_raw_sum": -0.5692697289259385
+    },
+    {
+      "episode_id": 1,
+      "steps": 210,
+      "terminated": true,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "phi_start": -0.5,
+      "phi_end": 0.0,
+      "discounted_raw_return": -0.1313082634749033,
+      "discounted_shaped_return": 0.36869173652509735,
+      "observed_shift_shaped_minus_raw": 0.5000000000000007,
+      "expected_shift_minus_beta_phi0": 0.5,
+      "expected_shift_general": 0.5,
+      "residual": 6.661338147750939e-16,
+      "within_tolerance": true,
+      "undiscounted_raw_sum": -0.41107546240837156
+    },
+    {
+      "episode_id": 2,
+      "steps": 92,
+      "terminated": false,
+      "gamma": 0.99,
+      "beta": 1.0,
+      "phi_start": -0.5,
+      "phi_end": -0.4266575699332184,
+      "discounted_raw_return": -0.0853967485965155,
+      "discounted_shaped_return": 0.24535766246902363,
+      "observed_shift_shaped_minus_raw": 0.33075441106553916,
+      "expected_shift_minus_beta_phi0": null,
+      "expected_shift_general": 0.33075441106553916,
+      "residual": 0.0,
+      "within_tolerance": true,
+      "undiscounted_raw_sum": -0.15645766334360284
+    }
+  ],
+  "all_within_tolerance": true,
+  "correction_3_1": "塑形与原始折扣回报之差不代表“方向相反”：在自然终止且终局势为零时，两者只差一个固定平移 -beta*Phi(s0)。前轮 0.5 的差值来自 Phi(s0)=-0.5、beta=1，与该等式逐条吻合，因此不能据此宣称“塑形回报改善而业务费用变差”。",
+  "correction_3_2": "首段 8 步全部留站+align=1、raw reward≈0 只能说明该段记录内没有出现明显即时费用偏离，不能排除后续随机采样的影响；第一个完整闭环复测点是 128，故只能说“更新改变了已记录快照上的动作概率，首次已评估的闭环退化出现在 128”。"
+}

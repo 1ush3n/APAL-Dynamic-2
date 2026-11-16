@@ -1,0 +1,58 @@
+{
+  "schema_version": "c_alignment_bc_weight_integrity_v1",
+  "original_c": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\seed42\\C\\weights.pt",
+    "sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "sha256_before_align_run": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "sha256_after_align_run": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "actor_fingerprint_before_align_run": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "actor_fingerprint_after_align_run": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "unchanged_across_round": true
+  },
+  "diagnostic_copy": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+    "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "expected_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "expected_actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "source_checkpoint_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "current_original_c_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "binding_valid": true,
+    "unchanged_across_round": true
+  },
+  "bc_runs": {
+    "runs": [
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S1_MODERATE.json",
+        "actor_fingerprint_before": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+        "actor_fingerprint_after": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+        "weights_unchanged": true
+      },
+      {
+        "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S2_STRONG.json",
+        "actor_fingerprint_before": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+        "actor_fingerprint_after": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+        "weights_unchanged": true
+      }
+    ],
+    "no_alignment_wrapper": true,
+    "note": "两条受扰轨迹均由正式 C profile 的普通 FormalEvaluationAgent 产生，未叠加对齐干预。"
+  },
+  "scenarios": {
+    "detail": {
+      "RULE_VAL_S1_MODERATE": {
+        "timing_reference": "nominal_entry_referenced_preentry_v1",
+        "is_v1": true,
+        "recovery_time": 62.44541295239945
+      },
+      "RULE_VAL_S2_STRONG": {
+        "timing_reference": "nominal_entry_referenced_preentry_v1",
+        "is_v1": true,
+        "recovery_time": 187.33623885719837
+      }
+    },
+    "all_v1": true,
+    "scenarios_file_sha256": "18a5a90af0b087e147a0ccc9af1c7976e1ea828296ae385e649fee441fc5da60"
+  }
+}

@@ -17,7 +17,7 @@ from scripts.work3.train_ppo_work3 import (
     build_worker_scenario_plan,
     load_training_scenarios,
 )
-from training.work3_runtime_config import (
+from training.work3.runtime_config import (
     load_work3_runtime_config,
     resolved_config_fingerprint,
 )

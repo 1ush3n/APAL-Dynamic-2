@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import hashlib
 import json
 import os
 import random
@@ -45,9 +46,9 @@ def restore_global_random_state() -> Iterator[None]:
 
 def _runtime_config_module() -> ModuleType:
     """将缺少的新运行时模块呈现为清晰的测试失败，而不是导入错误。"""
-    if importlib.util.find_spec("training.work3_runtime_config") is None:
+    if importlib.util.find_spec("training.work3.runtime_config") is None:
         pytest.fail("工作三运行时配置加载器尚未实现", pytrace=False)
-    return importlib.import_module("training.work3_runtime_config")
+    return importlib.import_module("training.work3.runtime_config")
 
 
 def _decision_snapshot_module() -> ModuleType:
@@ -57,15 +58,15 @@ def _decision_snapshot_module() -> ModuleType:
 
 
 def _work3_vector_env_module() -> ModuleType:
-    if importlib.util.find_spec("training.work3_vector_env") is None:
+    if importlib.util.find_spec("training.work3.vector_env") is None:
         pytest.fail("工作三spawn环境运行时尚未实现", pytrace=False)
-    return importlib.import_module("training.work3_vector_env")
+    return importlib.import_module("training.work3.vector_env")
 
 
 def _work3_lightning_module() -> ModuleType:
-    if importlib.util.find_spec("training.work3_lightning") is None:
+    if importlib.util.find_spec("training.work3.lightning") is None:
         pytest.fail("工作三Lightning训练生命周期尚未实现", pytrace=False)
-    return importlib.import_module("training.work3_lightning")
+    return importlib.import_module("training.work3.lightning")
 
 
 def test_runtime_config_loads_smoke_defaults_and_hashes_resolved_yaml() -> None:
@@ -88,7 +89,7 @@ def test_runtime_config_loads_smoke_defaults_and_hashes_resolved_yaml() -> None:
 
 
 def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
-    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import sys
 
@@ -102,11 +103,14 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
         "runtime.device=cuda",
         "runtime.amp_dtype=bf16",
         "runtime.warmup_mode=none",
+        f"artifacts.runs_root={tmp_path / 'runs'}",
+        "artifacts.run_id=cli-fingerprint",
     )
     resolved_config = runtime_config_module.load_work3_runtime_config(
         DEFAULT_CONFIG,
         overrides=overrides,
     )
+    runtime_config_module.resolve_work3_output_paths(resolved_config, ROOT_DIR)
     resolved_yaml, fingerprint = runtime_config_module.resolved_config_fingerprint(
         resolved_config
     )
@@ -116,6 +120,7 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
         captured.update(kwargs)
 
     monkeypatch.setattr(train_ppo_work3, "run_training", capture_training_call)
+    monkeypatch.setattr(train_ppo_work3, "_finalize_work3_run_manifest", lambda *args: None, raising=False)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -152,6 +157,167 @@ def test_amp_precision_resolver_rejects_mixed_precision_on_cpu() -> None:
 
     with pytest.raises(ValueError, match="CUDA"):
         runtime.resolve_work3_precision("fp16", torch.device("cpu"))
+
+
+@pytest.mark.parametrize("output_mode", ["default", "directories", "files"])
+def test_query_cli_outputs_share_run_context_and_preserve_overrides(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, output_mode: str,
+) -> None:
+    from scripts.work3 import train_ppo_work3
+    from omegaconf import OmegaConf
+
+    run_dir = tmp_path / "runs" / "work3_query" / output_mode
+    checkpoint_dir = tmp_path / "explicit_checkpoints" if output_mode == "directories" else run_dir / "checkpoints"
+    report_dir = tmp_path / "explicit_reports" if output_mode == "directories" else run_dir / "artifacts" / "reports"
+    output = checkpoint_dir / "smoke_method_query_weights.pt"
+    report = report_dir / "smoke_method_query.run.json"
+    arguments = ["train_ppo_work3", "--config", str(ROOT_DIR / "conf" / "work3" / "train_query.yaml"),
+                 "--set", f"artifacts.runs_root={tmp_path / 'runs'}", "--set", f"artifacts.run_id={output_mode}"]
+    if output_mode == "directories":
+        arguments.extend(["--set", f"paths.checkpoint_dir={checkpoint_dir}",
+                          "--set", f"paths.report_dir={report_dir}"])
+    elif output_mode == "files":
+        output, report = tmp_path / "explicit" / "weights.pt", tmp_path / "explicit" / "report.json"
+        arguments.extend(["--output", str(output), "--report", str(report)])
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(train_ppo_work3, "run_training", lambda **kwargs: captured.update(kwargs))
+    monkeypatch.setattr(train_ppo_work3, "_finalize_work3_run_manifest", lambda *args: None, raising=False)
+    monkeypatch.setattr(sys, "argv", arguments)
+    train_ppo_work3.main()
+
+    assert captured["output_ckpt"] == output
+    assert captured["report_path"] == report
+    assert captured["run_id"] == output_mode
+    assert captured["audit_output_dir"] == run_dir / "artifacts" / "traces"
+    assert captured["lightning_root_dir"] == run_dir / "logs"
+    resolved = OmegaConf.create(str(captured["resolved_config_yaml"]))
+    assert resolved.artifacts.run_id == output_mode
+    assert resolved.paths.output_checkpoint == str(output)
+    assert resolved.paths.run_report == str(report)
+    saved_yaml = (run_dir / "configs" / "resolved_config.yaml").read_text(encoding="utf-8")
+    assert saved_yaml == captured["resolved_config_yaml"]
+    assert hashlib.sha256((run_dir / "configs" / "resolved_config.yaml").read_bytes()).hexdigest() == captured["resolved_config_sha256"]
+    manifest_path = run_dir / "configs" / "run_manifest.json"
+    manifest_bytes = manifest_path.read_bytes()
+    manifest = json.loads(manifest_bytes)
+    assert manifest["run_id"] == output_mode
+    assert manifest["resolved_config_sha256"] == captured["resolved_config_sha256"]
+    assert manifest["method_profile"]["name"] == "QUERY"
+    assert "model_spec" not in manifest
+    with pytest.raises(FileExistsError):
+        train_ppo_work3.main()
+    assert manifest_path.read_bytes() == manifest_bytes
+
+
+def test_direct_training_default_output_uses_runs_before_environment_start(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts.work3 import train_ppo_work3
+
+    audit: dict[str, object] = {}
+    monkeypatch.setattr(train_ppo_work3, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(train_ppo_work3, "_seed_everything", lambda *args, **kwargs: None)
+    monkeypatch.setattr(train_ppo_work3, "load_training_scenarios", lambda *args: [])
+    monkeypatch.setattr(train_ppo_work3, "init_r3_e04_auditor", lambda **kwargs: audit.update(kwargs))
+
+    def stop_before_environment(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("目录核验在环境启动前停止")
+
+    monkeypatch.setattr(train_ppo_work3, "create_work3_single_env_runtime", stop_before_environment)
+    with pytest.raises(RuntimeError, match="目录核验"):
+        train_ppo_work3.run_training(method_variant="QUERY", output_ckpt=None, run_id="direct-api")
+    run_dir = tmp_path / "runs" / "work3_query" / "direct-api"
+    assert (run_dir / "checkpoints").is_dir()
+    assert (run_dir / "artifacts" / "reports").is_dir()
+    assert audit["run_id"] == "direct-api"
+    assert audit["output_dir"] == run_dir / "artifacts" / "traces"
+    assert not (tmp_path / "models").exists()
+
+
+def test_historical_comprehensive_validation_uses_one_run_without_rewriting_docs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts.work3 import run_comprehensive_validation as validation
+    from types import SimpleNamespace
+
+    run_dir = tmp_path / "runs" / "work3_validation" / "path-check"
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(validation, "ROOT_DIR", tmp_path)
+    def capture_baseline_directory(directory: Path) -> dict[str, str]:
+        captured["baseline_directory"] = directory
+        return {"status": "PASS"}
+
+    def capture_context(context: object) -> dict[str, str]:
+        captured["context"] = context
+        return {"status": "PASS"}
+
+    monkeypatch.setattr(validation, "run_section_9_1_five_stations_seven_aircraft", capture_baseline_directory)
+    monkeypatch.setattr(validation, "run_section_9_2_real_283_k10_bridge", lambda: {"status": "PASS"})
+    monkeypatch.setattr(validation, "run_section_9_3_learning_smoke_test", capture_context)
+    times = iter((3.0, 5.0))
+    monkeypatch.setattr(validation, "time", SimpleNamespace(perf_counter=lambda: next(times), strftime=lambda *args: "固定时间"))
+    arguments = ["--runs-root", str(tmp_path / "runs"), "--run-id", "path-check"]
+    validation.main(arguments)
+    expected = {"timestamp": "固定时间", "total_elapsed_seconds": 2.0,
+                "section_9_1": {"status": "PASS"}, "section_9_2": {"status": "PASS"}, "section_9_3": {"status": "PASS"}}
+    report_path = run_dir / "artifacts" / "reports" / "section9_comprehensive_validation_report.json"
+    assert report_path.read_text(encoding="utf-8") == json.dumps(expected, indent=2, ensure_ascii=False)
+    assert captured["baseline_directory"] == run_dir / "artifacts" / "inputs"
+    assert captured["context"].checkpoint_dir == run_dir / "checkpoints"
+    assert not (tmp_path / "docs").exists()
+    assert not (tmp_path / ".pytest_tmp_v2").exists()
+    with pytest.raises(FileExistsError):
+        validation.main(arguments)
+
+
+@pytest.mark.parametrize("outcome", ["finished", "truncated", "failed"])
+def test_query_manifest_records_report_facts_only_after_training_returns(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outcome: str,
+) -> None:
+    from scripts.work3 import train_ppo_work3
+
+    manifest_path = tmp_path / "work3_query" / outcome / "configs" / "run_manifest.json"
+    result = {
+        "source_sha": "a" * 40, "source_tree_dirty": True,
+        "device": "cpu", "amp_dtype": "fp32", "seed": 42, "lightning_precision": "32-true",
+        "runtime_versions": {"python": "核验版本"}, "method_variant": "QUERY",
+        "method_profile": {"name": "QUERY"},
+        "data_fingerprint": {"baseline_sha256": "b" * 64},
+        "training_config": {"query_program_source": "c" * 64,
+                            "policy_input_semantics": {"query_version": "work3_conditions_v1"}},
+        "run_status": "successful_batch_target_reached" if outcome == "finished" else "budget_or_iteration_ended",
+        "terminated": outcome == "finished", "truncated": outcome != "finished",
+        "termination_reason": "completed" if outcome == "finished" else "decision_limit",
+        "lightning_fit_calls": 1, "lightning_optimization_steps": 1,
+        "lightning_optimizer_step_attempts": 1, "lightning_amp_skipped_steps": 0,
+        "total_decisions": 8, "successful_batch_count": int(outcome == "finished"),
+        "sampling_replay_sample_count": 8, "sampling_replay_max_abs_error": 0.0,
+        "research_result_eligible": False, "checkpoint_evaluation_eligible": False,
+    }
+
+    def return_report(**kwargs: object) -> dict[str, object]:
+        assert json.loads(manifest_path.read_text(encoding="utf-8"))["status"] == "running"
+        if outcome == "failed":
+            raise RuntimeError("受控训练失败")
+        return result
+
+    monkeypatch.setattr(train_ppo_work3, "run_training", return_report)
+    monkeypatch.setattr(sys, "argv", ["train_ppo_work3", "--config", str(ROOT_DIR / "conf" / "work3" / "train_query.yaml"),
+        "--set", f"artifacts.runs_root={tmp_path}", "--set", f"artifacts.run_id={outcome}"])
+    if outcome == "failed":
+        with pytest.raises(RuntimeError, match="受控训练失败"):
+            train_ppo_work3.main()
+        assert json.loads(manifest_path.read_text(encoding="utf-8"))["status"] == "running"
+        return
+    train_ppo_work3.main()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["status"] == outcome
+    for key in ("source_sha", "data_fingerprint", "seed", "device", "lightning_precision",
+                "terminated", "truncated", "termination_reason", "lightning_optimization_steps"):
+        assert manifest[key] == result[key]
+    assert manifest["query_program_source"] == "c" * 64
+    assert manifest["policy_input_semantics"] == result["training_config"]["policy_input_semantics"]
+    assert manifest["graph_feature_version"] == train_ppo_work3.GRAPH_FEATURE_VERSION
 
 
 @pytest.mark.parametrize("amp_dtype", ["fp16", "bf16"])
@@ -903,7 +1069,7 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
     from envs.work3.environment import AirLineEnvWork3
     from models.work3.actor_critic import ActorCriticWork3
     from models.work3.heuristic_agent import HeuristicAgentWork3
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     planning_env = AirLineEnvWork3(baseline_json_path=baseline_path)
@@ -994,7 +1160,7 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
 
 def test_vector_reset_reports_fixed_scenario_and_actual_hit_status() -> None:
     from scripts.work3.train_ppo_work3 import build_worker_scenario_plan
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     scenarios = [
@@ -1042,7 +1208,7 @@ def test_vector_reset_reports_fixed_scenario_and_actual_hit_status() -> None:
 
 def test_vector_worker_keeps_started_disturbance_target_fixed_and_unhit() -> None:
     from envs.work3.core_types import ActionBranch
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
     from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
@@ -1107,7 +1273,7 @@ def test_disturbance_hit_with_later_existing_release_has_zero_added_wait() -> No
     from envs.work3.environment import AirLineEnvWork3
     from scripts.work3.evaluate_c_vs_d import summarize_disturbance_effects
     from scripts.work3.train_ppo_work3 import count_actual_scenario_hits
-    from training.work3_vector_env import _scenario_status
+    from training.work3.vector_env import _scenario_status
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
@@ -1174,7 +1340,7 @@ def test_disturbance_hit_with_later_existing_release_has_zero_added_wait() -> No
 def test_vector_worker_errors_and_incomplete_step_timeouts_are_explicit_and_cleaned() -> None:
     from envs.work3.core_types import ActionBranch
     from models.work3.actor_critic import ActorCriticWork3
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     failed_vector = Work3VectorEnv(
@@ -1237,7 +1403,7 @@ def test_vector_expired_wall_clock_deadline_stops_dispatch_without_fake_result()
     import time
 
     from envs.work3.core_types import ActionBranch
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     vector = Work3VectorEnv(
@@ -1510,7 +1676,7 @@ def test_training_preserves_rollout_boundary_potential_and_refreshes_episodes(
     from models.work3.graph_builder import GRAPH_FEATURE_VERSION
     from models.work3.potential_shaping import PotentialRewardShaper
     from torch_geometric.data import HeteroData
-    from training.work3_vector_env import Work3StepResult, Work3VectorStepBatch
+    from training.work3.vector_env import Work3StepResult, Work3VectorStepBatch
 
     training = importlib.import_module("scripts.work3.train_ppo_work3")
     events: list[tuple[Any, ...]] = []
@@ -2893,7 +3059,7 @@ def test_pilot_success_target_waits_for_started_episodes_to_finish() -> None:
 
 
 def test_spawn_reset_runs_uniform_warmup_before_loading_fixed_scenario() -> None:
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     vector = Work3VectorEnv(
         env_kwargs={
@@ -2957,7 +3123,7 @@ def test_spawn_reset_runs_uniform_warmup_before_loading_fixed_scenario() -> None
 def test_spawn_reset_applies_due_event_at_uniform_warmup_boundary_before_snapshot() -> None:
     from envs.work3.core_types import TaskStatus
     from envs.work3.environment import AirLineEnvWork3
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
     from utils.work3.uniform_baseline_warmup import run_uniform_baseline_warmup
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"

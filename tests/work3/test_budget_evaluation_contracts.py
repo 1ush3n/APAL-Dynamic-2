@@ -1,4 +1,4 @@
-"""测试 work3_4060/run_budget_evaluation.py 中的契约核验与坏输入拦截能力 (Section 9.3, 10.3)。
+"""测试 scripts/work3/run_budget_evaluation.py 中的契约核验与坏输入拦截能力 (Section 9.3, 10.3)。
 
 验证点：
 1. 现有 C4096 / D4096 契约、运行记录和审计文件校验通过。
@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from work3_4060.run_budget_evaluation import (
+from scripts.work3.run_budget_evaluation import (
     REPO_ROOT,
     ManifestResult,
     compute_four_cell_matrix_analysis,
@@ -226,9 +226,9 @@ def test_load_variants_from_json(tmp_path: Path):
             {
                 "label": "C_b4096",
                 "method": "C",
-                "checkpoint": "work3_4060/repeat_v1/seed45/C_beta1_b4096/weights.pt",
-                "run_json": "work3_4060/repeat_v1/seed45/C_beta1_b4096/run.json",
-                "audit_json": "work3_4060/repeat_v1/seed45/C_beta1_b4096/shaping_audit_summary.json",
+                "checkpoint": "tests/fixtures/work3/local_history/repeat_v1/seed45/C_beta1_b4096/weights.pt",
+                "run_json": "tests/fixtures/work3/local_history/repeat_v1/seed45/C_beta1_b4096/run.json",
+                "audit_json": "tests/fixtures/work3/local_history/repeat_v1/seed45/C_beta1_b4096/shaping_audit_summary.json",
                 "expected_beta": 1.0,
                 "expected_decisions": 4096,
                 "is_target": True,
@@ -244,7 +244,7 @@ def test_load_variants_from_json(tmp_path: Path):
     assert len(variants) == 1
     assert variants[0]["label"] == "C_b4096"
     assert variants[0]["expected_seed"] == 45
-    assert variants[0]["checkpoint"] == REPO_ROOT / "work3_4060/repeat_v1/seed45/C_beta1_b4096/weights.pt"
+    assert variants[0]["checkpoint"] == REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "repeat_v1", "seed45", "C_beta1_b4096", "weights.pt")
 
 
 def test_cf_mode_variants_configuration(tmp_path: Path):
@@ -268,9 +268,9 @@ def test_cf_mode_variants_configuration(tmp_path: Path):
             {
                 "label": "C_b4096",
                 "method": "C",
-                "checkpoint": "work3_4060/budget_v1/seed42/C_b4096/weights.pt",
-                "run_json": "work3_4060/budget_v1/seed42/C_b4096/run.json",
-                "audit_json": "work3_4060/budget_v1/seed42/C_b4096/shaping_audit_summary.json",
+                "checkpoint": "tests/fixtures/work3/local_history/budget_v1/seed42/C_b4096/weights.pt",
+                "run_json": "tests/fixtures/work3/local_history/budget_v1/seed42/C_b4096/run.json",
+                "audit_json": "tests/fixtures/work3/local_history/budget_v1/seed42/C_b4096/shaping_audit_summary.json",
                 "expected_beta": 1.0,
                 "expected_decisions": 4096,
                 "is_target": True,
@@ -278,9 +278,9 @@ def test_cf_mode_variants_configuration(tmp_path: Path):
             {
                 "label": "F_b4096",
                 "method": "F",
-                "checkpoint": "work3_4060/representation_v2/seed42/F_beta1_b4096/weights.pt",
-                "run_json": "work3_4060/representation_v2/seed42/F_beta1_b4096/run.json",
-                "audit_json": "work3_4060/representation_v2/seed42/F_beta1_b4096/shaping_audit_summary.json",
+                "checkpoint": "tests/fixtures/work3/local_history/representation_v2/seed42/F_beta1_b4096/weights.pt",
+                "run_json": "tests/fixtures/work3/local_history/representation_v2/seed42/F_beta1_b4096/run.json",
+                "audit_json": "tests/fixtures/work3/local_history/representation_v2/seed42/F_beta1_b4096/shaping_audit_summary.json",
                 "expected_beta": 1.0,
                 "expected_decisions": 4096,
                 "is_target": True,
@@ -478,8 +478,8 @@ def test_r13_c_unrounded_float_preserves_near_ties():
 
 def test_r13_a_compute_four_cell_matrix_dynamic():
     """(Section 13.4 R13-A) 验证四格矩阵基于原始 JSON 动态计算，杜绝写死常量。"""
-    hist_json = REPO_ROOT / "work3_4060/representation_v1/seed42/evaluation/equal_budget_validation_results.json"
-    hist_manifest = REPO_ROOT / "work3_4060/representation_v1/seed42/variants.json"
+    hist_json = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "representation_v1", "seed42", "evaluation", "equal_budget_validation_results.json")
+    hist_manifest = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "representation_v1", "seed42", "variants.json")
     val_scenarios = ["COMPARE_VAL_S0_EARLY_M", "COMPARE_VAL_S2_MID_M", "COMPARE_VAL_S3_MID_L", "COMPARE_VAL_S4_LATE_H"]
 
     # 当前 beta=1.0 的 C 与 F 验证集均值 (来自真实评估数据)
@@ -534,7 +534,7 @@ def test_r13_a_mismatched_seed_incomplete(tmp_path: Path):
     manifest_p = tmp_path / "bad_manifest.json"
     manifest_p.write_text(json.dumps(manifest_data), encoding="utf-8")
 
-    hist_json = REPO_ROOT / "work3_4060/representation_v1/seed42/evaluation/equal_budget_validation_results.json"
+    hist_json = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "representation_v1", "seed42", "evaluation", "equal_budget_validation_results.json")
     val_scenarios = ["COMPARE_VAL_S0_EARLY_M"]
 
     lines, info = compute_four_cell_matrix_analysis(

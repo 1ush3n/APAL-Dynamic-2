@@ -14,7 +14,7 @@ from scripts.work3.evaluate_c_vs_d import evaluate_single_trajectory
 from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
-BASELINE_PATH = Path("work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json")
+BASELINE_PATH = Path("tests/fixtures/work3/local_history/rule_baseline_ac_v1/mini210_rule_baseline.json")
 
 
 def test_baseline_metadata_and_policy() -> None:

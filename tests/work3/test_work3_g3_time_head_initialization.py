@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from training.work3_runtime_config import (
+from training.work3.runtime_config import (
     load_work3_runtime_config,
     validate_time_head_initialization,
     validate_work3_runtime_config,

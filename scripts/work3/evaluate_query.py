@@ -17,7 +17,7 @@ from envs.work3.core_types import TaskStatus
 from envs.work3.environment import AirLineEnvWork3
 from models.work3.actor_critic import ActorCriticWork3
 from models.work3.ppo_trainer import PPOTrainerWork3
-from training.work3_runtime_config import load_work3_runtime_config, resolve_work3_precision, seed_work3_runtime
+from training.work3.runtime_config import load_work3_runtime_config, resolve_work3_precision, seed_work3_runtime
 from utils.work3.objective_evaluator import ObjectiveWeights, build_objective_report, evaluate_trajectory_objective
 from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
 

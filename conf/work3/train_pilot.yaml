@@ -18,11 +18,15 @@ runtime:
   dataloader_num_workers: 0
   scenario_pool_path: data/work3/scenarios_9class.json
   scenario_split_path: data/work3/experiment_splits/train.json
+artifacts:
+  experiment_name: work3_pilot
+  runs_root: runs
+  run_id: null
 paths:
   baseline: data/work3/real_283_k10_baseline.json
   time_head_checkpoint: null
-  checkpoint_dir: models/work3/checkpoints
-  report_dir: outputs/work3
+  checkpoint_dir: null
+  report_dir: null
 ppo:
   steps_per_iter: 32
   epochs: 1

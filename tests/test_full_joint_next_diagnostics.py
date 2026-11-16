@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from diagnostics.next_suite import build_jobs, build_train_command, jobs_for_suite
+from scripts.common.next_suite import build_jobs, build_train_command, jobs_for_suite
 
 
 def test_next_diagnostic_suite_has_non_overlapping_t5_and_t6_jobs() -> None:

@@ -2,7 +2,7 @@
 
 本项目面向 Aircraft Pulse Assembly Lines（APAL）初始调度与动态重调度，核心组件包括异构图注意力网络、指针网络、PPO、PyTorch Geometric 与 PyTorch Lightning。
 
-## 当前开题方案对应入口（2026-11-15）
+## 当前开题方案对应入口（2026-11-16）
 
 | 研究内容 | 方法与实际入口 |
 | --- | --- |
@@ -12,20 +12,24 @@
 
 工作三在模板站位与既有合法后移范围内生成无扰动批次安排，也能在已指派、执行中受到扰动后继续调度；这不等同于工作一的自由初始分站。两种转站模式从原基准继承，未修改物理规则。
 
-最短检查流程如下，先激活 `rag_env`，从仓库根目录运行；输出已存在时需换路径，避免覆盖研究结果：
+最短检查流程如下，先激活 `rag_env`，从仓库根目录运行；每次生成独立运行ID，训练先产生检查点，再由两个评估入口加载：
 
 ```powershell
 conda activate rag_env
-python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml
-python -m scripts.work3.evaluate_query --checkpoint outputs/work3/query/checkpoints/smoke_method_query_weights.pt --report outputs/work3/query/undisturbed.json
-python -m scripts.work3.evaluate_query --checkpoint outputs/work3/query/checkpoints/smoke_method_query_weights.pt --report outputs/work3/query/disturbed.json --scenario-id EARLY_LOW_S0
+$runId = 'query_smoke_' + [guid]::NewGuid().ToString('N')
+$run = Join-Path (Join-Path 'runs' 'work3_query') $runId
+$checkpoint = Join-Path (Join-Path $run 'checkpoints') 'smoke_method_query_weights.pt'
+python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml --set "artifacts.run_id=$runId"
+python -m scripts.work3.evaluate_query --checkpoint $checkpoint --report (Join-Path (Join-Path $run 'eval') 'nominal.json') --max-decisions 8
+python -m scripts.work3.evaluate_query --checkpoint $checkpoint --report (Join-Path (Join-Path $run 'eval') 'disturbed.json') --scenario-id EARLY_LOW_S0 --max-decisions 8
 python -m pytest tests/work3/test_scheduling_queries.py -q
 ```
 
-默认是两 worker、8 步的通路烟测，评估也受 120 秒预算限制；烟测权重不具备研究效果结论资格。受扰训练使用同一入口，例如在新的输出目录中执行：
+默认是两 worker、8 步的通路烟测，评估也受 120 秒预算限制；烟测权重不具备研究效果结论资格。8步预登记扰动评估可能尚未到达触发时刻，真实命中及终局验证见迁移记录中的小双机回归。受扰训练使用同一入口，例如用新的运行ID执行：
 
 ```powershell
-python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml --set runtime.run_mode=pilot --set runtime.successful_batch_target=1 --set runtime.total_env_steps=10000 --set runtime.max_wall_seconds=3600 --set paths.checkpoint_dir=outputs/work3/query_pilot/checkpoints --set paths.report_dir=outputs/work3/query_pilot
+$pilotId = 'query_pilot_' + [guid]::NewGuid().ToString('N')
+python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml --set "artifacts.run_id=$pilotId" --set runtime.run_mode=pilot --set runtime.successful_batch_target=1 --set runtime.total_env_steps=10000 --set runtime.max_wall_seconds=3600
 ```
 
 GPU 小内存运行追加 `--set runtime.device=cuda --set runtime.amp_dtype=bf16`；小批次由 `ppo.batch_size` 控制，缓存始终在 CPU。当前查询完整枚举合法团队，不把未穷尽结果冒充最优；大规模后段吞吐尚需单独评测。
@@ -39,6 +43,36 @@ LLM 暂不配置 API。默认使用 `conf/work3/condition_program.json` 的离�
 需要继续调用方已持有的生产现场时，使用 `evaluate_query_trajectory(env, actor, reset=False, max_decisions=100)`；默认 `reset=True` 保持从零评估。续评估记录起始时间、费用和承诺，分别核对完整目标与后续增量，不清空执行前缀。已运行工序不因新注入扰动而重新推迟。
 
 工作三历史 B/C/D/E/F/G 的含义保留：使用 `conf/work3/train_pilot.yaml` 与原 `scripts/work3/evaluate_c_vs_d.py`。时间头、监督和势函数文件继续服务历史复现；APCF 等扩展不是本轮正式方案新增内容。下文保留原有工程与历史实验说明，以本节及 [迁移记录](docs/work3_query_migration.md) 为当前方法入口依据。
+
+## 目录与运行材料
+
+```text
+conf/                  当前配置与历史方法配置
+data/                  运行输入、场景、划分与被维护诊断所需数据
+envs/  models/         APAL物理环境、图编码与策略网络
+training/              Lightning、采样、重放与运行配置
+runtime/               共享运行目录、配置、随机种子与检查点支持
+scripts/work1/         工作一数据准备与筛查入口
+scripts/work2/         工作二数据准备入口
+scripts/work3/         工作三训练、评估与受维护核验入口
+scripts/common/        被多个命令复用的辅助代码
+tests/                 回归检查；fixtures/保存小型固定输入
+docs/                  当前导航、迁移记录与历史资料索引
+runs/                  新运行的配置、检查点、日志、报告和轨迹（不提交）
+```
+
+新输出使用 `runs/<experiment>/<run_id>/`，各研究继续使用自身配置和物理环境；工作三的 `artifacts` 段与共享 `runtime.artifacts` 解析同一目录约定。显式指定输出路径仍被尊重。已有输入数据、冻结基准和有效模型不会因输出目录变化被重写。
+
+本轮四条命令路径调整如下，算法参数与数据来源保持原定义。根目录其余历史脚本未按名称批量改写。
+
+| 原入口 | 当前入口 |
+|---|---|
+| `scripts/generate_initial_buckets.py` | `scripts/work1/build_training_pool.py` |
+| `scripts/train_main_screen.py` | `scripts/work1/train_main_screen.py` |
+| `scripts/evaluate_main_screen.py` | `scripts/work1/evaluate_main_screen.py` |
+| `scripts/prepare_reschedule_r5_data.py` | `scripts/work2/build_r5_data.py` |
+
+[文档导航](docs/README.md)、[逐项路径映射](docs/directory_migration.csv)和[历史资料与恢复方法](docs/history.md)说明当前位置。开题材料、旧根审计及旧实验文件保存在项目外普通目录 `D:\OneDrive\研究生\归档\APAL-Dynamic-2`，按逐文件清单核验；不需要展开压缩包才能查阅。旧报告中的路径与命令保留为原始记录，不当作当前默认输出位置。
 
 ## 环境
 
@@ -60,13 +94,13 @@ PyTorch 应根据官方安装矩阵单独安装与显卡驱动兼容的 CUDA whe
 生成 283、680、2338、3182 四档训练池，每档默认 32 个变体：
 
 ```powershell
-python scripts/generate_initial_buckets.py bucket=all num_samples=32 seed=42
+python scripts/work1/build_training_pool.py bucket=all num_samples=32 seed=42
 ```
 
 覆盖已有训练池：
 
 ```powershell
-python scripts/generate_initial_buckets.py bucket=all num_samples=32 seed=42 overwrite=true
+python scripts/work1/build_training_pool.py bucket=all num_samples=32 seed=42 overwrite=true
 ```
 
 ## 训练

@@ -1,7 +1,0 @@
-{
-  "protocol_status": "FAIL",
-  "production_status": "INCOMPLETE",
-  "retention_status": "INCOMPLETE",
-  "stop_reason": "KeyError",
-  "message": "'path'"
-}

@@ -36,6 +36,14 @@ wandb/
 *.pth
 *.ckpt
 *.pt
+# 固定历史契约回归所需的小型二进制；新训练权重仍留在runs。
+!/tests/fixtures/work3/local_history/bc_ppo_retention_v1/seed42/first_rollout.pt
+!/tests/fixtures/work3/local_history/budget_v1/seed42/C_b4096/weights.pt
+!/tests/fixtures/work3/local_history/c_reproduction_diagnostic_v1/seed42/diagnostic_actor.pt
+!/tests/fixtures/work3/local_history/critic_calibration_retention_v1/seed42/calibration/calibrated_model.pt
+!/tests/fixtures/work3/local_history/critic_calibration_retention_v1/seed42/ppo/checkpoints/step0000.pt
+!/tests/fixtures/work3/local_history/critic_calibration_retention_v1/seed42/ppo/first_rollout.pt
+!/tests/fixtures/work3/local_history/rule_baseline_ac_v1/seed42/C/weights.pt
 /work3_4060/compare_v1/seed*/
 
 # ============================================================

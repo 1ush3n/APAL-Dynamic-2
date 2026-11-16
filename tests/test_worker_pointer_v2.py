@@ -1865,7 +1865,7 @@ def test_v2_experiment_config_is_isolated_and_explicit() -> None:
         target=cfg,
     )
     assert cfg.experiment_name == "initial_worker_pointer_v2_exploratory"
-    assert cfg.runs_root == "results/01_initial_main"
+    assert cfg.runs_root == "runs"
     assert cfg.team_selection_mode == "autoregressive_pressure_v2"
     assert cfg.policy_action_scope == "operation_station_worker"
     assert cfg.actor_context_mode == "attention"

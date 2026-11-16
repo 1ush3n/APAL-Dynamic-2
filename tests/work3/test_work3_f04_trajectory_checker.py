@@ -12,7 +12,7 @@ from scripts.work3.evaluate_c_vs_d import _check_completed_trajectory_feasibilit
 from scripts.work3.train_ppo_work3 import (
     _independent_feasibility_from_audit,
 )
-from training.work3_vector_env import _execution_record
+from training.work3.vector_env import _execution_record
 from utils.work3.trajectory_feasibility import (
     TaskConstraintRecord,
     TrajectoryExecutionRecord,

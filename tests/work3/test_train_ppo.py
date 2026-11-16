@@ -32,7 +32,7 @@ def test_d_time_prediction_runs_for_decisions_and_required_bootstrap_only(
     """正常转移不预先计算下一状态时间特征；真实截断仍计算bootstrap特征。"""
     from dataclasses import replace
 
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     prediction_times: list[float] = []
     snapshot_state_features: list[tuple[torch.Tensor, ...]] = []
@@ -404,7 +404,7 @@ def test_training_mixed_worker_termination_truncation_and_continuation(
     from dataclasses import replace
 
     from models.work3.ppo_buffer import RolloutBufferWork3
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     action_masks: list[tuple[bool, ...]] = []
     dispatched_workers: list[tuple[int, ...]] = []
@@ -512,7 +512,7 @@ def test_training_entry_closes_other_workers_after_worker_error(
     """一个worker报告错误时，训练入口也必须回收同批其他worker。"""
     from dataclasses import replace
 
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     created_envs: list[Work3VectorEnv] = []
     original_create = train_module.create_work3_single_env_runtime
@@ -572,7 +572,7 @@ def test_training_entry_closes_workers_after_actor_exception(
     tmp_path: Path,
 ) -> None:
     """主进程Actor抛出异常时，训练入口也必须回收已启动的环境worker。"""
-    from training.work3_vector_env import Work3VectorEnv
+    from training.work3.vector_env import Work3VectorEnv
 
     created_envs: list[Work3VectorEnv] = []
     original_create = train_module.create_work3_single_env_runtime

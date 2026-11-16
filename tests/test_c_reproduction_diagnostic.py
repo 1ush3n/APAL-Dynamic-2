@@ -17,8 +17,8 @@ from models.work3.actor_critic import ActorCriticWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from scripts.work3.baseline_repair_agent import BaselinePlanRepairAgent
 from scripts.work3.evaluate_c_vs_d import build_formal_evaluation_agent
-import work3_4060.c_reproduction_protocol as protocol
-from work3_4060.c_reproduction_protocol import (
+import scripts.work3.c_reproduction_protocol as protocol
+from scripts.work3.c_reproduction_protocol import (
     BASELINE_PATH,
     actor_fingerprint,
     build_c_state_features,
@@ -311,7 +311,7 @@ def test_original_checkpoint_is_untouched_by_diagnostic_copy() -> None:
 
 def test_input_visibility_report_covers_four_items(teacher_bundle: dict) -> None:
     """Phase A：清册必须覆盖四个信息项，并给出状态与证据。"""
-    from work3_4060.run_c_reproduction_diagnostic import build_input_visibility_report
+    from scripts.work3.run_c_reproduction_diagnostic import build_input_visibility_report
 
     baseline = protocol.load_json(BASELINE_PATH)
     samples = teacher_bundle["samples"]
@@ -331,7 +331,7 @@ def test_input_visibility_report_covers_four_items(teacher_bundle: dict) -> None
 
 def test_outcome_tier_mapping() -> None:
     """第 8 节：描述性等级必须由绝对费用与可行性判定，不用 A 作百分比分母。"""
-    from work3_4060.run_c_reproduction_diagnostic import classify_outcome
+    from scripts.work3.run_c_reproduction_diagnostic import classify_outcome
 
     base = {
         "success": True,

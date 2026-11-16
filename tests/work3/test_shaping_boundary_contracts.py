@@ -18,7 +18,7 @@ def run_checker(events_file: Path, run_json: Path | None = None) -> tuple[int, d
     output_summary = events_file.parent / "summary.json"
     cmd = [
         sys.executable,
-        str(REPO_ROOT / "work3_4060/verify_shaping_trace.py"),
+        str(REPO_ROOT / "scripts/work3/verify_shaping_trace.py"),
         "--events",
         str(events_file),
         "--output",

@@ -11,8 +11,9 @@ from torch.distributions import Categorical
 from torch_geometric.data import HeteroData
 
 from models.work3.actor_critic import ActorCriticWork3
-from work3_4060.run_ppo_ablation_arms import apply_detach_value_hook
-from work3_4060.run_ppo_retention_repeat import (
+from scripts.work3.run_ppo_ablation_arms import apply_detach_value_hook
+from scripts.work3.run_ppo_retention_repeat import (
+    OUTPUT_ROOT,
     build_arm_configs,
     delta_j,
     historical_interaction_budget,
@@ -23,14 +24,15 @@ from work3_4060.run_ppo_retention_repeat import (
 
 
 def test_seed_and_output_root_are_explicit_and_isolated() -> None:
-    expected = Path(__file__).resolve().parents[1] / "work3_4060" / "ppo_retention_repeat_v1" / "ppo_seed43"
+    expected = OUTPUT_ROOT
     assert resolve_output_root(expected) == expected.resolve()
+    assert expected.is_relative_to(Path(__file__).resolve().parents[1] / "runs")
     with pytest.raises(ValueError):
         resolve_output_root(expected.parent.parent / "ppo_ablation_arms_v1" / "seed42")
 
 
 def test_r1_1024_config_changes_only_lr_seed_and_explicit_budget() -> None:
-    from work3_4060.run_r1_retention_1024 import OUTPUT_ROOT, build_resolved_config, resolve_output_root
+    from scripts.work3.run_r1_retention_1024 import OUTPUT_ROOT, build_resolved_config, resolve_output_root
 
     source = {
         "method_variant": "C",
@@ -72,7 +74,7 @@ def test_r1_1024_config_changes_only_lr_seed_and_explicit_budget() -> None:
 
 
 def test_missing_training_dependency_is_reported_as_missing(tmp_path: Path) -> None:
-    from work3_4060.run_r1_retention_1024 import inventory_dependency_paths
+    from scripts.work3.run_r1_retention_1024 import inventory_dependency_paths
 
     rows, missing = inventory_dependency_paths({"calibrated_model": tmp_path / "absent.pt"})
     assert missing == ["calibrated_model"]
@@ -81,7 +83,7 @@ def test_missing_training_dependency_is_reported_as_missing(tmp_path: Path) -> N
 
 
 def test_r1_report_gates_distinguish_failed_protocol_from_incomplete_evidence() -> None:
-    from work3_4060.run_r1_retention_1024 import (
+    from scripts.work3.run_r1_retention_1024 import (
         _classify_protocol_status,
         _fixture_inputs_match,
         _pytest_summary_counts,
@@ -132,10 +134,11 @@ def test_r1_report_gates_distinguish_failed_protocol_from_incomplete_evidence() 
 
 def test_r1_runner_imports_repository_modules_when_started_by_file_path() -> None:
     root = Path(__file__).resolve().parents[1]
-    script = root / "work3_4060" / "run_r1_retention_1024.py"
+    from scripts.work3.run_r1_retention_1024 import OUTPUT_ROOT
+    script = root / "scripts" / "work3" / "run_r1_retention_1024.py"
     result = subprocess.run(
         [sys.executable, str(script), "--worker", "evaluate", "--output",
-         str(root / "work3_4060" / "engineering_closeout_r1_1024_v1" / "ppo_seed43"),
+         str(OUTPUT_ROOT),
          "--point", "7"],
         cwd=root,
         capture_output=True,
@@ -152,7 +155,7 @@ def test_discarded_preflight_record_copies_and_hashes_preserved_artifacts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import json
-    from work3_4060 import run_r1_retention_1024 as runner
+    from scripts.work3 import run_r1_retention_1024 as runner
 
     source = tmp_path / "preserved_preflight"
     source.mkdir()
@@ -164,15 +167,15 @@ def test_discarded_preflight_record_copies_and_hashes_preserved_artifacts(
     assert result is not None
     assert result["environment_decisions"] == 0
     assert result["optimizer_steps"] == 0
-    copied = destination / "runs" / "discarded_preflight_attempt_0001" / "dependency_inventory.json"
+    copied = destination.parent / "logs" / "discarded_preflight_attempt_0001" / "dependency_inventory.json"
     assert copied.read_bytes() == (source / "dependency_inventory.json").read_bytes()
-    saved = json.loads((destination / "runs" / "discarded_runs.json").read_text(encoding="utf-8"))
+    saved = json.loads((destination.parent / "logs" / "discarded_runs.json").read_text(encoding="utf-8"))
     assert saved["discarded_runs"][0]["preserved_files"][0]["sha256"] == runner.sha256(copied)
 
 
 def test_r1_csv_writer_keeps_fields_present_only_in_later_rows(tmp_path: Path) -> None:
     import csv
-    from work3_4060.run_r1_retention_1024 import write_csv
+    from scripts.work3.run_r1_retention_1024 import write_csv
 
     path = tmp_path / "cross_seed.csv"
     write_csv(path, [
@@ -187,7 +190,7 @@ def test_r1_csv_writer_keeps_fields_present_only_in_later_rows(tmp_path: Path) -
 
 
 def test_source_hash_allows_only_documented_report_only_runner_revision(tmp_path: Path) -> None:
-    from work3_4060.run_r1_retention_1024 import _source_hash_status, sha256
+    from scripts.work3.run_r1_retention_1024 import _source_hash_status, sha256
 
     script = tmp_path / "runner.py"
     tests = tmp_path / "tests.py"
@@ -210,11 +213,11 @@ def test_source_hash_allows_only_documented_report_only_runner_revision(tmp_path
 
 
 def test_legacy_writer_paths_are_rebound_inside_new_output_root(monkeypatch: pytest.MonkeyPatch) -> None:
-    from work3_4060.run_ppo_retention_repeat import _configure_runner
-    import work3_4060.run_ppo_ablation_arms as runner
+    from scripts.work3.run_ppo_retention_repeat import CAL_ROOT, _configure_runner
+    import scripts.work3.run_ppo_ablation_arms as runner
 
-    expected = Path(__file__).resolve().parents[1] / "work3_4060" / "ppo_retention_repeat_v1" / "ppo_seed43"
-    names = ("CAL_ROUND", "OUTPUT_DIR", "RUNS_DIR", "CAL_MODEL", "CAL_FIT", "REFERENCE_PPO",
+    expected = OUTPUT_ROOT
+    names = ("RUN_CONTEXT", "CAL_ROUND", "OUTPUT_DIR", "RUNS_DIR", "CAL_MODEL", "CAL_FIT", "REFERENCE_PPO",
              "REFERENCE_SUMMARY", "REFERENCE_HISTORY", "REFERENCE_PAIRING", "REFERENCE_FIRST_ROLLOUT",
              "BASELINE_PATH", "ARMS", "POINTS", "BUDGET", "RUN_SEED", "ARM_SPECS", "MANIFEST",
              "ARM_REGISTRY", "COMPARISON_CSV", "CYCLE_CSV", "DIAGNOSTICS_CSV", "VERIFICATION", "SUMMARY_MD")
@@ -225,11 +228,11 @@ def test_legacy_writer_paths_are_rebound_inside_new_output_root(monkeypatch: pyt
         paths = runner.arm_paths(arm)
         assert paths["dir"].resolve().is_relative_to(expected.resolve())
         assert paths["run_json"].resolve() != (expected.parent.parent / "ppo_ablation_arms_v1" / "seed42" / arm / "runs" / "ppo_run.json").resolve()
-    assert runner.REFERENCE_SUMMARY == expected.parents[1] / "critic_calibration_retention_v1" / "seed42" / "ppo" / "training_summary.json"
+    assert runner.REFERENCE_SUMMARY == CAL_ROOT / "ppo" / "training_summary.json"
 
 
 def test_r1_update_pairing_can_bind_prior_same_arm_minibatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import work3_4060.run_ppo_ablation_arms as runner
+    import scripts.work3.run_ppo_ablation_arms as runner
 
     source = tmp_path / "old_R1_first_update.json"
     monkeypatch.setattr(runner, "OUTPUT_DIR", tmp_path / "new_run")
@@ -237,6 +240,37 @@ def test_r1_update_pairing_can_bind_prior_same_arm_minibatch(tmp_path: Path, mon
     assert runner.minibatch_reference_path("R1") == source
     monkeypatch.setattr(runner, "REFERENCE_MINIBATCH_UPDATE", None)
     assert runner.minibatch_reference_path("R1") == tmp_path / "new_run" / "REF" / "first_update.json"
+
+
+def test_local_launcher_leaves_run_creation_to_training_child(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import io
+    import json
+    from types import SimpleNamespace
+    from typing import Any
+    from runtime.artifacts import create_run_context
+    from scripts.work3 import run_local
+
+    context = create_run_context(run_local.ROOT, experiment_name="work3_local_smoke_c",
+                                 run_id="launcher-check", runs_root=tmp_path)
+
+    def start_child(command: list[str], **kwargs: Any) -> SimpleNamespace:
+        assert not context.run_dir.exists(), "运行目录必须由训练子进程首次创建"
+        context.run_dir.mkdir(parents=True, exist_ok=False)
+        context.configs_dir.mkdir()
+        manifest = {"run_id": context.run_id, "pid": 42, "command": command[1:]}
+        (context.configs_dir / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        return SimpleNamespace(stdout=io.StringIO("子进程已独占运行目录\n"), pid=42, wait=lambda: 0)
+
+    monkeypatch.setattr(run_local.subprocess, "Popen", start_child)
+    monkeypatch.setattr(sys, "argv", ["run_local", "smoke-c", "--device", "cpu", "--steps", "2",
+                                     "--ppo-batch", "2", "--runs-root", str(tmp_path),
+                                     "--run-id", context.run_id])
+    with pytest.raises(SystemExit) as result:
+        run_local.main()
+    assert result.value.code == 0
+    assert (context.logs_dir / "console.log").read_text(encoding="utf-8") == "子进程已独占运行目录\n"
+    launch = json.loads((context.configs_dir / "launch.json").read_text(encoding="utf-8"))
+    assert launch["child_pid"] == 42 and launch["returncode"] == 0
 
 
 def test_arm_configs_only_scale_r1_lr_and_enable_r4_detach() -> None:

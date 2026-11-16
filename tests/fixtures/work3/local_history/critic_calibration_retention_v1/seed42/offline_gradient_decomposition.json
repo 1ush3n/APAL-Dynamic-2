@@ -1,0 +1,92 @@
+{
+  "schema_version": "critic_calibration_gradient_decomposition_v1",
+  "scope": "固定首段离线诊断：使用前轮 first_rollout.pt 的 8 条真实采样记录整体计算三项损失并分解梯度；**不是**历史上真实的第一次 2 样本 mini-batch。真实首批的样本身份无法从归档数据恢复，因为正式 trainer 用全局 RNG 打乱后按 batch=2 切分，而该 RNG 状态未被保存。",
+  "first_minibatch_identity_available": false,
+  "missing_evidence": [
+    "真实第一批 2 条样本的索引（依赖未保存的 torch RNG 状态）",
+    "该 mini-batch 的实际 shuffle 顺序"
+  ],
+  "device": "cpu",
+  "mode": "eval",
+  "sample_count": 8,
+  "sample_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "coefficients": {
+    "clip_epsilon": 0.2,
+    "vf_coef": 0.5,
+    "ent_coef": 0.01
+  },
+  "losses": {
+    "policy_loss": -4.127621650695801e-06,
+    "value_loss_raw": 0.0005991287180222571,
+    "entropy": 0.517387330532074,
+    "value_loss_weighted": 0.00029956435901112854,
+    "entropy_weighted": -0.005173873156309128,
+    "total_loss": -0.004878436215221882
+  },
+  "advantages": {
+    "raw_mean": 0.02247522585093975,
+    "raw_std_unbiased_ddof1": 0.028145039454102516,
+    "raw_std_biased_ddof0": 0.02632727287709713,
+    "normalized_mean": -1.4901161193847656e-08,
+    "normalized_std_unbiased_ddof1": 0.9999996423721313,
+    "normalized_std_biased_ddof0": 0.9354140162467957,
+    "normalization_scope": "整段 8 样本（与正式 buffer 的段内标准化一致）",
+    "note": "0.935 附近的归一化 std 是 (x-mean)/(std+1e-8) 在有限样本上的结果，不是错误。"
+  },
+  "shared_gradient": {
+    "parameter_count": 102,
+    "norms": {
+      "policy": 2.249856948852539,
+      "value": 0.05526256188750267,
+      "entropy": 0.013919138349592686
+    },
+    "pairwise_cosines": {
+      "policy|value": 0.016775173567498775,
+      "entropy|policy": 0.01970277325906814,
+      "entropy|value": 0.0061194453058145346
+    },
+    "sum_residual_norm": 6.95609996910207e-05,
+    "relative_residual": 3.089167522954052e-05,
+    "tolerance": 0.0001,
+    "residual_within_tolerance": true,
+    "tolerance_rationale": "残差容差按单精度浮点累加特征固定为 1e-4 相对值；float64 级 1e-9 不适用于 float32 的 138 个参数梯度求和。实测残差已记录。"
+  },
+  "per_group_gradient_norms": {
+    "shared": {
+      "policy": 2.249856948852539,
+      "value": 0.05526256188750267,
+      "entropy": 0.013919138349592686
+    },
+    "policy": {
+      "policy": 0.7304483652114868,
+      "value": 0.0,
+      "entropy": 0.006043293979018927
+    },
+    "value": {
+      "policy": 0.0,
+      "value": 0.10093517601490021,
+      "entropy": 0.0
+    }
+  },
+  "group_membership": {
+    "shared": 102,
+    "policy": 32,
+    "value": 4
+  },
+  "approx_kl": 0.0,
+  "clip_fraction": 0.0,
+  "interpretation_limits": [
+    "这是贡献分解，不是因果定位：某项梯度范数最大不等于它导致退化。",
+    "Adam 的自适应缩放、全局裁剪与参数尺度都会改变实际更新幅度。",
+    "共享参数梯度同时包含 policy 与 value 的贡献，不能当作“仅来自 policy”。"
+  ]
+}

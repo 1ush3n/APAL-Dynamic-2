@@ -17,13 +17,15 @@ if str(REPO_ROOT) not in sys.path:
 
 from models.work3.actor_critic import ActorCriticWork3
 from scripts.work3.evaluate_c_vs_d import build_formal_evaluation_agent
-from training.work3_lightning import Work3LightningModule
-import work3_4060.run_bc_ppo_retention as diag
-from work3_4060.c_reproduction_protocol import load_diagnostic_actor, sha256_file
+from training.work3.lightning import Work3LightningModule
+import scripts.work3.run_bc_ppo_retention as diag
+from scripts.work3.c_reproduction_protocol import load_diagnostic_actor, sha256_file
 
 
 # 1. 受控初始化：来源绑定严格，诊断格式不走正式加载旁路
 
+
+HISTORY_DIR = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "work3" / "local_history"
 
 def test_bc_initialization_is_strictly_bound(tmp_path: Path) -> None:
     if not diag.BC_WEIGHTS.is_file():
@@ -103,9 +105,9 @@ def test_nominal_only_and_no_alignment_wrapper() -> None:
 
 
 def test_recorded_config_is_nominal_only() -> None:
-    if not diag.RESOLVED_CONFIG.is_file():
+    if not (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "resolved_config.yaml")).is_file():
         pytest.skip("缺少 resolved_config.yaml")
-    text = diag.RESOLVED_CONFIG.read_text(encoding="utf-8")
+    text = (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "resolved_config.yaml")).read_text(encoding="utf-8")
     assert "disturbance_enabled: false" in text
     assert "scenario: NOMINAL" in text
     assert "warmup_mode: none" in text
@@ -124,9 +126,9 @@ def test_replay_contract_and_non_finite_blocking() -> None:
 
 
 def test_recorded_history_respects_replay_contract() -> None:
-    if not diag.TRAINING_HISTORY.is_file():
+    if not (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "training_history.jsonl")).is_file():
         pytest.skip("缺少训练历史")
-    rows = [json.loads(line) for line in diag.TRAINING_HISTORY.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows = [json.loads(line) for line in (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "training_history.jsonl")).read_text(encoding="utf-8").splitlines() if line.strip()]
     assert rows, "训练历史为空"
     for row in rows:
         assert diag.replay_contract_ok(row["replay_max_abs_error"]), row["replay_max_abs_error"]
@@ -168,9 +170,9 @@ def test_truncation_differs_from_natural_termination() -> None:
 
 
 def test_recorded_segments_mark_truncation_explicitly() -> None:
-    if not diag.TRAINING_HISTORY.is_file():
+    if not (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "training_history.jsonl")).is_file():
         pytest.skip("缺少训练历史")
-    rows = [json.loads(line) for line in diag.TRAINING_HISTORY.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows = [json.loads(line) for line in (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "training_history.jsonl")).read_text(encoding="utf-8").splitlines() if line.strip()]
     boundary_types = {row["boundary_type"] for row in rows}
     assert boundary_types <= {"rollout_continuation", "budget_truncation", "natural_termination"}
     last = rows[-1]
@@ -218,12 +220,12 @@ def test_statistics_are_computed_from_values() -> None:
 
 def test_evaluation_rows_are_dynamic_and_signed() -> None:
     """ΔJ 是“相对 BC 起点”的带符号差值（正值=更差），必须由原始事实算出。"""
-    if not all(path.is_file() for path in (diag.TRAJ_DIR / "step0000_NOMINAL.json", diag.TRAJ_DIR / "step0512_NOMINAL.json")):
+    if not all(path.is_file() for path in ((HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "trajectories")) / "step0000_NOMINAL.json", (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "trajectories")) / "step0512_NOMINAL.json")):
         pytest.skip("缺少本轮评估轨迹")
     baseline_bc = json.loads(diag.BC_NOMINAL_TRAJ.read_text(encoding="utf-8"))
     evaluations = []
     for step in (0, 512):
-        path = diag.TRAJ_DIR / f"step{step:04d}_NOMINAL.json"
+        path = (HISTORY_DIR / Path("bc_ppo_retention_v1", "seed42", "trajectories")) / f"step{step:04d}_NOMINAL.json"
         evaluations.append({"step": step, "payload": json.loads(path.read_text(encoding="utf-8")), "teacher": None})
     rows = diag.build_evaluation_rows(evaluations, baseline_bc, float(json.loads(diag.BASELINE_PATH.read_text(encoding="utf-8"))["metadata"]["h0"]))
     zero = next(row for row in rows if row["step"] == 0)
@@ -234,3 +236,23 @@ def test_evaluation_rows_are_dynamic_and_signed() -> None:
         train["j_total"] - float(baseline_bc["objective_j_total"]), abs=1e-12
     )
     assert train["retention_pass"] is False
+
+
+def test_teacher_snapshot_override_reads_external_input_without_writing(tmp_path: Path) -> None:
+    import hashlib
+    import os
+    import subprocess
+
+    path = tmp_path / "外部教师快照.pt"
+    torch.save({"samples": [{"identity": "外部输入"}, {"identity": "第二条"}]}, path)
+    before = hashlib.sha256(path.read_bytes()).hexdigest()
+    code = """
+from scripts.work3.run_bc_ppo_retention import fixed_snapshot_sample
+assert fixed_snapshot_sample(limit=1) == [{"identity": "外部输入"}]
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True,
+        env={**os.environ, "APAL_WORK3_TEACHER_SNAPSHOTS": str(path)}, timeout=45, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == before

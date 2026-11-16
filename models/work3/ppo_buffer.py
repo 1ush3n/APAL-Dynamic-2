@@ -29,7 +29,7 @@ from typing import Any, Iterator, Mapping
 import torch
 
 from envs.work3.core_types import CycleExecutionRecord, validate_cycle_execution_record
-from training.work3_r3_e04_audit import get_r3_e04_auditor
+from training.work3.r3_e04_audit import get_r3_e04_auditor
 
 
 @dataclass

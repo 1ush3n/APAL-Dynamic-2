@@ -1,0 +1,64 @@
+{
+  "task": "Work-3 价值头专属校准与 PPO 保持性匹配对照",
+  "schema_version": "critic_calibration_manifest_v1",
+  "reference_commit": "169df7c136a1816255e221cce08ca90c453febfa",
+  "run_context": {
+    "head": "169df7c136a1816255e221cce08ca90c453febfa",
+    "branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "worktree_dirty": true,
+    "worktree_entries": [
+      "?? work3_4060/critic_calibration_retention_v1/",
+      "?? work3_4060/run_critic_calibration_retention.py"
+    ]
+  },
+  "output_dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42",
+  "instance": {
+    "baseline": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\rule_baseline_ac_v1\\mini210_rule_baseline.json",
+    "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+    "scenario": "NOMINAL",
+    "disturbance": "none",
+    "warmup": "none"
+  },
+  "arms": {
+    "uncalibrated_control": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42",
+    "calibrated": "本目录 ppo/（唯一新增训练臂）"
+  },
+  "budget": {
+    "calibration_steps_max": 128,
+    "calibration_seconds_max": 300.0,
+    "ppo_decisions": 512,
+    "checkpoints": [
+      0,
+      128,
+      256,
+      512
+    ]
+  },
+  "expected_artifacts": [
+    "manifest.json",
+    "control_binding.json",
+    "interpretation_errata.md",
+    "interpretation_errata.json",
+    "offline_gradient_decomposition.json",
+    "calibration/trajectory.json",
+    "calibration/snapshots_and_mc_targets.pt",
+    "calibration/history.jsonl",
+    "calibration/fit_metrics.json",
+    "calibration/policy_invariance.json",
+    "calibration/calibrated_model.pt",
+    "ppo/resolved_config.yaml",
+    "ppo/initialization_verification.json",
+    "ppo/first_rollout_pairing.json",
+    "ppo/training_history.jsonl",
+    "ppo/checkpoints/{step0000,step0128,step0256,step0512}.pt",
+    "ppo/trajectories/{step0000,step0128,step0256,step0512}_NOMINAL.json",
+    "ppo/shaping_events.jsonl",
+    "ppo/shaping_audit_summary.json",
+    "comparison_results.csv",
+    "cycle_comparison.csv",
+    "trajectory_verification.json",
+    "weight_integrity.json",
+    "verification.json",
+    "summary.md"
+  ]
+}

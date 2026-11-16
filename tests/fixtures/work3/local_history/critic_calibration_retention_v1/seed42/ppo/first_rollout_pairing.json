@@ -1,0 +1,10 @@
+{
+  "paired": true,
+  "same_states": true,
+  "same_actions": true,
+  "max_abs_log_prob_difference": 1.9073486328125e-06,
+  "tolerance": 1e-05,
+  "steps_compared": 8,
+  "divergence_note": "策略相同且随机状态匹配时，首段 8 步应得到相同采样事件；首段之后两臂因 critic 不同而自然分化，不强制重放对照动作。",
+  "reason": "matched"
+}

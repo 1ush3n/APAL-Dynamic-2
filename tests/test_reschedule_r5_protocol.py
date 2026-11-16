@@ -11,7 +11,7 @@ from runtime.reschedule_manifest import (
     RescheduleManifestEntry,
     validate_r5_manifest_shape,
 )
-from scripts.prepare_reschedule_r5_data import split_r5_instance_files
+from scripts.work2.build_r5_data import split_r5_instance_files
 from scripts.evaluate_reschedule_rules import _solver_seed_count
 from configs import Config, load_config_files
 from utils.reschedule_r5 import (

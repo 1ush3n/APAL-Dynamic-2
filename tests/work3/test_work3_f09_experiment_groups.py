@@ -19,7 +19,7 @@ from scripts.work3.train_ppo_work3 import (
     load_training_scenarios,
     run_training,
 )
-from training.work3_runtime_config import load_work3_runtime_config
+from training.work3.runtime_config import load_work3_runtime_config
 
 
 def _save_profile_checkpoint(

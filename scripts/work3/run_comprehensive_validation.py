@@ -14,6 +14,7 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 import hashlib
+import argparse
 import json
 import math
 import sys
@@ -41,7 +42,8 @@ from models.work3.ppo_buffer import (
     RolloutBufferWork3,
     PPOTransition,
 )
-from training.work3_lightning import Work3LightningModule, Work3TrainingUpdate
+from training.work3.lightning import Work3LightningModule, Work3TrainingUpdate
+from runtime.artifacts import RunContext, create_run_context
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.heuristic_agent import HeuristicAgentWork3
 from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
@@ -60,7 +62,7 @@ from utils.work3.objective_evaluator import (
 from utils.work3.trajectory_feasibility import validate_trajectory
 
 
-def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
+def run_section_9_1_five_stations_seven_aircraft(input_dir: Path) -> dict[str, Any]:
     print("\n" + "=" * 80)
     print(">>> 执行 Section 9.1: 五站七架可审阅小实例验证")
     print("=" * 80)
@@ -100,7 +102,7 @@ def run_section_9_1_five_stations_seven_aircraft() -> dict[str, Any]:
         tasks=tasks,
         station_workers=source.station_workers,
     )
-    tmp_baseline_path = Path(".pytest_tmp_v2/small_7ac_baseline.json")
+    tmp_baseline_path = input_dir / "small_7ac_baseline.json"
     tmp_baseline_path.parent.mkdir(parents=True, exist_ok=True)
     sub_baseline.save_to_json(tmp_baseline_path)
 
@@ -284,11 +286,11 @@ def run_section_9_2_real_283_k10_bridge() -> dict[str, Any]:
     }
 
 
-def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
+def run_section_9_3_learning_smoke_test(context: RunContext) -> dict[str, Any]:
     print("\n" + "=" * 80)
     print(">>> 执行 Section 9.3: 实际 C/D 学习烟测与双目标辅助更新")
     print("=" * 80)
-    tmp_ckpt_dir = Path(".pytest_tmp_v2/smoke_checkpoints")
+    tmp_ckpt_dir = context.checkpoint_dir
     tmp_ckpt_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. 运行 Method C 学习小烟测 (PPO 更新, budget=32)
@@ -304,6 +306,10 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
         batch_size=32,
         method_variant="C",
         output_ckpt=c_ckpt,
+        report_path=context.reports_dir / "method_c_smoke.run.json",
+        run_id=context.run_id,
+        audit_output_dir=context.traces_dir / "method_c",
+        lightning_root_dir=context.logs_dir / "method_c",
     )
     elapsed_c = time.perf_counter() - t0_c
     print(f"    Method C 完成: decisions={res_c['total_decisions']}, 耗时={elapsed_c:.2f}s, ckpt={c_ckpt}")
@@ -328,6 +334,10 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
         batch_size=32,
         method_variant="D",
         output_ckpt=d_ckpt,
+        report_path=context.reports_dir / "method_d_smoke.run.json",
+        run_id=context.run_id,
+        audit_output_dir=context.traces_dir / "method_d",
+        lightning_root_dir=context.logs_dir / "method_d",
     )
     elapsed_d = time.perf_counter() - t0_d
     print(f"    Method D 完成: decisions={res_d['total_decisions']}, 耗时={elapsed_d:.2f}s, ckpt={d_ckpt}")
@@ -691,15 +701,21 @@ def run_section_9_3_learning_smoke_test() -> dict[str, Any]:
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="工作三历史C/D综合验证；包含完整轨迹与学习烟测")
+    parser.add_argument("--runs-root", type=Path, default=Path("runs"), help="统一运行目录根路径")
+    parser.add_argument("--run-id", default=None, help="运行标识；已有目录拒绝覆盖")
+    args = parser.parse_args(argv)
+    context = create_run_context(ROOT_DIR, experiment_name="work3_validation", runs_root=args.runs_root, run_id=args.run_id)
+    context.run_dir.mkdir(parents=True, exist_ok=False)
     print("=" * 80)
     print("开始工作三综合验证全流程 (Sections 9.1, 9.2, 9.3)")
     print("=" * 80)
     overall_start = time.perf_counter()
 
-    r91 = run_section_9_1_five_stations_seven_aircraft()
+    r91 = run_section_9_1_five_stations_seven_aircraft(context.artifacts_dir / "inputs")
     r92 = run_section_9_2_real_283_k10_bridge()
-    r93 = run_section_9_3_learning_smoke_test()
+    r93 = run_section_9_3_learning_smoke_test(context)
 
     total_elapsed = time.perf_counter() - overall_start
     print("\n" + "=" * 80)
@@ -713,8 +729,9 @@ def main() -> None:
         "section_9_2": r92,
         "section_9_3": r93,
     }
-    summary_path = ROOT_DIR / "docs" / "section9_comprehensive_validation_report.json"
-    with open(summary_path, "w", encoding="utf-8") as f:
+    summary_path = context.reports_dir / "section9_comprehensive_validation_report.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     print(f"综合验证报告已保存至: {summary_path}")
 

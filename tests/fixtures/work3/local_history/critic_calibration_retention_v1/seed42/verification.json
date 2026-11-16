@@ -1,0 +1,28 @@
+{
+  "protocol_status": "PASS",
+  "overall_status": "PASS",
+  "checks": {
+    "protocol_status_pass": true,
+    "source_bc_unchanged": true,
+    "calibrated_model_consistent": true,
+    "checkpoints_consistent": true,
+    "policy_invariant_after_calibration": true,
+    "shaping_not_fail": true,
+    "first_rollout_paired": true
+  },
+  "shaping_audit_status": "PASS",
+  "shaping_contracts": {
+    "single_step_formula": "PASS",
+    "step_to_step_continuity": "PASS",
+    "predictor_version_invariance": "PASS",
+    "terminal_zero_potential": "PASS",
+    "completed_episode_telescope": "PASS",
+    "config_consistency": "PASS",
+    "boundary_contract": "PASS",
+    "ledger_reconciliation": "PASS"
+  },
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}

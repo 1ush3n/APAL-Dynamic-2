@@ -1,4 +1,4 @@
-"""测试 work3_4060/run_baseline_a_evaluation.py 中的协议契约、坏输入拦截与边界处理能力 (Section 7)。
+"""测试 scripts/work3/run_baseline_a_evaluation.py 中的协议契约、坏输入拦截与边界处理能力 (Section 7)。
 
 验收清单：
 1. A 身份验收：调用真实 BaselinePlanRepairAgent，agent_type="Baseline-Repair-A"；非合规实例被拦截。
@@ -33,7 +33,7 @@ from scripts.work3.evaluate_c_vs_d import (
     evaluate_single_trajectory,
 )
 from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
-from work3_4060.run_baseline_a_evaluation import (
+from scripts.work3.run_baseline_a_evaluation import (
     COST_TOLERANCE,
     REPO_ROOT,
     build_reuse_inventory,
@@ -44,7 +44,7 @@ from work3_4060.run_baseline_a_evaluation import (
     run_baseline_a_scenario,
     verify_and_load_learning_results,
 )
-from work3_4060.run_baseline_a_reachability_diagnostic import (
+from scripts.work3.run_baseline_a_reachability_diagnostic import (
     evaluate_action_reachability_and_probs,
 )
 from models.work3.actor_critic import ActorCriticWork3
@@ -65,7 +65,7 @@ def test_baseline_a_identity_and_type_check():
     assert not hasattr(agent, "time_head")
 
     # 错误类型传入 evaluate_single_trajectory 时必须抛出 TypeError
-    env = AirLineEnvWork3(baseline_json_path=str(REPO_ROOT / "work3_4060/data/mini210.json"))
+    env = AirLineEnvWork3(baseline_json_path=str(REPO_ROOT / Path("data", "work3", "local_diagnostics", "mini210.json")))
     with pytest.raises(TypeError, match="A组必须使用BaselinePlanRepairAgent"):
         evaluate_single_trajectory(
             env=env,
@@ -78,7 +78,7 @@ def test_baseline_a_identity_and_type_check():
 
 def test_check_environment_trajectory_feasibility_explicit_unpacking():
     """验证 check_environment_trajectory_feasibility 返回 (bool, dict)，不得将整个元组直接转布尔。"""
-    env = AirLineEnvWork3(baseline_json_path=str(REPO_ROOT / "work3_4060/data/mini210.json"))
+    env = AirLineEnvWork3(baseline_json_path=str(REPO_ROOT / Path("data", "work3", "local_diagnostics", "mini210.json")))
     # 在环境未开始或未终止时调用
     res = check_environment_trajectory_feasibility(env)
     assert isinstance(res, tuple)
@@ -294,7 +294,7 @@ def test_sha256_helpers(tmp_path: Path):
 
 def test_baseline_a_advance_cause_counts_export():
     """验证 R-A1 修复：明确区分 explicit (0) 与 auto_after_action (11)，保留完整 advance_cause_counts。"""
-    baseline_path = REPO_ROOT / "work3_4060/data/mini210.json"
+    baseline_path = REPO_ROOT / Path("data", "work3", "local_diagnostics", "mini210.json")
     a_res, facts = run_baseline_a_scenario(
         baseline_path=baseline_path,
         scenario=None,
@@ -475,10 +475,10 @@ def test_generate_markdown_report_dynamic_win_tallies_and_components(tmp_path: P
 
 def test_reachability_diagnostic_contract():
     """验证 Unit D1 可达性诊断契约：A 在单步派工决策下对标准 C 模型的候选集、分支、团队、对齐均完全可达。"""
-    weights_path = REPO_ROOT / "work3_4060/budget_v1/seed42/C_b4096/weights.pt"
+    weights_path = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "budget_v1", "seed42", "C_b4096", "weights.pt")
     assert weights_path.is_file(), f"未找到检查点: {weights_path}"
 
-    baseline_path = REPO_ROOT / "work3_4060/data/mini210.json"
+    baseline_path = REPO_ROOT / Path("data", "work3", "local_diagnostics", "mini210.json")
     env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
     agent = BaselinePlanRepairAgent()
 

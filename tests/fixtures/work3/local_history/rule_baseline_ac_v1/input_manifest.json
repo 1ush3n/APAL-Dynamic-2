@@ -1,0 +1,68 @@
+{
+  "manifest_version": "work3_rule_baseline_input_v1",
+  "description": "Work-3 规则基准重构冻结输入清册",
+  "units": {
+    "time": "hours",
+    "duration": "hours",
+    "standard_duration": "hours"
+  },
+  "slot_capacity_per_station": 3,
+  "duration_model": {
+    "formula": "duration = standard_duration * demand / (sum(efficiencies) * synergy_factor)",
+    "synergy_factor_formula": "0.95 ** (demand - 1)"
+  },
+  "source_files": {
+    "craft_csv": {
+      "path": "data/283.csv",
+      "sha256": "4059f36706bef9539278bd035b8fa8056611bf5af1eefda0625c78b9c64244e1"
+    },
+    "worker_pool_csv": {
+      "path": "data/worker_pool_fixed.csv",
+      "sha256": "48b0322f27f3b3fcab49253a0dd996e22333072d744a03fcd1ae8aa7de8c899b"
+    },
+    "mini210_reference_json": {
+      "path": "work3_4060/data/mini210.json",
+      "sha256": "b3f4285a37b1141ad6745fd69905ea41000b11922648af671c7976a5835eeb3b"
+    }
+  },
+  "selected_tasks_count": 30,
+  "selected_task_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    125
+  ],
+  "station_workers_count": {
+    "1": 2,
+    "2": 4,
+    "3": 6,
+    "4": 2,
+    "5": 11
+  }
+}

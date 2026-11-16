@@ -9,15 +9,15 @@ import torch
 from torch import nn
 
 from configs import Config
-from experiments.main_screen.screen_models import (
+from models.main_screen import (
     DualAttentionContextHBGATPN,
     ScaleGatedContextHBGATPN,
 )
 from models.hb_gat_pn import HBGATPN
 from models.worker_pointer_context import build_worker_pressure_context
 from runtime.checkpoints import ModelSpec
-from scripts.train_main_screen import _load_initial_weights, _resolve_screen_model_class
-from scripts.evaluate_main_screen import (
+from scripts.work1.train_main_screen import _load_initial_weights, _resolve_screen_model_class
+from scripts.work1.evaluate_main_screen import (
     _extract_screen_model,
     _resolve_screen_model_class as _resolve_eval_screen_model_class,
 )

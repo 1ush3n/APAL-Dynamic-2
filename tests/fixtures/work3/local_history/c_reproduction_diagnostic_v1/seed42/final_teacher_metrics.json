@@ -1,0 +1,76 @@
+{
+  "schema_version": "c_reproduction_teacher_metrics_v1",
+  "sample_count": 210,
+  "teacher_decision_kind_counts": {
+    "stay": 210
+  },
+  "nll_mean": 0.16468082732255337,
+  "nll_finite": true,
+  "decision_kind_accuracy": 1.0,
+  "task_accuracy_conditional": 0.9809523809523809,
+  "branch_accuracy_conditional": 1.0,
+  "team_accuracy_unordered_conditional": 1.0,
+  "align_accuracy_conditional": 1.0,
+  "full_physical_action_accuracy": 0.9809523809523809,
+  "conditional_denominators": {
+    "task": 210,
+    "branch": 210,
+    "team": 210,
+    "align": 210
+  },
+  "accuracy_scopes": {
+    "task_accuracy_conditional": "教师推进/不推进前缀固定为不推进后的工序头；非独立贪婪全流程",
+    "branch_accuracy_conditional": "教师工序前缀固定的分支头；非独立贪婪全流程",
+    "team_accuracy_unordered_conditional": "教师工序前缀固定的指针头，按无序团队集合比较",
+    "align_accuracy_conditional": "教师工序与团队前缀固定的对齐头",
+    "full_physical_action_accuracy": "正式贪心入口的完整物理动作元组（含推进门控）"
+  },
+  "first_full_action_divergence": {
+    "sample_id": 50,
+    "decision_index": 51,
+    "sim_time": 156.11353238099863,
+    "cycle": 4,
+    "teacher": [
+      "stay",
+      "3_3",
+      [
+        12,
+        72
+      ],
+      1
+    ],
+    "greedy": [
+      "stay",
+      "3_4",
+      [
+        12,
+        72
+      ],
+      1
+    ]
+  },
+  "first_task_divergence": {
+    "sample_id": 50,
+    "decision_index": 51,
+    "sim_time": 156.11353238099863,
+    "cycle": 4,
+    "teacher_task": "3_3",
+    "greedy_task": "3_4"
+  },
+  "evaluated_model": {
+    "role": "diagnostic_behavior_clone",
+    "checkpoint_path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+    "checkpoint_sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "source_actor_fingerprint": "08cc0a047abc29a07c78cd6168d925ddd3443794dd4cc41e3f415532ac5a6f12",
+    "source_weights_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b",
+    "device": "cpu",
+    "threads": {
+      "intra_op_threads": 1,
+      "inter_op_threads": 1
+    },
+    "training_steps": 1000,
+    "stop_reason": "max_optimizer_steps"
+  },
+  "teacher_manifest_sha256": "fa787d67ac13f65884a7d029da55f8298c73502c150c3674a2a77f191876709c"
+}

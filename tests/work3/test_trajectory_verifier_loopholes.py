@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import shutil
 
-from work3_4060.verify_trajectory_facts import (
+from scripts.work3.verify_trajectory_facts import (
     CANONICAL_MANIFEST,
     COST_TOLERANCE,
     PHYSICAL_TIME_TOLERANCE,
@@ -25,9 +25,9 @@ from work3_4060.verify_trajectory_facts import (
 from utils.work3.objective_evaluator import calculate_postpone_penalty
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-BASELINE_PATH = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/mini210_rule_baseline.json"
-SCENARIOS_PATH = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/scenarios.json"
-TRAJ_DIR = REPO_ROOT / "work3_4060/rule_baseline_ac_v1/trajectories"
+BASELINE_PATH = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "mini210_rule_baseline.json")
+SCENARIOS_PATH = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "scenarios.json")
+TRAJ_DIR = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "trajectories")
 
 
 @pytest.fixture(scope="module")

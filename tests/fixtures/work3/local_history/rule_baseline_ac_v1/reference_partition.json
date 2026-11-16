@@ -1,0 +1,384 @@
+{
+  "description": "沿用的 mini210 参考站位分区 (作为基准排程生成输入，非所有重调度方法的硬约束)",
+  "tasks": {
+    "2": {
+      "task_id": 2,
+      "ao_code": "AAQS00-0010",
+      "reference_station": 1,
+      "fixed_station": 1,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.7,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "3": {
+      "task_id": 3,
+      "ao_code": "FAQJ00-3450",
+      "reference_station": 1,
+      "fixed_station": 1,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 2.9,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "4": {
+      "task_id": 4,
+      "ao_code": "FDQJ00-2000",
+      "reference_station": 1,
+      "fixed_station": 1,
+      "demand": 2,
+      "skill": 1,
+      "standard_duration": 2.1,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "5": {
+      "task_id": 5,
+      "ao_code": "ABQJ00-0010",
+      "reference_station": 1,
+      "fixed_station": 1,
+      "demand": 2,
+      "skill": 2,
+      "standard_duration": 3.8,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "6": {
+      "task_id": 6,
+      "ao_code": "AJYY00-0010",
+      "reference_station": 1,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.09,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "7": {
+      "task_id": 7,
+      "ao_code": "AJYY00-0030",
+      "reference_station": 1,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.35,
+      "predecessors": [
+        6
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "8": {
+      "task_id": 8,
+      "ao_code": "AJZY00-0020",
+      "reference_station": 2,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.09,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "9": {
+      "task_id": 9,
+      "ao_code": "AJZY00-0040",
+      "reference_station": 2,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.35,
+      "predecessors": [
+        8
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "10": {
+      "task_id": 10,
+      "ao_code": "AJYY00-0050",
+      "reference_station": 4,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.28,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "11": {
+      "task_id": 11,
+      "ao_code": "AJYY00-0070",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.35,
+      "predecessors": [
+        10
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "12": {
+      "task_id": 12,
+      "ao_code": "AJZY00-0060",
+      "reference_station": 3,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.28,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "13": {
+      "task_id": 13,
+      "ao_code": "AJZY00-0080",
+      "reference_station": 3,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.35,
+      "predecessors": [
+        12
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "14": {
+      "task_id": 14,
+      "ao_code": "AJCP00-0090",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 2.06,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "15": {
+      "task_id": 15,
+      "ao_code": "AJCP00-0100",
+      "reference_station": 1,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 0.57,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "16": {
+      "task_id": 16,
+      "ao_code": "AJCP00-0130",
+      "reference_station": 1,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.35,
+      "predecessors": [
+        15
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "17": {
+      "task_id": 17,
+      "ao_code": "AJCP00-0110",
+      "reference_station": 4,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 2.06,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "18": {
+      "task_id": 18,
+      "ao_code": "AJCP00-0120",
+      "reference_station": 2,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 0.57,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "19": {
+      "task_id": 19,
+      "ao_code": "AJCP00-0140",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.35,
+      "predecessors": [
+        17,
+        18
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "20": {
+      "task_id": 20,
+      "ao_code": "AJCP00-0150",
+      "reference_station": 4,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.04,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "21": {
+      "task_id": 21,
+      "ao_code": "AJCP00-0160",
+      "reference_station": 4,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 2.52,
+      "predecessors": [
+        20
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "22": {
+      "task_id": 22,
+      "ao_code": "AJCP00-0170",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 0.63,
+      "predecessors": [
+        21
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "23": {
+      "task_id": 23,
+      "ao_code": "AJWB00-0180",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.04,
+      "predecessors": [
+        24
+      ],
+      "source": "mini210_reference_partition"
+    },
+    "24": {
+      "task_id": 24,
+      "ao_code": "AJWB00-0190",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.06,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "25": {
+      "task_id": 25,
+      "ao_code": "AJQJ00-0200",
+      "reference_station": 2,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.18,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "26": {
+      "task_id": 26,
+      "ao_code": "AEQJ00-0010",
+      "reference_station": 2,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 4,
+      "standard_duration": 8.3,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "27": {
+      "task_id": 27,
+      "ao_code": "AEQJ00-0080",
+      "reference_station": 3,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 4,
+      "standard_duration": 50.1,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "28": {
+      "task_id": 28,
+      "ao_code": "AGQJ00-0010",
+      "reference_station": 3,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 3.8,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "29": {
+      "task_id": 29,
+      "ao_code": "FJQJ00-0370",
+      "reference_station": 3,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 0,
+      "standard_duration": 1.03,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "30": {
+      "task_id": 30,
+      "ao_code": "ABHS00-2180",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 2,
+      "skill": 2,
+      "standard_duration": 1.8,
+      "predecessors": [],
+      "source": "mini210_reference_partition"
+    },
+    "125": {
+      "task_id": 125,
+      "ao_code": "ENHSB1-0310",
+      "reference_station": 5,
+      "fixed_station": null,
+      "demand": 1,
+      "skill": 3,
+      "standard_duration": 1.8,
+      "predecessors": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "source": "mini210_reference_partition"
+    }
+  }
+}

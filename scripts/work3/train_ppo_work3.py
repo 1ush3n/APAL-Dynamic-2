@@ -48,20 +48,22 @@ from envs.work3.core_types import (
 from envs.work3.decision_snapshot import DecisionSnapshot
 from models.work3.action_fusion import compute_time_urgency_vector
 from models.work3.actor_critic import ActorCriticWork3
-from models.work3.graph_builder import GRAPH_FEATURE_VERSION
+from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
 from models.work3.potential_shaping import PotentialRewardShaper
 from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
 from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION, QUERY_PPO_CHECKPOINT_VERSION
 from models.work3.time_head import TimeResidualHead
 from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
 from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
-from training.work3_vector_env import Work3VectorEnv
-from training.work3_lightning import Work3PPODataModule, Work3LightningModule, Work3TrainingUpdate
-from training.work3_r3_e04_audit import init_r3_e04_auditor, get_r3_e04_auditor, is_r3_e04_audit_enabled
-from training.work3_runtime_config import (
+from runtime.artifacts import RunContext, create_run_context
+from training.work3.vector_env import Work3VectorEnv
+from training.work3.lightning import Work3PPODataModule, Work3LightningModule, Work3TrainingUpdate
+from training.work3.r3_e04_audit import init_r3_e04_auditor, get_r3_e04_auditor, is_r3_e04_audit_enabled
+from training.work3.runtime_config import (
     apply_work3_runtime_overrides,
     load_work3_runtime_config,
     resolved_config_fingerprint,
+    resolve_work3_output_paths,
     resolve_work3_precision,
     seed_work3_runtime,
     validate_time_head_initialization,
@@ -255,6 +257,46 @@ def _module_fingerprint(modules: dict[str, torch.nn.Module | None]) -> str:
             digest.update(f"{module_name}.{name}".encode("utf-8"))
             digest.update(tensor.detach().cpu().contiguous().numpy().tobytes())
     return digest.hexdigest()
+
+
+def _write_work3_run_files(context: RunContext, resolved_yaml: str, manifest: dict[str, Any]) -> None:
+    """只在本次新建运行目录中写入工作三配置和清单。"""
+    context.configs_dir.mkdir(parents=True, exist_ok=False)
+    (context.configs_dir / "resolved_config.yaml").write_text(resolved_yaml, encoding="utf-8", newline="\n")
+    (context.configs_dir / "run_manifest.json").write_text(
+        json.dumps({**manifest, "status": "running", "pid": os.getpid()}, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8",
+    )
+
+
+def _finalize_work3_run_manifest(context: RunContext, report: dict[str, Any]) -> None:
+    """仅复用本次报告事实补全清单，不重新查询、加载模型或读取随机源。"""
+    path = context.configs_dir / "run_manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if manifest["run_id"] != context.run_id or manifest["status"] != "running":
+        raise ValueError("只能完成本次独占且仍在运行的工作三清单")
+    fields = (
+        "source_sha", "source_tree_dirty", "seed", "device", "amp_dtype", "lightning_precision",
+        "runtime_versions", "method_variant", "method_profile", "data_fingerprint",
+        "run_status", "terminated", "truncated", "termination_reason", "total_decisions",
+        "successful_batch_count", "lightning_fit_calls", "lightning_optimization_steps",
+        "lightning_optimizer_step_attempts", "lightning_amp_skipped_steps",
+        "sampling_replay_sample_count", "sampling_replay_max_abs_error",
+        "research_result_eligible", "checkpoint_evaluation_eligible",
+    )
+    manifest.update({key: report[key] for key in fields})
+    manifest.update({
+        "status": "truncated" if report["truncated"] else "finished",
+        "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+        "query_program_source": report["training_config"]["query_program_source"],
+        "policy_input_semantics": report["training_config"]["policy_input_semantics"],
+        "graph_feature_version": GRAPH_FEATURE_VERSION,
+        "graph_feature_dims": dict(GRAPH_FEATURE_DIMS),
+    })
+    # 先完成新文件，再替换原清单，保留写入失败时可诊断的running记录。
+    temporary = path.with_suffix(".json.tmp")
+    with temporary.open("x", encoding="utf-8") as handle:
+        json.dump(manifest, handle, ensure_ascii=False, indent=2, allow_nan=False)
+    temporary.replace(path)
 
 
 def _independent_feasibility_from_audit(audit: Any) -> list[dict[str, Any]]:
@@ -747,7 +789,7 @@ def run_training(
     scenario_split_path: str | Path = "data/work3/experiment_splits/train.json",
     time_head_ckpt: str | Path | None = None,
     time_head_initialization: str = "random_no_pretraining",
-    output_ckpt: str | Path = "models/work3/checkpoints/method_d_model.pt",
+    output_ckpt: str | Path | None = None,
     report_path: str | Path | None = None,
     paired_report_path: str | Path | None = None,
     device: str = "cpu",
@@ -765,6 +807,9 @@ def run_training(
     query_program_path: str | Path | None = None,
     objective_weights: dict[str, Any] | None = None,
     raw_data_path: str | Path | None = None,
+    run_id: str | None = None,
+    audit_output_dir: str | Path | None = None,
+    lightning_root_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """执行不具研究结论资格的烟测或有明确预算的训练试点。"""
     run_started = time.monotonic()
@@ -861,11 +906,23 @@ def run_training(
         episodes_per_worker=len(episode_plan),
         seed=seed,
     )
-    if Path(output_ckpt).as_posix() == "models/work3/checkpoints/method_d_model.pt":
-        mode_name = "smoke" if run_mode == "smoke" else "pilot"
-        output_ckpt = Path("models/work3/checkpoints") / f"{mode_name}_method_{profile.name.lower()}_weights.pt"
+    api_context = None
+    if output_ckpt is None:
+        api_context = create_run_context(ROOT_DIR, experiment_name=f"work3_{profile.name.lower()}", run_id=run_id)
+        api_context.run_dir.mkdir(parents=True, exist_ok=False)
+        output_ckpt = api_context.checkpoint_dir / f"{run_mode}_method_{profile.name.lower()}_weights.pt"
+        if report_path is None:
+            report_path = api_context.reports_dir / f"{run_mode}_method_{profile.name.lower()}.run.json"
+        run_id = api_context.run_id
+        if audit_output_dir is None:
+            audit_output_dir = api_context.traces_dir
+        if lightning_root_dir is None:
+            lightning_root_dir = api_context.logs_dir
     output_ckpt = Path(output_ckpt)
     report_path = Path(report_path) if report_path is not None else output_ckpt.with_suffix(".run.json")
+    resolved_run_id = str(run_id) if run_id is not None else report_path.parent.name
+    audit_dir = Path(audit_output_dir) if audit_output_dir is not None else report_path.parent
+    lightning_dir = Path(lightning_root_dir) if lightning_root_dir is not None else report_path.parent / ".work3_lightning"
     paired_report_path = Path(paired_report_path) if paired_report_path is not None else None
     if output_ckpt.exists() or report_path.exists():
         raise FileExistsError("输出已存在，请使用新的检查点及报告路径")
@@ -876,14 +933,14 @@ def run_training(
     report_path.parent.mkdir(parents=True, exist_ok=True)
 
     auditor = init_r3_e04_auditor(
-        output_dir=report_path.parent,
-        run_id=report_path.parent.name,
+        output_dir=audit_dir,
+        run_id=resolved_run_id,
         enabled=r3_e04_audit,
     )
 
     shaping_audit_file = None
     if shaping_audit:
-        audit_jsonl_path = report_path.parent / "shaping_events.jsonl"
+        audit_jsonl_path = audit_dir / "shaping_events.jsonl"
         audit_jsonl_path.parent.mkdir(parents=True, exist_ok=True)
         shaping_audit_file = audit_jsonl_path.open("w", encoding="utf-8")
         logger.info(f"开启势函数奖励塑形闭合审计，事件输出至: {audit_jsonl_path}")
@@ -1009,12 +1066,27 @@ def run_training(
             None if time_head_ckpt is None else str(Path(time_head_ckpt))
         ),
         "output_checkpoint_path": str(output_ckpt),
+        "run_id": resolved_run_id,
+        "audit_output_dir": str(audit_dir),
+        "lightning_root_dir": str(lightning_dir),
         "report_path": str(report_path),
         "paired_report_path": None if paired_report_path is None else str(paired_report_path),
         "device": str(torch_device),
         "amp_dtype": amp_dtype,
         "lightning_precision": lightning_precision,
     }
+    if api_context is not None:
+        if resolved_config_yaml is None:
+            resolved_config_yaml = OmegaConf.to_yaml(OmegaConf.create(config), resolve=True)
+            resolved_config_sha256 = hashlib.sha256(resolved_config_yaml.encode("utf-8")).hexdigest()
+            config["resolved_config_sha256"] = resolved_config_sha256
+        _write_work3_run_files(api_context, resolved_config_yaml, {
+            "run_id": api_context.run_id, "run_dir": str(api_context.run_dir), "command": "run_training",
+            "source_sha": source_sha, "source_tree_dirty": source_tree_dirty,
+            "resolved_config_sha256": resolved_config_sha256, "method_profile": asdict(profile),
+            "checkpoint_path": str(output_ckpt), "report_path": str(report_path),
+            "query_program_source": config["query_program_source"],
+        })
     initial_actor_fingerprint = _module_fingerprint({"actor_critic": actor_critic})
     initial_parameter_fingerprint = _module_fingerprint({
         "actor_critic": actor_critic,
@@ -1318,7 +1390,7 @@ def run_training(
                         cb = info_dict.get("cost_breakdown", {})
                         ep_summary_rec = {
                             "record_type": "episode_cost_summary",
-                            "run_id": report_path.parent.name,
+                            "run_id": resolved_run_id,
                             "worker_id": int(state.worker_id),
                             "episode_id": int(state.episode_id),
                             "cumulative_cost": float(info_dict.get("cumulative_cost", 0.0)),
@@ -1858,7 +1930,7 @@ def run_training(
                             cb = result.info.get("cost_breakdown", {})
                             ep_summary_rec = {
                                 "record_type": "episode_cost_summary",
-                                "run_id": report_path.parent.name,
+                                "run_id": resolved_run_id,
                                 "worker_id": int(worker_id),
                                 "episode_id": int(state.episode_id),
                                 "cumulative_cost": float(result.info.get("cumulative_cost", 0.0)),
@@ -1908,7 +1980,7 @@ def run_training(
                     )
                     shaping_event = {
                         "record_type": "transition",
-                        "run_id": report_path.parent.name,
+                        "run_id": resolved_run_id,
                         "worker_id": int(worker_id),
                         "episode_id": int(state.episode_id),
                         "rollout_id": int(iter_idx),
@@ -2046,7 +2118,7 @@ def run_training(
 
                 seg_end_rec = {
                     "record_type": "segment_end",
-                    "run_id": report_path.parent.name,
+                    "run_id": resolved_run_id,
                     "worker_id": int(w_id),
                     "episode_id": int(ep_id),
                     "rollout_id": int(seg_id),
@@ -2104,7 +2176,7 @@ def run_training(
                 enable_checkpointing=False,
                 enable_model_summary=False,
                 enable_progress_bar=False,
-                default_root_dir=report_path.parent / ".work3_lightning",
+                default_root_dir=lightning_dir,
             )
             lightning_trainer.fit(lightning_module, datamodule=data_module)
             if auditor is not None:
@@ -2453,6 +2525,7 @@ def run_training(
         report["paired_report_path"] = str(paired_report_path)
 
     checkpoint_metadata = {
+        "run_id": resolved_run_id,
         "run_mode": run_mode,
         "seed": int(seed),
         "method_variant": profile.name,
@@ -2554,6 +2627,8 @@ def run_training(
     )
     logger.info("=" * 80)
 
+    if api_context is not None:
+        _finalize_work3_run_manifest(api_context, report)
     return {
         **report,
         "history": history,
@@ -2677,6 +2752,9 @@ def main() -> None:
         runtime_config,
         {key: value for key, value in cli_overrides.items() if value is not None},
     )
+    context, output_path, report_path = resolve_work3_output_paths(
+        runtime_config, ROOT_DIR, output=args.output, report=args.report,
+    )
     resolved_yaml, config_sha256 = resolved_config_fingerprint(runtime_config)
 
     run_mode = str(runtime_config.runtime.run_mode)
@@ -2685,15 +2763,23 @@ def main() -> None:
     max_decisions = int(runtime_config.runtime.total_env_steps)
     if run_mode == "smoke":
         max_decisions = min(max_decisions, steps_per_iter)
-    output_path = args.output or (
-        Path(runtime_config.paths.checkpoint_dir)
-        / f"{run_mode}_method_{method_profile.lower()}_weights.pt"
-    )
-    report_path = args.report or (
-        Path(runtime_config.paths.report_dir)
-        / f"{run_mode}_method_{method_profile.lower()}.run.json"
-    )
-    run_training(
+    if output_path.exists() or report_path.exists():
+        raise FileExistsError("输出已存在，请使用新的检查点及报告路径")
+    if context is not None:
+        # 先独占运行目录，避免同秒启动或重复ID覆盖另一运行的配置清单。
+        context.run_dir.mkdir(parents=True, exist_ok=False)
+        source_sha, source_tree_dirty = _source_revision()
+        manifest = {
+            "run_id": context.run_id, "run_dir": str(context.run_dir),
+            "command": list(sys.argv), "source_sha": source_sha, "source_tree_dirty": source_tree_dirty,
+            "resolved_config_sha256": config_sha256,
+            "method_profile": asdict(build_method_profile(method_profile)),
+            "checkpoint_path": str(output_path), "report_path": str(report_path),
+            "query_program_path": runtime_config.paths.get("query_program"),
+            "runtime": OmegaConf.to_container(runtime_config.runtime, resolve=True),
+        }
+        _write_work3_run_files(context, resolved_yaml, manifest)
+    result = run_training(
         num_iterations=args.iterations,
         steps_per_iter=steps_per_iter,
         num_envs=int(runtime_config.runtime.num_envs),
@@ -2733,6 +2819,9 @@ def main() -> None:
         warmup_mode=str(runtime_config.runtime.warmup_mode),
         output_ckpt=output_path,
         report_path=report_path,
+        run_id=None if context is None else context.run_id,
+        audit_output_dir=None if context is None else context.traces_dir,
+        lightning_root_dir=None if context is None else context.logs_dir,
         paired_report_path=args.paired_report,
         resolved_config_yaml=resolved_yaml,
         resolved_config_sha256=config_sha256,
@@ -2743,6 +2832,8 @@ def main() -> None:
         raw_data_path=runtime_config.paths.get("raw_data"),
         query_program_path=runtime_config.paths.get("query_program"),
     )
+    if context is not None:
+        _finalize_work3_run_manifest(context, result)
 
 
 if __name__ == "__main__":

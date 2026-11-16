@@ -1,0 +1,97 @@
+{
+  "schema_version": "ppo_ablation_arms_registry_v1",
+  "reference_commit": "a94eb7da70add9a6622498f6111ab119d609e648",
+  "run_context": {
+    "head": "a94eb7da70add9a6622498f6111ab119d609e648",
+    "branch": "work3-next-round-p2-1-p1-3-p2-2",
+    "worktree_dirty": true
+  },
+  "shared_start": {
+    "calibrated_model": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\calibration\\calibrated_model.pt",
+    "calibrated_model_sha256": "b19c9e8acc79de28eaadc8414413f2901d7d8d94ffbfb3b889d1e4a4f5ca68c6",
+    "calibrated_actor_fingerprint": "cc1b350c3332d24d1e6d334cb5eda46c413e880718e6f2ab914612f772ba59c6",
+    "calibration_steps": 128,
+    "note": "五臂共用同一校准副本；不重新校准，不改变原 BC，不接续上一组训练结束权重。"
+  },
+  "reference_arm": {
+    "dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\critic_calibration_retention_v1\\seed42\\ppo",
+    "hyperparameters": {
+      "method_variant": "C",
+      "gamma": 0.99,
+      "gae_lambda": 0.95,
+      "beta_shaping": 1.0,
+      "learning_rate": 0.0003,
+      "clip_epsilon": 0.2,
+      "value_coefficient": 0.5,
+      "entropy_coefficient": 0.01,
+      "ppo_epochs": 1,
+      "batch_size": 2,
+      "rollout_steps": 8,
+      "num_envs": 1,
+      "max_grad_norm": 0.5,
+      "optimizer": "AdamW",
+      "optimizer_eps": 1e-05,
+      "weight_decay": 0.0001,
+      "normalize_advantages": true,
+      "amp_dtype": "fp32",
+      "disturbance_enabled": false,
+      "scenario": "NOMINAL",
+      "warmup_mode": "none",
+      "seed": 42,
+      "total_env_steps": 512,
+      "max_decisions": 512
+    },
+    "points": [
+      0,
+      128,
+      256,
+      512
+    ],
+    "note": "a94eb7d 的校准臂作为共同参照；该轮未保存 8 步检查点，故 8 步仅新臂有值。"
+  },
+  "arms": {
+    "R0": {
+      "change": "frozen_sampling_no_update",
+      "frozen": true
+    },
+    "R1": {
+      "change": "learning_rate_x0.1",
+      "lr_scale": 0.1
+    },
+    "R2": {
+      "change": "entropy_coefficient_0",
+      "entropy_coefficient": 0.0
+    },
+    "R3": {
+      "change": "advantage_center_only",
+      "advantage_mode": "center_only"
+    },
+    "R4": {
+      "change": "value_loss_detached_at_shared_features",
+      "detach_value": true
+    }
+  },
+  "points": [
+    0,
+    8,
+    128,
+    256,
+    512
+  ],
+  "budget": {
+    "per_arm_interactions": 512,
+    "arms": 5,
+    "total_interactions": 2560
+  },
+  "rules": {
+    "scenario": "NOMINAL",
+    "seed": 42,
+    "precision": "fp32",
+    "num_envs": 1,
+    "start_method": "spawn",
+    "rollout_steps": 8,
+    "batch_size": 2,
+    "epochs": 1,
+    "serial_execution": true
+  }
+}

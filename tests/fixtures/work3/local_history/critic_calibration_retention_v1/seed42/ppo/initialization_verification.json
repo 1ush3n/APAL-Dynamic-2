@@ -1,0 +1,74 @@
+{
+  "schema_version": "critic_calibration_initialization_v1",
+  "bc": {
+    "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_reproduction_diagnostic_v1\\seed42\\diagnostic_actor.pt",
+    "sha256": "34d8c226bcbad2aabc1a14d5be05eb312496fcd03e01c7a1200589d3ab035752",
+    "actor_fingerprint": "26f96efe89a5e2421d79d02bfec006ec9cec53710d4b12ab87e270b085321550",
+    "format": "diagnostic_behavior_clone",
+    "teacher_manifest_sha256": "fa787d67ac13f65884a7d029da55f8298c73502c150c3674a2a77f191876709c",
+    "source_checkpoint_sha256": "5edd049f11e427c255615f6bd3603cd4e7d3bca903f731031c6f7d1983b0c31b"
+  },
+  "control": {
+    "dir": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\bc_ppo_retention_v1\\seed42",
+    "hyperparameters": {
+      "method_variant": "C",
+      "gamma": 0.99,
+      "gae_lambda": 0.95,
+      "beta_shaping": 1.0,
+      "learning_rate": 0.0003,
+      "clip_epsilon": 0.2,
+      "value_coefficient": 0.5,
+      "entropy_coefficient": 0.01,
+      "ppo_epochs": 1,
+      "batch_size": 2,
+      "rollout_steps": 8,
+      "num_envs": 1,
+      "max_grad_norm": 0.5,
+      "optimizer": "AdamW",
+      "optimizer_eps": 1e-05,
+      "weight_decay": 0.0001,
+      "normalize_advantages": true,
+      "amp_dtype": "fp32",
+      "disturbance_enabled": false,
+      "scenario": "NOMINAL",
+      "warmup_mode": "none",
+      "seed": 42,
+      "total_env_steps": 512,
+      "max_decisions": 512
+    }
+  },
+  "graph_schema": {
+    "version": "work3_graph_v6",
+    "dims": {
+      "task": 28,
+      "worker": 21,
+      "station": 15,
+      "skill": 11
+    },
+    "schema_hash": "23b1f82de3b2d11d"
+  },
+  "stage_plan": {
+    "calibration": {
+      "seed": 4201,
+      "split_seed": 4202,
+      "max_steps": 128,
+      "max_seconds": 300.0,
+      "batch": 8,
+      "holdout_modulo": 5
+    },
+    "ppo": {
+      "budget": 512,
+      "checkpoints": [
+        0,
+        128,
+        256,
+        512
+      ],
+      "seed": 42
+    }
+  },
+  "threads": {
+    "intra_op_threads": 1,
+    "inter_op_threads": 1
+  }
+}

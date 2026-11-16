@@ -48,11 +48,14 @@ def format_run_timestamp(now: datetime | None = None) -> str:
 
 def build_run_id(config: Config, now: datetime | None = None) -> str:
     """按 <experiment>_<YYMMDD-HHMMSS> 生成可读且不覆盖的 run_id。"""
-    existing = str(getattr(config, "run_id", "") or "").strip()
+    return _named_run_id(getattr(config, "experiment_name", "default"), getattr(config, "run_id", ""), now)
+
+
+def _named_run_id(experiment_name: object, run_id: object, now: datetime | None = None) -> str:
+    existing = str(run_id or "").strip()
     if existing:
         return sanitize_name(existing)
-    experiment = sanitize_name(getattr(config, "experiment_name", "default"))
-    return f"{experiment}_{format_run_timestamp(now)}"
+    return f"{sanitize_name(experiment_name)}_{format_run_timestamp(now)}"
 
 
 def uses_runs_layout(config: Config) -> bool:
@@ -66,16 +69,35 @@ def run_context(
     create_dirs: bool = False,
 ) -> RunContext:
     """解析并可选创建统一 runs 输出目录。"""
-    experiment = sanitize_name(getattr(config, "experiment_name", "default"))
-    run_id = build_run_id(config)
-    setattr(config, "run_id", run_id)
-    root = resolve_path(getattr(config, "runs_root", "runs"), project_root)
-    run_dir = root / experiment / run_id
-    setattr(config, "run_dir", str(run_dir))
+    context = create_run_context(
+        project_root,
+        experiment_name=getattr(config, "experiment_name", "default"),
+        run_id=build_run_id(config),
+        runs_root=getattr(config, "runs_root", "runs"),
+        create_dirs=create_dirs,
+    )
+    setattr(config, "run_id", context.run_id)
+    setattr(config, "run_dir", str(context.run_dir))
+    return context
+
+
+def create_run_context(
+    project_root: Path,
+    *,
+    experiment_name: str,
+    run_id: str | None = None,
+    runs_root: str | Path = "runs",
+    create_dirs: bool = False,
+) -> RunContext:
+    """按显式运行身份构造目录，供不同研究配置共用。"""
+    experiment = sanitize_name(experiment_name)
+    resolved_run_id = _named_run_id(experiment_name, run_id)
+    root = resolve_path(runs_root, project_root)
+    run_dir = root / experiment / resolved_run_id
 
     context = RunContext(
         experiment_name=experiment,
-        run_id=run_id,
+        run_id=resolved_run_id,
         run_dir=run_dir,
         checkpoint_dir=run_dir / "checkpoints",
         logs_dir=run_dir / "logs",

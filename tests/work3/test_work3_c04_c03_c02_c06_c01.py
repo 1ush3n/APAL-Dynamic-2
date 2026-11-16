@@ -59,7 +59,7 @@ from scripts.work3.train_ppo_work3 import (
     compute_online_snapshot_time_inputs,
     compute_online_time_inputs,
 )
-from training.work3_lightning import Work3LightningModule, Work3TrainingUpdate
+from training.work3.lightning import Work3LightningModule, Work3TrainingUpdate
 
 
 BASELINE_PATH = REPO_ROOT / "data" / "work3" / "real_283_k10_baseline.json"

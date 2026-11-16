@@ -38,6 +38,7 @@ from environment import AirLineEnv_Graph
 from models.hb_gat_pn import HBGATPN
 from ppo_agent import PPOAgent
 from runtime.seed import set_seed
+from runtime.artifacts import create_run_context, sanitize_name
 from training.rollout_service import APALRolloutService
 from utils.vector_env import EnvCreator, VectorEnv
 
@@ -278,7 +279,8 @@ def main():
     print("=" * 80)
 
     # 保存结果 JSON
-    out_file = PROJECT_ROOT / f"benchmark_{args.tag}.json"
+    context = create_run_context(PROJECT_ROOT, experiment_name="profile_diagnostic", create_dirs=True)
+    out_file = context.reports_dir / f"benchmark_{sanitize_name(args.tag)}.json"
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(res, f, indent=2, ensure_ascii=False)
     print(f"Saved: {out_file}")

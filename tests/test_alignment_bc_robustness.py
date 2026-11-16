@@ -15,8 +15,8 @@ if str(REPO_ROOT) not in sys.path:
 from envs.work3.core_types import ActionBranch
 from envs.work3.environment import AirLineEnvWork3
 from scripts.work3.evaluate_c_vs_d import FormalEvaluationAgent, build_formal_evaluation_agent
-import work3_4060.run_alignment_bc_robustness as diag
-from work3_4060.c_reproduction_protocol import load_diagnostic_actor
+import scripts.work3.run_alignment_bc_robustness as diag
+from scripts.work3.c_reproduction_protocol import load_diagnostic_actor
 
 BASELINE = diag.BASELINE_PATH
 
@@ -40,6 +40,8 @@ def _stay_action(task_key: str = "0_2", team=(12, 72), align: int = 0) -> dict:
 
 # 1. 干预只改变合法执行动作的 align；原字典不被原地污染
 
+
+HISTORY_DIR = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "work3" / "local_history"
 
 def test_intervention_only_changes_align_and_keeps_other_fields() -> None:
     original = _stay_action(task_key="1_4", team=(12, 72), align=0)
@@ -228,12 +230,12 @@ def test_cycle_summary_is_computed_from_rows() -> None:
 
 def test_nominal_and_disturbance_tables_are_derived_from_facts() -> None:
     """汇总必须由原始轨迹动态计算，并与直接重算一致。"""
-    required = [diag.ALIGN_TRAJ, diag.BC_S1_TRAJ, diag.BC_S2_TRAJ, diag.PREVIOUS_C_NOMINAL]
+    required = [(HISTORY_DIR / Path("c_alignment_bc_robustness_v1", "seed42", "trajectories", "C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json")), (HISTORY_DIR / Path("c_alignment_bc_robustness_v1", "seed42", "trajectories", "C_BC_RULE_VAL_S1_MODERATE.json")), (HISTORY_DIR / Path("c_alignment_bc_robustness_v1", "seed42", "trajectories", "C_BC_RULE_VAL_S2_STRONG.json")), diag.PREVIOUS_C_NOMINAL]
     if not all(path.is_file() for path in required):
         pytest.skip("本轮产物或上一轮对照缺失，跳过动态汇总核对")
-    from work3_4060.c_reproduction_protocol import load_json
+    from scripts.work3.c_reproduction_protocol import load_json
 
-    align = load_json(diag.ALIGN_TRAJ)
+    align = load_json((HISTORY_DIR / Path("c_alignment_bc_robustness_v1", "seed42", "trajectories", "C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json")))
     original = load_json(diag.PREVIOUS_C_NOMINAL)
     rows = diag.build_nominal_rows(
         [

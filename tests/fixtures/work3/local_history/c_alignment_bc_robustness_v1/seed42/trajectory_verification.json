@@ -1,0 +1,179 @@
+{
+  "scope": "本轮显式方法×场景清单；复用 work3_4060/verify_trajectory_facts.py::verify_single_trajectory 的单轨迹严格检查逻辑，六文件默认合同未被改动。",
+  "expected_manifest": [
+    {
+      "method": "C_ORIGINAL_ALIGN1_DIAGNOSTIC",
+      "scenario_id": "NOMINAL",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json",
+      "role": "对齐单变量干预（仅把执行分支 align 改为 1）"
+    },
+    {
+      "method": "C_BC_DIAGNOSTIC",
+      "scenario_id": "RULE_VAL_S1_MODERATE",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S1_MODERATE.json",
+      "role": "冻结 BC 副本，v1 验证扰动 S1"
+    },
+    {
+      "method": "C_BC_DIAGNOSTIC",
+      "scenario_id": "RULE_VAL_S2_STRONG",
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S2_STRONG.json",
+      "role": "冻结 BC 副本，v1 验证扰动 S2"
+    }
+  ],
+  "verified_count": 3,
+  "expected_count": 3,
+  "protocol_status": "PASS",
+  "exit_code": 0,
+  "tolerances": {
+    "physical_time_hours": 1e-07,
+    "cost_reconciliation": 1e-09,
+    "raw_reward_sum": 1e-09
+  },
+  "baseline_sha256": "f461b887335b76bb67b85817f0f0f30b91a308f535c3379f9d1a2b73d8f20414",
+  "trajectories": [
+    {
+      "trajectory_file": "C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 3.731718672596426,
+        "d_time": 0.12491084509569937,
+        "d_team": 0.01416666666666667,
+        "j_postpone": 0.0,
+        "j_revision": 0.13907751176236607,
+        "j_total": 4.009873696121158
+      },
+      "reported_costs": {
+        "j_takt": 3.731718672596426,
+        "d_time": 0.12491084509569943,
+        "d_team": 0.014166666666666682,
+        "j_postpone": 0.0,
+        "j_revision": 0.1390775117623661,
+        "j_total": 4.009873696121158
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 5.551115123125783e-17,
+        "d_team_diff": 1.214306433183765e-17,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 2.7755575615628914e-17,
+        "j_total_diff": 0.0
+      },
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_ORIGINAL_ALIGN1_DIAGNOSTIC_NOMINAL.json",
+      "method": "C_ORIGINAL_ALIGN1_DIAGNOSTIC",
+      "scenario_id": "NOMINAL",
+      "role": "对齐单变量干预（仅把执行分支 align 改为 1）"
+    },
+    {
+      "trajectory_file": "C_BC_RULE_VAL_S1_MODERATE.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.00017977870162401704,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0001797787016239961,
+        "j_total": 0.00035955740325074404
+      },
+      "reported_costs": {
+        "j_takt": 2.7308692267343145e-15,
+        "d_time": 0.000179778701624017,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0001797787016239961,
+        "j_total": 0.000359557403250744
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 2.710505431213761e-20,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 5.421010862427522e-20
+      },
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S1_MODERATE.json",
+      "method": "C_BC_DIAGNOSTIC",
+      "scenario_id": "RULE_VAL_S1_MODERATE",
+      "role": "冻结 BC 副本，v1 验证扰动 S1"
+    },
+    {
+      "trajectory_file": "C_BC_RULE_VAL_S2_STRONG.json",
+      "status": "PASS",
+      "total_violations": 0,
+      "violations": {
+        "schema_violation": [],
+        "non_finite_value": [],
+        "task_set_mismatch": [],
+        "aircraft_set_mismatch": [],
+        "cycle_set_mismatch": [],
+        "step_rewards_violation": [],
+        "worker_overlap": [],
+        "station_overflow": [],
+        "precedence_inversion": [],
+        "station_interval_violation": [],
+        "scenario_binding_violation": [],
+        "revision_history_invalid": [],
+        "cost_reconciliation_mismatch": []
+      },
+      "recalculated_costs": {
+        "j_takt": 0.5501232694860628,
+        "d_time": 0.0005239269233200782,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0005239269233200583,
+        "j_total": 0.5511711233327029
+      },
+      "reported_costs": {
+        "j_takt": 0.5501232694860628,
+        "d_time": 0.0005239269233200769,
+        "d_team": 0.0,
+        "j_postpone": 0.0,
+        "j_revision": 0.0005239269233200583,
+        "j_total": 0.5511711233327029
+      },
+      "reconciliation_differences": {
+        "j_takt_diff": 0.0,
+        "d_time_diff": 1.3010426069826053e-18,
+        "d_team_diff": 0.0,
+        "j_postpone_diff": 0.0,
+        "j_revision_diff": 0.0,
+        "j_total_diff": 0.0
+      },
+      "path": "D:\\OneDrive\\研究生\\APAL-Dynamic-2\\work3_4060\\c_alignment_bc_robustness_v1\\seed42\\trajectories\\C_BC_RULE_VAL_S2_STRONG.json",
+      "method": "C_BC_DIAGNOSTIC",
+      "scenario_id": "RULE_VAL_S2_STRONG",
+      "role": "冻结 BC 副本，v1 验证扰动 S2"
+    }
+  ]
+}
