@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import random
 import json
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 import pytest
 import torch
@@ -396,6 +398,52 @@ def test_query_training_uses_existing_lightning_and_two_workers(tmp_path: Path, 
     checkpoint = torch.load(tmp_path / "query.pt", weights_only=False)
     assert checkpoint["query_program_source"] == load_condition_program(Path("conf") / "work3" / "program_predecessor_focus.json").fingerprint
     assert report["environment_worker_cuda_initialized"] == [False, False]
+
+
+@pytest.mark.parametrize("bad_result", [None, [], "bad"], ids=["null", "array", "string"])
+def test_non_object_program_retries_with_feedback_and_keeps_review_gate(tmp_path: Path, bad_result: Any) -> None:
+    from envs.work3.query_program import compile_condition_program, load_condition_program
+
+    source = json.loads((Path("conf") / "work3" / "condition_program.json").read_text(encoding="utf-8"))
+    feedbacks: list[str] = []
+
+    def generate(text: str, feedback: str) -> Any:
+        assert text == source["description"]
+        feedbacks.append(feedback)
+        return bad_result if len(feedbacks) == 1 else deepcopy(source)
+
+    generated = compile_condition_program(source["description"], generate, cache_dir=tmp_path, attempts=2,
+                                         verified_examples=(deepcopy(source),))
+    assert len(feedbacks) == 2
+    assert "JSON对象" in feedbacks[1]
+    assert "已核验检索示例：" in feedbacks[1]
+    assert json.dumps((source,), ensure_ascii=False) in feedbacks[1]
+    assert json.loads(generated.read_text(encoding="utf-8"))["review"] == "pending_semantic_review"
+    with pytest.raises(ValueError, match="语义核验"):
+        load_condition_program(generated)
+
+    def no_second_request(text: str, feedback: str) -> dict[str, Any]:
+        raise AssertionError("已缓存的候选计划不应再次请求生成，也不代表通过语义审核")
+
+    assert compile_condition_program(source["description"], no_second_request,
+                                     cache_dir=tmp_path, attempts=2) == generated
+
+
+@pytest.mark.parametrize("bad_result", [None, [], "bad"], ids=["null", "array", "string"])
+def test_non_object_program_stops_at_attempt_limit_without_cache(tmp_path: Path, bad_result: Any) -> None:
+    from envs.work3.query_program import compile_condition_program
+
+    calls = 0
+
+    def generate(text: str, feedback: str) -> Any:
+        nonlocal calls
+        calls += 1
+        return bad_result
+
+    with pytest.raises(ValueError, match="JSON对象"):
+        compile_condition_program("查询当前候选工序的合法团队窗口。", generate, cache_dir=tmp_path, attempts=2)
+    assert calls == 2
+    assert not list(tmp_path.glob("*.json"))
 
 
 def test_offline_program_binds_real_candidate_and_reuses_plan(tmp_path: Path) -> None:

@@ -170,6 +170,8 @@ def compile_condition_program(description: str, generate: Callable[[str, str], d
     for _ in range(attempts):
         try:
             plan = generate(description, examples_context + feedback)
+            if not isinstance(plan, dict):
+                raise ValueError("查询计划必须为JSON对象")
             if plan.get("description") != description:
                 raise ValueError("生成计划丢失或改写了原始说明")
             # 此处只核验接口，不能将模型自评当作语义审核。
