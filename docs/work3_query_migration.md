@@ -1,6 +1,8 @@
-# 开题方案代码迁移与整理：完整修改及审阅报告（2026-11-15）
+# 开题方案代码迁移与整理：完整修改及审阅报告（更新至2026-11-16）
 
 > 版本说明：本报告保留d82f258首轮实施及发布记录。独立审阅指出的F1、F2、F3与G1，以及本轮修正和新验证，见末尾“独立审阅后的修正记录”；该节优先于首轮能力描述。历史验证结果不自动计作本轮复验。
+
+> 最新状态见末节“2026-11-16：R1容错修复、正式训练复验与性能取舍”：M0a为4dd394d，正式CPU两worker更新及必要评估通过；本轮不保留性能候选，不宣称整体训练加速。前面各节按日期保留历史范围。
 
 基线：`837194591b67c83e9cd2943d987de19e84a2c996`。本地分支：`work3-query-migration-20261115`。
 原有未跟踪目录 `research_diagnostics/` 保留，不属于本次改动。
@@ -348,3 +350,128 @@ F1、F2、F3已有直接回归；G1具备上述有限的真实计划差异与正
 本轮临时模型、报告和pytest临时输出置于仓库外，记录结果后清理具名诊断产物。用户原有 `research_diagnostics/`、数据、已有检查点及历史测试继续保留。新增永久内容只有两个程序JSON，回归仍集中在原查询文件；未增加网络、数据库、执行框架或新的训练器。
 
 本轮修正代码提交为 [`196acec12470231a6133fef6f2a3b94ddbba7283`](https://github.com/1ush3n/APAL-Dynamic-2/commit/196acec12470231a6133fef6f2a3b94ddbba7283)。[相对独立审阅提交d82f258的修正差异](https://github.com/1ush3n/APAL-Dynamic-2/compare/d82f25826d3c3707688225e0870224a981fec5fe...196acec12470231a6133fef6f2a3b94ddbba7283)可单独审阅，本报告随后以独立文档提交保存。发布仍使用 `work3-query-migration-20261115` 分支，不合并基准分支，不强制推送。
+
+## 2026-11-16：R1容错修复、正式训练复验与性能取舍
+
+本节是新一轮实施记录。结论是：**保留R1的两行生产修复及六项集中回归，不加入性能补丁**。Windows正式两worker训练、真实PPO更新和必要评估已复验；当前测得的环境微优化上限不足以支持改动。没有恢复时间预测，也没有重新设计网络、奖励或训练器。本节不将前面各轮的测试数量相加。
+
+### 版本、工作区与环境
+
+- 分支：`work3-query-migration-20261115`。
+- 起点及开始时再次读取的远程HEAD：`9d824eacd28e6e6f297ddbb044e474a87fa34a6d`。
+- R1独立提交及本轮性能对照M0a：[`4dd394dd2a5e365e92fe8234eab9650541b3b505`](https://github.com/1ush3n/APAL-Dynamic-2/commit/4dd394dd2a5e365e92fe8234eab9650541b3b505)。此后只有本报告的文档提交，没有M1或组合优化提交。
+- 开始时无已跟踪文件修改；用户原有未跟踪目录`research_diagnostics/`保留。因此运行报告的`source_tree_dirty=true`，不能将整个工作区称为干净。未reset、切换用户工作区、合并基准或强制推送。
+- Windows，`D:\Conda\envs\rag_env\python.exe`；Python3.11.15、PyTorch2.12.0+cu132、PyG2.7.0、Lightning2.6.5、OmegaConf2.3.0、NumPy2.4.6。没有安装或升级依赖。
+- 本轮CPU、FP32、主线程1、环境线程1、两个spawn worker。保留正式AMP上下文及现有Lightning优化器生命周期。worker报告CUDA均未初始化；已有GPU活动未停止，本轮不使用GPU或连接远程服务器。
+- 未取得Dot的Library原始归档，未核对原文件SHA或重跑其30项探索、480对计时。历史结论来自本轮用户提示词，不当作本轮运行证据。没有凭归档名称重新制造补丁或合入六项组合。
+
+### 实际修改：原逻辑 → 新逻辑 → 原因
+
+| 文件/函数 | 原逻辑 | 新逻辑与原因 |
+|---|---|---|
+| `envs/work3/query_program.py::compile_condition_program` | 对模型结果直接`.get`，`null`、数组、字符串先抛出不在反馈重试范围内的`AttributeError` | 仅在`.get`前增加`isinstance(plan, dict)`检查，失败抛`ValueError("查询计划必须为JSON对象")`，进入原有有限反馈重试 |
+| `tests/work3/test_scheduling_queries.py` | 正常生成、缓存与pending审核有检查，缺非对象返回值 | 两组参数化、共六个场景覆盖`None/[]/"bad"`的第二次成功及两次耗尽；同时检查示例/反馈、准确调用次数、缓存、pending拒绝及失败不落盘 |
+| 本报告 | 缺少本轮正式训练与热点证据 | 记录实际执行、精确比较边界、性能否决与剩余未验项；不新增生产入口或配置 |
+
+未扩大异常捕获、吞掉任意`AttributeError`、替换坏结果为空字典或绕过语义审核。`attempts=2`仍是总计两次尝试。缓存键、白名单、原说明核对、示例上限和正常离线执行保持原样；成功编译仍是`pending_semantic_review`，正式loader拒绝未经核验的程序。没有请求真实LLM。
+
+### 真实训练与A/A核验
+
+固定使用`conf/work3/train_query.yaml`：QUERY、seed42、两worker、总8步、每段8步、batch8、epoch1、120秒预算、默认全候选查询。680仅同时覆盖baseline与raw_data，其他算法和资源设置相同。所有运行均未耗尽120秒预算。
+
+| 运行身份 | 范围 | 报告耗时/秒 | 成功主优化器步/尝试/AMP跳过 | replay样本/最大误差 |
+|---|---|---:|---|---|
+| `aa_283_a1` | 正式`main()`，带精确比较探针 | 31.625 | 1 / 1 / 0 | 8 / 0 |
+| `aa_283_b` | 同M0a再次运行，带同探针 | 30.641 | 1 / 1 / 0 | 8 / 0 |
+| `profile_283` | 正式`main()`及两个worker，cProfile | 32.641 | 1 / 1 / 0 | 8 / 0 |
+| `profile_680` | 正式`main()`及两个worker，cProfile | 44.282 | 1 / 1 / 0 | 8 / 0 |
+| `cli_283` | 无探针的原`python -m`正式入口 | 36.078 | 1 / 1 / 0 | 8 / 0 |
+
+各次独立完成实际rollout、record、分组GAE/returns、完整PPO loss、backward、Lightning主优化器step与checkpoint；各自`lightning_fit_calls=1`、`history[0].ppo_updates=1`。这里是五次独立烟测，不能称40步生产长训。全部以`decision_limit`截断，`terminated=false`、成功批次0、研究结论资格false；未将不完整工业轨迹判为终局可行。
+
+检查的是`actor_critic_state`和`lightning_training_state.optimizer_state/optimizer_step_counts`，不是不存在的`training_state`或必然存在的顶层`optimizer_state`。五份权重均有限、与各自初始指纹不同，优化器状态非空，成功/尝试均1、跳过0。283 loss=`-0.019621893763542175`、裁剪前grad norm=`11.951152801513672`；680分别为`-0.022127298638224602`、`30.53557014465332`，均有限。QUERY没有时间头权重、时间标签或预测塑形依赖。
+
+A/A两次有序比较共59条边界：37次分类logits/采样、8次完整动作及采样后Torch RNG、5次快照批、4次环境step批、2次close审计，以及GAE/returns、完整loss、裁剪后梯度各一次。梯度探针在原`on_before_optimizer_step`返回后读取；前文grad norm则是原函数报告的裁剪前范数。保存的是按容器顺序及浮点/张量字节计算的SHA，而非allclose；初始权重、所有59条摘要、最终actor、优化器、主进程Python/NumPy/Torch RNG和整个Lightning训练状态均精确相同。138个参数张量实际变化。无探针283正式CLI的最终actor指纹也与两次A/A相同。比较器能拒绝一ULP、候选顺序和等待原因的负控变化。
+
+范围限于实际捕获的原始条件/掩码/候选顺序、图store张量和图根私有分层索引、动作记录、已返回事件与审计、更新张量；**没有证明Tensor别名/stride、PyG store父引用、未暴露的全部未来事件队列及每一步worker RNG完全等价**。本轮没有图、事件、worker或性能改动，不将此范围扩写成全库等价证明。探针额外复制/哈希会占用时间和内存，其耗时不能作为无探针性能基准。
+
+首轮`aa_283_a`在外部比较器把PyG的dataclass类当实例时退出，尚未PPO更新；修正探针后用新名称`a1`重跑。原错误日志保留，既不归因生产代码，也不记作训练成功。无探针完整CLI从解释器启动至退出墙钟55.309秒；表中报告耗时不含最终保存/报告尾部，两个范围不能混用。主进程峰值工作集约5.34GB（283）、6.52GB（680），不是worker合计峰值，也不是GPU显存。
+
+### 当前耗时占比与不实施性能候选的依据
+
+profiling与正式性能计时分开。以下是cProfile定位数据，包含仪器开销，不是M1收益。主进程互斥顶层边界如下；列出的子阶段不得再次加到父阶段上。
+
+| 主进程边界/秒 | 283 | 680 |
+|---|---:|---:|
+| 环境池构造/启动 | 14.521 | 16.206 |
+| reset往返 | 1.543 | 2.356 |
+| 8次Actor选动作 | 3.045 | 4.967 |
+| 2次bootstrap编码 | 0.894 | 1.195 |
+| snapshot往返 | 0.577 | 1.707 |
+| step往返 | 0.018 | 0.042 |
+| Lightning.fit | 9.690 | 15.324 |
+| close | 1.215 | 1.335 |
+| checkpoint保存 | 0.083 | 0.090 |
+| 整个main墙钟 / 该进程CPU时间 | 33.101 / 14.422 | 44.839 / 22.297 |
+
+fit内部完整PPO前向/loss为3.784/6.296秒，manual_update为5.785/8.871秒，后者主要为backward。GAE约毫秒以下。主进程响应等待16.744/20.434秒嵌套于启动/reset/snapshot/step，不能再加一遍；worker的命令等待主要是等待主进程，不是可优化环境计算。短烟测启动占比很高，不能外推稳定长训比例。worker查询、构图、快照复制、事件/费用、记录，及主进程buffer/minibatch/优化/保存的原始函数边界保留在外部profile JSON和汇总中。
+
+另外通过正常规则动作准备已有生产进度，再实际执行8次QUERY决策：
+
+| 现场起点 | now / cycle | 候选 | 完成 / 预约未开 / 运行 | 已入线飞机 | 8快照实际枚举团队总数 |
+|---|---|---:|---|---:|---:|
+| 283默认完整计划，step64 | 129.705337 / 5 | 25 | 61 / 2 / 1 | 5 | 2881 |
+| 680默认完整计划，step64 | 104.475042 / 2 | 65 | 41 / 20 / 3 | 2 | 6557 |
+| 283现有前序focus，0_18确为候选 | 14.227162 / 2 | 13 | 见原始facts | 2 | 48 |
+
+283/680实际H0为292.5726004548256/449.18630954112496、25/58人。每个快照的资格人数、组合规模、状态、候选与动作保留在facts JSON；相同步数不等于同阶段。三个场景使用本轮诊断权重，不是历史优质权重，也不是纯规则终局。full与focus现场不同、信息范围不同，不能把其耗时差称作等价优化收益。
+
+现场profile活动时间为5.005/8.601/4.593秒；首次graph builder构造另可定位为0.467/0.703/0.466秒，包含在snapshot上层时间中。外层wall另含暂停profile后的事实/指纹审计，不能当纯策略链时间。默认两规模查询累计0.283/0.981秒，Actor选动作3.062/4.883秒；没有只测便宜的focus来代替默认查询。
+
+| 候选 | 当前证据与处理 |
+|---|---|
+| P07 `WorkerCalendar.is_available` | 团队窗口搜索实际调用`find_earliest_slot`；正式283/680两worker合计本函数仅约30.5/5.7微秒，不实施 |
+| P08 容量扫描早退 | 正式训练累计0.000904/0.070621秒；即便两个并行worker时间全部串行相加且函数100%免费，整main的极乐观上限也只有约0.0027%/0.1575%。真实中段现场上限约0.60%/3.60%，早退仅省其中一部分；不实施 |
+| P01 发布参照局部复用 | 当前构图每task只取一次`publication_reference`，后续已有局部复用；未发现所述重复，也未取得Dot原补丁。全部调用耗时免费对正式链上限也仅约0.17%/0.32%；不凭名称复刻 |
+| P19 worker完工扫描 | 内联扫描没有独立计时边界，未获得热点证据；不把整个worker派发函数自耗时当它的耗时。不新增索引、改变暖机/重置/上报顺序或IPC |
+| 其他方向 | Actor每次动作和每条重放各只编码一次图；不硬造重复编码。不改P12复制、所有权、buffer、浮点归约、事件、线程或精度 |
+
+正式候选准入事先记录在外部`REGISTRATION.md`：精确差分先通过；若准备保留，283/680×名义/受扰、三个会话、AB/BA平衡、各条件各会话配对中位改善均正、合并至少约5%且超过A/A噪声，无明显可重复p95/内存退化。本轮占比筛选即停止，**没有M1，没有候选配对计时、IQR/p95收益或整体训练加速结论**。不为了产生优化提交而继续低占比实验，也不降低门槛。
+
+### 必要测试、评估与可复制入口
+
+以下命令均在仓库根目录，用rag_env执行；实际pytest临时目录在仓库外。R1原代码红灯6失败/18未选入，均为`.get`的`AttributeError`；修复后第一条7通过/17未选入、14.39秒。第二条3通过/21未选入、13.84秒：小双机名义/受扰真正完成且独立物理/费用检查通过；`reset=False`继承已完成前缀、预约团队/对齐并完成续调度。两条测试集合分别记账，无skip、删断言或放宽生产守卫。
+
+```powershell
+$python = 'D:\Conda\envs\rag_env\python.exe'
+$env:OMP_NUM_THREADS = '1'
+$env:MKL_NUM_THREADS = '1'
+$env:PYTHONDONTWRITEBYTECODE = '1'
+& $python -m pytest tests/work3/test_scheduling_queries.py -k 'non_object_program or offline_program_binds_real_candidate' -q -p no:cacheprovider --tb=short
+& $python -m pytest tests/work3/test_scheduling_queries.py -k 'query_network_completes_real_two_aircraft_batch or continuation_evaluation_preserves_progress_and_initial_cost' -q -p no:cacheprovider --tb=short
+```
+
+最短正式训练/评估命令如下。`$run`每次创建唯一目录，不依赖已经清理的诊断模型；这是一条可实际先训练、后加载的命令链。无扰动/预登记扰动使用同一检查点和Actor，继续给定中段现场使用已测试的函数接口`evaluate_query_trajectory(..., reset=False)`，CLI仍从零评估。
+
+```powershell
+$python = 'D:\Conda\envs\rag_env\python.exe'
+$run = Join-Path $env:TEMP ('apal_query_' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $run | Out-Null
+& $python -m scripts.work3.train_ppo_work3 --config conf/work3/train_query.yaml --output (Join-Path $run 'query.pt') --report (Join-Path $run 'train.json')
+& $python -m scripts.work3.evaluate_query --config conf/work3/train_query.yaml --checkpoint (Join-Path $run 'query.pt') --report (Join-Path $run 'nominal.json') --max-decisions 8
+& $python -m scripts.work3.evaluate_query --config conf/work3/train_query.yaml --checkpoint (Join-Path $run 'query.pt') --report (Join-Path $run 'disturbed.json') --scenario-id EARLY_LOW_S0 --max-decisions 8
+```
+
+本轮实际执行上述正式模块命令，输出具名为`cli_283.*`、`eval_nominal.*`和`eval_disturbed.*`。两个评估都完成8步、3/2830工序、`success=false`、`decision_limit`、`makespan=null`，完整和增量账本均true。预登记场景`EARLY_LOW_S0`的tau=1465.2455，而短评估只到18.631264，**该CLI前缀尚未触发扰动**；真正受扰命中后完成的证据来自上述小双机回归，不混称工业受扰终局。检查点明确标记smoke、非正式效果评估资格；不据其短片段判断策略优劣。
+
+本轮`git diff --check`通过。没有重跑全库或此前五项历史失败；它们仍按前轮报告记录，不能写成已被R1修好。没有修改共享物理路径，所以不启动昂贵的工业规则终局差分或工作一/二全回归。
+
+### 外部证据、清理与剩余边界
+
+运行时专用目录为`D:\DevTools\codex\home\visualizations\2026\11\15\01a1de09-7824-7311-92bb-ab8d69fb468c\work3_20261116_recheck`；R1原始红绿日志来自同级`apal_r1_20261116`。结束时只保留同级外部包`APAL_work3_R1_M0a_20261116_evidence.zip`：49个条目、737133字节，SHA256=`954bd85ea01aed2c25233b2c133513fe1dc22c9b78e3edaeead65395aca02615`，ZIP CRC及包内逐文件SHA复读通过。包内有单个可复用`recheck.py`、复现命令、预登记、输入/配置身份、原始JSON profile/facts/trace、必要控制台日志及SHA清单。profile是函数统计，不是大规模完整工业trace。
+
+保留的默认基准SHA256：283=`46c0e4482b557640e9674ebb69f11dc3d7ffd648ef3ddf6ac46270ba6dafc46e`；其CSV=`4059f36706bef9539278bd035b8fa8056611bf5af1eefda0625c78b9c64244e1`。680及程序/配置身份见包内清单和facts；未用文件名或Library解析文本的SHA冒充原文件校验。
+
+关键报告、原始统计/摘要和复现脚本先归档并复读，再清理本轮登记的5个诊断`.pt`、pytest临时目录及上述两个外部展开目录；不删除外部ZIP。模型可按包内命令重新生成，不把大权重放进仓库。用户原有`research_diagnostics/`、数据、有效checkpoint、旧研究记录和测试未动。历史B/C/D/E/F/G入口和含义保留，本轮没有新增old/new并列入口。
+
+尚未验证：真实LLM服务、GPU、本轮正常Linux多进程、完整工业批次/长训练与跨种子收益。本轮Windows图Tensor IPC及正式两worker更新通过，不代替Linux宿主权限问题的复验；没有修改通信机制来绕过限制。精确A/A与有限更新证明本轮所记录的通路可运行，不证明所有平台无bug、PPO收敛或整体训练加速。
