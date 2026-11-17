@@ -268,9 +268,13 @@ def run_phase(config: DictConfig, phase: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="固定原BC轨迹设置的人数采样单因素对照")
     parser.add_argument("--config", type=Path, default=PROJECT_ROOT / "conf" / "work3" / "bc_sampling.yaml")
-    parser.add_argument("--phase", choices=("single", "full"), required=True)
+    parser.add_argument("--phase", choices=("prepare", "single", "full"), required=True)
     args = parser.parse_args()
-    run_phase(OmegaConf.load(args.config), args.phase)
+    config = OmegaConf.load(args.config)
+    if args.phase == "prepare":
+        BCDiagnosis(config).prepare()
+    else:
+        run_phase(config, args.phase)
 
 
 if __name__ == "__main__":
