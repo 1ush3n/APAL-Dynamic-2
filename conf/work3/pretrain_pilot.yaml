@@ -1,0 +1,79 @@
+# BC与后续PPO共享QUERY结构，纯C_exit目标单独实验。
+runtime:
+  run_mode: pilot
+  method_profile: QUERY
+  seed: 42
+  deterministic: true
+  device: cpu
+  amp_dtype: fp32
+  main_num_threads: 1
+  env_num_threads: 1
+  num_envs: 2
+  start_method: spawn
+  total_env_steps: 2048
+  successful_batch_target: 100000
+  settle_timeout_seconds: 10.0
+  dataloader_num_workers: 0
+  warmup_mode: none
+  max_wall_seconds: 900.0
+artifacts:
+  experiment_name: work3_pretrain
+  runs_root: runs
+  run_id: null
+paths:
+  episode_manifest: null
+  query_program: null
+  baseline: null
+  raw_data: null
+  checkpoint_dir: null
+  report_dir: null
+  train_records: null
+  validation_records: null
+  initial_checkpoint: null
+bc:
+  team_objective: set
+  demand_sampling_weights:
+    1: 0.62
+    2: 3.0
+    3: 0.18
+    5: 1.89
+  hidden_dim: 64
+  max_station_workers: 16
+  batch_size: 4
+  max_updates: 200
+  learning_rate: 0.0003
+  max_grad_norm: 0.5
+  validate_every: 25
+  patience: 4
+ppo:
+  steps_per_iter: 64
+  epochs: 1
+  batch_size: 8
+  learning_rate: 0.0003
+  clip_epsilon: 0.2
+  value_coefficient: 0.5
+  entropy_coefficient: 0.01
+  gamma: 1.0
+  gae_lambda: 0.95
+experiment:
+  paired_seeds: [42, 43]
+  dataset_seed: 20261117
+  train_parent_count: 32
+  validation_parent_count: 8
+  test_parent_count: 12
+  evaluation_max_decisions: 1000
+  evaluation_max_wall_seconds: 120.0
+  gap_absolute_tolerance: 0.000000001
+  checkpoint_selection: validation_nll
+  primary_ppo_checkpoint: final_budget
+objective:
+  w_makespan: 1.0
+  w_h: 0.0
+  w_t: 0.0
+  w_w: 0.0
+  w_p: 0.0
+  w_revision_time: 0.0
+  w_revision_team: 0.0
+  lambda_1: 0.10
+  lambda_2: 0.20
+  normalize_by_n: true

@@ -65,6 +65,8 @@ from apal.models.work3.graph_builder import (
 )
 from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
+TEAM_SET_CACHE_VERSION = "work3_team_set_v1"
+
 
 class Work3GraphEncoder(nn.Module):
     """工作三轻量异构图编码器，复用仓库已有 HB-GAT 输入与消息传递。"""
@@ -755,6 +757,76 @@ class ActorCriticWork3(nn.Module):
             )
         return mask
 
+    def _worker_logits(
+        self, context: torch.Tensor, task_embed: torch.Tensor, selected_mask: torch.Tensor,
+        query_features: torch.Tensor | None, worker_bias: torch.Tensor | None, num_workers: int,
+    ) -> torch.Tensor:
+        """采样、序列重放和集合监督共用原打分及相加顺序。"""
+        logits = self.worker_score_fc(torch.cat([context, task_embed, selected_mask], dim=-1)).clone()
+        if self.condition_queries:
+            if query_features is None:
+                raise ValueError("QUERY人员评分缺少原始条件")
+            logits = logits + self.query_worker_score(query_features.to(context.device)).squeeze(-1)
+        if worker_bias is not None:
+            logits[:num_workers] = logits[:num_workers] + worker_bias
+        return logits
+
+    def _team_set_log_prob(
+        self, context: torch.Tensor, task_embed: torch.Tensor, worker_bias: torch.Tensor | None,
+        record: dict[str, Any],
+    ) -> torch.Tensor:
+        """从采样时全部真子集事实重算集合概率，不查询现场或缓存旧隐向量。"""
+        cache = record.get("team_set_cache")
+        if not isinstance(cache, dict) or cache.get("version") != TEAM_SET_CACHE_VERSION:
+            raise ValueError("团队集合监督缺少有效子集缓存")
+        target = tuple(sorted(record["chosen_worker_indices"]))
+        if (not 1 <= len(target) <= 5 or len(set(target)) != len(target)
+                or tuple(cache.get("target_worker_indices", ())) != target):
+            raise ValueError("团队子集缓存目标与实际团队不匹配")
+        subsets = cache.get("subsets")
+        full = (1 << len(target)) - 1
+        if not isinstance(subsets, (tuple, list)) or len(subsets) != full:
+            raise ValueError("团队子集缓存未覆盖全部真子集")
+        distributions: list[Categorical] = []
+        for mask, entry in enumerate(subsets):
+            selected = tuple(target[bit] for bit in range(len(target)) if mask & (1 << bit))
+            if not isinstance(entry, dict) or tuple(entry.get("selected_worker_indices", ())) != selected:
+                raise ValueError("团队子集缓存顺序或前缀不匹配")
+            raw = entry.get("query_worker_features")
+            valid = torch.as_tensor(entry.get("worker_valid_mask"), dtype=torch.bool)
+            if (not isinstance(raw, torch.Tensor) or raw.shape != (self.max_station_workers, CONDITION_DIM)
+                    or raw.dtype != torch.float32 or raw.device.type != "cpu" or not bool(torch.isfinite(raw).all())
+                    or valid.shape != (self.max_station_workers,)):
+                raise ValueError("团队子集缓存条件或掩码形状无效")
+            if (any(index < 0 or index >= int(record["num_st_workers"]) for index in target)
+                    or any(bool(valid[index]) for index in selected)
+                    or any(not bool(valid[index]) for index in target if index not in selected)):
+                raise ValueError("团队子集缓存掩码禁止目标补全或重复选择")
+            selected_mask = torch.zeros(self.max_station_workers, dtype=context.dtype, device=context.device)
+            selected_mask[list(selected)] = 1.0
+            logits = self._worker_logits(context, task_embed, selected_mask, raw, worker_bias,
+                                         int(record["num_st_workers"]))
+            logits = self._apply_worker_selection_mask(logits, valid.to(context.device),
+                                                       task_key=record["task_key"], step_index=len(selected))
+            distributions.append(Categorical(logits=logits))
+        sequence_indices = record["chosen_worker_indices"]
+        for step, index in enumerate(sequence_indices):
+            mask = sum(1 << target.index(previous) for previous in sequence_indices[:step])
+            if (tuple(subsets[mask]["worker_valid_mask"]) != tuple(record["worker_valid_masks"][step])
+                    or not torch.equal(subsets[mask]["query_worker_features"], record["query_worker_features"][step])):
+                raise ValueError("团队子集缓存与原教师序列事实不一致")
+        # 每个子集只计算一次分布；完整集合的概率合并所有合法人员排列。
+        log_probabilities = [torch.zeros((), dtype=context.dtype, device=context.device)]
+        for mask in range(1, full + 1):
+            incoming = []
+            for bit, index in enumerate(target):
+                if mask & (1 << bit):
+                    previous = mask ^ (1 << bit)
+                    incoming.append(log_probabilities[previous] + distributions[previous].log_prob(
+                        torch.as_tensor(index, device=context.device)))
+            log_probabilities.append(torch.logsumexp(torch.stack(incoming), dim=0))
+        return log_probabilities[full]
+
     @staticmethod
     def _apply_worker_selection_mask(
         logits: torch.Tensor,
@@ -856,6 +928,7 @@ class ActorCriticWork3(nn.Module):
         *,
         time_features_override: torch.Tensor | None = None,
         generator: torch.Generator | None = None,
+        teacher_action: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
         """只依据独立CPU快照采样动作；不读取环境对象或可变现场状态。"""
         if snapshot.graph_version != GRAPH_FEATURE_VERSION:
@@ -885,6 +958,18 @@ class ActorCriticWork3(nn.Module):
         )
         state_value = float(v.item())
         candidate_count = len(snapshot.candidate_task_keys)
+        teacher_branch = None
+        if teacher_action is not None:
+            if not isinstance(teacher_action, dict) or "branch" not in teacher_action:
+                raise ValueError("教师动作必须包含合法分支")
+            teacher_branch = int(teacher_action["branch"])
+            if teacher_branch == int(ActionBranch.ADVANCE_TO_NEXT_EVENT):
+                if set(teacher_action) != {"branch"} or (candidate_count and not snapshot.advance_available):
+                    raise ValueError("教师推进动作不可用或包含未发生的调度层")
+            elif teacher_branch not in (0, 1) or teacher_action.get("task_key") not in snapshot.candidate_task_keys:
+                raise ValueError("教师工序或分支不在当前候选中")
+            if not candidate_count and teacher_branch != int(ActionBranch.ADVANCE_TO_NEXT_EVENT):
+                raise ValueError("无候选时教师只能推进事件")
         query_task_features = None
         if self.condition_queries:
             query_task_features = torch.stack([
@@ -940,7 +1025,8 @@ class ActorCriticWork3(nn.Module):
             prob_advance = float(adv_softmax[1].item())
             dist_advance = Categorical(logits=advance_logits)
             advance_choice = (
-                int(torch.argmax(advance_logits).item())
+                int(teacher_branch == int(ActionBranch.ADVANCE_TO_NEXT_EVENT))
+                if teacher_action is not None else int(torch.argmax(advance_logits).item())
                 if deterministic
                 else int(self._sample_categorical(dist_advance, generator).item())
             )
@@ -970,7 +1056,8 @@ class ActorCriticWork3(nn.Module):
         task_logits = self.task_score_fc(task_pair).squeeze(-1)
         dist_task = Categorical(logits=task_logits)
         task_idx = (
-            int(torch.argmax(task_logits).item())
+            snapshot.candidate_task_keys.index(teacher_action["task_key"])
+            if teacher_action is not None else int(torch.argmax(task_logits).item())
             if deterministic
             else int(self._sample_categorical(dist_task, generator).item())
         )
@@ -986,13 +1073,15 @@ class ActorCriticWork3(nn.Module):
                 ScheduleCondition(QueryStatus.UNKNOWN, reasons=("station",)).features(snapshot.current_time, snapshot.h0)))
             branch_logits = branch_logits + self.query_branch_score(branch_conditions.to(device)).squeeze(-1)
         can_reserve, can_postpone = snapshot.branch_masks[task_idx]
+        if teacher_action is not None and not (can_reserve, can_postpone)[teacher_branch]:
+            raise ValueError("教师动作被当前分支掩码禁止")
         if not can_postpone:
             branch_logits[1] = -1e4
         if not can_reserve:
             branch_logits[0] = -1e4
         dist_branch = Categorical(logits=branch_logits)
         branch_act = (
-            int(torch.argmax(branch_logits).item())
+            teacher_branch if teacher_action is not None else int(torch.argmax(branch_logits).item())
             if deterministic
             else int(self._sample_categorical(dist_branch, generator).item())
         )
@@ -1019,6 +1108,8 @@ class ActorCriticWork3(nn.Module):
         }
 
         if branch_act == int(ActionBranch.POSTPONE):
+            if teacher_action is not None and set(teacher_action) != {"task_key", "branch"}:
+                raise ValueError("教师后移动作不能包含团队或对齐标签")
             total_log_prob = advance_log_prob + log_prob_task + log_prob_branch
             return (
                 {"task_key": task_key, "branch": ActionBranch.POSTPONE},
@@ -1028,6 +1119,13 @@ class ActorCriticWork3(nn.Module):
             )
 
         num_station_workers = len(context.workers)
+        teacher_team = () if teacher_action is None else tuple(teacher_action.get("team", ()))
+        if teacher_action is not None and (
+            len(teacher_team) != context.demand or len(set(teacher_team)) != context.demand
+            or any(worker not in {profile.worker_id for profile in context.workers} for worker in teacher_team)
+            or teacher_action.get("align") not in (0, 1)
+        ):
+            raise ValueError("教师团队人数、唯一性或对齐标签非法")
         if num_station_workers > self.max_station_workers:
             raise ValueError(
                 f"站内工人数量{num_station_workers}超过Actor掩码上限"
@@ -1055,17 +1153,15 @@ class ActorCriticWork3(nn.Module):
             ).squeeze(-1)
 
         for step_w in range(context.demand):
-            ptr_input = torch.cat([e_fused, chosen_task_embed, worker_mask_tracker], dim=-1)
-            worker_logits = self.worker_score_fc(ptr_input).clone()
+            raw_conditions = None
             if self.condition_queries:
                 worker_prefixes.append(tuple(chosen_worker_ids))
                 raw_conditions = snapshot.query_tables[task_idx].worker_features(
                     sample_record["station_worker_ids"], tuple(chosen_worker_ids),
                     snapshot.current_time, snapshot.h0, self.max_station_workers)
                 worker_conditions.append(raw_conditions)
-                worker_logits = worker_logits + self.query_worker_score(raw_conditions.to(device)).squeeze(-1)
-            if worker_graph_bias is not None:
-                worker_logits[:num_station_workers] += worker_graph_bias
+            worker_logits = self._worker_logits(e_fused, chosen_task_embed, worker_mask_tracker,
+                                                 raw_conditions, worker_graph_bias, num_station_workers)
             worker_mask = self._worker_selection_mask(
                 context,
                 tuple(chosen_worker_ids),
@@ -1080,10 +1176,13 @@ class ActorCriticWork3(nn.Module):
             )
             dist_worker = Categorical(logits=worker_logits)
             worker_index = (
-                int(torch.argmax(worker_logits).item())
+                sample_record["station_worker_ids"].index(teacher_team[step_w])
+                if teacher_action is not None else int(torch.argmax(worker_logits).item())
                 if deterministic
                 else int(self._sample_categorical(dist_worker, generator).item())
             )
+            if teacher_action is not None and not bool(worker_mask[worker_index]):
+                raise ValueError("教师工人在当前前缀下非法")
             chosen_worker_indices.append(worker_index)
             chosen_worker_ids.append(context.workers[worker_index].worker_id)
             log_prob_workers += dist_worker.log_prob(
@@ -1103,7 +1202,7 @@ class ActorCriticWork3(nn.Module):
             sample_record["worker_prefixes"] = tuple(worker_prefixes)
         dist_align = Categorical(logits=align_logits)
         align_act = (
-            int(torch.argmax(align_logits).item())
+            int(teacher_action["align"]) if teacher_action is not None else int(torch.argmax(align_logits).item())
             if deterministic
             else int(self._sample_categorical(dist_align, generator).item())
         )
@@ -1140,7 +1239,12 @@ class ActorCriticWork3(nn.Module):
         time_urgencies: torch.Tensor,
         sample_records: list[dict[str, Any]],
         allow_legacy: bool = False,
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        *,
+        return_components: bool = False,
+        team_set_supervision: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | tuple[
+        torch.Tensor, torch.Tensor, torch.Tensor, list[dict[str, torch.Tensor]]
+    ]:
         """PPO 训练重放接口：严格按照条件分支结构计算重放对数概率、状态值与熵。
 
         Returns:
@@ -1190,10 +1294,13 @@ class ActorCriticWork3(nn.Module):
 
         log_probs = []
         entropies = []
+        components: list[dict[str, torch.Tensor]] = []
 
         for i in range(batch_size):
             rec = sample_records[i]
             e_ctx = e_fused[i]
+            parts: dict[str, torch.Tensor] = {}
+            components.append(parts)
 
             if rec.get("action_type") == "forced_advance":
                 log_probs.append(torch.zeros((), device=device))
@@ -1203,6 +1310,7 @@ class ActorCriticWork3(nn.Module):
             if rec.get("action_type") == "advance_to_next_event":
                 dist_advance = Categorical(logits=self._advance_logits(e_ctx))
                 lp_advance = dist_advance.log_prob(torch.as_tensor(1, device=device))
+                parts["advance"] = lp_advance
                 log_probs.append(lp_advance)
                 entropies.append(dist_advance.entropy())
                 continue
@@ -1212,6 +1320,7 @@ class ActorCriticWork3(nn.Module):
             if rec.get("advance_available", False):
                 dist_advance = Categorical(logits=self._advance_logits(e_ctx))
                 lp_advance = dist_advance.log_prob(torch.as_tensor(0, device=device))
+                parts["advance"] = lp_advance
                 ent_advance = dist_advance.entropy()
 
             # 1. 重放 Head 1: 工序对数概率
@@ -1265,6 +1374,7 @@ class ActorCriticWork3(nn.Module):
             branch_act = rec.get("branch", rec.get("action_branch", 0))
             lp_branch = dist_branch.log_prob(torch.as_tensor(branch_act, device=device))
             ent_branch = dist_branch.entropy()
+            parts.update(task=lp_task, branch=lp_branch)
 
             # 3. 条件分支截断判定
             if branch_act == 1:
@@ -1309,15 +1419,14 @@ class ActorCriticWork3(nn.Module):
                 ).squeeze(-1)
 
             for step_w, w_idx in enumerate(chosen_worker_indices):
-                ptr_input = torch.cat([e_ctx, chosen_task_embed, worker_mask], dim=-1)
-                w_logits = self.worker_score_fc(ptr_input).clone()
+                query_features = None
                 if self.condition_queries:
                     expected_prefix = tuple(rec["station_worker_ids"][index] for index in chosen_worker_indices[:step_w])
                     if tuple(rec["worker_prefixes"][step_w]) != expected_prefix:
                         raise ValueError("PPO工人前缀与采样顺序不一致")
-                    w_logits = w_logits + self.query_worker_score(rec["query_worker_features"][step_w].to(device)).squeeze(-1)
-                if worker_bias is not None:
-                    w_logits[:num_st_workers] = w_logits[:num_st_workers] + worker_bias
+                    query_features = rec["query_worker_features"][step_w]
+                w_logits = self._worker_logits(e_ctx, chosen_task_embed, worker_mask, query_features,
+                                                worker_bias, num_st_workers)
                 saved_mask = torch.as_tensor(
                     worker_valid_masks[step_w], dtype=torch.bool, device=device
                 )
@@ -1350,6 +1459,11 @@ class ActorCriticWork3(nn.Module):
             align_act = rec.get("align", rec.get("align_selection", 0))
             lp_align = dist_align.log_prob(torch.as_tensor(align_act, device=device))
             ent_align = dist_align.entropy()
+            parts.update(team=lp_workers, align=lp_align)
+            if team_set_supervision:
+                if not self.condition_queries:
+                    raise ValueError("团队集合监督只支持QUERY输入")
+                parts["team_set"] = self._team_set_log_prob(e_ctx, chosen_task_embed, worker_bias, rec)
 
             total_lp = lp_advance + lp_task + lp_branch + lp_workers + lp_align
             total_ent = ent_advance + ent_task + ent_branch + ent_workers + ent_align
@@ -1357,4 +1471,5 @@ class ActorCriticWork3(nn.Module):
             log_probs.append(total_lp)
             entropies.append(total_ent)
 
-        return values, torch.stack(log_probs), torch.stack(entropies)
+        result = values, torch.stack(log_probs), torch.stack(entropies)
+        return (*result, components) if return_components else result

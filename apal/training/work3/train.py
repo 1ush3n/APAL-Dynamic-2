@@ -60,6 +60,7 @@ from apal.training.work3.r3_e04_audit import init_r3_e04_auditor, get_r3_e04_aud
 from apal.training.work3.runtime_config import (
     apply_work3_runtime_overrides,
     load_work3_runtime_config,
+    load_work3_episode_manifest,
     resolved_config_fingerprint,
     resolve_work3_output_paths,
     resolve_work3_precision,
@@ -132,10 +133,11 @@ class _TrainingWorkerEpisode:
     worker_id: int
     episode_id: int
     episode_index: int
-    scenario: dict[str, Any]
+    scenario: dict[str, Any] | None
     scenario_status: dict[str, Any]
     snapshot: DecisionSnapshot
     scenario_log: dict[str, Any]
+    instance_id: str | None = None
     done: bool = False
     success: bool | None = None
     termination_reason: str | None = None
@@ -151,6 +153,8 @@ def create_work3_single_env_runtime(
     query_program_path: str | Path | None = None,
     objective_weights: dict[str, Any] | None = None,
     raw_data_path: str | Path | None = None,
+    worker_pool_path: str | Path | None = None,
+    env_config: dict[str, Any] | None = None,
     seed: int | None = None,
 ) -> Work3VectorEnv:
     """构造FP32 spawn环境worker池；策略与PPO优化器仍由调用方持有。"""
@@ -160,6 +164,9 @@ def create_work3_single_env_runtime(
         env_kwargs["weights"] = ObjectiveWeights(**objective_weights)
     if raw_data_path is not None:
         env_kwargs["raw_data_path"] = Path(raw_data_path)
+    if worker_pool_path is not None:
+        env_kwargs["worker_pool_path"] = Path(worker_pool_path)
+    env_kwargs.update(env_config or {})
     environment = Work3VectorEnv(
         env_kwargs=env_kwargs,
         num_envs=num_envs,
@@ -255,6 +262,24 @@ def _module_fingerprint(modules: dict[str, torch.nn.Module | None]) -> str:
             digest.update(f"{module_name}.{name}".encode("utf-8"))
             digest.update(tensor.detach().cpu().contiguous().numpy().tobytes())
     return digest.hexdigest()
+
+
+def load_query_initial_weights(actor: ActorCriticWork3, path: str | Path) -> dict[str, Any]:
+    """严格继承同结构QUERY权重；本入口不读取源优化器动量。"""
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.runtime import legacy_pickle
+
+    if not actor.condition_queries:
+        raise ValueError("同结构初始化仅接受QUERY Actor")
+    source = Path(path).resolve()
+    checkpoint = torch.load(source, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
+    metadata = dict(checkpoint.get("run_metadata", {}))
+    if metadata.get("method_variant", "QUERY") != "QUERY":
+        raise ValueError("初始化检查点profile不是QUERY")
+    PPOTrainerWork3(actor, device=next(actor.parameters()).device, create_optimizer=False).load_checkpoint(str(source))
+    return {"path": str(source), "sha256": _file_fingerprint(source),
+            "stage": metadata.get("stage", "ppo"), "optimizer_restored": False,
+            "actor_fingerprint": _module_fingerprint({"actor_critic": actor})}
 
 
 def _write_work3_run_files(context: RunContext, resolved_yaml: str, manifest: dict[str, Any]) -> None:
@@ -806,6 +831,8 @@ def run_training(
     objective_weights: dict[str, Any] | None = None,
     raw_data_path: str | Path | None = None,
     run_id: str | None = None,
+    episode_manifest_path: str | Path | None = None,
+    initial_checkpoint: str | Path | None = None,
     audit_output_dir: str | Path | None = None,
     lightning_root_dir: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -816,6 +843,8 @@ def run_training(
     if warmup_mode not in {"none", "uniform_baseline"}:
         raise ValueError("warmup_mode必须为none或uniform_baseline")
     profile = build_method_profile(method_variant)
+    if (episode_manifest_path is not None or initial_checkpoint is not None) and not profile.use_condition_queries:
+        raise ValueError("多实例与同结构初始化仅接受QUERY")
     if profile.use_condition_queries:
         beta_shaping, time_loss_coef, time_auxiliary_epochs = 0.0, 0.0, 0
     if not profile.use_condition_queries:
@@ -880,8 +909,20 @@ def run_training(
     torch.set_num_threads(main_num_threads)
     _seed_everything(seed, deterministic=deterministic)
 
-    training_scenarios = load_training_scenarios(scenarios_path, scenario_split_path)
-    if run_mode == "smoke":
+    public_instances = (load_work3_episode_manifest(episode_manifest_path)
+                        if episode_manifest_path is not None else None)
+    if public_instances is not None and warmup_mode != "none":
+        raise ValueError("公开实例计划暂只支持warmup_mode=none")
+    training_scenarios = ([] if public_instances is not None
+                          else load_training_scenarios(scenarios_path, scenario_split_path))
+    if public_instances is not None:
+        episode_plan = [item.get("scenario") for item in public_instances]
+        worker_event_plan = [{"worker_id": worker_id, "episode_index": wave,
+                              "episode_id": wave * num_envs + worker_id,
+                              "scenario": public_instances[(wave * num_envs + worker_id) % len(public_instances)].get("scenario"),
+                              "instance": public_instances[(wave * num_envs + worker_id) % len(public_instances)]}
+                             for wave in range(len(public_instances)) for worker_id in range(num_envs)]
+    elif run_mode == "smoke":
         episode_plan = [{
             "scenario_id": "SMOKE_NO_DISTURBANCE",
             "timing": None,
@@ -897,13 +938,10 @@ def run_training(
             len(training_scenarios),
             seed=seed,
         )
-    worker_scenario_source = training_scenarios if run_mode == "pilot" else episode_plan
-    worker_event_plan = build_worker_scenario_plan(
-        worker_scenario_source,
-        num_workers=num_envs,
-        episodes_per_worker=len(episode_plan),
-        seed=seed,
-    )
+    if public_instances is None:
+        worker_scenario_source = training_scenarios if run_mode == "pilot" else episode_plan
+        worker_event_plan = build_worker_scenario_plan(
+            worker_scenario_source, num_workers=num_envs, episodes_per_worker=len(episode_plan), seed=seed)
     api_context = None
     if output_ckpt is None:
         api_context = create_run_context(ROOT_DIR, experiment_name=f"work3_{profile.name.lower()}", run_id=run_id)
@@ -945,14 +983,17 @@ def run_training(
 
     # 1. 初始化仿真环境
     logger.info(f"初始化环境: {baseline_path}")
+    first_instance = public_instances[0] if public_instances is not None else {}
     env = create_work3_single_env_runtime(
-        baseline_path,
+        first_instance.get("baseline", baseline_path),
         num_envs=num_envs,
         worker_torch_num_threads=env_num_threads,
         condition_queries=profile.use_condition_queries,
         query_program_path=query_program_path,
         objective_weights=objective_weights,
-        raw_data_path=raw_data_path,
+        raw_data_path=first_instance.get("raw_data", raw_data_path),
+        worker_pool_path=first_instance.get("worker_pool"),
+        env_config=first_instance.get("env_config"),
         seed=seed,
     )
 
@@ -965,6 +1006,8 @@ def run_training(
         condition_queries=profile.use_condition_queries,
         query_program_path=query_program_path,
     ).to(torch_device)
+    initialization = (load_query_initial_weights(actor_critic, initial_checkpoint)
+                      if initial_checkpoint is not None else None)
     time_head = (
         TimeResidualHead(in_dim=actor_critic.hidden_dim, hidden_dim=64).to(torch_device)
         if profile.use_time_auxiliary
@@ -1008,11 +1051,13 @@ def run_training(
     )
 
     source_sha, source_tree_dirty = _source_revision()
-    event_plan = [dict(item) for item in episode_plan]
+    event_plan = [None if item is None else dict(item) for item in episode_plan]
     data_fingerprint = {
         "scenario_pool_sha256": _json_fingerprint(training_scenarios),
-        "scenario_split_sha256": _file_fingerprint(scenario_split_path),
-        "baseline_sha256": _file_fingerprint(baseline_path),
+        "scenario_split_sha256": (None if public_instances is not None else _file_fingerprint(scenario_split_path)),
+        "baseline_sha256": (None if public_instances is not None else _file_fingerprint(baseline_path)),
+        "episode_manifest_sha256": (None if episode_manifest_path is None else _file_fingerprint(episode_manifest_path)),
+        "public_instances": public_instances,
         "time_head_checkpoint_sha256": (
             _file_fingerprint(time_head_ckpt)
             if time_head_ckpt is not None and Path(time_head_ckpt).is_file()
@@ -1023,11 +1068,13 @@ def run_training(
     }
     config = {
         "run_mode": run_mode,
-        "disturbance_enabled": run_mode == "pilot",
+        "disturbance_enabled": run_mode == "pilot" and any(item is not None for item in event_plan),
         "warmup_mode": warmup_mode,
         "method_variant": profile.name,
         "method_profile": asdict(profile),
         "policy_input_semantics": actor_critic.input_semantics(),
+        "initialization": initialization,
+        "episode_manifest_path": None if episode_manifest_path is None else str(Path(episode_manifest_path).resolve()),
         "query_program_path": None if query_program_path is None else str(Path(query_program_path)),
         "query_program_source": None if actor_critic.query_program is None else actor_critic.query_program.fingerprint,
         "objective_weights": dict(objective_weights or {}),
@@ -1057,9 +1104,9 @@ def run_training(
         "deterministic": deterministic,
         "settle_timeout_seconds": settle_timeout_seconds,
         "resolved_config_sha256": resolved_config_sha256,
-        "baseline_path": str(Path(baseline_path)),
-        "scenarios_path": str(Path(scenarios_path)),
-        "scenario_split_path": str(Path(scenario_split_path)),
+        "baseline_path": None if public_instances is not None else str(Path(baseline_path)),
+        "scenarios_path": None if public_instances is not None else str(Path(scenarios_path)),
+        "scenario_split_path": None if public_instances is not None else str(Path(scenario_split_path)),
         "time_head_checkpoint_path": (
             None if time_head_ckpt is None else str(Path(time_head_ckpt))
         ),
@@ -1095,6 +1142,7 @@ def run_training(
 
     history: list[dict[str, Any]] = []
     total_env_steps = 0
+    internal_worker_selections = 0
     warmup_env_steps = 0
     start_time = run_started
     pending_time_labels = PendingTimeLabelCache() if profile.use_time_auxiliary else None
@@ -1157,7 +1205,7 @@ def run_training(
         plan_entries = worker_event_plan[plan_offset : plan_offset + num_envs]
         if len(plan_entries) != num_envs:
             raise RuntimeError("固定worker/episode事件计划没有覆盖当前episode wave")
-        scenarios = [dict(item["scenario"]) for item in plan_entries]
+        scenarios = [None if item["scenario"] is None else dict(item["scenario"]) for item in plan_entries]
         episode_ids = [wave * num_envs + worker_id for worker_id in range(num_envs)]
         reset_results = env.reset_all(
             scenarios=[scenario if run_mode == "pilot" else None for scenario in scenarios],
@@ -1168,6 +1216,7 @@ def run_training(
             wall_clock_deadline=(
                 None if max_wall_seconds is None else start_time + max_wall_seconds
             ),
+            **({"instances": [item["instance"] for item in plan_entries]} if public_instances is not None else {}),
         )
         warmup_steps_this_wave = sum(
             0 if item.warmup_result is None else item.warmup_result.step_count
@@ -1186,24 +1235,29 @@ def run_training(
             zip(scenarios, reset_results, snapshots, strict=True)
         ):
             episode_id = episode_ids[worker_id]
+            scenario_values = scenario or {}
+            disturbance_scheduled = run_mode == "pilot" and scenario is not None
+            instance = plan_entries[worker_id].get("instance")
             scenario_log_entry = {
                 "worker_id": worker_id,
                 "episode_index": wave,
                 "episode_id": episode_id,
-                "scenario_id": scenario["scenario_id"],
-                "disturbance_type": str(scenario.get("disturbance_type", DISTURBANCE_TYPE)),
-                "disturbance_label": str(scenario.get("disturbance_label", DISTURBANCE_LABEL)),
-                "timing": scenario["timing"],
-                "intensity": scenario["intensity"],
-                "station_id": scenario["station_id"],
-                "aircraft_id": scenario["aircraft_id"],
-                "disturbance_scheduled": run_mode == "pilot",
-                "scheduled_tau": scenario.get("tau") if run_mode == "pilot" else None,
-                "scheduled_recovery_time": scenario.get("recovery_time") if run_mode == "pilot" else None,
-                "scheduled_affected_task_keys": list(scenario.get("affected_task_keys", [])) if run_mode == "pilot" else [],
+                "instance_id": None if instance is None else instance["instance_id"],
+                "public_sha256": None if instance is None else instance["public_sha256"],
+                "scenario_id": scenario_values.get("scenario_id"),
+                "disturbance_type": str(scenario_values.get("disturbance_type", DISTURBANCE_TYPE)) if scenario else None,
+                "disturbance_label": str(scenario_values.get("disturbance_label", DISTURBANCE_LABEL)) if scenario else None,
+                "timing": scenario_values.get("timing"),
+                "intensity": scenario_values.get("intensity"),
+                "station_id": scenario_values.get("station_id"),
+                "aircraft_id": scenario_values.get("aircraft_id"),
+                "disturbance_scheduled": disturbance_scheduled,
+                "scheduled_tau": scenario_values.get("tau") if disturbance_scheduled else None,
+                "scheduled_recovery_time": scenario_values.get("recovery_time") if disturbance_scheduled else None,
+                "scheduled_affected_task_keys": list(scenario_values.get("affected_task_keys", [])) if disturbance_scheduled else [],
                 "scheduled_target_count": (
-                    len(scenario.get("affected_task_keys", []))
-                    if run_mode == "pilot"
+                    len(scenario_values.get("affected_task_keys", []))
+                    if disturbance_scheduled
                     else 0
                 ),
                 "disturbance_triggered": False,
@@ -1238,6 +1292,7 @@ def run_training(
                 scenario_status=dict(reset_result.scenario_status),
                 snapshot=snapshot,
                 scenario_log=scenario_log_entry,
+                instance_id=None if instance is None else instance["instance_id"],
             )
             if shaper is not None and (
                 reset_result.warmup_result is None
@@ -1271,16 +1326,16 @@ def run_training(
                 "加载训练worker=%s episode=%s scenario=%s disturbance=%s warmup=%s timing=%s intensity=%s station=%s",
                 worker_id,
                 episode_id,
-                scenario["scenario_id"],
-                run_mode == "pilot",
+                scenario_values.get("scenario_id"),
+                disturbance_scheduled,
                 (
                     None
                     if reset_result.warmup_result is None
                     else reset_result.warmup_result.termination_reason
                 ),
-                scenario["timing"],
-                scenario["intensity"],
-                scenario["station_id"],
+                scenario_values.get("timing"),
+                scenario_values.get("intensity"),
+                scenario_values.get("station_id"),
             )
         warmup_incomplete = any(
             item.warmup_result is not None and not item.warmup_result.completed
@@ -1634,6 +1689,8 @@ def run_training(
                     raise RuntimeError(
                         "Actor未返回动作；无候选状态应通过强制推进动作进入env.step()"
                     )
+                if state.instance_id is not None:
+                    sample_record["instance_id"] = state.instance_id
                 if profile.use_time_auxiliary:
                     pending_time_labels.add(
                         episode_id=state.episode_id,
@@ -1726,6 +1783,7 @@ def run_training(
                 result = step_batch.results[worker_id]
                 if result is None:
                     raise RuntimeError("向量环境worker未返回有效执行结果")
+                internal_worker_selections += len(context["sample_record"].get("chosen_worker_indices", ()))
                 latest_worker_info[(int(worker_id), int(state.episode_id))] = dict(result.info)
                 state.snapshot = snapshot
                 state.scenario_status = dict(result.scenario_status)
@@ -2260,7 +2318,7 @@ def run_training(
             "mean_shaped_reward": mean_shaped_r,
             "elapsed_seconds": iter_elapsed,
             "method_variant": profile.name,
-            "scenario_ids": sorted({item["scenario_id"] for item in scenario_log}),
+            "scenario_ids": sorted({item["scenario_id"] for item in scenario_log if item["scenario_id"] is not None}),
             "scenario_log_count": len(scenario_log),
             "cache_stats": (pending_time_labels.stats() if pending_time_labels is not None else {}),
             "cache_discard_reasons": (dict(pending_time_labels.discard_reasons) if pending_time_labels is not None else {}),
@@ -2357,6 +2415,10 @@ def run_training(
         data_fingerprint.get("event_plan_sha256"),
         data_fingerprint.get("worker_event_plan_sha256"),
     )
+    if public_instances is not None:
+        required_data_hashes = (data_fingerprint["episode_manifest_sha256"],
+                                data_fingerprint["event_plan_sha256"], data_fingerprint["worker_event_plan_sha256"],
+                                *(value for item in public_instances for value in item["public_sha256"].values()))
     resolved_config_valid = (
         resolved_config_yaml is not None
         and resolved_config_sha256 is not None
@@ -2383,7 +2445,7 @@ def run_training(
         "report_version": "work3_training_run_v1",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "run_mode": run_mode,
-        "disturbance_enabled": run_mode == "pilot",
+        "disturbance_enabled": config["disturbance_enabled"],
         "run_status": (
             "infrastructure_interrupted"
             if stop_reason == "worker_infrastructure_interrupted"
@@ -2418,7 +2480,8 @@ def run_training(
         "event_plan_fingerprint": data_fingerprint["event_plan_sha256"],
         "worker_event_plan": worker_event_plan,
         "worker_event_plan_fingerprint": data_fingerprint["worker_event_plan_sha256"],
-        "planned_scenario_ids": [item["scenario_id"] for item in event_plan],
+        "planned_scenario_ids": [None if item is None else item["scenario_id"] for item in event_plan],
+        "initialization": initialization,
         "initial_actor_fingerprint": initial_actor_fingerprint,
         "initial_parameter_fingerprint": initial_parameter_fingerprint,
         "device": str(torch_device),
@@ -2451,6 +2514,7 @@ def run_training(
         "completed_transition_count": int(total_env_steps - warmup_env_steps),
         "warmup_env_steps": warmup_env_steps,
         "policy_decision_steps": total_env_steps - warmup_env_steps,
+        "internal_worker_selections": internal_worker_selections,
         "lightning_optimization_steps": int(lightning_module.optimization_steps),
         "lightning_optimizer_step_attempts": int(
             lightning_module.optimizer_step_attempts
@@ -2803,9 +2867,9 @@ def main() -> None:
         max_decisions=max_decisions,
         max_wall_seconds=float(runtime_config.runtime.max_wall_seconds),
         method_variant=method_profile,
-        baseline_path=Path(runtime_config.paths.baseline),
-        scenarios_path=Path(runtime_config.runtime.scenario_pool_path),
-        scenario_split_path=Path(runtime_config.runtime.scenario_split_path),
+        baseline_path=Path(runtime_config.paths.get("baseline") or "data/work3/real_283_k10_baseline.json"),
+        scenarios_path=Path(runtime_config.runtime.get("scenario_pool_path") or "data/work3/scenarios_9class.json"),
+        scenario_split_path=Path(runtime_config.runtime.get("scenario_split_path") or "data/work3/experiment_splits/train.json"),
         time_head_ckpt=(
             None
             if runtime_config.paths.get("time_head_checkpoint") is None
@@ -2829,6 +2893,8 @@ def main() -> None:
                            if "objective" in runtime_config else None),
         raw_data_path=runtime_config.paths.get("raw_data"),
         query_program_path=runtime_config.paths.get("query_program"),
+        episode_manifest_path=runtime_config.paths.get("episode_manifest"),
+        initial_checkpoint=runtime_config.paths.get("initial_checkpoint"),
     )
     if context is not None:
         _finalize_work3_run_manifest(context, result)

@@ -59,6 +59,7 @@ class Work3ResetResult:
     scenario_status: dict[str, Any]
     warmup_result: UniformBaselineWarmupResult | None = None
     scenario_error: str | None = None
+    instance_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,6 +253,8 @@ def _worker_main(
             key: Path(value) if key.endswith("_path") else value
             for key, value in env_kwargs.items()
         }
+        original_kwargs = dict(normalized_kwargs)
+        current_instance_id: str | None = None
         env = AirLineEnvWork3(**normalized_kwargs)
         baseline = MultiAircraftBaseline.load_from_json(env.baseline_json_path)
         graph_builder = MultiAircraftGraphBuilder(
@@ -305,6 +308,26 @@ def _worker_main(
                 if command == "reset":
                     episode_id = int(request.get("episode_id", 0))
                     episode_index = int(request.get("episode_index", 0))
+                    instance = request.get("instance")
+                    if instance is not None or current_instance_id is not None:
+                        if instance is not None and not isinstance(instance, dict):
+                            raise TypeError("worker公开实例描述必须为字典")
+                        replacement_kwargs = dict(original_kwargs)
+                        if instance is not None:
+                            for key in ("baseline_json_path", "raw_data_path", "worker_pool_path",
+                                        "max_slots_per_station", "transfer_policy", "tolerance"):
+                                replacement_kwargs.pop(key, None)
+                            replacement_kwargs.update(instance.get("env_config", {}))
+                            replacement_kwargs.update({target: Path(instance[source]) for source, target in (
+                                ("baseline", "baseline_json_path"), ("raw_data", "raw_data_path"),
+                                ("worker_pool", "worker_pool_path"))})
+                        env = AirLineEnvWork3(**replacement_kwargs)
+                        baseline = MultiAircraftBaseline.load_from_json(env.baseline_json_path)
+                        graph_builder = MultiAircraftGraphBuilder(baseline, config=Work3ResourceConfig())
+                        # 新队列重新绑定闭包，避免追踪已退出实例的事件。
+                        original_pop = env.event_queue.pop
+                        env.event_queue.pop = traced_pop  # type: ignore[method-assign]
+                        current_instance_id = None if instance is None else str(instance["instance_id"])
                     observation = env.reset()
                     known_completed.clear()
                     last_info = {}
@@ -362,6 +385,7 @@ def _worker_main(
                         scenario_status=scenario_status,
                         warmup_result=warmup_result,
                         scenario_error=scenario_error,
+                        instance_id=current_instance_id,
                     )
                 elif command == "rng_state":
                     result = {
@@ -439,6 +463,8 @@ def _worker_main(
                     )
                 elif command == "close":
                     result = _trajectory_audit(env, last_info)
+                    if current_instance_id is not None:
+                        result["instance_id"] = current_instance_id
                     connection.send({"request_id": request_id, "ok": True, "result": result})
                     break
                 else:
@@ -799,6 +825,7 @@ class Work3VectorEnv:
         warmup_mode: str = "none",
         max_total_steps: int | None = None,
         wall_clock_deadline: float | None = None,
+        instances: Sequence[dict[str, Any] | None] | None = None,
     ) -> tuple[Work3ResetResult, ...]:
         if not (
             len(scenarios)
@@ -807,6 +834,8 @@ class Work3VectorEnv:
             == self._num_envs
         ):
             raise ValueError("reset_all必须为每个worker提供场景、episode_id和episode_index")
+        if instances is not None and len(instances) != self._num_envs:
+            raise ValueError("reset_all必须为每个worker提供公开实例")
         if warmup_mode not in {"none", "uniform_baseline"}:
             raise ValueError("warmup_mode必须为none或uniform_baseline")
         if max_total_steps is not None and (
@@ -845,6 +874,7 @@ class Work3VectorEnv:
                     "warmup_mode": warmup_mode,
                     "max_warmup_steps": warmup_limits[worker_id],
                     "wall_clock_deadline": wall_clock_deadline,
+                    "instance": None if instances is None else instances[worker_id],
                 },
             )
         results = self._request_many(commands)
@@ -898,8 +928,8 @@ class Work3VectorEnv:
                 or type(item.get("episode_index")) is not int
             ):
                 raise ValueError("场景计划必须包含整数episode_id和episode_index")
-            if not isinstance(item.get("scenario"), dict):
-                raise ValueError("场景计划必须包含scenario字典")
+            if "scenario" not in item or (item["scenario"] is not None and not isinstance(item["scenario"], dict)):
+                raise ValueError("场景计划必须包含scenario字典或None")
             by_worker[worker_id] = item
         if set(by_worker) != set(range(self._num_envs)):
             raise ValueError("场景计划未覆盖所有worker")
@@ -911,6 +941,7 @@ class Work3VectorEnv:
             warmup_mode=warmup_mode,
             max_total_steps=max_total_steps,
             wall_clock_deadline=wall_clock_deadline,
+            instances=[item.get("instance") for item in ordered],
         )
 
     def snapshot(

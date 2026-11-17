@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import random
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import torch
@@ -59,6 +61,62 @@ def _required(config: DictConfig, key: str) -> object:
     return value
 
 
+def load_work3_episode_manifest(path: str | Path, *, split: str = "train") -> list[dict[str, Any]]:
+    """只载入已核对哈希的公开实例，按冻结序列分配episode。"""
+    manifest_path = Path(path).resolve()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict) or manifest.get("version") != "work3_episode_instances_v1":
+        raise ValueError("公开实例manifest版本错误")
+    items = manifest.get("instances")
+    if not isinstance(items, list) or not items:
+        raise ValueError("公开实例manifest必须包含非空instances列表")
+    allowed = {"instance_id", "split", "family", "parent_group", "baseline", "raw_data", "worker_pool",
+               "public_sha256", "scenario", "env_config", "generator_version", "generation_seed", "source_ref"}
+    by_id: dict[str, dict[str, Any]] = {}
+    for raw in items:
+        if not isinstance(raw, dict) or set(raw) - allowed:
+            raise ValueError("公开实例含未知字段或私有资料")
+        instance_id = raw.get("instance_id")
+        if not isinstance(instance_id, str) or not instance_id or instance_id in by_id:
+            raise ValueError("公开instance_id必须是唯一非空字符串")
+        if not isinstance(raw.get("split"), str):
+            raise ValueError("公开实例缺少split")
+        instance = dict(raw)
+        hashes = raw.get("public_sha256")
+        if not isinstance(hashes, dict):
+            raise ValueError("公开实例缺少public_sha256")
+        for key in ("baseline", "raw_data", "worker_pool"):
+            value = raw.get(key)
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"公开实例缺少路径{key}")
+            source = Path(value)
+            source = source if source.is_absolute() else manifest_path.parent / source
+            source = source.resolve()
+            if hashlib.sha256(source.read_bytes()).hexdigest() != hashes.get(key):
+                raise ValueError(f"公开实例{instance_id}的{key} SHA256不匹配")
+            instance[key] = str(source)
+        if raw.get("scenario") is not None and not isinstance(raw["scenario"], dict):
+            raise ValueError("公开场景必须是字典或None")
+        env_config = raw.get("env_config", {})
+        if not isinstance(env_config, dict) or set(env_config) - {"max_slots_per_station", "transfer_policy", "tolerance"}:
+            raise ValueError("公开实例env_config包含未支持参数")
+        if "max_slots_per_station" in env_config and (type(env_config["max_slots_per_station"]) is not int
+                                                     or env_config["max_slots_per_station"] < 1):
+            raise ValueError("公开实例站位容量必须为正整数")
+        if "tolerance" in env_config and (not isinstance(env_config["tolerance"], (int, float))
+                                          or not math.isfinite(env_config["tolerance"]) or env_config["tolerance"] <= 0):
+            raise ValueError("公开实例tolerance必须为正有限数")
+        instance["env_config"] = dict(env_config)
+        by_id[instance_id] = instance
+    sequence = manifest.get("episode_sequence", list(by_id))
+    if not isinstance(sequence, list) or not sequence or any(not isinstance(key, str) or key not in by_id for key in sequence):
+        raise ValueError("episode_sequence必须引用已声明的公开实例")
+    selected = [dict(by_id[key]) for key in sequence if by_id[key]["split"] == split]
+    if not selected:
+        raise ValueError(f"公开实例manifest没有{split}实例")
+    return selected
+
+
 def _positive_int(config: DictConfig, key: str, *, allow_zero: bool = False) -> int:
     value = _required(config, key)
     if type(value) is not int or value < (0 if allow_zero else 1):
@@ -105,6 +163,7 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
     if not isinstance(config, DictConfig):
         raise TypeError("工作三运行配置必须是OmegaConf DictConfig")
     query_method = OmegaConf.select(config, 'runtime.method_profile') == "QUERY"
+    episode_manifest = OmegaConf.select(config, "paths.episode_manifest")
     runs_layout = OmegaConf.select(config, "artifacts.experiment_name") is not None
     if runs_layout:
         for key in ("artifacts.experiment_name", "artifacts.runs_root"):
@@ -118,6 +177,7 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
                        "ppo.time_loss_coefficient", "ppo.time_auxiliary_epochs", "ppo.time_auxiliary_batch_size"}
     missing = [key for key in _REQUIRED_CONFIG_KEYS
                if not (query_method and key in historical_keys)
+               and not (episode_manifest is not None and key in {"runtime.scenario_pool_path", "runtime.scenario_split_path", "paths.baseline"})
                and not (runs_layout and key in {"paths.checkpoint_dir", "paths.report_dir"})
                and OmegaConf.select(config, key) is None]
     if missing:
@@ -148,6 +208,12 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
     program_path = OmegaConf.select(config, "paths.query_program")
     if program_path is not None and (not query_method or not isinstance(program_path, str) or not program_path.strip()):
         raise ValueError("paths.query_program仅支持QUERY的非空程序文件路径")
+    for key in ("paths.episode_manifest", "paths.initial_checkpoint"):
+        value = OmegaConf.select(config, key)
+        if value is not None and (not query_method or not isinstance(value, str) or not value.strip()):
+            raise ValueError(f"{key}仅支持QUERY的非空文件路径")
+    if episode_manifest is not None and config.runtime.warmup_mode != "none":
+        raise ValueError("公开实例计划暂只支持warmup_mode=none")
     if type(config.runtime.seed) is not int:
         raise ValueError('runtime.seed必须是整数')
     if type(config.runtime.deterministic) is not bool:
@@ -171,10 +237,14 @@ def validate_work3_runtime_config(config: DictConfig) -> None:
         raise ValueError("配置 runtime.settle_timeout_seconds必须是正有限数值")
 
     for key in ('runtime.scenario_pool_path', 'runtime.scenario_split_path'):
+        if episode_manifest is not None:
+            continue
         value = _required(config, key)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"配置 {key}必须是pathlib可解析的路径字符串")
     for key in ("paths.baseline", "paths.checkpoint_dir", "paths.report_dir"):
+        if episode_manifest is not None and key == "paths.baseline":
+            continue
         if runs_layout and key != "paths.baseline" and OmegaConf.select(config, key) is None:
             continue
         value = _required(config, key)

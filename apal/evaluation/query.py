@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -18,7 +19,7 @@ from apal.envs.work3.core_types import TaskStatus
 from apal.envs.work3.environment import AirLineEnvWork3
 from apal.models.work3.actor_critic import ActorCriticWork3
 from apal.models.work3.ppo_trainer import PPOTrainerWork3
-from apal.training.work3.runtime_config import load_work3_runtime_config, resolve_work3_precision, seed_work3_runtime
+from apal.training.work3.runtime_config import load_work3_runtime_config, load_work3_episode_manifest, resolve_work3_precision, seed_work3_runtime
 from apal.utils.work3.objective_evaluator import ObjectiveWeights, build_objective_report, evaluate_trajectory_objective
 from apal.utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
 
@@ -87,6 +88,7 @@ def evaluate_query_trajectory(
         "termination_reason": reason, "decisions": steps, "elapsed_seconds": time.monotonic() - started,
         "completed_tasks": sum(task.status == TaskStatus.COMPLETED for task in env.state.tasks.values()),
         "total_tasks": len(env.state.tasks), "makespan": env.state.current_time if complete else None,
+        "C_task": max(task.actual_end for task in env.state.tasks.values()) if complete else None,
         "partial_current_time": env.state.current_time, "transfer_policy": env.transfer_policy,
         "independent_feasible": feasible, "constraint_violations": violations,
         "cost_ledger_matches": ledger_matches,
@@ -103,6 +105,31 @@ def evaluate_query_trajectory(
     }
 
 
+def evaluate_query_instances(
+    manifest: Path, actor: ActorCriticWork3, *, split: str, weights: ObjectiveWeights,
+    max_decisions: int, max_wall_seconds: float | None = None, amp_dtype: str = "fp32",
+) -> dict[str, Any]:
+    """公开清单逐例评估；证书与最优值不进入环境或策略，失败保留原报告。"""
+    instances = load_work3_episode_manifest(manifest, split=split)
+    device = next(actor.parameters()).device
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
+    results = []
+    for instance in instances:
+        env = AirLineEnvWork3(baseline_json_path=Path(instance["baseline"]),
+            raw_data_path=Path(instance["raw_data"]), worker_pool_path=Path(instance["worker_pool"]),
+            weights=weights, **instance["env_config"])
+        report = evaluate_query_trajectory(env, actor, scenario=instance["scenario"],
+            max_decisions=max_decisions, max_wall_seconds=max_wall_seconds, amp_dtype=amp_dtype)
+        report.update({key: instance[key] for key in ("instance_id", "parent_group", "family", "split", "public_sha256")})
+        results.append(report)
+    return {"manifest": str(Path(manifest).resolve()), "manifest_sha256": hashlib.sha256(Path(manifest).read_bytes()).hexdigest(),
+            "split": split, "instances": results, "completed": sum(row["success"] for row in results),
+            "total": len(results), "elapsed_seconds": sum(row["elapsed_seconds"] for row in results),
+            "device": str(device), "gpu_memory_peak_bytes": (
+                torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None)}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="QUERY方法无扰动/受扰评估")
     parser.add_argument("--config", type=Path, default=Path("conf") / "work3" / "train_query.yaml")
@@ -110,8 +137,12 @@ def main() -> None:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--scenario-id", default=None, help="省略即无扰动；指定时从配置的场景库读取")
     parser.add_argument("--max-decisions", type=int, default=10000)
+    parser.add_argument("--instance-manifest", type=Path, default=None, help="可选公开实例清单；与单场景选择互斥")
+    parser.add_argument("--split", choices=("train", "val", "test"), default="test")
     parser.add_argument("--set", action="append", default=[])
     args = parser.parse_args()
+    if args.instance_manifest is not None and args.scenario_id is not None:
+        raise ValueError("实例清单已有场景，不能同时指定单场景")
     if args.report.exists():
         raise FileExistsError(f"评估报告已存在：{args.report}")
     config = load_work3_runtime_config(args.config, args.set)
@@ -121,9 +152,7 @@ def main() -> None:
     torch.set_num_threads(config.runtime.main_num_threads)
     actor = ActorCriticWork3(condition_queries=True, query_program_path=config.paths.get("query_program")).to(config.runtime.device)
     PPOTrainerWork3(actor, device=config.runtime.device, create_optimizer=False).load_checkpoint(str(args.checkpoint))
-    env = AirLineEnvWork3(baseline_json_path=Path(config.paths.baseline),
-                         raw_data_path=Path(config.paths.raw_data),
-                         weights=ObjectiveWeights(**OmegaConf.to_container(config.objective, resolve=True)))
+    weights = ObjectiveWeights(**OmegaConf.to_container(config.objective, resolve=True))
     scenario = None
     if args.scenario_id is not None:
         scenarios = json.loads(Path(config.runtime.scenario_pool_path).read_text(encoding="utf-8"))
@@ -131,16 +160,24 @@ def main() -> None:
         if len(matches) != 1:
             raise ValueError("场景ID不存在、不唯一或标记为无效")
         scenario = matches[0]
-    report = evaluate_query_trajectory(env, actor, scenario=scenario, max_decisions=args.max_decisions,
-                                       max_wall_seconds=config.runtime.max_wall_seconds,
-                                       amp_dtype=config.runtime.amp_dtype)
+    if args.instance_manifest is not None:
+        report = evaluate_query_instances(args.instance_manifest, actor, split=args.split, weights=weights,
+            max_decisions=args.max_decisions, max_wall_seconds=config.runtime.max_wall_seconds, amp_dtype=config.runtime.amp_dtype)
+    else:
+        env = AirLineEnvWork3(baseline_json_path=Path(config.paths.baseline),
+                             raw_data_path=Path(config.paths.raw_data), weights=weights)
+        report = evaluate_query_trajectory(env, actor, scenario=scenario, max_decisions=args.max_decisions,
+                                           max_wall_seconds=config.runtime.max_wall_seconds,
+                                           amp_dtype=config.runtime.amp_dtype)
     report["checkpoint"] = str(args.checkpoint.resolve())
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     report["checkpoint_training_mode"] = checkpoint.get("run_metadata", {}).get("run_mode")
+    report["checkpoint_stage"] = checkpoint.get("run_metadata", {}).get("stage", "ppo")
     report["checkpoint_evaluation_eligible"] = checkpoint.get("run_metadata", {}).get("checkpoint_evaluation_eligible", False)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({key: report[key] for key in ("success", "termination_reason", "completed_tasks", "total_tasks")}, ensure_ascii=False))
+    keys = ("completed", "total") if args.instance_manifest is not None else ("success", "termination_reason", "completed_tasks", "total_tasks")
+    print(json.dumps({key: report[key] for key in keys}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
