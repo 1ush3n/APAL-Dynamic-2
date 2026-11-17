@@ -9,10 +9,10 @@ from typing import Any
 
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
 from scripts.work3.evaluate_c_vs_d import evaluate_single_trajectory
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

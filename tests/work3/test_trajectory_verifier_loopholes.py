@@ -22,7 +22,7 @@ from scripts.work3.verify_trajectory_facts import (
     verify_all_trajectories,
     verify_single_trajectory,
 )
-from utils.work3.objective_evaluator import calculate_postpone_penalty
+from apal.utils.work3.objective_evaluator import calculate_postpone_penalty
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_PATH = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "mini210_rule_baseline.json")

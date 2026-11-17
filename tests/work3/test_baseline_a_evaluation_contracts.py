@@ -23,7 +23,7 @@ import math
 from pathlib import Path
 import pytest
 
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.environment import AirLineEnvWork3
 from scripts.work3.baseline_repair_agent import (
     BaselinePlanRepairAgent,
     BaselineRepairInfeasibleError,
@@ -32,7 +32,7 @@ from scripts.work3.evaluate_c_vs_d import (
     PERCENTAGE_DENOMINATOR_THRESHOLD,
     evaluate_single_trajectory,
 )
-from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
+from apal.utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
 from scripts.work3.run_baseline_a_evaluation import (
     COST_TOLERANCE,
     REPO_ROOT,
@@ -47,7 +47,7 @@ from scripts.work3.run_baseline_a_evaluation import (
 from scripts.work3.run_baseline_a_reachability_diagnostic import (
     evaluate_action_reachability_and_probs,
 )
-from models.work3.actor_critic import ActorCriticWork3
+from apal.models.work3.actor_critic import ActorCriticWork3
 from scripts.work3.evaluate_c_vs_d import (
     compute_cycle_heuristic_cmax,
     compute_time_urgency_vector,

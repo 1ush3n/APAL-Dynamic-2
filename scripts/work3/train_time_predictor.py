@@ -4,8 +4,7 @@
     python scripts/work3/train_time_predictor.py \
         --train-trajectories data/work3/m4_train_trajectories.pt \
         --validation-trajectories data/work3/m4_validation_trajectories.pt \
-        --epochs 35 \
-        --checkpoint models/work3/checkpoints/time_head_m4_official.pt
+        --epochs 35
 """
 
 from __future__ import annotations
@@ -20,14 +19,13 @@ from pathlib import Path
 import sys
 from typing import Any
 
-# 确保项目根目录在 sys.path 中
-_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+from apal.project import PROJECT_ROOT as _ROOT
+from apal.runtime.artifacts import create_run_context
 
+from apal.runtime import legacy_pickle
 import torch
 
-from models.work3.train_time_head import (
+from apal.models.work3.train_time_head import (
     train_time_head,
 )
 
@@ -254,7 +252,7 @@ def load_official_trajectory_splits(
     for split_name, path in trajectory_paths.items():
         if not path.is_file():
             raise FileNotFoundError(f"{split_name}轨迹文件不存在：{path}")
-        trajectories = torch.load(path, map_location="cpu", weights_only=False)
+        trajectories = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
         if not isinstance(trajectories, list) or not trajectories:
             raise ValueError(f"{split_name}轨迹文件必须包含非空轨迹列表：{path}")
         actual_ids = [
@@ -308,7 +306,8 @@ def main() -> None:
     parser.add_argument(
         "--checkpoint",
         type=Path,
-        default=_ROOT / "models" / "work3" / "checkpoints" / "time_head_m4_official.pt",
+        default=None,
+        help="显式保存路径；默认在独立runs/work3_time_head运行中保存",
     )
     parser.add_argument("--epochs", type=int, default=35)
     parser.add_argument("--batch_size", type=int, default=128)
@@ -322,6 +321,11 @@ def main() -> None:
         validation_split_path=OFFICIAL_SPLIT_PATHS["validation"],
         test_split_path=OFFICIAL_SPLIT_PATHS["test"],
     )
+    if args.checkpoint is None:
+        context = create_run_context(_ROOT, experiment_name="work3_time_head")
+        context.run_dir.mkdir(parents=True, exist_ok=False)
+        context.checkpoint_dir.mkdir()
+        args.checkpoint = context.checkpoint_dir / "time_head_m4_official.pt"
     logger.info(
         "加载预先划分轨迹：训练场景=%s、验证场景=%s；测试场景仅登记不参与拟合/选模",
         len(data_provenance["scenario_ids"]["train"]),

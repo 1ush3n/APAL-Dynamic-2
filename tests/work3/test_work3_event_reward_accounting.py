@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from models.work3.actor_critic import ActorCriticWork3
+from apal.envs.work3.core_types import ActionBranch
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.models.work3.actor_critic import ActorCriticWork3
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

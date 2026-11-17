@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")
@@ -86,7 +86,7 @@ def test_duration_for_team_uses_raw_standard_time_not_baseline_team_duration(
     env: AirLineEnvWork3,
 ) -> None:
     """原始CSV工时乘需求再按团队效率折算，不能重复折算基准团队工时。"""
-    from core.constraints import calculate_team_synergy_factor
+    from apal.core.constraints import calculate_team_synergy_factor
 
     task = env.state.tasks["0_12"]
     with RAW_DATA_PATH.open("r", encoding="utf-8-sig", newline="") as handle:

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from envs.work3.event_queue import (
+from apal.envs.work3.event_queue import (
     DiscreteEventQueue,
     EventType,
     SimulationEvent,

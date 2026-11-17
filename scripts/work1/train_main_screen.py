@@ -14,28 +14,26 @@ import sys
 from pathlib import Path
 from typing import Any
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+from apal.project import PROJECT_ROOT as PROJECT_ROOT
 
 import lightning.pytorch as pl
 import torch
 from lightning.pytorch.loggers import TensorBoardLogger
 
-from configs import configs
-from environment import AirLineEnv_Graph
-from models.hb_gat_pn import HBGATPN
-from ppo_agent import PPOAgent
-from runtime.artifacts import run_context, write_run_context_files
-from runtime.checkpoints import apply_checkpoint_model_spec, load_checkpoint
-from runtime.hydra_config import ExtraArgument, HydraCliError, initialize_hydra_runtime, should_show_help
-from runtime.paths import resolve_checkpoint_paths, resolve_tensorboard_log_root, resolve_workspace_path, sanitize_experiment_name
-from runtime.seed import set_seed
-from train_lightning import RolloutCheckpoint
-from runtime.training_data_manifest import resolve_explicit_five_skill_initial_training_paths
-from training.lightning_module import APALDataModule, APALLightningModule
-from training.rollout_service import APALRolloutService
-from utils.vector_env import EnvCreator, VectorEnv
+from apal.configs import configs
+from apal.environment import AirLineEnv_Graph
+from apal.models.hb_gat_pn import HBGATPN
+from apal.ppo_agent import PPOAgent
+from apal.runtime.artifacts import run_context, write_run_context_files
+from apal.runtime.checkpoints import apply_checkpoint_model_spec, load_checkpoint
+from apal.runtime.hydra_config import ExtraArgument, HydraCliError, initialize_hydra_runtime, should_show_help
+from apal.runtime.paths import resolve_checkpoint_paths, resolve_tensorboard_log_root, resolve_workspace_path, sanitize_experiment_name
+from apal.runtime.seed import set_seed
+from apal.training.entry import RolloutCheckpoint
+from apal.runtime.training_data_manifest import resolve_explicit_five_skill_initial_training_paths
+from apal.training.lightning_module import APALDataModule, APALLightningModule
+from apal.training.rollout_service import APALRolloutService
+from apal.utils.vector_env import EnvCreator, VectorEnv
 
 
 def _sha256(path: Path) -> str:
@@ -50,7 +48,7 @@ def _resolve_screen_model_class(screen_model: str) -> type[HBGATPN]:
     normalized = str(screen_model).strip().lower()
     if normalized == "full":
         return HBGATPN
-    from models.main_screen import (
+    from apal.models.main_screen import (
         DualAttentionContextHBGATPN,
         ScaleGatedContextHBGATPN,
     )
@@ -89,7 +87,7 @@ def _load_initial_weights(
     checkpoint = load_checkpoint(checkpoint_path, map_location="cpu")
     state_dict = checkpoint.state_dict
     warm_start_transformed = False
-    from models.main_screen import (
+    from apal.models.main_screen import (
         DualAttentionContextHBGATPN,
         expand_dual_attention_task_projection,
     )

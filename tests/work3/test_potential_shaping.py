@@ -12,8 +12,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from models.work3.potential_shaping import PotentialRewardShaper
-from models.work3.time_head import TimeResidualHead
+from apal.models.work3.potential_shaping import PotentialRewardShaper
+from apal.models.work3.time_head import TimeResidualHead
 
 
 def test_potential_monotonicity() -> None:

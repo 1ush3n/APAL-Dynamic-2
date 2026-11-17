@@ -9,11 +9,11 @@ from pathlib import Path
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskRuntimeState, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from models.work3.actor_critic import ActorCriticWork3
-from utils.work3.objective_evaluator import evaluate_trajectory_objective
+from apal.envs.work3.core_types import ActionBranch, TaskRuntimeState, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.models.work3.actor_critic import ActorCriticWork3
+from apal.utils.work3.objective_evaluator import evaluate_trajectory_objective
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

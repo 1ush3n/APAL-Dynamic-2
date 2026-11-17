@@ -13,7 +13,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from models.work3.time_head import TimeResidualHead
+from apal.models.work3.time_head import TimeResidualHead
 
 
 def test_time_residual_head_shapes() -> None:

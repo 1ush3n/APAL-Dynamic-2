@@ -25,41 +25,39 @@ import gc
 from pathlib import Path
 from typing import Any
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+from apal.project import PROJECT_ROOT as ROOT_DIR
 
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus, CycleExecutionRecord
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import (
+from apal.envs.work3.core_types import ActionBranch, TaskStatus, CycleExecutionRecord
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import (
     ActorCriticWork3,
     extract_compact_state_features,
 )
-from models.work3.ppo_buffer import (
+from apal.models.work3.ppo_buffer import (
     PendingTimeLabelCache,
     RolloutBufferWork3,
     PPOTransition,
 )
-from training.work3.lightning import Work3LightningModule, Work3TrainingUpdate
-from runtime.artifacts import RunContext, create_run_context
-from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.heuristic_agent import HeuristicAgentWork3
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-from models.work3.time_head import TimeResidualHead
-from models.work3.ppo_trainer import PPOTrainerWork3
+from apal.training.work3.lightning import Work3LightningModule, Work3TrainingUpdate
+from apal.runtime.artifacts import RunContext, create_run_context
+from apal.models.work3.action_fusion import compute_time_urgency_vector
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.models.work3.time_head import TimeResidualHead
+from apal.models.work3.ppo_trainer import PPOTrainerWork3
 from scripts.work3.evaluate_c_vs_d import (
     evaluate_single_trajectory,
     _check_completed_trajectory_feasibility,
 )
-from scripts.work3.train_ppo_work3 import run_training
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.objective_evaluator import (
+from apal.training.work3.train import run_training
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.objective_evaluator import (
     ObjectiveWeights,
     evaluate_trajectory_objective,
 )
-from utils.work3.trajectory_feasibility import validate_trajectory
+from apal.utils.work3.trajectory_feasibility import validate_trajectory
 
 
 def run_section_9_1_five_stations_seven_aircraft(input_dir: Path) -> dict[str, Any]:

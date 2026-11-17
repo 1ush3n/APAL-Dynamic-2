@@ -15,9 +15,9 @@ from __future__ import annotations
 from pathlib import Path
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
 
 
 @pytest.fixture

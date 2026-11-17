@@ -15,8 +15,8 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
 
 
 @pytest.fixture

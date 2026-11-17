@@ -7,13 +7,13 @@ from pathlib import Path
 import pytest
 import torch
 
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
-from models.work3.ppo_trainer import PPOTrainerWork3
-from models.work3.time_head import TimeResidualHead
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.action_fusion import compute_time_urgency_vector
+from apal.models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+from apal.models.work3.ppo_trainer import PPOTrainerWork3
+from apal.models.work3.time_head import TimeResidualHead
 
 
 @pytest.fixture

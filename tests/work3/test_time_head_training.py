@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from models.work3.time_head import TimeResidualHead
-from models.work3.train_time_head import (
+from apal.models.work3.time_head import TimeResidualHead
+from apal.models.work3.train_time_head import (
     StepResidualDataset,
     collate_step_batch,
     evaluate_time_head,
@@ -983,7 +983,7 @@ def test_collector_defaults_to_one_nominal_trajectory(
     tmp_path: Path,
 ) -> None:
     """确定性基准采集默认只写一条名义轨迹，不制造重复样本数。"""
-    from scripts.work3 import collect_validation_trajectories
+    from apal.data.work3 import validation_trajectories as collect_validation_trajectories
 
     def fake_collect_single_trajectory(
         agent: object,

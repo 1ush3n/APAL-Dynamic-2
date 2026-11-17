@@ -1,0 +1,1360 @@
+"""工作三条件分支自回归Actor-Critic：QUERY与历史时间输入路径。
+
+QUERY保留图编码和分层融合，按阶段读取准确条件，不创建时间融合层。
+以下时间融合说明仅用于保留的历史B/C/D/E/F/G检查点及复现入口。
+
+核心数学模型与技术规范：
+依据《方法设计确认稿》第 4.2 节（自回归动作）与第 7.3 节（动作上下文显式时间融合）：
+1. 共享状态编码器与 Critic：
+   - 编码器: z = Encoder(s_feat) ∈ R^d (默认 d=64)
+   - Critic: V(s) = Critic(z) ∈ R (评估综合回报价值)
+   - 时间融合: e_fused = TimeContextFusion(z, u(s)) (Task 6.3 成果)
+2. 四头条件自回归解码架构：
+   - Head 1 (工序选择): 在就绪工序候选池中输出 Categorical 分布，采样工序 task；
+   - Head 2 (站位分支): 输出 [STAY, POSTPONE] 分布，采样分支 branch；
+     - 物理硬掩码: 末站 (站位 4) 或达到后移上限时，强制禁止 POSTPONE！
+   - 条件分支动作截断 (核心定理)：
+     - 若 branch == POSTPONE:
+       * 动作在此截断！不选工人，不选对齐；
+       * log π(a|s) = log π_task + log π_branch。
+     - 若 branch == STAY:
+       * Head 3 (工人指针序列): 自回归挑选 m_i 名站内工人，避免重复选人；
+       * Head 4 (二元对齐): 决策 α ∈ {0, 1}；
+       * log π(a|s) = log π_task + log π_branch + Σ log π_worker + log π_align。
+3. PPO 重放契约 (evaluate_actions)：
+   - 严格根据实际采样的动作分支计算对数概率与策略熵；
+   - 保证在采样时刻比率 r_0(θ) = π_θ(a) / π_old(a) 严格恒等于 1.0。
+"""
+
+from __future__ import annotations
+
+import math
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+
+import torch
+import torch.nn as nn
+from torch.distributions import Categorical
+from torch_geometric.data import HeteroData
+
+from apal.envs.work3.core_types import (
+    ActionBranch,
+    MultiAircraftState,
+    TaskRuntimeState,
+    TaskStatus,
+    remaining_processing_time,
+)
+from apal.envs.work3.decision_snapshot import (
+    DecisionSnapshot,
+    TeamCompletionContext,
+    build_decision_snapshot,
+    worker_completion_mask,
+)
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.scheduling_queries import CONDITION_DIM, CONDITION_LAYOUT, CONDITION_NORMALIZATION, METHOD_ID, QUERY_VERSION, QueryStatus, ScheduleCondition
+from apal.envs.work3.query_program import load_condition_program
+from apal.models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
+from apal.models.hb_gat_pn import FeatureEmbedder, HeteroGATEncoder
+from apal.models.work3.graph_builder import (
+    GRAPH_FEATURE_DIMS,
+    GRAPH_FEATURE_SCHEMA,
+    GRAPH_FEATURE_VERSION,
+    MultiAircraftGraphBuilder,
+    Work3ResourceConfig,
+)
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+
+
+class Work3GraphEncoder(nn.Module):
+    """工作三轻量异构图编码器，复用仓库已有 HB-GAT 输入与消息传递。"""
+
+    def __init__(self, hidden_dim: int, condition_queries: bool = False) -> None:
+        super().__init__()
+        self.condition_queries = condition_queries
+        config = SimpleNamespace(
+            hidden_dim=int(hidden_dim),
+            num_gat_layers=1,
+            num_heads=2,
+            task_feat_dim=GRAPH_FEATURE_DIMS["task"],
+            worker_feat_dim=GRAPH_FEATURE_DIMS["worker"],
+            station_feat_dim=GRAPH_FEATURE_DIMS["station"],
+            skill_feat_dim=GRAPH_FEATURE_DIMS["skill"],
+            use_skill_hub=True,
+            skill_hub_bidirectional=True,
+            num_skill_types=5,
+            worker_skill_feature_slots=5,
+            graph_encoder_mode="hetero_gat",
+            task_feature_scope="full",
+            station_feature_scope="full",
+            homogeneous_shared_input_projection=False,
+        )
+        self.embedder = FeatureEmbedder(config)
+        self.message_passing = HeteroGATEncoder(config)
+        self.baseline_team_task_to_worker = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.published_team_task_to_worker = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.baseline_team_worker_to_task = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.published_team_worker_to_task = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.context_projection = nn.Sequential(
+            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+        self.station_summary_mlp = nn.Sequential(
+            nn.Linear(hidden_dim * (5 if condition_queries else 4), hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+        self.aircraft_role_mlp = nn.Sequential(
+            nn.Linear(hidden_dim * 3 + (21 if condition_queries else 0), hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+        self.recent_events_mlp = nn.Sequential(
+            nn.Linear(12, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+        self.line_fusion_mlp = nn.Sequential(
+            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+
+    def forward(
+        self,
+        graph: HeteroData,
+        return_hierarchical: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+        """返回全局上下文、任务节点嵌入、工人节点嵌入 [以及分层语义字典]。"""
+        device = next(self.parameters()).device
+        raw_x = {node_type: features.to(device) for node_type, features in graph.x_dict.items()}
+        assert set(("task", "worker", "station", "skill")) <= set(raw_x)
+        x_dict = self.embedder(raw_x)
+        edge_index_dict = {
+            edge_type: edge_index.to(device)
+            for edge_type, edge_index in graph.edge_index_dict.items()
+        }
+        for edge_type, edge_index in edge_index_dict.items():
+            src_type, _, dst_type = edge_type
+            if edge_index.numel() > 0:
+                max_src = int(edge_index[0].max().item())
+                max_dst = int(edge_index[1].max().item())
+                num_src = x_dict[src_type].size(0)
+                num_dst = x_dict[dst_type].size(0)
+                if max_src >= num_src or max_dst >= num_dst or edge_index.min().item() < 0:
+                    raise IndexError(
+                        f"OOB edge {edge_type}: src max={max_src}>={num_src}, dst max={max_dst}>={num_dst}, min={edge_index.min().item()}"
+                    )
+        encoded = self.message_passing(x_dict, edge_index_dict)
+
+        task_emb = encoded["task"]
+        worker_emb = encoded["worker"]
+        for edge_key, t2w_proj, w2t_proj in (
+            (
+                ("task", "baseline_team", "worker"),
+                self.baseline_team_task_to_worker,
+                self.baseline_team_worker_to_task,
+            ),
+            (
+                ("task", "last_published_team", "worker"),
+                self.published_team_task_to_worker,
+                self.published_team_worker_to_task,
+            ),
+        ):
+            edge_index = edge_index_dict.get(edge_key)
+            if edge_index is not None and edge_index.numel() > 0:
+                src_task, dst_worker = edge_index[0], edge_index[1]
+                w_delta = torch.zeros_like(worker_emb)
+                w_delta.index_add_(
+                    0,
+                    dst_worker,
+                    t2w_proj(task_emb[src_task]).to(dtype=w_delta.dtype),
+                )
+                t_delta = torch.zeros_like(task_emb)
+                t_delta.index_add_(
+                    0,
+                    src_task,
+                    w2t_proj(worker_emb[dst_worker]).to(dtype=t_delta.dtype),
+                )
+                worker_emb = worker_emb + w_delta
+                task_emb = task_emb + t_delta
+        encoded["task"] = task_emb
+        encoded["worker"] = worker_emb
+
+        def mean_pool(node_type: str) -> torch.Tensor:
+            value = encoded.get(node_type)
+            if value is None or value.numel() == 0:
+                return torch.zeros(
+                    (1, next(self.parameters()).size(0)),
+                    dtype=next(self.parameters()).dtype,
+                    device=device,
+                )
+            return value.mean(dim=0, keepdim=True)
+
+        pooled = torch.cat(
+            [mean_pool("task"), mean_pool("worker"), mean_pool("station"), mean_pool("skill")],
+            dim=-1,
+        )
+        base_context = self.context_projection(pooled).squeeze(0)
+
+        # 分层语义聚合 (R04, Problem 06 / U21)
+        ac_curr_indices = getattr(graph, "_ac_current_task_indices", getattr(graph, "ac_current_task_indices", None))
+        ac_next_indices = getattr(graph, "_ac_next_task_indices", getattr(graph, "ac_next_task_indices", None))
+        ac_further_indices = getattr(graph, "_ac_further_task_indices", getattr(graph, "ac_further_task_indices", None))
+        task_indices_by_ac = getattr(graph, "_task_indices_by_aircraft", getattr(graph, "task_indices_by_aircraft", None))
+        num_ac = len(task_indices_by_ac) if task_indices_by_ac is not None else 10
+
+        if ac_curr_indices is not None and ac_next_indices is not None and ac_further_indices is not None:
+            ac_role_list = []
+            facts = graph.role_task_facts.to(device=device, dtype=task_emb.dtype) if self.condition_queries else None
+            for k in range(num_ac):
+                c_idx = ac_curr_indices[k].to(device) if k < len(ac_curr_indices) and ac_curr_indices[k].numel() > 0 else None
+                n_idx = ac_next_indices[k].to(device) if k < len(ac_next_indices) and ac_next_indices[k].numel() > 0 else None
+                f_idx = ac_further_indices[k].to(device) if k < len(ac_further_indices) and ac_further_indices[k].numel() > 0 else None
+
+                c_emb = task_emb[c_idx].mean(dim=0, keepdim=True) if c_idx is not None else torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device)
+                n_emb = task_emb[n_idx].mean(dim=0, keepdim=True) if n_idx is not None else torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device)
+                f_emb = task_emb[f_idx].mean(dim=0, keepdim=True) if f_idx is not None else torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device)
+
+                role_parts = [c_emb, n_emb, f_emb]
+                if self.condition_queries:
+                    assert facts.shape == (task_emb.size(0), 7)
+                    # 各组 [N, 7] -> [1, 7]，分别保留数量、标准工时、五类技能需求的总量。
+                    role_parts.extend(facts[indices].sum(dim=0, keepdim=True) if indices is not None
+                                      else torch.zeros((1, 7), device=device, dtype=task_emb.dtype)
+                                      for indices in (c_idx, n_idx, f_idx))
+                ac_role_list.append(torch.cat(role_parts, dim=-1))
+            aircraft_roles = torch.cat(ac_role_list, dim=0)
+            aircraft_emb = self.aircraft_role_mlp(aircraft_roles)
+        else:
+            ac_list = []
+            for k in range(num_ac):
+                if task_indices_by_ac is not None and k < len(task_indices_by_ac) and task_indices_by_ac[k].numel() > 0:
+                    idx_dev = task_indices_by_ac[k].to(device)
+                    ac_list.append(task_emb[idx_dev].mean(dim=0, keepdim=True))
+                else:
+                    ac_list.append(torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device))
+            aircraft_base = torch.cat(ac_list, dim=0)
+            aircraft_emb = self.aircraft_role_mlp(torch.cat([aircraft_base, aircraft_base, aircraft_base], dim=-1))
+
+        station_emb = encoded["station"]
+        num_st = station_emb.size(0)
+        curr_indices = getattr(graph, "_current_task_indices", getattr(graph, "current_task_indices", None))
+        next_indices = getattr(graph, "_next_task_indices", getattr(graph, "next_task_indices", None))
+        further_indices = getattr(graph, "_further_task_indices", getattr(graph, "further_task_indices", None))
+
+        def _pool_station_tasks(indices_list: list[torch.Tensor] | None) -> torch.Tensor:
+            st_list = []
+            for s in range(num_st):
+                if indices_list is not None and s < len(indices_list) and indices_list[s].numel() > 0:
+                    idx_dev = indices_list[s].to(device)
+                    st_list.append(task_emb[idx_dev].mean(dim=0, keepdim=True))
+                else:
+                    st_list.append(torch.zeros((1, task_emb.size(-1)), dtype=task_emb.dtype, device=device))
+            return torch.cat(st_list, dim=0)
+
+        st_curr = _pool_station_tasks(curr_indices)
+        st_next = _pool_station_tasks(next_indices)
+        st_further = _pool_station_tasks(further_indices)
+        station_parts = [station_emb, st_curr, st_next, st_further]
+        if self.condition_queries:
+            # 已有绑定独热 [W, S] -> 站内人员摘要 [S, D]，复用人员的资格、效率与占用表示。
+            bindings = raw_x["worker"][:, 8:13].to(dtype=worker_emb.dtype).transpose(0, 1)
+            assert bindings.shape == (num_st, worker_emb.size(0))
+            station_parts.append((bindings @ worker_emb) / bindings.sum(dim=1, keepdim=True).clamp_min(1.0))
+        st_summary = self.station_summary_mlp(torch.cat(station_parts, dim=-1))
+
+        line_input = torch.cat([
+            st_summary.mean(dim=0, keepdim=True),
+            aircraft_emb.mean(dim=0, keepdim=True),
+            worker_emb.mean(dim=0, keepdim=True),
+            encoded["skill"].mean(dim=0, keepdim=True),
+        ], dim=-1)
+        line_emb = self.line_fusion_mlp(line_input).squeeze(0)
+        context = base_context + line_emb
+
+        # 动态演化与最近事实摘要融合 (Problem 05 / U19, U20)
+        recent_summary = getattr(graph, "_recent_events_summary", getattr(graph, "recent_events_summary", None))
+        if recent_summary is not None:
+            recent_dev = recent_summary.to(dtype=context.dtype, device=device)
+            if recent_dev.ndim == 1:
+                recent_dev = recent_dev.unsqueeze(0)
+            context = context + self.recent_events_mlp(recent_dev).squeeze(0)
+
+        if return_hierarchical:
+            hier_dict = {
+                "aircraft": aircraft_emb,
+                "station_current": st_curr,
+                "station_next": st_next,
+                "station_summary": st_summary,
+                "line": line_emb,
+            }
+            return context, encoded["task"], encoded["worker"], hier_dict
+        return context, encoded["task"], encoded["worker"]
+
+
+def extract_candidate_task_features(
+    state: MultiAircraftState,
+    candidate_tasks: list[TaskRuntimeState],
+) -> torch.Tensor:
+    """提取候选工序的 8 维标准化物理特征张量（含未来预约时刻与上一版发布差异）。"""
+    if not candidate_tasks:
+        return torch.empty((0, 8), dtype=torch.float)
+
+    h0 = float(state.h0)
+    current_time = float(state.current_time)
+    num_cand = len(candidate_tasks)
+    feats = torch.zeros((num_cand, 8), dtype=torch.float)
+
+    for idx, task in enumerate(candidate_tasks):
+        ac = state.aircraft.get(task.aircraft_id)
+        ac_station = ac.current_station if ac is not None else task.current_station
+        rel_station_offset = float(ac_station - task.base_station)
+
+        last_pub = task.publication_reference
+        pub_pos = (
+            float(last_pub["position"])
+            if last_pub.get("position") is not None
+            and math.isfinite(float(last_pub["position"]))
+            else float(task.in_station_offset)
+        )
+        pub_station = (
+            float(last_pub.get("station", task.base_station))
+            if last_pub.get("station") is not None
+            else float(task.base_station)
+        )
+        pub_team = last_pub.get("team")
+        team_diff_ratio = 0.0
+        if pub_team and task.demand > 0:
+            overlap = len(set(pub_team) & set(task.base_team))
+            team_diff_ratio = 1.0 - (float(overlap) / float(task.demand))
+
+        is_reserved = task.status == TaskStatus.RESERVED
+        has_sched = (
+            task.status in (TaskStatus.RESERVED, TaskStatus.RUNNING)
+            and task.scheduled_start is not None
+            and math.isfinite(float(task.scheduled_start))
+        )
+        sched_start_rem = (
+            max(0.0, float(task.scheduled_start) - current_time) / h0
+            if has_sched
+            else 0.0
+        )
+        exec_dur = (
+            task.execution_duration
+            if task.execution_duration is not None
+            else task.duration
+        )
+        sched_end_rem = (
+            max(0.0, float(task.scheduled_start) + float(exec_dur) - current_time) / h0
+            if has_sched and exec_dur is not None and math.isfinite(float(exec_dur))
+            else 0.0
+        )
+
+        feats[idx, 0] = float(task.duration) / h0
+        feats[idx, 1] = (pub_pos / h0) + (sched_start_rem if is_reserved else 0.0)
+        feats[idx, 2] = (float(task.demand) / 5.0) + (0.25 * team_diff_ratio)
+        feats[idx, 3] = (float(task.current_station) / 4.0) + (0.1 * (pub_station - float(task.base_station)))
+        feats[idx, 4] = (float(task.postpone_count) / 5.0) + (0.5 if is_reserved else 0.0)
+
+        is_delayed = 1.0 if task.material_ready_time > current_time else 0.0
+        feats[idx, 5] = is_delayed + (0.5 if is_reserved else 0.0)
+        feats[idx, 6] = (max(0.0, float(task.material_ready_time - current_time)) / h0) + sched_start_rem
+        feats[idx, 7] = (rel_station_offset / 4.0) + sched_end_rem
+
+    return feats
+
+
+def extract_compact_state_features(state: MultiAircraftState, estimated_cmax: float | None) -> torch.Tensor:
+    """提取当前仿真状态的 32 维精炼物理特征向量。
+
+    维度组成:
+      [0]: 当前周期已运行时间比例 (t - P_{q-1}) / H_0
+      [1:6]: 各站实际停靠飞机本周期未完工工序的剩余工时比例
+      [6:11]: 各站实际停靠飞机当前运行工序数比例 (<= 3)
+      [11:16]: 各站实际停靠飞机开工可用性延迟任务数比例
+      [16:21]: 各站实际停靠飞机最大开工可用性等待紧迫度 (log1p)
+      [21:26]: 5 站是否有飞机在场 (0/1)
+      [26]: 启发式估计剩余时间比例 (P_q^h - t) / H_0
+      [27]: 名义剩余时间比例 (P_{q-1} + H_0 - t) / H_0
+      [28]: 产线当前脉动周期比例
+      [29]: 全线累计完工工序比例
+      [30]: 全线累计后移工序数比例
+      [31]: 归一化总生产时长进度
+    """
+    feat = torch.zeros(32, dtype=torch.float)
+    h0 = float(state.h0)
+    current_time = float(state.current_time)
+    p_last = float(state.last_transfer_time)
+
+    total_cycles = float(state.num_aircraft + state.num_stations - 1)
+    total_tasks = float(len(state.tasks)) if len(state.tasks) > 0 else 2830.0
+
+    feat[0] = max(0.0, current_time - p_last) / h0
+
+    for s in range(state.num_stations):
+        ac_id = state.get_aircraft_at_station(s)
+        st_tasks = (
+            [
+                t for t in state.get_tasks_for_station(s)
+                if t.status != TaskStatus.COMPLETED
+            ]
+            if ac_id is not None
+            else []
+        )
+        w_remain = sum(
+            remaining_processing_time(task, current_time) for task in st_tasks
+        )
+        feat[1 + s] = float(w_remain) / h0
+
+        running_count = sum(1 for t in st_tasks if t.status == TaskStatus.RUNNING)
+        feat[6 + s] = float(running_count) / 3.0
+
+        delayed_tasks = [t for t in st_tasks if t.material_ready_time > current_time]
+        feat[11 + s] = float(len(delayed_tasks)) / 10.0
+
+        if delayed_tasks:
+            max_delay = max(t.material_ready_time - current_time for t in delayed_tasks)
+            feat[16 + s] = math.log1p(float(max_delay) / h0)
+
+        feat[21 + s] = 1.0 if ac_id is not None else 0.0
+
+    feat[26] = (max(0.0, estimated_cmax - current_time) / h0
+                if estimated_cmax is not None else
+                sum(t.status == TaskStatus.RESERVED for t in state.tasks.values()) / total_tasks)
+    feat[27] = (p_last + h0 - current_time) / h0
+    feat[28] = float(state.current_cycle) / total_cycles
+
+    completed = sum(1 for t in state.tasks.values() if t.status == TaskStatus.COMPLETED)
+    feat[29] = float(completed) / total_tasks
+
+    # [30] 综合后移压力指标：历史累计改派后移次数加本脉动周期内新发生的后移数 (Q08)
+    postponed = sum(t.postpone_count for t in state.tasks.values()) + float(getattr(state, "recent_postponed_count", 0))
+    feat[30] = float(postponed) / 50.0
+
+    # 编码微步与最近分支动作 (C07: 最近事实演化进入全局状态特征)
+    micro_offset = (
+        float(getattr(state, "micro_steps_in_timestamp", 0)) * 0.01
+        + float(getattr(state, "last_action_branch", 0)) * 0.05
+    )
+    feat[31] = current_time / (total_cycles * h0) + micro_offset
+    if estimated_cmax is None:
+        feat[30] = sum(t.postpone_count for t in state.tasks.values()) / 50.0
+        feat[31] = sum(ac.current_station < 0 for ac in state.aircraft.values()) / max(1, state.num_aircraft)
+
+    return feat
+
+
+class ActorCriticWork3(nn.Module):
+    """支持条件分支自回归解码的 Actor-Critic 强化学习网络。"""
+
+    def __init__(
+        self,
+        state_dim: int = 32,
+        task_feat_dim: int = 8,
+        hidden_dim: int = 64,
+        max_station_workers: int = 16,
+        condition_queries: bool = False,
+        query_program_path: str | Path | None = None,
+    ) -> None:
+        super().__init__()
+        self.state_dim = state_dim
+        self.task_feat_dim = task_feat_dim
+        self.hidden_dim = hidden_dim
+        self.max_station_workers = max_station_workers
+        self.condition_queries = condition_queries
+        self.query_program = load_condition_program(None if query_program_path is None else Path(query_program_path)) if condition_queries else None
+
+        # 图骨干；encoder 保留为旧32维接口的补充状态分支和旧检查点兼容层。
+        self.graph_encoder = Work3GraphEncoder(hidden_dim, condition_queries=condition_queries)
+        self.task_graph_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.worker_graph_score = nn.Linear(hidden_dim, 1)
+        self.graph_builder: MultiAircraftGraphBuilder | None = None
+        self._graph_baseline_key: str | None = None
+        self.graph_policy_enabled = True
+
+        # 1. 状态编码器与 Critic 头
+        self.encoder = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+
+        self.critic = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, 1),
+        )
+
+        # 2. 显式时间特征融合模块 (Task 6.3 / R05)
+        self.time_fusion = None if condition_queries else TimeContextFusion(
+            context_dim=hidden_dim,
+            time_dim=12,
+            hidden_dim=hidden_dim,
+            stop_time_gradient=True,
+        )
+
+        # 分层候选任务语义融合模块 (R04)
+        self.hierarchical_task_fusion = nn.Sequential(
+            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+        )
+
+        # 3. Head 1: 工序评分打分头 (Task Selection Head)
+        self.task_proj = nn.Linear(CONDITION_DIM if condition_queries else task_feat_dim, hidden_dim)
+        if condition_queries:
+            self.query_branch_score = nn.Linear(CONDITION_DIM, 1)
+            self.query_worker_score = nn.Linear(CONDITION_DIM, 1)
+            self.query_alignment_score = nn.Linear(CONDITION_DIM, 1)
+        self.task_score_fc = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, 1),
+        )
+
+        # 4. Head 2: 站位分支选择头 (Station Branch Head: STAY vs POSTPONE)
+        self.branch_head = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, 2),  # 0: STAY, 1: POSTPONE
+        )
+
+        # 5. Head 3: 站内工人指针头 (Worker Pointer Head)
+        # 输入: [e_fused, task_embed, cumulative_worker_embed]
+        self.worker_score_fc = nn.Sequential(
+            nn.Linear(hidden_dim * 2 + max_station_workers, hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, max_station_workers),
+        )
+
+        # 6. Head 4: 二元对齐头 (Binary Alignment Head)
+        self.align_head = nn.Sequential(
+            nn.Linear(hidden_dim * 2 + max_station_workers, hidden_dim),
+            nn.LeakyReLU(negative_slope=0.1),
+            nn.Linear(hidden_dim, 2),  # 0: 对齐 α=0, 1: 对齐 α=1
+        )
+
+    def _get_graph_builder(self, env: AirLineEnvWork3) -> MultiAircraftGraphBuilder:
+        """按环境基准实例缓存图构造器，动态节点特征仍每步重建。"""
+        baseline_key = str(Path(env.baseline_json_path).resolve())
+        if self.graph_builder is None or self._graph_baseline_key != baseline_key:
+            baseline = MultiAircraftBaseline.load_from_json(env.baseline_json_path)
+            self.graph_builder = MultiAircraftGraphBuilder(
+                baseline,
+                config=Work3ResourceConfig(),
+            )
+            self._graph_baseline_key = baseline_key
+        return self.graph_builder
+
+    def build_graph_snapshot(self, env: AirLineEnvWork3) -> HeteroData:
+        """构造可保存的当前图快照，避免PPO重放读取变化后的现场状态。"""
+        graph = self._get_graph_builder(env).build_graph(env, include_role_facts=self.condition_queries)
+        return graph.clone()
+
+    def _encode_state_components(
+        self,
+        state_feat: torch.Tensor,
+        time_urgency: torch.Tensor,
+        graph_data: HeteroData | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None, torch.Tensor | None, dict[str, torch.Tensor] | None]:
+        """编码状态并返回图节点嵌入与分层语义；无图时走旧接口兼容路径。"""
+        assert state_feat.ndim == 1 and state_feat.size(0) == self.state_dim
+        assert time_urgency.ndim == 1 and time_urgency.size(0) in (2, 7, 12)
+        legacy_context = self.encoder(state_feat)
+        task_nodes: torch.Tensor | None = None
+        worker_nodes: torch.Tensor | None = None
+        hier_dict: dict[str, torch.Tensor] | None = None
+        if graph_data is None or not self.graph_policy_enabled:
+            context = legacy_context
+        else:
+            graph_context, task_nodes, worker_nodes, hier_dict = self.graph_encoder(
+                graph_data, return_hierarchical=True
+            )
+            context = graph_context + legacy_context
+        v = self.critic(context).squeeze(-1)
+        e_fused = context if self.time_fusion is None else self.time_fusion(context, time_urgency)
+        return v, e_fused, task_nodes, worker_nodes, hier_dict
+
+    def encode_shared_representation(
+        self,
+        state_feat: torch.Tensor,
+        graph_data: HeteroData | None = None,
+    ) -> torch.Tensor:
+        """返回供时间辅助头共享的图增强状态表征。"""
+        assert state_feat.ndim == 1 and state_feat.size(0) == self.state_dim
+        legacy_context = self.encoder(state_feat)
+        if graph_data is None or not self.graph_policy_enabled:
+            return legacy_context
+        graph_context, _, _ = self.graph_encoder(graph_data)
+        return legacy_context + graph_context
+
+    def encode_state(
+        self,
+        state_feat: torch.Tensor,
+        time_urgency: torch.Tensor,
+        graph_data: HeteroData | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """编码状态，图快照存在时输出图增强的价值与策略上下文。"""
+        if state_feat.ndim == 2:
+            if graph_data is not None:
+                raise ValueError("批量状态请通过 evaluate_action_log_probs 传入图快照列表")
+            z = self.encoder(state_feat)
+            v = self.critic(z).squeeze(-1)
+            e_fused = z if self.time_fusion is None else self.time_fusion(z, time_urgency)
+            return v, e_fused
+        v, e_fused, _, _, _ = self._encode_state_components(
+            state_feat,
+            time_urgency,
+            graph_data,
+        )
+        return v, e_fused
+
+    def input_semantics(self) -> dict[str, Any]:
+        """形状相同也必须核对含义；历史方法保留原有图与时间输入。"""
+        if not self.condition_queries:
+            return {"method_id": "historical_time_v3"}
+        return {"method_id": METHOD_ID, "query_version": QUERY_VERSION,
+                "condition_layout": CONDITION_LAYOUT, "state_version": "work3_facts32_v1",
+                "hierarchy_version": "work3_role_sums_v1",
+                "role_fact_layout": ("task_count", "standard_work_h0", "skill_0_demand", "skill_1_demand",
+                                     "skill_2_demand", "skill_3_demand", "skill_4_demand"),
+                "condition_normalization": CONDITION_NORMALIZATION}
+
+    @staticmethod
+    def _validate_program_sources(hashes: tuple[str, ...]) -> None:
+        """程序指纹仅用于来源追溯，不限制当前Actor只能重放一个来源。"""
+        if not hashes or any(not isinstance(value, str) or len(value) != 64
+                             or any(char not in "0123456789abcdef" for char in value) for value in hashes):
+            raise ValueError("查询程序来源指纹缺失或损坏")
+
+    def _validate_condition_record(self, record: dict[str, Any]) -> None:
+        self._validate_program_sources(tuple(record.get("query_program_hashes", ())))
+        if (record.get("method_id") != METHOD_ID
+            or tuple(record.get("condition_layout", CONDITION_LAYOUT)) != CONDITION_LAYOUT
+            or record.get("condition_normalization", CONDITION_NORMALIZATION) != CONDITION_NORMALIZATION):
+            raise ValueError("PPO条件字段或归一化语义不匹配")
+        def check(value: Any, shape: tuple[int, ...]) -> None:
+            if not isinstance(value, torch.Tensor) or tuple(value.shape) != shape or not torch.isfinite(value).all():
+                raise ValueError("PPO原始条件张量形状错误或含非有限值")
+        check(record.get("query_task_features"), (len(record.get("candidate_task_keys", ())), CONDITION_DIM))
+        if record.get("action_type") != "schedule":
+            return
+        check(record.get("query_branch_features"), (2, CONDITION_DIM))
+        if record.get("branch") == int(ActionBranch.POSTPONE):
+            return
+        conditions = record.get("query_worker_features", ())
+        if len(conditions) != len(record.get("chosen_worker_indices", ())):
+            raise ValueError("PPO逐人条件数量不匹配")
+        for value in conditions:
+            check(value, (self.max_station_workers, CONDITION_DIM))
+        check(record.get("query_alignment_features"), (2, CONDITION_DIM))
+
+    def load_warm_start_weights(
+        self,
+        state_dict: dict[str, torch.Tensor],
+    ) -> dict[str, list[str]]:
+        """显式旧模型热启动入口：按名称与shape过滤参数，返回缺失与意外键 (R4)。"""
+        model_dict = self.state_dict()
+        filtered_dict: dict[str, torch.Tensor] = {}
+        missing_keys: list[str] = []
+        unexpected_keys: list[str] = []
+        loaded_keys: list[str] = []
+
+        for k, v in state_dict.items():
+            if self.condition_queries and k.startswith(("encoder.0.", "task_proj.", "time_fusion.", "query_")):
+                unexpected_keys.append(f"{k}（输入语义改变，重置）")
+                continue
+            if k in model_dict:
+                if model_dict[k].shape == v.shape:
+                    filtered_dict[k] = v
+                    loaded_keys.append(k)
+                elif (
+                    k == "graph_encoder.embedder.task_emb.0.weight"
+                    and model_dict[k].ndim == 2
+                    and v.ndim == 2
+                    and model_dict[k].shape[0] == v.shape[0]
+                    and model_dict[k].shape[1] == 28
+                    and v.shape[1] == 26
+                ):
+                    # 显式将旧版 26 维 Task 特征投影层迁移至 28 维，新增的 2 个槽位补零 (S02/E01)
+                    adapted_w = model_dict[k].clone()
+                    adapted_w[:, :26] = v.to(device=adapted_w.device, dtype=adapted_w.dtype)
+                    adapted_w[:, 26:] = 0.0
+                    filtered_dict[k] = adapted_w
+                    loaded_keys.append(f"{k} (adapted from 26-dim {tuple(v.shape)} to 28-dim {tuple(model_dict[k].shape)} via zero-init)")
+                else:
+                    unexpected_keys.append(f"{k} (shape mismatch: expected {model_dict[k].shape}, got {v.shape})")
+            else:
+                unexpected_keys.append(k)
+
+        for k in model_dict:
+            if k not in filtered_dict:
+                missing_keys.append(k)
+
+        has_graph_weights = any(key.startswith("graph_encoder.") for key in filtered_dict)
+        self.graph_policy_enabled = has_graph_weights
+        if "time_fusion.time_mlp.0.weight" in filtered_dict:
+            ckpt_time_dim = filtered_dict["time_fusion.time_mlp.0.weight"].size(1)
+            if ckpt_time_dim != self.time_fusion.time_dim:
+                self.time_fusion = TimeContextFusion(
+                    context_dim=self.hidden_dim,
+                    time_dim=ckpt_time_dim,
+                    hidden_dim=self.hidden_dim,
+                    stop_time_gradient=self.time_fusion.stop_time_gradient,
+                )
+        super().load_state_dict(filtered_dict, strict=False)
+        return {
+            "loaded_keys": loaded_keys,
+            "missing_keys": missing_keys,
+            "unexpected_keys": unexpected_keys,
+        }
+
+    def load_state_dict(self, state_dict: dict[str, torch.Tensor], strict: bool = True, assign: bool = False):
+        """严格加载模型检查点；如需热启动兼容旧模型，使用 load_warm_start_weights (R4)。"""
+        if self.condition_queries and any(key.startswith("time_fusion.") for key in state_dict):
+            raise ValueError("历史时间输入语义不匹配，请显式使用load_warm_start_weights")
+        has_graph_weights = any(key.startswith("graph_encoder.") for key in state_dict)
+        self.graph_policy_enabled = has_graph_weights
+        if not strict and "time_fusion.time_mlp.0.weight" in state_dict:
+            ckpt_time_dim = state_dict["time_fusion.time_mlp.0.weight"].size(1)
+            if ckpt_time_dim != self.time_fusion.time_dim:
+                self.time_fusion = TimeContextFusion(
+                    context_dim=self.hidden_dim,
+                    time_dim=ckpt_time_dim,
+                    hidden_dim=self.hidden_dim,
+                    stop_time_gradient=self.time_fusion.stop_time_gradient,
+                )
+        return super().load_state_dict(state_dict, strict=strict, assign=assign)
+
+    def _advance_logits(self, context: torch.Tensor) -> torch.Tensor:
+        """复用既有分支头产生推进门控，保持旧Actor检查点可加载。"""
+        zero_task = torch.zeros(self.hidden_dim, dtype=context.dtype, device=context.device)
+        return self.branch_head(torch.cat([context, zero_task], dim=-1))
+
+    def _worker_selection_mask(
+        self,
+        context: TeamCompletionContext,
+        selected_worker_ids: tuple[int, ...],
+        device: torch.device,
+    ) -> torch.Tensor:
+        """构造当前指针步的固定长度布尔可选工人掩码。"""
+        mask = torch.tensor(
+            worker_completion_mask(context, selected_worker_ids, self.max_station_workers),
+            dtype=torch.bool,
+            device=device,
+        )
+        if not bool(mask.any().item()):
+            raise ValueError(
+                f"工序 {context.task_key} 的工人指针无合法补全："
+                f"已选工人={selected_worker_ids}"
+            )
+        return mask
+
+    @staticmethod
+    def _apply_worker_selection_mask(
+        logits: torch.Tensor,
+        mask: torch.Tensor,
+        *,
+        task_key: str,
+        step_index: int,
+    ) -> torch.Tensor:
+        """掩码在图偏置加入后应用；拒绝全屏蔽或形状不匹配的分布。"""
+        if mask.dtype != torch.bool or mask.shape != logits.shape:
+            raise ValueError(
+                f"工序 {task_key} 第{step_index}步工人掩码形状/类型无效："
+                f"mask={tuple(mask.shape)} {mask.dtype}, logits={tuple(logits.shape)}"
+            )
+        if not bool(mask.any().item()):
+            raise ValueError(f"工序 {task_key} 第{step_index}步工人掩码全空")
+        return logits.masked_fill(~mask, -torch.inf)
+
+    def make_decision_snapshot(
+        self,
+        env: AirLineEnvWork3,
+        state_feat: torch.Tensor,
+        time_urgency: torch.Tensor,
+        *,
+        worker_id: int = 0,
+        episode_id: int = -1,
+        episode_index: int | None = None,
+        estimated_cmax: float | None = None,
+        allow_postpone: bool = True,
+    ) -> DecisionSnapshot:
+        """兼容单环境入口：从当前现场生成不含环境引用的CPU决策快照。"""
+        return build_decision_snapshot(
+            env,
+            self._get_graph_builder(env),
+            state_feat,
+            time_urgency,
+            worker_id=worker_id,
+            episode_id=episode_id,
+            episode_index=env.step_count if episode_index is None else episode_index,
+            estimated_cmax=estimated_cmax,
+            allow_postpone=allow_postpone,
+            condition_queries=self.condition_queries,
+            query_program=self.query_program,
+        )
+
+    def _candidate_embeddings(
+        self, cand_feats: torch.Tensor, task_nodes: torch.Tensor | None,
+        hier_dict: dict[str, torch.Tensor] | None, metadata: dict[str, Any],
+        query_features: torch.Tensor | None,
+    ) -> torch.Tensor:
+        """采样和重放共享候选节点、分层上下文及原始条件的投影。"""
+        device = cand_feats.device
+        candidate_count = len(cand_feats)
+        inputs = query_features.to(cand_feats.device) if self.condition_queries else cand_feats
+        cand_embed = self.task_proj(inputs)
+        candidate_task_node_indices = metadata.get("candidate_task_node_indices", ())
+        if task_nodes is not None and candidate_task_node_indices:
+            node_indices = torch.as_tensor(candidate_task_node_indices, device=device)
+            cand_embed = cand_embed + self.task_graph_proj(task_nodes[node_indices])
+        if hier_dict is not None and metadata.get("candidate_aircraft_ids"):
+            ac_ids = torch.as_tensor(metadata["candidate_aircraft_ids"], device=device)
+            st_ids = torch.as_tensor(metadata["candidate_station_ids"], device=device)
+            ac_embs = hier_dict["aircraft"][ac_ids]
+            st_curr_embs = hier_dict["station_current"][st_ids]
+            has_next_st = (st_ids + 1 < hier_dict["station_next"].size(0)).unsqueeze(-1)
+            target_st_ids = torch.clamp(st_ids + 1, max=hier_dict["station_next"].size(0) - 1)
+            st_next_raw = hier_dict["station_next"][target_st_ids]
+            st_next_embs = torch.where(has_next_st, st_next_raw, torch.zeros_like(st_next_raw))
+            line_embs = hier_dict["line"].unsqueeze(0).expand(candidate_count, -1)
+            cand_embed = cand_embed + self.hierarchical_task_fusion(
+                torch.cat([ac_embs, st_curr_embs, st_next_embs, line_embs], dim=-1)
+            )
+        return cand_embed
+
+    @torch.no_grad()
+    def select_action(
+        self,
+        env: AirLineEnvWork3,
+        state_feat: torch.Tensor,
+        time_urgency: torch.Tensor,
+        deterministic: bool = False,
+        *,
+        allow_postpone: bool = True,
+    ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
+        """兼容旧调用者，先冻结现场快照，再走纯快照策略入口。"""
+        snapshot = self.make_decision_snapshot(
+            env,
+            state_feat,
+            time_urgency,
+            allow_postpone=allow_postpone,
+        )
+        return self.select_snapshot(snapshot, deterministic=deterministic)
+
+    @torch.no_grad()
+    def select_snapshot(
+        self,
+        snapshot: DecisionSnapshot,
+        deterministic: bool = False,
+        *,
+        time_features_override: torch.Tensor | None = None,
+        generator: torch.Generator | None = None,
+    ) -> tuple[dict[str, Any] | None, float, float, dict[str, Any]]:
+        """只依据独立CPU快照采样动作；不读取环境对象或可变现场状态。"""
+        if snapshot.graph_version != GRAPH_FEATURE_VERSION:
+            raise ValueError(
+                f"快照图版本{snapshot.graph_version!r}与Actor要求的"
+                f"{GRAPH_FEATURE_VERSION!r}不匹配"
+            )
+        if self.condition_queries != (snapshot.query_version == QUERY_VERSION):
+            raise ValueError("Actor与快照的调度条件输入语义不一致")
+        if self.condition_queries:
+            self._validate_program_sources(snapshot.query_program_hashes)
+        device = next(self.parameters()).device
+        state_feat = snapshot.state_features.to(device)
+        if time_features_override is not None:
+            if time_features_override.ndim != 1 or time_features_override.shape[0] not in (2, 7, 12):
+                raise ValueError(
+                    f"time_features_override 形状无效: {time_features_override.shape}"
+                )
+            time_urgency = time_features_override.to(device)
+        else:
+            time_urgency = snapshot.time_features.to(device)
+        graph_snapshot = snapshot.graph_snapshot
+        v, e_fused, task_nodes, worker_nodes, hier_dict = self._encode_state_components(
+            state_feat,
+            time_urgency,
+            graph_snapshot,
+        )
+        state_value = float(v.item())
+        candidate_count = len(snapshot.candidate_task_keys)
+        query_task_features = None
+        if self.condition_queries:
+            query_task_features = torch.stack([
+                table.best().features(snapshot.current_time, snapshot.h0)
+                for table in snapshot.query_tables
+            ]) if candidate_count else torch.empty((0, CONDITION_DIM))
+        sample_common = {
+            "sample_record_version": 2,
+            "decision_snapshot_id": (
+                snapshot.worker_id,
+                snapshot.episode_id,
+                snapshot.episode_index,
+            ),
+            "graph_snapshot": graph_snapshot.clone(),
+            "graph_version": snapshot.graph_version,
+            "candidate_task_keys": snapshot.candidate_task_keys,
+            "candidate_branch_masks": snapshot.branch_masks,
+            "candidate_task_node_indices": snapshot.candidate_task_node_indices,
+            "candidate_aircraft_ids": getattr(snapshot, "candidate_aircraft_ids", ()),
+            "candidate_station_ids": getattr(snapshot, "candidate_station_ids", ()),
+            "worker_node_indices": (),
+            "method_id": METHOD_ID if self.condition_queries else "historical_time_v3",
+            "query_version": snapshot.query_version,
+            "query_program_hashes": snapshot.query_program_hashes,
+            "query_task_features": query_task_features,
+            "condition_layout": CONDITION_LAYOUT,
+            "condition_normalization": CONDITION_NORMALIZATION,
+        }
+
+        if candidate_count == 0:
+            return (
+                {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT},
+                0.0,
+                state_value,
+                {
+                    **sample_common,
+                    "action_type": "forced_advance",
+                    "advance_available": False,
+                    "prob_advance": 0.0,
+                    "prob_stay": 1.0,
+                    "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
+                },
+            )
+
+        advance_log_prob = torch.zeros((), device=device)
+        advance_choice = 0
+        prob_advance = 0.0
+        prob_stay = 1.0
+        if snapshot.advance_available:
+            advance_logits = self._advance_logits(e_fused)
+            adv_softmax = torch.softmax(advance_logits, dim=-1)
+            prob_stay = float(adv_softmax[0].item())
+            prob_advance = float(adv_softmax[1].item())
+            dist_advance = Categorical(logits=advance_logits)
+            advance_choice = (
+                int(torch.argmax(advance_logits).item())
+                if deterministic
+                else int(self._sample_categorical(dist_advance, generator).item())
+            )
+            advance_log_prob = dist_advance.log_prob(
+                torch.tensor(advance_choice, device=device)
+            )
+            if advance_choice == 1:
+                return (
+                    {"branch": ActionBranch.ADVANCE_TO_NEXT_EVENT},
+                    float(advance_log_prob.item()),
+                    state_value,
+                    {
+                        **sample_common,
+                        "action_type": "advance_to_next_event",
+                        "advance_available": True,
+                        "advance_choice": 1,
+                        "prob_advance": prob_advance,
+                        "prob_stay": prob_stay,
+                        "branch": int(ActionBranch.ADVANCE_TO_NEXT_EVENT),
+                    },
+                )
+
+        cand_feats = snapshot.candidate_task_features.to(device)
+        cand_embed = self._candidate_embeddings(cand_feats, task_nodes, hier_dict, sample_common, query_task_features)
+        e_ctx_expanded = e_fused.unsqueeze(0).expand(candidate_count, -1)
+        task_pair = torch.cat([e_ctx_expanded, cand_embed], dim=-1)
+        task_logits = self.task_score_fc(task_pair).squeeze(-1)
+        dist_task = Categorical(logits=task_logits)
+        task_idx = (
+            int(torch.argmax(task_logits).item())
+            if deterministic
+            else int(self._sample_categorical(dist_task, generator).item())
+        )
+        task_key = snapshot.candidate_task_keys[task_idx]
+        log_prob_task = dist_task.log_prob(torch.tensor(task_idx, device=device))
+        chosen_task_embed = cand_embed[task_idx]
+
+        branch_input = torch.cat([e_fused, chosen_task_embed], dim=-1)
+        branch_logits = self.branch_head(branch_input).clone()
+        branch_conditions = None
+        if self.condition_queries:
+            branch_conditions = torch.stack((query_task_features[task_idx],
+                ScheduleCondition(QueryStatus.UNKNOWN, reasons=("station",)).features(snapshot.current_time, snapshot.h0)))
+            branch_logits = branch_logits + self.query_branch_score(branch_conditions.to(device)).squeeze(-1)
+        can_reserve, can_postpone = snapshot.branch_masks[task_idx]
+        if not can_postpone:
+            branch_logits[1] = -1e4
+        if not can_reserve:
+            branch_logits[0] = -1e4
+        dist_branch = Categorical(logits=branch_logits)
+        branch_act = (
+            int(torch.argmax(branch_logits).item())
+            if deterministic
+            else int(self._sample_categorical(dist_branch, generator).item())
+        )
+        log_prob_branch = dist_branch.log_prob(torch.tensor(branch_act, device=device))
+        context = snapshot.team_contexts[task_idx]
+        chosen_worker_ids: list[int] = []
+        sample_record = {
+            **sample_common,
+            "action_type": "schedule",
+            "advance_available": snapshot.advance_available,
+            "advance_choice": advance_choice,
+            "prob_advance": prob_advance,
+            "prob_stay": prob_stay,
+            "task_idx": task_idx,
+            "task_key": task_key,
+            "branch": branch_act,
+            "cand_feats": cand_feats.detach().cpu().clone(),
+            "can_reserve": can_reserve,
+            "can_postpone": can_postpone,
+            "num_st_workers": self.max_station_workers,
+            "chosen_team": (),
+            "align": 0,
+            "query_branch_features": branch_conditions,
+        }
+
+        if branch_act == int(ActionBranch.POSTPONE):
+            total_log_prob = advance_log_prob + log_prob_task + log_prob_branch
+            return (
+                {"task_key": task_key, "branch": ActionBranch.POSTPONE},
+                float(total_log_prob.item()),
+                state_value,
+                sample_record,
+            )
+
+        num_station_workers = len(context.workers)
+        if num_station_workers > self.max_station_workers:
+            raise ValueError(
+                f"站内工人数量{num_station_workers}超过Actor掩码上限"
+                f"{self.max_station_workers}"
+            )
+        worker_node_indices = snapshot.worker_node_indices[task_idx]
+        sample_record["num_st_workers"] = num_station_workers
+        sample_record["worker_node_indices"] = worker_node_indices
+        sample_record["station_worker_ids"] = tuple(
+            worker.worker_id for worker in context.workers
+        )
+        worker_valid_masks: list[tuple[bool, ...]] = []
+        worker_conditions: list[torch.Tensor] = []
+        worker_prefixes: list[tuple[int, ...]] = []
+        chosen_worker_indices: list[int] = []
+        log_prob_workers = torch.zeros((), device=device)
+        worker_mask_tracker = torch.zeros(
+            self.max_station_workers, dtype=torch.float, device=device
+        )
+        worker_graph_bias = None
+        if worker_nodes is not None and worker_node_indices:
+            worker_graph_ids = torch.as_tensor(worker_node_indices, device=device)
+            worker_graph_bias = self.worker_graph_score(
+                worker_nodes[worker_graph_ids]
+            ).squeeze(-1)
+
+        for step_w in range(context.demand):
+            ptr_input = torch.cat([e_fused, chosen_task_embed, worker_mask_tracker], dim=-1)
+            worker_logits = self.worker_score_fc(ptr_input).clone()
+            if self.condition_queries:
+                worker_prefixes.append(tuple(chosen_worker_ids))
+                raw_conditions = snapshot.query_tables[task_idx].worker_features(
+                    sample_record["station_worker_ids"], tuple(chosen_worker_ids),
+                    snapshot.current_time, snapshot.h0, self.max_station_workers)
+                worker_conditions.append(raw_conditions)
+                worker_logits = worker_logits + self.query_worker_score(raw_conditions.to(device)).squeeze(-1)
+            if worker_graph_bias is not None:
+                worker_logits[:num_station_workers] += worker_graph_bias
+            worker_mask = self._worker_selection_mask(
+                context,
+                tuple(chosen_worker_ids),
+                device,
+            )
+            worker_valid_masks.append(tuple(bool(value) for value in worker_mask.cpu().tolist()))
+            worker_logits = self._apply_worker_selection_mask(
+                worker_logits,
+                worker_mask,
+                task_key=task_key,
+                step_index=step_w,
+            )
+            dist_worker = Categorical(logits=worker_logits)
+            worker_index = (
+                int(torch.argmax(worker_logits).item())
+                if deterministic
+                else int(self._sample_categorical(dist_worker, generator).item())
+            )
+            chosen_worker_indices.append(worker_index)
+            chosen_worker_ids.append(context.workers[worker_index].worker_id)
+            log_prob_workers += dist_worker.log_prob(
+                torch.tensor(worker_index, device=device)
+            )
+            worker_mask_tracker[worker_index] = 1.0
+
+        align_input = torch.cat([e_fused, chosen_task_embed, worker_mask_tracker], dim=-1)
+        align_logits = self.align_head(align_input)
+        if self.condition_queries:
+            alignment_conditions = torch.stack([
+                snapshot.query_tables[task_idx].best(tuple(chosen_worker_ids), align).features(
+                    snapshot.current_time, snapshot.h0) for align in (0, 1)])
+            align_logits = align_logits + self.query_alignment_score(alignment_conditions.to(device)).squeeze(-1)
+            sample_record["query_alignment_features"] = alignment_conditions
+            sample_record["query_worker_features"] = tuple(worker_conditions)
+            sample_record["worker_prefixes"] = tuple(worker_prefixes)
+        dist_align = Categorical(logits=align_logits)
+        align_act = (
+            int(torch.argmax(align_logits).item())
+            if deterministic
+            else int(self._sample_categorical(dist_align, generator).item())
+        )
+        log_prob_align = dist_align.log_prob(torch.tensor(align_act, device=device))
+        total_log_prob = (
+            advance_log_prob + log_prob_task + log_prob_branch + log_prob_workers + log_prob_align
+        )
+        sample_record["chosen_team"] = tuple(chosen_worker_ids)
+        sample_record["chosen_worker_indices"] = tuple(chosen_worker_indices)
+        sample_record["worker_valid_masks"] = tuple(worker_valid_masks)
+        sample_record["align"] = align_act
+        action = {
+            "task_key": task_key,
+            "branch": ActionBranch.STATION_EXECUTE,
+            "team": tuple(chosen_worker_ids),
+            "align": align_act,
+        }
+        return action, float(total_log_prob.item()), state_value, sample_record
+
+    @staticmethod
+    def _sample_categorical(
+        distribution: Categorical,
+        generator: torch.Generator | None,
+    ) -> torch.Tensor:
+        assert distribution.probs.ndim == 1, f"分类概率应为[K]，实际为{tuple(distribution.probs.shape)}"
+        if generator is None:
+            return distribution.sample()
+        # 输入概率 [K] -> 采样索引标量 []，并使用显式的设备内 RNG。
+        return torch.multinomial(distribution.probs, 1, generator=generator).squeeze(0)
+
+    def evaluate_action_log_probs(
+        self,
+        state_feats: torch.Tensor,
+        time_urgencies: torch.Tensor,
+        sample_records: list[dict[str, Any]],
+        allow_legacy: bool = False,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """PPO 训练重放接口：严格按照条件分支结构计算重放对数概率、状态值与熵。
+
+        Returns:
+            (values, log_probs, entropies)
+        """
+        device = next(self.parameters()).device
+        state_feats = state_feats.to(device)
+        time_urgencies = time_urgencies.to(device)
+        batch_size = len(sample_records)
+        for record in sample_records:
+            if self.condition_queries != (record.get("query_version") == QUERY_VERSION):
+                raise ValueError("PPO记录与Actor的调度条件输入语义不一致")
+            if self.condition_queries:
+                self._validate_condition_record(record)
+            act_type = record.get("action_type")
+            if act_type not in ("forced_advance", "advance_to_next_event", "schedule", "station_execute", "postpone"):
+                raise ValueError(f"PPO样本缺少合法动作类型 action_type: {act_type!r}")
+            graph_version = record.get("graph_version")
+            if not allow_legacy and record.get("graph_snapshot") is not None and not graph_version:
+                raise ValueError(
+                    f"PPO样本包含图快照但缺少 graph_version 字段，要求: {GRAPH_FEATURE_VERSION!r}"
+                )
+            if graph_version is not None and graph_version != GRAPH_FEATURE_VERSION:
+                raise ValueError(
+                    f"PPO样本图版本{graph_version!r}与Actor要求的"
+                    f"{GRAPH_FEATURE_VERSION!r}不匹配"
+                )
+
+        values_list: list[torch.Tensor] = []
+        context_list: list[torch.Tensor] = []
+        task_nodes_list: list[torch.Tensor | None] = []
+        worker_nodes_list: list[torch.Tensor | None] = []
+        hier_dict_list: list[dict[str, torch.Tensor] | None] = []
+        for index, record in enumerate(sample_records):
+            value_i, context_i, task_nodes_i, worker_nodes_i, hier_dict_i = self._encode_state_components(
+                state_feats[index],
+                time_urgencies[index],
+                record.get("graph_snapshot"),
+            )
+            values_list.append(value_i)
+            context_list.append(context_i)
+            task_nodes_list.append(task_nodes_i)
+            worker_nodes_list.append(worker_nodes_i)
+            hier_dict_list.append(hier_dict_i)
+        values = torch.stack(values_list)
+        e_fused = torch.stack(context_list)
+
+        log_probs = []
+        entropies = []
+
+        for i in range(batch_size):
+            rec = sample_records[i]
+            e_ctx = e_fused[i]
+
+            if rec.get("action_type") == "forced_advance":
+                log_probs.append(torch.zeros((), device=device))
+                entropies.append(torch.zeros((), device=device))
+                continue
+
+            if rec.get("action_type") == "advance_to_next_event":
+                dist_advance = Categorical(logits=self._advance_logits(e_ctx))
+                lp_advance = dist_advance.log_prob(torch.as_tensor(1, device=device))
+                log_probs.append(lp_advance)
+                entropies.append(dist_advance.entropy())
+                continue
+
+            lp_advance = torch.zeros((), device=device)
+            ent_advance = torch.zeros((), device=device)
+            if rec.get("advance_available", False):
+                dist_advance = Categorical(logits=self._advance_logits(e_ctx))
+                lp_advance = dist_advance.log_prob(torch.as_tensor(0, device=device))
+                ent_advance = dist_advance.entropy()
+
+            # 1. 重放 Head 1: 工序对数概率
+            cand_feats = rec.get("cand_feats", rec.get("candidate_task_features"))
+            if cand_feats is None:
+                raise KeyError("rec缺少工序特征 'cand_feats' 或 'candidate_task_features'")
+            cand_feats = cand_feats.to(device)
+            task_idx = rec.get("task_idx", rec.get("selected_task_index", 0))
+            cand_embed = self._candidate_embeddings(
+                cand_feats, task_nodes_list[i], hier_dict_list[i], rec, rec.get("query_task_features"))
+            e_ctx_exp = e_ctx.unsqueeze(0).expand(len(cand_feats), -1)
+            task_pair = torch.cat([e_ctx_exp, cand_embed], dim=-1)
+            task_logits = self.task_score_fc(task_pair).squeeze(-1)
+            dist_task = Categorical(logits=task_logits)
+            lp_task = dist_task.log_prob(torch.as_tensor(task_idx, device=device))
+            ent_task = dist_task.entropy()
+
+            # 2. 重放 Head 2: 站位分支对数概率
+            chosen_task_embed = cand_embed[task_idx]
+            branch_input = torch.cat([e_ctx, chosen_task_embed], dim=-1)
+            branch_logits = self.branch_head(branch_input).clone()
+            if self.condition_queries:
+                branch_logits = branch_logits + self.query_branch_score(rec["query_branch_features"].to(device)).squeeze(-1)
+            candidate_masks = rec.get("candidate_branch_masks")
+            if candidate_masks is not None:
+                if len(candidate_masks) != len(cand_feats) or not 0 <= task_idx < len(candidate_masks):
+                    raise ValueError("PPO样本中的候选分支掩码与工序特征数量不匹配")
+                candidate_keys = rec.get("candidate_task_keys", ())
+                if candidate_keys and (
+                    len(candidate_keys) != len(candidate_masks)
+                    or candidate_keys[task_idx] != rec.get("task_key")
+                ):
+                    raise ValueError("PPO样本的工序键与快照候选顺序不匹配")
+                can_reserve, can_postpone = candidate_masks[task_idx]
+                branch = int(rec.get("branch", rec.get("action_branch", -1)))
+                if branch not in (0, 1) or not candidate_masks[task_idx][branch]:
+                    raise ValueError("PPO样本选择了快照掩码禁止的动作分支")
+                if (
+                    bool(can_reserve) != bool(rec.get("can_reserve", True))
+                    or bool(can_postpone) != bool(rec.get("can_postpone", False))
+                ) and "can_reserve" in rec and "can_postpone" in rec:
+                    raise ValueError("PPO样本的分支掩码与所选工序掩码不一致")
+            else:
+                can_reserve = rec.get("can_reserve", True)
+                can_postpone = rec.get("can_postpone", True)
+            if not can_reserve:
+                branch_logits[0] = -1e4
+            if not can_postpone:
+                branch_logits[1] = -1e4
+            dist_branch = Categorical(logits=branch_logits)
+            branch_act = rec.get("branch", rec.get("action_branch", 0))
+            lp_branch = dist_branch.log_prob(torch.as_tensor(branch_act, device=device))
+            ent_branch = dist_branch.entropy()
+
+            # 3. 条件分支截断判定
+            if branch_act == 1:
+                # POSTPONE 分支：仅累加工序与站位
+                log_probs.append(lp_advance + lp_task + lp_branch)
+                entropies.append(ent_advance + ent_task + ent_branch)
+                continue
+
+            # 4. STAY 分支：重放选人与对齐
+            chosen_worker_indices = rec.get(
+                "chosen_worker_indices", rec.get("worker_selection_records", ())
+            )
+            worker_valid_masks = rec.get("worker_valid_masks")
+            if rec.get("sample_record_version") != 2:
+                if len(chosen_worker_indices) > 0:
+                    raise ValueError(
+                        f"工序 {rec.get('task_key', '<unknown>')} 的采样记录版本不支持正式PPO重放；"
+                        "请重新采样，不允许静默按全体工人合法处理"
+                    )
+            elif not isinstance(worker_valid_masks, (tuple, list)) or len(worker_valid_masks) != len(
+                chosen_worker_indices
+            ):
+                raise ValueError(
+                    f"工序 {rec.get('task_key', '<unknown>')} 缺少逐步工人合法掩码快照"
+                )
+            num_st_workers = rec.get("num_st_workers", self.max_station_workers)
+            if num_st_workers > self.max_station_workers:
+                raise ValueError(
+                    f"采样快照工人数量{num_st_workers}超过Actor掩码上限"
+                    f"{self.max_station_workers}"
+                )
+            lp_workers = torch.zeros((), device=device)
+            ent_workers = torch.zeros((), device=device)
+            worker_mask = torch.zeros(self.max_station_workers, dtype=torch.float, device=device)
+            replay_worker_nodes = worker_nodes_list[i]
+            worker_node_indices = rec.get("worker_node_indices", ())
+            worker_bias = None
+            if replay_worker_nodes is not None and worker_node_indices:
+                node_indices = torch.as_tensor(worker_node_indices, device=device)
+                worker_bias = self.worker_graph_score(
+                    replay_worker_nodes[node_indices]
+                ).squeeze(-1)
+
+            for step_w, w_idx in enumerate(chosen_worker_indices):
+                ptr_input = torch.cat([e_ctx, chosen_task_embed, worker_mask], dim=-1)
+                w_logits = self.worker_score_fc(ptr_input).clone()
+                if self.condition_queries:
+                    expected_prefix = tuple(rec["station_worker_ids"][index] for index in chosen_worker_indices[:step_w])
+                    if tuple(rec["worker_prefixes"][step_w]) != expected_prefix:
+                        raise ValueError("PPO工人前缀与采样顺序不一致")
+                    w_logits = w_logits + self.query_worker_score(rec["query_worker_features"][step_w].to(device)).squeeze(-1)
+                if worker_bias is not None:
+                    w_logits[:num_st_workers] = w_logits[:num_st_workers] + worker_bias
+                saved_mask = torch.as_tensor(
+                    worker_valid_masks[step_w], dtype=torch.bool, device=device
+                )
+                if saved_mask.numel() != self.max_station_workers:
+                    raise ValueError(
+                        f"工序 {rec.get('task_key', '<unknown>')} 第{step_w}步掩码长度"
+                        f"{saved_mask.numel()}与Actor输出长度{self.max_station_workers}不符"
+                    )
+                if not 0 <= int(w_idx) < self.max_station_workers or not bool(saved_mask[int(w_idx)]):
+                    raise ValueError(
+                        f"工序 {rec.get('task_key', '<unknown>')} 第{step_w}步所选工人"
+                        f"索引{w_idx}不在采样时合法掩码中"
+                    )
+                w_logits = self._apply_worker_selection_mask(
+                    w_logits,
+                    saved_mask,
+                    task_key=str(rec.get("task_key", "<unknown>")),
+                    step_index=step_w,
+                )
+                dist_w = Categorical(logits=w_logits)
+                lp_workers = lp_workers + dist_w.log_prob(torch.as_tensor(w_idx, device=device))
+                ent_workers = ent_workers + dist_w.entropy()
+                worker_mask[w_idx] = 1.0
+
+            align_input = torch.cat([e_ctx, chosen_task_embed, worker_mask], dim=-1)
+            align_logits = self.align_head(align_input)
+            if self.condition_queries:
+                align_logits = align_logits + self.query_alignment_score(rec["query_alignment_features"].to(device)).squeeze(-1)
+            dist_align = Categorical(logits=align_logits)
+            align_act = rec.get("align", rec.get("align_selection", 0))
+            lp_align = dist_align.log_prob(torch.as_tensor(align_act, device=device))
+            ent_align = dist_align.entropy()
+
+            total_lp = lp_advance + lp_task + lp_branch + lp_workers + lp_align
+            total_ent = ent_advance + ent_task + ent_branch + ent_workers + ent_align
+
+            log_probs.append(total_lp)
+            entropies.append(total_ent)
+
+        return values, torch.stack(log_probs), torch.stack(entropies)

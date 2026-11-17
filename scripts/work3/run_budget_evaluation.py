@@ -22,16 +22,15 @@ import re
 import sys
 from typing import Any
 
+from apal.runtime import legacy_pickle
 import torch
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
-from envs.work3.core_types import ActionBranch
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import ActorCriticWork3
-from scripts.work3.experiment_protocol import build_method_profile
+from apal.envs.work3.core_types import ActionBranch
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import ActorCriticWork3
+from apal.training.work3.protocol import build_method_profile
 from scripts.work3.evaluate_c_vs_d import (
     build_formal_evaluation_agent,
     evaluate_single_trajectory,
@@ -556,7 +555,7 @@ def verify_checkpoint_and_run_contracts(
 
         profile = build_method_profile(v["method"])
         actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64).to(device)
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
         _validate_formal_checkpoint_contract(profile, ckpt, actor)
 
         meta = ckpt.get("run_metadata", {})
@@ -1463,7 +1462,7 @@ def evaluate_scenarios(
     historical_sha256: str | None = None,
     offline: bool = False,
 ) -> tuple[Path, Path]:
-    from runtime.artifacts import create_run_context
+    from apal.runtime.artifacts import create_run_context
     default_dir = create_run_context(REPO_ROOT, experiment_name="work3_budget_evaluation").artifacts_dir
     out_dir = output_dir or default_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1610,7 +1609,7 @@ def main():
                 mode = "cd"
         variants = get_variants_for_mode(mode)
 
-    from runtime.artifacts import create_run_context
+    from apal.runtime.artifacts import create_run_context
     output_dir = args.output_dir or create_run_context(REPO_ROOT, experiment_name="work3_budget_evaluation").artifacts_dir
 
     device_for_meta = "cpu" if args.offline else args.device

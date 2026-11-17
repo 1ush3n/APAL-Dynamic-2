@@ -11,9 +11,9 @@ import sys
 import pytest
 import torch
 
-import scripts.work3.train_ppo_work3 as train_module
-from models.work3.ppo_buffer import PendingTimeLabelCache
-from scripts.work3.train_ppo_work3 import ROOT_DIR, _compare_training_reports, run_training
+import apal.training.work3.train as train_module
+from apal.models.work3.ppo_buffer import PendingTimeLabelCache
+from apal.training.work3.train import ROOT_DIR, _compare_training_reports, run_training
 
 
 def test_seeded_smoke_runs_repeat_initialization_and_event_plan(tmp_path: Path) -> None:
@@ -241,7 +241,7 @@ def test_training_cli_exposes_seed_and_pilot_budget_arguments() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            str(ROOT_DIR / "scripts" / "work3" / "train_ppo_work3.py"),
+            str(ROOT_DIR / 'apal' / 'training' / 'work3' / 'train.py'),
             "--help",
         ],
         cwd=ROOT_DIR,

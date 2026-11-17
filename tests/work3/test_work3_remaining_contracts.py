@@ -59,7 +59,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from envs.work3.core_types import (
+from apal.envs.work3.core_types import (
     ActionBranch,
     CycleExecutionRecord,
     MultiAircraftState,
@@ -68,15 +68,15 @@ from envs.work3.core_types import (
     initialize_multi_aircraft_state,
     validate_cycle_execution_record,
 )
-from envs.work3.decision_snapshot import DecisionSnapshot
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
-from models.work3.actor_critic import (
+from apal.envs.work3.decision_snapshot import DecisionSnapshot
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
+from apal.models.work3.actor_critic import (
     ActorCriticWork3,
     extract_compact_state_features,
 )
-from models.work3.graph_builder import (
+from apal.models.work3.graph_builder import (
     GRAPH_FEATURE_DIMS,
     GRAPH_FEATURE_SCHEMA,
     GRAPH_FEATURE_VERSION,
@@ -84,26 +84,26 @@ from models.work3.graph_builder import (
     get_graph_feature_schema_hash,
     validate_checkpoint_graph_feature_schema,
 )
-from models.work3.heuristic_estimator import (
+from apal.models.work3.heuristic_estimator import (
     compute_cycle_heuristic_cmax,
 )
-from models.work3.potential_shaping import PotentialRewardShaper
-from models.work3.ppo_buffer import (
+from apal.models.work3.potential_shaping import PotentialRewardShaper
+from apal.models.work3.ppo_buffer import (
     PendingTimeLabelCache,
     PPOTransition,
     RolloutBufferWork3,
 )
-from models.work3.ppo_trainer import PPOTrainerWork3
-from models.work3.time_head import TimeResidualHead
-from scripts.work3.experiment_protocol import build_method_profile
-from scripts.work3.train_ppo_work3 import (
+from apal.models.work3.ppo_trainer import PPOTrainerWork3
+from apal.models.work3.time_head import TimeResidualHead
+from apal.training.work3.protocol import build_method_profile
+from apal.training.work3.train import (
     OnlineSnapshotTimeInputs,
     compute_heuristic_potential,
     compute_online_snapshot_time_inputs,
 )
-from training.work3.lightning import Work3LightningModule
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.trajectory_feasibility import (
+from apal.training.work3.lightning import Work3LightningModule
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.trajectory_feasibility import (
     TaskConstraintRecord,
     TrajectoryExecutionRecord,
     validate_trajectory,

@@ -3,11 +3,9 @@ from __future__ import annotations
 import argparse,json,os,shutil,subprocess,sys,tempfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-from runtime.artifacts import create_run_context
-from training.work3.runtime_config import load_work3_runtime_config
+from apal.project import PROJECT_ROOT as ROOT
+from apal.runtime.artifacts import create_run_context
+from apal.training.work3.runtime_config import load_work3_runtime_config
 
 STAGES=("smoke-c","smoke-d","pilot-c","pilot-d","middle-d","stability-d","bridge-c","bridge-d")
 def main():
@@ -19,7 +17,7 @@ def main():
                 pass
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("stage",choices=STAGES)
-    p.add_argument("--repo",type=Path,default=Path(__file__).resolve().parents[2])
+    p.add_argument("--repo",type=Path,default=ROOT)
     p.add_argument("--seed",type=int,default=42)
     p.add_argument("--device",default="cuda:0")
     p.add_argument("--amp",choices=("fp32","bf16"),default="fp32")

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

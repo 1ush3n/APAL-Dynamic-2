@@ -10,22 +10,22 @@ from pathlib import Path
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus, TimeInterval
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import (
+from apal.envs.work3.core_types import ActionBranch, TaskStatus, TimeInterval
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import (
     ActorCriticWork3,
     extract_compact_state_features,
 )
-from models.work3.graph_builder import (
+from apal.models.work3.graph_builder import (
     GRAPH_FEATURE_VERSION,
     MultiAircraftGraphBuilder,
 )
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-from models.work3.time_head import TimeResidualHead
-from models.work3.ppo_trainer import PPOTrainerWork3
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.models.work3.time_head import TimeResidualHead
+from apal.models.work3.ppo_trainer import PPOTrainerWork3
 from scripts.work3.evaluate_c_vs_d import build_formal_evaluation_agent
-from scripts.work3.train_ppo_work3 import compute_online_time_inputs
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.training.work3.train import compute_online_time_inputs
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
 @pytest.fixture
@@ -453,8 +453,8 @@ def test_seven_aircraft_small_full_line_trace_keeps_loads_feasible(
 ) -> None:
     """七架同模板飞机填线、经历扰动并排空，特征与独立账本保持有效。"""
     from scripts.work3.evaluate_c_vs_d import _check_completed_trajectory_feasibility
-    from scripts.work3.train_ppo_work3 import count_actual_scenario_hits
-    from utils.work3.objective_evaluator import evaluate_trajectory_objective
+    from apal.training.work3.train import count_actual_scenario_hits
+    from apal.utils.work3.objective_evaluator import evaluate_trajectory_objective
 
     source = MultiAircraftBaseline.load_from_json(str(baseline_path))
     station_task_ids = (

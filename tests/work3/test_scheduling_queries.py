@@ -11,15 +11,15 @@ from typing import Any
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import ActorCriticWork3
+from apal.envs.work3.core_types import ActionBranch
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import ActorCriticWork3
 
 
 @pytest.mark.parametrize("later_worker", [False, True])
 def test_search_reports_later_station_block_after_waiting_for_workers(later_worker: bool) -> None:
-    from core.constraints import calculate_team_synergy_factor
-    from envs.work3.scheduling_queries import SchedulingQueries
+    from apal.core.constraints import calculate_team_synergy_factor
+    from apal.envs.work3.scheduling_queries import SchedulingQueries
 
     env = AirLineEnvWork3(baseline_json_path=Path("data") / "work3" / "real_680_k10_baseline.json",
                          raw_data_path=Path("data") / "680.csv", max_slots_per_station=2)
@@ -51,8 +51,8 @@ def test_search_reports_later_station_block_after_waiting_for_workers(later_work
 
 
 def test_equivalent_description_keeps_checkpoint_and_mixed_replay_compatible(tmp_path: Path) -> None:
-    from envs.work3.query_program import validate_condition_program
-    from models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.envs.work3.query_program import validate_condition_program
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
 
     torch.set_num_threads(1)
     env = AirLineEnvWork3()
@@ -98,8 +98,8 @@ def test_equivalent_description_keeps_checkpoint_and_mixed_replay_compatible(tmp
 
 def test_continuation_evaluation_preserves_progress_and_initial_cost(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from .test_work3_m02_disturbed_pulse_trace import _two_aircraft_baseline, TEAMS
-    from scripts.work3.evaluate_query import evaluate_query_trajectory
-    from utils.work3.objective_evaluator import ObjectiveWeights
+    from apal.evaluation.query import evaluate_query_trajectory
+    from apal.utils.work3.objective_evaluator import ObjectiveWeights
 
     path = tmp_path / "continuation.json"
     _two_aircraft_baseline(path)
@@ -120,7 +120,7 @@ def test_continuation_evaluation_preserves_progress_and_initial_cost(tmp_path: P
     result = evaluate_query_trajectory(env, actor, reset=False, max_decisions=100,
         scenario={"scenario_id": "续调度", "tau": before_time, "recovery_time": 12.0,
                   "affected_task_keys": ["0_18"], "valid": True})
-    from envs.work3.core_types import TaskStatus
+    from apal.envs.work3.core_types import TaskStatus
     assert seen[0][0] == before_time and seen[0][1] == TaskStatus.COMPLETED
     assert seen[0][2] >= scheduled
     assert seen[0][3] == before_steps
@@ -132,7 +132,7 @@ def test_continuation_evaluation_preserves_progress_and_initial_cost(tmp_path: P
 
 def test_scoped_programs_bind_relations_and_conditions_into_same_policy(tmp_path: Path) -> None:
     from .test_work3_m02_disturbed_pulse_trace import _two_aircraft_baseline, TEAMS
-    from envs.work3.query_program import load_condition_program, compile_condition_program
+    from apal.envs.work3.query_program import load_condition_program, compile_condition_program
 
     torch.set_num_threads(1)
     path = tmp_path / "program_batch.json"
@@ -162,7 +162,7 @@ def test_scoped_programs_bind_relations_and_conditions_into_same_policy(tmp_path
                                              verified_examples=(raw,))
         generated = json.loads(compiled.read_text(encoding="utf-8"))
         generated["review"] = "offline_verified_retrieval_only"
-        from envs.work3.query_program import validate_condition_program
+        from apal.envs.work3.query_program import validate_condition_program
         manual = actor.query_program.execute_candidates(env, snapshot.candidate_task_keys)
         assert validate_condition_program(generated).execute_candidates(env, snapshot.candidate_task_keys) == manual
     keys = snapshots[0].candidate_task_keys
@@ -184,11 +184,11 @@ def test_scoped_programs_bind_relations_and_conditions_into_same_policy(tmp_path
 @pytest.mark.parametrize("relation", ["predecessors", "successors"])
 def test_program_relation_scope_negation_and_rejections(relation: str) -> None:
     import copy
-    from envs.work3.query_program import validate_condition_program
+    from apal.envs.work3.query_program import validate_condition_program
 
     env = AirLineEnvWork3()
     env.reset()
-    from envs.work3.core_types import TaskStatus
+    from apal.envs.work3.core_types import TaskStatus
     child = next(task for task in env.state.tasks.values() if task.aircraft_id == 0 and task.predecessors
                  and env.state.tasks[f"0_{task.predecessors[0]}"].status != TaskStatus.COMPLETED)
     parent = env.state.tasks[f"0_{child.predecessors[0]}"]
@@ -218,7 +218,7 @@ def test_program_relation_scope_negation_and_rejections(relation: str) -> None:
 
 
 def test_query_continuous_slot_prefix_and_read_only() -> None:
-    from envs.work3.scheduling_queries import SchedulingQueries, QueryStatus
+    from apal.envs.work3.scheduling_queries import SchedulingQueries, QueryStatus
 
     env = AirLineEnvWork3()
     env.reset()
@@ -245,7 +245,7 @@ def test_query_continuous_slot_prefix_and_read_only() -> None:
 
 
 def test_query_policy_replays_without_live_queries_and_updates(tmp_path: Path) -> None:
-    from models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
 
     torch.set_num_threads(1)
     torch.manual_seed(42)
@@ -270,7 +270,7 @@ def test_query_policy_replays_without_live_queries_and_updates(tmp_path: Path) -
     assert len(record["worker_prefixes"]) == 2
     assert record["worker_prefixes"][1] == (action["team"][0],)
     assert not torch.equal(record["query_alignment_features"][0], record["query_alignment_features"][1])
-    from envs.work3.scheduling_queries import SchedulingQueries
+    from apal.envs.work3.scheduling_queries import SchedulingQueries
     env.state.current_time += 5.0
     def reject_search(*args: object, **kwargs: object) -> None:
         raise AssertionError("PPO重放不得重新执行查询")
@@ -301,8 +301,8 @@ def test_query_policy_replays_without_live_queries_and_updates(tmp_path: Path) -
 
 
 def test_capacity_efficiency_unknown_predecessor_and_prefix() -> None:
-    from envs.work3.scheduling_queries import SchedulingQueries, QueryStatus
-    from envs.work3.core_types import TaskStatus
+    from apal.envs.work3.scheduling_queries import SchedulingQueries, QueryStatus
+    from apal.envs.work3.core_types import TaskStatus
 
     env = AirLineEnvWork3(max_slots_per_station=1)
     env.reset()
@@ -365,7 +365,7 @@ def test_query_branch_truncation_replays_only_actual_choices(mode: str) -> None:
 
 
 def test_actual_time_cost_closes_without_predicted_shaping() -> None:
-    from utils.work3.objective_evaluator import ObjectiveWeights, evaluate_trajectory_objective
+    from apal.utils.work3.objective_evaluator import ObjectiveWeights, evaluate_trajectory_objective
 
     with pytest.raises(ValueError, match="有限"):
         ObjectiveWeights(w_makespan=float("inf"))
@@ -383,7 +383,7 @@ def test_actual_time_cost_closes_without_predicted_shaping() -> None:
 
 
 def test_query_training_uses_existing_lightning_and_two_workers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import scripts.work3.train_ppo_work3 as training
+    import apal.training.work3.train as training
 
     def reject_time_cache() -> None:
         raise AssertionError("查询路径不应创建时间标签缓存")
@@ -394,7 +394,7 @@ def test_query_training_uses_existing_lightning_and_two_workers(tmp_path: Path, 
                                    query_program_path=Path("conf") / "work3" / "program_predecessor_focus.json",
                                    output_ckpt=tmp_path / "query.pt")
     assert report["lightning_optimization_steps"] == 1
-    from envs.work3.query_program import load_condition_program
+    from apal.envs.work3.query_program import load_condition_program
     checkpoint = torch.load(tmp_path / "query.pt", weights_only=False)
     assert checkpoint["query_program_source"] == load_condition_program(Path("conf") / "work3" / "program_predecessor_focus.json").fingerprint
     assert report["environment_worker_cuda_initialized"] == [False, False]
@@ -402,7 +402,7 @@ def test_query_training_uses_existing_lightning_and_two_workers(tmp_path: Path, 
 
 @pytest.mark.parametrize("bad_result", [None, [], "bad"], ids=["null", "array", "string"])
 def test_non_object_program_retries_with_feedback_and_keeps_review_gate(tmp_path: Path, bad_result: Any) -> None:
-    from envs.work3.query_program import compile_condition_program, load_condition_program
+    from apal.envs.work3.query_program import compile_condition_program, load_condition_program
 
     source = json.loads((Path("conf") / "work3" / "condition_program.json").read_text(encoding="utf-8"))
     feedbacks: list[str] = []
@@ -431,7 +431,7 @@ def test_non_object_program_retries_with_feedback_and_keeps_review_gate(tmp_path
 
 @pytest.mark.parametrize("bad_result", [None, [], "bad"], ids=["null", "array", "string"])
 def test_non_object_program_stops_at_attempt_limit_without_cache(tmp_path: Path, bad_result: Any) -> None:
-    from envs.work3.query_program import compile_condition_program
+    from apal.envs.work3.query_program import compile_condition_program
 
     calls = 0
 
@@ -448,7 +448,7 @@ def test_non_object_program_stops_at_attempt_limit_without_cache(tmp_path: Path,
 
 def test_offline_program_binds_real_candidate_and_reuses_plan(tmp_path: Path) -> None:
     import json
-    from envs.work3.query_program import load_condition_program, validate_condition_program, compile_condition_program
+    from apal.envs.work3.query_program import load_condition_program, validate_condition_program, compile_condition_program
 
     program = load_condition_program(Path("conf") / "work3" / "condition_program.json")
     env = AirLineEnvWork3()
@@ -474,9 +474,9 @@ def test_offline_program_binds_real_candidate_and_reuses_plan(tmp_path: Path) ->
 
 @pytest.mark.parametrize("disturbed", [False, True])
 def test_query_network_completes_real_two_aircraft_batch(tmp_path: Path, disturbed: bool) -> None:
-    from scripts.work3.evaluate_query import evaluate_query_trajectory
+    from apal.evaluation.query import evaluate_query_trajectory
     from .test_work3_m02_disturbed_pulse_trace import _two_aircraft_baseline
-    from utils.work3.objective_evaluator import ObjectiveWeights
+    from apal.utils.work3.objective_evaluator import ObjectiveWeights
 
     torch.set_num_threads(1)
     torch.manual_seed(42)

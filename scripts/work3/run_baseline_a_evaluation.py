@@ -27,12 +27,10 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
-from envs.work3.core_types import TaskStatus
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
 from scripts.work3.baseline_repair_agent import (
     BaselinePlanRepairAgent,
     BaselineRepairInfeasibleError,
@@ -41,7 +39,7 @@ from scripts.work3.evaluate_c_vs_d import (
     PERCENTAGE_DENOMINATOR_THRESHOLD,
     evaluate_single_trajectory,
 )
-from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
+from apal.utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1029,7 +1027,7 @@ def export_csv_files(
 
 
 def main():
-    from runtime.artifacts import create_run_context
+    from apal.runtime.artifacts import create_run_context
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--baseline",

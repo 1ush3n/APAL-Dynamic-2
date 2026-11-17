@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
 from scripts.work3.evaluate_c_vs_d import (
     _check_completed_trajectory_feasibility,
     evaluate_single_trajectory,
 )
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.objective_evaluator import (
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.objective_evaluator import (
     ObjectiveWeights,
     evaluate_trajectory_objective,
 )

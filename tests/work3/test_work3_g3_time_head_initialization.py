@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from training.work3.runtime_config import (
+from apal.training.work3.runtime_config import (
     load_work3_runtime_config,
     validate_time_head_initialization,
     validate_work3_runtime_config,
@@ -56,6 +56,6 @@ def test_explicit_paired_load_rejects_checkpoint_until_protocol_exists(
 
 def test_runtime_config_rejects_legacy_independent_head_path() -> None:
     config = load_work3_runtime_config(ROOT / "conf/work3/train_pilot.yaml")
-    config.paths.time_head_checkpoint = "models/work3/checkpoints/time_head_best.pt"
+    config.paths.time_head_checkpoint = "runs/work3_legacy/imported_dbc33c9/checkpoints/time_head_best.pt"
     with pytest.raises(ValueError, match="随机初始化.*检查点路径必须为空"):
         validate_work3_runtime_config(config)

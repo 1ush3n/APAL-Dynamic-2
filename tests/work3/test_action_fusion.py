@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
+from apal.models.work3.action_fusion import TimeContextFusion, compute_time_urgency_vector
 
 
 def test_time_urgency_vector_calculation() -> None:

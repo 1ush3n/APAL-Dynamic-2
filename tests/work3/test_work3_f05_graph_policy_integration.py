@@ -10,13 +10,13 @@ import pytest
 import torch
 from torch_geometric.data import HeteroData
 
-from envs.work3.core_types import ActionBranch
-from envs.work3.decision_snapshot import DecisionSnapshot, TeamCompletionContext, WorkerSnapshot
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.envs.work3.core_types import ActionBranch
+from apal.envs.work3.decision_snapshot import DecisionSnapshot, TeamCompletionContext, WorkerSnapshot
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.action_fusion import compute_time_urgency_vector
+from apal.models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
+from apal.models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 
 
 @pytest.fixture
@@ -518,8 +518,8 @@ def test_training_entry_traces_graph_policy_and_updates_graph_parameters(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """真实训练入口应构图、使用图表征完成动作，并更新图编码器。"""
-    from models.work3.actor_critic import ActorCriticWork3
-    from scripts.work3.train_ppo_work3 import run_training
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.training.work3.train import run_training
 
     trace: dict[str, Any] = {
         "sampled_actions": [],
@@ -611,7 +611,7 @@ def test_training_entry_traces_graph_policy_and_updates_graph_parameters(
 
 def test_legacy_actor_checkpoint_can_be_loaded(baseline_path: Path) -> None:
     """已有工作三旧 Actor 检查点应显式兼容，不阻塞图策略接入。"""
-    checkpoint = Path("models/work3/checkpoints/method_d_model.pt")
+    checkpoint = Path("runs/work3_legacy/imported_dbc33c9/checkpoints/method_d_model.pt")
     if not checkpoint.is_file():
         pytest.skip(f"{checkpoint} 不存在")
     data = torch.load(checkpoint, map_location="cpu", weights_only=False)

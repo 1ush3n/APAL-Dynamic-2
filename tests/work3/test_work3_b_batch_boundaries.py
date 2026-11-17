@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

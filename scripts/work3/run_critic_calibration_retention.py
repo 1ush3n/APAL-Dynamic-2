@@ -32,26 +32,25 @@ import sys
 import time
 from typing import Any, Mapping, Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
 import numpy as np
+from apal.runtime import legacy_pickle
 import torch
 
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import ActorCriticWork3
-from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_SCHEMA, GRAPH_FEATURE_VERSION
-from models.work3.ppo_buffer import RolloutBufferWork3
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import ActorCriticWork3
+from apal.models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_SCHEMA, GRAPH_FEATURE_VERSION
+from apal.models.work3.ppo_buffer import RolloutBufferWork3
 from scripts.work3.evaluate_c_vs_d import (
     FormalEvaluationAgent,
     evaluate_single_trajectory,
 )
-from scripts.work3.experiment_protocol import build_method_profile
-from scripts.work3.train_ppo_work3 import compute_heuristic_potential
-from training.work3.lightning import Work3TrainingUpdate
-from utils.work3.objective_evaluator import build_objective_report, evaluate_trajectory_objective
-from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
+from apal.training.work3.protocol import build_method_profile
+from apal.training.work3.train import compute_heuristic_potential
+from apal.training.work3.lightning import Work3TrainingUpdate
+from apal.utils.work3.objective_evaluator import build_objective_report, evaluate_trajectory_objective
+from apal.utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
 from scripts.work3.c_reproduction_protocol import (
     actor_fingerprint,
     clone_actor_state,
@@ -72,7 +71,7 @@ BASE_DIR = REPO_ROOT / "tests" / "fixtures" / "work3" / "local_history"
 RULE_BASELINE_DIR = BASE_DIR / "rule_baseline_ac_v1"
 BC_DIR = BASE_DIR / "c_reproduction_diagnostic_v1" / "seed42"
 CONTROL_DIR = BASE_DIR / "bc_ppo_retention_v1" / "seed42"
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 
 RUN_CONTEXT = create_run_context(REPO_ROOT, experiment_name="work3_critic_calibration_retention_v1",
                                  run_id=os.environ.get("APAL_WORK3_LEGACY_RUN_ID"))
@@ -150,7 +149,7 @@ def log(message: str) -> None:
 
 def load_calibrated_actor(path: Path) -> tuple[ActorCriticWork3, dict[str, Any]]:
     """严格加载本轮的“已校准副本”格式（与 PPO 检查点是不同格式，不混用）。"""
-    payload = torch.load(path, map_location="cpu", weights_only=False)
+    payload = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     if not isinstance(payload, dict) or payload.get("diagnostic_format") != CAL_MODEL_FORMAT:
         raise ValueError(f"不是校准副本格式: {path}")
     if int(payload.get("diagnostic_format_version", -1)) != 1:
@@ -384,7 +383,7 @@ def stage_errata() -> int:
 
 def stage_offline() -> int:
     enforce_single_thread_cpu()
-    rollout = torch.load(CONTROL_FIRST_ROLLOUT, map_location="cpu", weights_only=False)
+    rollout = torch.load(CONTROL_FIRST_ROLLOUT, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     model, _payload = load_diagnostic_actor(
         BC_WEIGHTS,
         expected_teacher_manifest_sha256=load_json(BC_MANIFEST)["teacher"]["manifest_sha256"],
@@ -805,7 +804,7 @@ def stage_calibrate() -> int:
 
 
 def _cmax(env: AirLineEnvWork3) -> float:
-    from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+    from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 
     return float(compute_cycle_heuristic_cmax(env.state))
 
@@ -992,7 +991,7 @@ def stage_train() -> int:
     control = load_json(CONTROL_SUMMARY)
     hyper = control["hyperparameters"]
     fit = load_json(CAL_FIT)
-    calibration_payload = torch.load(CAL_MODEL, map_location="cpu", weights_only=False)
+    calibration_payload = torch.load(CAL_MODEL, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     if sha256_file(BC_WEIGHTS) != calibration_payload["source_bc_sha256"]:
         raise ValueError("校准副本记录的源 BC SHA 与当前文件不一致")
 
@@ -1379,8 +1378,8 @@ def stage_train() -> int:
 def verify_first_rollout_pairing() -> dict[str, Any]:
     if not PPO_FIRST_ROLLOUT.is_file() or not CONTROL_FIRST_ROLLOUT.is_file():
         return {"paired": False, "reason": "first_rollout 缺失"}
-    ours = torch.load(PPO_FIRST_ROLLOUT, map_location="cpu", weights_only=False)
-    control = torch.load(CONTROL_FIRST_ROLLOUT, map_location="cpu", weights_only=False)
+    ours = torch.load(PPO_FIRST_ROLLOUT, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
+    control = torch.load(CONTROL_FIRST_ROLLOUT, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     same_states = bool(torch.allclose(ours["state_feats"], control["state_feats"], atol=0.0, rtol=0.0))
     same_actions = [_action_signature(a) for a in ours["actions"]] == [
         _action_signature(a) for a in control["actions"]
@@ -1563,7 +1562,7 @@ def stage_verify() -> int:
 def build_weight_integrity() -> dict[str, Any]:
     manifest = load_json(BC_MANIFEST)
     bc_sha = sha256_file(BC_WEIGHTS)
-    calibrated = torch.load(CAL_MODEL, map_location="cpu", weights_only=False)
+    calibrated = torch.load(CAL_MODEL, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     invariance = load_json(CAL_INVARIANCE)
     pairing = load_json(PPO_PAIRING) if PPO_PAIRING.is_file() else {"paired": False}
     checkpoints = []
@@ -1571,7 +1570,7 @@ def build_weight_integrity() -> dict[str, Any]:
         path = PPO_CKPT_DIR / f"step{point:04d}.pt"
         if not path.is_file():
             continue
-        payload = torch.load(path, map_location="cpu", weights_only=False)
+        payload = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
         recomputed = state_dict_fingerprint(payload["actor_critic_state"])
         checkpoints.append(
             {

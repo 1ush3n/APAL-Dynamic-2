@@ -20,10 +20,10 @@ import pytest
 import torch
 from torch_geometric.data import Batch, HeteroData
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.graph_builder import MultiAircraftGraphBuilder, Work3ResourceConfig
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.graph_builder import MultiAircraftGraphBuilder, Work3ResourceConfig
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
 @pytest.fixture
@@ -153,7 +153,7 @@ def test_graph_building_latency_performance(baseline_path: str) -> None:
 
 def test_task_status_one_hot_encoding(baseline_path: str) -> None:
     """测试状态独热编码与枚举对齐（包含 POSTPONED 状态在槽位 4 的准确置 1）。"""
-    from envs.work3.core_types import TaskStatus
+    from apal.envs.work3.core_types import TaskStatus
 
     baseline = MultiAircraftBaseline.load_from_json(baseline_path)
     builder = MultiAircraftGraphBuilder(baseline)

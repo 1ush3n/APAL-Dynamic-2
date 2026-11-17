@@ -17,10 +17,10 @@ from pathlib import Path
 import random
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.objective_evaluator import (
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.objective_evaluator import (
     ObjectiveBreakdown,
     ObjectiveWeights,
     calculate_postpone_penalty,

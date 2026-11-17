@@ -7,9 +7,9 @@ import random
 
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3, NoFeasibleSlotError
-from envs.work3.event_queue import EventType
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3, NoFeasibleSlotError
+from apal.envs.work3.event_queue import EventType
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

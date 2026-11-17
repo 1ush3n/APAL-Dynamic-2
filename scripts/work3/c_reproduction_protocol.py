@@ -22,10 +22,11 @@ from itertools import permutations
 from pathlib import Path
 from typing import Any
 
+from apal.runtime import legacy_pickle
 import torch
 
-from envs.work3.core_types import ActionBranch
-from envs.work3.decision_snapshot import (
+from apal.envs.work3.core_types import ActionBranch
+from apal.envs.work3.decision_snapshot import (
     DecisionSnapshot,
     team_completion_worker_ids,
     worker_completion_mask,
@@ -35,10 +36,10 @@ from envs.work3.decision_snapshot import (
 # 常量与路径
 # ---------------------------------------------------------------------------
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+from apal.project import PROJECT_ROOT as REPO_ROOT
 BASE_DIR = REPO_ROOT / "tests" / "fixtures" / "work3" / "local_history"
 RULE_BASELINE_DIR = BASE_DIR / "rule_baseline_ac_v1"
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 
 RUN_CONTEXT = create_run_context(REPO_ROOT, experiment_name="work3_c_reproduction_diagnostic_v1",
                                  run_id=os.environ.get("APAL_WORK3_LEGACY_RUN_ID"))
@@ -162,7 +163,7 @@ def gpu_memory_snapshot() -> dict[str, int]:
 
 def build_c_time_features(state: Any, cmax: float, device: str | torch.device = "cpu") -> torch.Tensor:
     """构造 C profile 的 12 维时间特征：2 维紧迫度 + 5 维零残差 + 5 维占用。"""
-    from models.work3.action_fusion import compute_time_urgency_vector
+    from apal.models.work3.action_fusion import compute_time_urgency_vector
 
     urgency = compute_time_urgency_vector(
         estimated_r=max(0.0, float(cmax) - float(state.current_time)),
@@ -181,7 +182,7 @@ def build_c_time_features(state: Any, cmax: float, device: str | torch.device = 
 
 
 def build_c_state_features(state: Any, cmax: float) -> torch.Tensor:
-    from models.work3.actor_critic import extract_compact_state_features
+    from apal.models.work3.actor_critic import extract_compact_state_features
 
     return extract_compact_state_features(state, float(cmax))
 
@@ -836,12 +837,12 @@ def build_diagnostic_checkpoint(
     training_summary: Mapping[str, Any],
     snapshot_contract: Mapping[str, Any],
 ) -> dict[str, Any]:
-    from models.work3.graph_builder import (
+    from apal.models.work3.graph_builder import (
         GRAPH_FEATURE_DIMS,
         GRAPH_FEATURE_SCHEMA,
         GRAPH_FEATURE_VERSION,
     )
-    from scripts.work3.experiment_protocol import build_method_profile
+    from apal.training.work3.protocol import build_method_profile
 
     state = {name: tensor.detach().to(device="cpu").clone() for name, tensor in model.state_dict().items()}
     return {
@@ -882,16 +883,16 @@ def load_diagnostic_actor(
     expected_teacher_manifest_sha256: str | None = None,
 ) -> tuple[torch.nn.Module, dict[str, Any]]:
     """严格校验本轮自定义诊断格式后构造 Actor；任何偏差直接拒绝。"""
-    from models.work3.actor_critic import ActorCriticWork3
-    from models.work3.graph_builder import (
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.graph_builder import (
         GRAPH_FEATURE_DIMS,
         GRAPH_FEATURE_SCHEMA,
         GRAPH_FEATURE_VERSION,
     )
-    from scripts.work3.experiment_protocol import build_method_profile
+    from apal.training.work3.protocol import build_method_profile
 
     path = Path(checkpoint_path)
-    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     if not isinstance(checkpoint, dict):
         raise ValueError("诊断检查点必须是字典")
     if checkpoint.get("diagnostic_format") != DIAGNOSTIC_FORMAT:

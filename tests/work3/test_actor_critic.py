@@ -17,10 +17,10 @@ from pathlib import Path
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.actor_critic import ActorCriticWork3, extract_candidate_task_features
+from apal.envs.work3.core_types import ActionBranch
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.action_fusion import compute_time_urgency_vector
+from apal.models.work3.actor_critic import ActorCriticWork3, extract_candidate_task_features
 
 
 @pytest.fixture

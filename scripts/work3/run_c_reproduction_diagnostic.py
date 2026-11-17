@@ -27,23 +27,22 @@ import sys
 import time
 from typing import Any, Mapping, Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
+from apal.runtime import legacy_pickle
 import torch
 
-from envs.work3.core_types import TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import ActorCriticWork3
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.envs.work3.core_types import TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import ActorCriticWork3
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
 from scripts.work3.evaluate_c_vs_d import (
     FormalEvaluationAgent,
     build_formal_evaluation_agent,
     evaluate_single_trajectory,
 )
 from scripts.work3.baseline_repair_agent import BaselinePlanRepairAgent
-from scripts.work3.experiment_protocol import build_method_profile
+from apal.training.work3.protocol import build_method_profile
 import scripts.work3.c_reproduction_protocol as protocol
 from scripts.work3.c_reproduction_protocol import (
     BASELINE_PATH,
@@ -146,7 +145,7 @@ def write_json(path: Path, payload: Any) -> None:
 def read_teacher_bundle() -> dict[str, Any]:
     if not TEACHER_SNAPSHOTS.is_file():
         raise FileNotFoundError(f"缺少教师样本文件: {TEACHER_SNAPSHOTS}")
-    bundle = torch.load(TEACHER_SNAPSHOTS, map_location="cpu", weights_only=False)
+    bundle = torch.load(TEACHER_SNAPSHOTS, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     if bundle.get("schema_version") != protocol.TEACHER_SNAPSHOT_VERSION:
         raise ValueError("教师样本 schema 版本不匹配")
     samples = bundle.get("samples")
@@ -194,7 +193,7 @@ def load_original_c_actor() -> tuple[FormalEvaluationAgent, dict[str, Any]]:
     if not ORIGINAL_C_WEIGHTS.is_file():
         raise FileNotFoundError(f"缺少原 C 检查点: {ORIGINAL_C_WEIGHTS}")
     agent = build_formal_evaluation_agent("C", ORIGINAL_C_WEIGHTS, device="cpu")
-    checkpoint = torch.load(ORIGINAL_C_WEIGHTS, map_location="cpu", weights_only=False)
+    checkpoint = torch.load(ORIGINAL_C_WEIGHTS, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     return agent, checkpoint
 
 
@@ -361,7 +360,7 @@ def build_input_visibility_report(
     samples: Sequence[Mapping[str, Any]],
     baseline: Mapping[str, Any],
 ) -> dict[str, Any]:
-    from models.work3.graph_builder import (
+    from apal.models.work3.graph_builder import (
         GRAPH_FEATURE_DIMS,
         GRAPH_FEATURE_SCHEMA,
         GRAPH_FEATURE_VERSION,
@@ -1808,7 +1807,7 @@ def verify_snapshot_contract(samples: Sequence[Mapping[str, Any]]) -> dict[str, 
 
 
 def bundle_graph_version() -> str:
-    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
+    from apal.models.work3.graph_builder import GRAPH_FEATURE_VERSION
 
     return GRAPH_FEATURE_VERSION
 
@@ -1879,7 +1878,7 @@ def stage_report() -> int:
     trajectory_verification = load_json(TRAJECTORY_VERIFICATION)
     provenance = load_json(OUTPUT_DIR / "original_c_provenance.json")
     comparison = load_json(OUTPUT_DIR / "trajectory_comparison.json")
-    diagnostic_checkpoint = torch.load(DIAGNOSTIC_ACTOR, map_location="cpu", weights_only=False)
+    diagnostic_checkpoint = torch.load(DIAGNOSTIC_ACTOR, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     gate = diagnostic_checkpoint["training"]
 
     rows = [
@@ -2583,7 +2582,7 @@ def build_summary_markdown(
 
 def diagnostic_checkpoint_format() -> str:
     try:
-        payload = torch.load(DIAGNOSTIC_ACTOR, map_location="cpu", weights_only=False)
+        payload = torch.load(DIAGNOSTIC_ACTOR, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
         return str(payload.get("diagnostic_format"))
     except Exception:
         return DIAGNOSTIC_FORMAT

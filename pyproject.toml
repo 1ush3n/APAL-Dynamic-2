@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apal-dynamic"
+version = "0.1.0"
+description = "飞机脉动装配线调度研究代码"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+include = ["apal*", "scripts*"]

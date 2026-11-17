@@ -24,15 +24,14 @@ import sys
 import time
 from typing import Any
 
+from apal.runtime import legacy_pickle
 import torch
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
-from envs.work3.core_types import ActionBranch
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import ActorCriticWork3, DecisionSnapshot
+from apal.envs.work3.core_types import ActionBranch
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import ActorCriticWork3, DecisionSnapshot
 from scripts.work3.baseline_repair_agent import BaselinePlanRepairAgent
 from scripts.work3.evaluate_c_vs_d import (
     compute_cycle_heuristic_cmax,
@@ -275,7 +274,7 @@ def run_reachability_diagnostic(
 ) -> dict[str, Any]:
     """对标准 C 模型进行 A 动作可达性与概率诊断全流程。"""
     logger.info(f"加载标准 C 模型检查点: {checkpoint_path} ...")
-    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     actor = ActorCriticWork3(state_dim=32, task_feat_dim=8, hidden_dim=64).to(device)
     actor.load_state_dict(ckpt["actor_critic_state"])
     actor.eval()
@@ -500,7 +499,7 @@ def run_reachability_diagnostic(
 
 
 def main():
-    from runtime.artifacts import create_run_context
+    from apal.runtime.artifacts import create_run_context
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--checkpoint",

@@ -17,16 +17,16 @@ import time
 import pytest
 import torch
 
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
-from models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
 from scripts.work3.evaluate_c_vs_d import build_formal_evaluation_agent, evaluate_single_trajectory
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 BASELINE_JSON = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
 SCENARIOS_JSON = ROOT_DIR / "data" / "work3" / "scenarios_9class.json"
 EVAL_M5_JSON = ROOT_DIR / "data" / "work3" / "eval_c_vs_d_m5.json"
-METHOD_D_CKPT = ROOT_DIR / "models" / "work3" / "checkpoints" / "method_d_model.pt"
+METHOD_D_CKPT = ROOT_DIR / 'runs' / 'work3_legacy' / 'imported_dbc33c9' / 'checkpoints' / 'method_d_model.pt'
 
 CANONICAL_SCENARIOS = [
     "EARLY_LOW_S0",

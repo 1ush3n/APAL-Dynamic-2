@@ -28,42 +28,41 @@ import sys
 import time
 from typing import Any, Mapping, Sequence
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+from apal.project import PROJECT_ROOT as ROOT_DIR
 
+from apal.runtime import legacy_pickle
 import torch
 
-from envs.work3.core_types import ADVANCE_CAUSES, ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-from models.work3.heuristic_agent import HeuristicAgentWork3
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-from models.work3.time_head import TimeResidualHead
-from models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
+from apal.envs.work3.core_types import ADVANCE_CAUSES, ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.action_fusion import compute_time_urgency_vector
+from apal.models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.models.work3.time_head import TimeResidualHead
+from apal.models.work3.ppo_trainer import PPO_CHECKPOINT_VERSION
 from scripts.work3.baseline_repair_agent import (
     BaselinePlanRepairAgent,
     BaselineRepairInfeasibleError,
 )
-from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
-from scripts.work3.experiment_protocol import Work3MethodProfile, build_method_profile
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.objective_evaluator import (
+from apal.data.work3.validation_trajectories import load_scenarios_for_split
+from apal.training.work3.protocol import Work3MethodProfile, build_method_profile
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.objective_evaluator import (
     build_objective_report,
     evaluate_trajectory_objective,
 )
-from utils.work3.disturbance_generator import (
+from apal.utils.work3.disturbance_generator import (
     DISTURBANCE_DEFINITION,
     DISTURBANCE_LABEL,
     DISTURBANCE_LEGACY_NAMES,
     DISTURBANCE_METRIC_SEMANTICS,
     DISTURBANCE_TYPE,
 )
-from utils.work3.trajectory_feasibility import (
+from apal.utils.work3.trajectory_feasibility import (
     check_environment_trajectory_feasibility,
 )
-from utils.work3.uniform_baseline_warmup import (
+from apal.utils.work3.uniform_baseline_warmup import (
     UniformBaselineWarmupResult,
     run_uniform_baseline_warmup,
     validate_scenario_after_warmup,
@@ -201,7 +200,7 @@ def _validate_formal_checkpoint_contract(
     actor: ActorCriticWork3,
 ) -> None:
     """拒绝缺少训练来源、配置指纹或与方法profile不一致的推理权重。"""
-    from models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
+    from apal.models.work3.graph_builder import GRAPH_FEATURE_DIMS, GRAPH_FEATURE_VERSION
 
     metadata = checkpoint.get("run_metadata")
     expected_profile = asdict(profile)
@@ -376,8 +375,8 @@ def build_formal_evaluation_agent(
             time_head.eval()
         return FormalEvaluationAgent(profile, actor, time_head, debug_random=True)
 
-    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
-    from models.work3.graph_builder import (
+    checkpoint = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
+    from apal.models.work3.graph_builder import (
         GRAPH_FEATURE_DIMS,
         GRAPH_FEATURE_VERSION,
         get_graph_feature_schema_hash,
@@ -1241,8 +1240,8 @@ def run_benchmark_evaluation(
     baseline_path: str = "data/work3/real_283_k10_baseline.json",
     scenarios_path: str = "data/work3/scenarios_9class.json",
     scenario_split_path: str | Path | None = None,
-    method_c_ckpt: str = "models/work3/checkpoints/method_c_model.pt",
-    method_d_ckpt: str = "models/work3/checkpoints/method_d_model.pt",
+    method_c_ckpt: str = "runs/work3_legacy/imported_dbc33c9/checkpoints/method_c_model.pt",
+    method_d_ckpt: str = "runs/work3_legacy/imported_dbc33c9/checkpoints/method_d_model.pt",
     selected_scenario_ids: list[str] | None = None,
     output_json: str = "data/work3/eval_c_vs_d_m5.json",
     device: str = "cpu",
@@ -1457,8 +1456,8 @@ def main() -> None:
     parser.add_argument("--baseline", type=str, default="data/work3/real_283_k10_baseline.json")
     parser.add_argument("--scenarios", type=str, default="data/work3/scenarios_9class.json")
     parser.add_argument("--scenario-split", type=str, default="data/work3/experiment_splits/test.json")
-    parser.add_argument("--c-ckpt", type=str, default="models/work3/checkpoints/method_c_model.pt")
-    parser.add_argument("--d-ckpt", type=str, default="models/work3/checkpoints/method_d_model.pt")
+    parser.add_argument("--c-ckpt", type=str, default="runs/work3_legacy/imported_dbc33c9/checkpoints/method_c_model.pt")
+    parser.add_argument("--d-ckpt", type=str, default="runs/work3_legacy/imported_dbc33c9/checkpoints/method_d_model.pt")
     parser.add_argument("--output", type=str, default="data/work3/eval_c_vs_d_m5.json")
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument(

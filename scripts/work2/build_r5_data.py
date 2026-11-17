@@ -9,33 +9,31 @@ import sys
 from pathlib import Path
 from typing import Any
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+from apal.project import PROJECT_ROOT as PROJECT_ROOT
 
-from configs import configs
-from runtime.hydra_config import (
+from apal.configs import configs
+from apal.runtime.hydra_config import (
     ExtraArgument,
     HydraCliError,
     hydra_help,
     initialize_hydra_runtime,
     should_show_help,
 )
-from runtime.five_skill_schema import REQUIRED_SKILL_IDS, validate_explicit_five_skill_csv
-from runtime.paths import resolve_workspace_path
-from runtime.reschedule_manifest import (
+from apal.runtime.five_skill_schema import REQUIRED_SKILL_IDS, validate_explicit_five_skill_csv
+from apal.runtime.paths import resolve_workspace_path
+from apal.runtime.reschedule_manifest import (
     load_reschedule_manifest,
     to_manifest_path,
     validate_r5_manifest_assets,
 )
-from scripts.prepare_reschedule_data import (
+from apal.data.reschedule import (
     _as_path_list,
     _ensure_safe_output_dir,
     _generate_baseline,
     _sha256,
 )
-from utils.generate_random_dataset import generate_bucket
-from utils.reschedule_r5 import write_r5_scenario_library
+from apal.utils.generate_random_dataset import generate_bucket
+from apal.utils.reschedule_r5 import write_r5_scenario_library
 
 
 PREPARE_ARGS = {

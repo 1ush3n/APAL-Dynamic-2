@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+import multiprocessing as mp
+import os
+import sys
+from pathlib import Path
+
+# 必须在任何可能导入 PyTorch 的模块之前设置，供 CUDA 确定性矩阵乘法使用。
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+
+from apal.configs import configs
+from apal.runtime.hydra_config import (
+    HydraCliError,
+    hydra_help,
+    initialize_hydra_runtime,
+    should_show_help,
+)
+
+from apal.project import PROJECT_ROOT as PROJECT_ROOT
+
+
+def main(argv: list[str] | None = None) -> int:
+    raw_args = list(sys.argv[1:] if argv is None else argv)
+    if should_show_help(raw_args):
+        print(hydra_help())
+        return 0
+
+    try:
+        args = initialize_hydra_runtime(
+            raw_args,
+            target=configs,
+            project_root=PROJECT_ROOT,
+            default_experiment="default",
+        )
+    except (HydraCliError, KeyError, ValueError, RuntimeError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    if sys.platform == "win32":
+        try:
+            mp.set_start_method("spawn", force=True)
+        except RuntimeError:
+            pass
+    mp.freeze_support()
+
+    from apal.training.entry import run as run_lightning
+
+    run_lightning(args, config_initialized=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

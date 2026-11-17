@@ -18,15 +18,15 @@ from pathlib import Path
 import pytest
 import torch
 
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.heuristic_agent import HeuristicAgentWork3
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-import scripts.work3.collect_validation_trajectories as collection_module
-from scripts.work3.collect_validation_trajectories import (
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+import apal.data.work3.validation_trajectories as collection_module
+from apal.data.work3.validation_trajectories import (
     collect_single_trajectory,
     extract_compact_state_features,
 )
-from utils.work3.uniform_baseline_warmup import UniformBaselineWarmupResult
+from apal.utils.work3.uniform_baseline_warmup import UniformBaselineWarmupResult
 
 
 def test_collector_script_cli_runs_from_repository_root_without_pythonpath() -> None:

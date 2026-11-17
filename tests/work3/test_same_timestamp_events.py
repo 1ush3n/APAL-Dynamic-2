@@ -8,13 +8,13 @@ from pathlib import Path
 
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-from models.work3.time_head import TimeResidualHead
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.models.work3.action_fusion import compute_time_urgency_vector
+from apal.models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.models.work3.time_head import TimeResidualHead
 from scripts.work3.evaluate_c_vs_d import summarize_disturbance_effects
 
 

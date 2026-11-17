@@ -100,7 +100,7 @@ def build_train_command(
         raise ValueError("max_episodes、num_envs、batch_size 必须为正数")
     return [
         sys.executable,
-        "train.py",
+        'apal/training/cli.py',
         "experiment=full_joint_diagnostic",
         f"experiment.experiment_name={job.run_name}",
         f"seed={job.seed}",

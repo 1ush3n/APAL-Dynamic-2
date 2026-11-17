@@ -42,11 +42,9 @@ from pathlib import Path
 import sys
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
-from utils.work3.objective_evaluator import ObjectiveWeights, calculate_postpone_penalty
+from apal.utils.work3.objective_evaluator import ObjectiveWeights, calculate_postpone_penalty
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("VerifyTrajectoryFacts")
@@ -698,7 +696,7 @@ def verify_all_trajectories(
 
 
 def main() -> None:
-    from runtime.artifacts import create_run_context
+    from apal.runtime.artifacts import create_run_context
     parser = argparse.ArgumentParser(description="Independent Trajectory Facts & Cost Verifier")
     parser.add_argument(
         "--traj-dir",

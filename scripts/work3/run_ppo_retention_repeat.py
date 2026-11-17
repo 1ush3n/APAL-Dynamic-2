@@ -15,13 +15,12 @@ import time
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+from apal.runtime import legacy_pickle
 import torch
 
-ROOT = Path(__file__).resolve().parents[2]
+from apal.project import PROJECT_ROOT as ROOT
 BASE = ROOT / "tests" / "fixtures" / "work3" / "local_history"
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 
 RUN_CONTEXT = create_run_context(ROOT, experiment_name="work3_ppo_retention_repeat_v1",
                                  run_id=os.environ.get("APAL_WORK3_LEGACY_RUN_ID"))
@@ -201,11 +200,11 @@ def _source_files() -> list[tuple[Path, str]]:
         (Path(__file__).resolve().parent / "c_reproduction_protocol.py", "事实、probe 与指纹合同"),
         (Path(__file__).resolve().parent / "verify_trajectory_facts.py", "独立物理轨迹事实核验器"),
         (Path(__file__).resolve().parent / "verify_shaping_trace.py", "塑形及边界独立核验器"),
-        (ROOT / "training" / "work3" / "lightning.py", "正式 PPO 更新与损失"),
-        (ROOT / "training" / "work3" / "vector_env.py", "单环境 spawn 实现"),
-        (ROOT / "models" / "work3" / "actor_critic.py", "图策略及条件动作实现"),
+        (ROOT / 'apal' / 'training' / 'work3' / 'lightning.py', "正式 PPO 更新与损失"),
+        (ROOT / 'apal' / 'training' / 'work3' / 'vector_env.py', "单环境 spawn 实现"),
+        (ROOT / 'apal' / 'models' / 'work3' / 'actor_critic.py', "图策略及条件动作实现"),
         (Path(__file__), "本轮复核入口"),
-        (ROOT / "tests" / "test_ppo_retention_repeat.py", "本轮新增合同测试"),
+        (ROOT / 'tests' / 'work3' / 'legacy' / 'test_ppo_retention_repeat.py', "本轮新增合同测试"),
     ]
 
 
@@ -431,7 +430,7 @@ def _probe_checkpoint(out: Path, arm: str, point: int) -> int:
     model, _payload = calibration.load_calibrated_actor(checkpoint) if point == 0 else common.load_checkpoint_actor(checkpoint)
     model.to("cpu")
     model.eval()
-    bundle = torch.load(BC_SOURCE / "teacher_snapshots.pt", map_location="cpu", weights_only=False)
+    bundle = torch.load(BC_SOURCE / "teacher_snapshots.pt", map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     samples = bundle.get("samples") or bundle.get("teacher_samples")
     if not samples:
         raise ValueError("固定 BC teacher_snapshots.pt 缺少 samples")
@@ -539,7 +538,7 @@ def _build_reports(out: Path, source_rows: Sequence[Mapping[str, Any]], initial_
             cycles = data.get("execution_facts", {}).get("cycle_execution_records", {}).values()
             delays = [max(0.0, float(item["transfer_time"]) - float(item["nominal_transfer_time"]))
                       for item in cycles]
-            from envs.work3.core_types import ActionBranch
+            from apal.envs.work3.core_types import ActionBranch
             trace = data.get("action_trace", [])
             advance_count = sum(int(item.get("branch", -1)) == int(ActionBranch.ADVANCE_TO_NEXT_EVENT) for item in trace)
             action_postpone_count = sum(int(item.get("branch", -1)) == int(ActionBranch.POSTPONE) for item in trace)

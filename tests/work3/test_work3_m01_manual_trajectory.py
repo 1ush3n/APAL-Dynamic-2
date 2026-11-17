@@ -7,15 +7,15 @@ from pathlib import Path
 
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.objective_evaluator import (
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.objective_evaluator import (
     ObjectiveBreakdown,
     ObjectiveWeights,
     evaluate_trajectory_objective,
 )
-from utils.work3.trajectory_feasibility import (
+from apal.utils.work3.trajectory_feasibility import (
     TaskConstraintRecord,
     TrajectoryExecutionRecord,
     TrajectoryFeasibilityReport,

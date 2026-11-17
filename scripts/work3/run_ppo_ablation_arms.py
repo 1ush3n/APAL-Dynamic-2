@@ -25,19 +25,18 @@ import sys
 import time
 from typing import Any, Mapping, Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
 import numpy as np
+from apal.runtime import legacy_pickle
 import torch
 
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.ppo_buffer import RolloutBufferWork3
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.ppo_buffer import RolloutBufferWork3
 from scripts.work3.evaluate_c_vs_d import FormalEvaluationAgent, evaluate_single_trajectory
-from scripts.work3.experiment_protocol import build_method_profile
-from scripts.work3.train_ppo_work3 import compute_heuristic_potential
-from training.work3.lightning import Work3TrainingUpdate
+from apal.training.work3.protocol import build_method_profile
+from apal.training.work3.train import compute_heuristic_potential
+from apal.training.work3.lightning import Work3TrainingUpdate
 from scripts.work3.c_reproduction_protocol import (
     actor_fingerprint,
     compare_execution_facts,
@@ -51,7 +50,7 @@ import scripts.work3.run_bc_ppo_retention as prev
 
 BASE_DIR = REPO_ROOT / "tests" / "fixtures" / "work3" / "local_history"
 CAL_ROUND = BASE_DIR / "critic_calibration_retention_v1" / "seed42"
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 
 RUN_CONTEXT = create_run_context(REPO_ROOT, experiment_name="work3_ppo_ablation_arms_v1",
                                  run_id=os.environ.get("APAL_WORK3_LEGACY_RUN_ID"))
@@ -328,7 +327,7 @@ def _snapshot_facts(snapshot: Any) -> dict[str, Any]:
 
 def build_arm_model(arm: str) -> tuple[torch.nn.Module, dict[str, Any], dict[str, Any]]:
     fit = load_json(CAL_FIT)
-    payload = torch.load(CAL_MODEL, map_location="cpu", weights_only=False)
+    payload = torch.load(CAL_MODEL, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     hyper = load_json(REFERENCE_SUMMARY)["hyperparameters"]
     return payload, hyper, fit
 
@@ -422,7 +421,7 @@ def stage_arm(arm: str) -> int:
     torch.cuda.reset_peak_memory_stats()
     paths = arm_paths(arm)
 
-    payload = torch.load(CAL_MODEL, map_location="cpu", weights_only=False)
+    payload = torch.load(CAL_MODEL, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     hyper = dict(load_json(REFERENCE_SUMMARY)["hyperparameters"])
     if RUN_SEED is not None:
         hyper["seed"] = int(RUN_SEED)
@@ -997,8 +996,8 @@ def verify_pairing(arm: str) -> dict[str, Any]:
     ours_path = arm_paths(arm)["dir"] / "first_rollout.pt"
     if not ours_path.is_file() or not REFERENCE_FIRST_ROLLOUT.is_file():
         return {"paired": False, "reason": "first_rollout 缺失"}
-    ours = torch.load(ours_path, map_location="cpu", weights_only=False)
-    reference = torch.load(REFERENCE_FIRST_ROLLOUT, map_location="cpu", weights_only=False)
+    ours = torch.load(ours_path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
+    reference = torch.load(REFERENCE_FIRST_ROLLOUT, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     if RUN_SEED is not None:
         from scripts.work3.run_ppo_retention_repeat import verify_first_rollout
 
@@ -1367,10 +1366,10 @@ def stage_report() -> int:
     diagnostics = []
     start_state = torch.load(
         arm_paths("R1")["checkpoints"] / "step0000.pt", map_location="cpu", weights_only=False
-    )["actor_critic_state"]
+    , pickle_module=legacy_pickle)["actor_critic_state"]
     reference_state = torch.load(
         REFERENCE_PPO / "checkpoints" / "step0512.pt", map_location="cpu", weights_only=False
-    )["actor_critic_state"]
+    , pickle_module=legacy_pickle)["actor_critic_state"]
     reference_drift = _drift(start_state, reference_state)
     for arm in ARMS:
         if arm == "R0":
@@ -1399,7 +1398,7 @@ def stage_report() -> int:
                     torch.load(
                         arm_paths(arm)["checkpoints"] / "step0512.pt",
                         map_location="cpu", weights_only=False,
-                    )["actor_critic_state"],
+                     pickle_module=legacy_pickle)["actor_critic_state"],
                 ),
                 "reference_param_drift_at_512": reference_drift,
                 "replay_max_abs_error_max": max(

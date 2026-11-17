@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from envs.work3.environment import AirLineEnvWork3
-from utils.work3.uniform_baseline_warmup import (
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.utils.work3.uniform_baseline_warmup import (
     run_uniform_baseline_warmup,
     validate_scenario_after_warmup,
 )

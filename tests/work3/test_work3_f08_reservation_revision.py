@@ -17,16 +17,16 @@ from typing import Any
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.decision_snapshot import build_decision_snapshot
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from models.work3.action_fusion import compute_time_urgency_vector
-from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-from models.work3.graph_builder import MultiAircraftGraphBuilder
-from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-from utils.work3.objective_evaluator import evaluate_trajectory_objective
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.decision_snapshot import build_decision_snapshot
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.models.work3.action_fusion import compute_time_urgency_vector
+from apal.models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
+from apal.models.work3.graph_builder import MultiAircraftGraphBuilder
+from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+from apal.utils.work3.objective_evaluator import evaluate_trajectory_objective
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

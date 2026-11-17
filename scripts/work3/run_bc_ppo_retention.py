@@ -32,30 +32,29 @@ import sys
 import time
 from typing import Any, Mapping, Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
 import numpy as np
+from apal.runtime import legacy_pickle
 import torch
 
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.actor_critic import ActorCriticWork3
-from models.work3.graph_builder import (
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.actor_critic import ActorCriticWork3
+from apal.models.work3.graph_builder import (
     GRAPH_FEATURE_DIMS,
     GRAPH_FEATURE_SCHEMA,
     GRAPH_FEATURE_VERSION,
 )
-from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+from apal.models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
 from scripts.work3.evaluate_c_vs_d import (
     FormalEvaluationAgent,
     build_formal_evaluation_agent,
     evaluate_single_trajectory,
 )
-from scripts.work3.experiment_protocol import build_method_profile
-from scripts.work3.train_ppo_work3 import compute_heuristic_potential
-from training.work3.lightning import Work3LightningModule, Work3TrainingUpdate
-from training.work3.vector_env import Work3VectorEnv
+from apal.training.work3.protocol import build_method_profile
+from apal.training.work3.train import compute_heuristic_potential
+from apal.training.work3.lightning import Work3LightningModule, Work3TrainingUpdate
+from apal.training.work3.vector_env import Work3VectorEnv
 from scripts.work3.c_reproduction_protocol import (
     actor_fingerprint,
     clone_actor_state,
@@ -76,7 +75,7 @@ BASE_DIR = REPO_ROOT / "tests" / "fixtures" / "work3" / "local_history"
 RULE_BASELINE_DIR = BASE_DIR / "rule_baseline_ac_v1"
 BC_DIR = BASE_DIR / "c_reproduction_diagnostic_v1" / "seed42"
 ALIGN_DIR = BASE_DIR / "c_alignment_bc_robustness_v1" / "seed42"
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 
 RUN_CONTEXT = create_run_context(REPO_ROOT, experiment_name="work3_bc_ppo_retention_v1",
                                  run_id=os.environ.get("APAL_WORK3_LEGACY_RUN_ID"))
@@ -385,7 +384,7 @@ def save_checkpoint(
 
 def load_checkpoint_actor(path: Path) -> tuple[ActorCriticWork3, dict[str, Any]]:
     """严格加载本轮诊断检查点；不允许退化为普通 state_dict 旁路。"""
-    payload = torch.load(path, map_location="cpu", weights_only=False)
+    payload = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     if not isinstance(payload, dict) or payload.get("diagnostic_format") != DIAGNOSTIC_CHECKPOINT_FORMAT:
         raise ValueError(f"不是本轮诊断检查点: {path}")
     if int(payload.get("diagnostic_format_version", -1)) != DIAGNOSTIC_CHECKPOINT_VERSION:
@@ -601,7 +600,7 @@ def write_resolved_config_yaml(resolved: Mapping[str, Any], conflicts: Mapping[s
 
 
 def fixed_snapshot_sample(limit: int = 6) -> list[dict[str, Any]]:
-    bundle = torch.load(BC_TEACHER_SNAPSHOTS, map_location="cpu", weights_only=False)
+    bundle = torch.load(BC_TEACHER_SNAPSHOTS, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     samples = bundle["samples"][:limit]
     return samples
 
@@ -1629,7 +1628,7 @@ def stage_evaluate_one(checkpoint: Path, step_point: int) -> int:
     # 教师状态评分（辅助定位，不进入训练）
     teacher_path = OUTPUT_DIR / f"teacher_scores_step{step_point:04d}.json"
     try:
-        bundle = torch.load(BC_TEACHER_SNAPSHOTS, map_location="cpu", weights_only=False)
+        bundle = torch.load(BC_TEACHER_SNAPSHOTS, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
         samples = bundle["samples"]
         per_sample = [
             evaluate_teacher_sample(model, sample, device="cpu") for sample in samples
@@ -1792,7 +1791,7 @@ def build_weight_integrity() -> dict[str, Any]:
         path = CHECKPOINT_DIR / f"step{point:04d}.pt"
         if not path.is_file():
             continue
-        payload = torch.load(path, map_location="cpu", weights_only=False)
+        payload = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
         recomputed = state_dict_fingerprint(payload["actor_critic_state"])
         checkpoints.append(
             {

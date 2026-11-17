@@ -8,13 +8,13 @@ from pathlib import Path
 import pytest
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from models.work3.heuristic_agent import HeuristicAgentWork3
-from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
-from models.work3.train_time_head import StepResidualDataset
-from scripts.work3.collect_validation_trajectories import attach_transfer_labels
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+from apal.models.work3.train_time_head import StepResidualDataset
+from apal.data.work3.validation_trajectories import attach_transfer_labels
 import scripts.work3.evaluate_c_vs_d as evaluation_module
 from scripts.work3.evaluate_c_vs_d import evaluate_single_trajectory
 
@@ -240,7 +240,7 @@ def test_evaluation_completion_on_exact_decision_limit_requires_feasibility(
             self.reset()
 
         def reset(self) -> None:
-            from envs.work3.environment import ObjectiveWeights
+            from apal.envs.work3.environment import ObjectiveWeights
             task.status = TaskStatus.READY
             self.finished = False
             self.step_count = 0

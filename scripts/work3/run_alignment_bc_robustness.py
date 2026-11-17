@@ -28,20 +28,19 @@ import sys
 import time
 from typing import Any, Mapping, Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
+from apal.runtime import legacy_pickle
 import torch
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3, NoFeasibleSlotError
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3, NoFeasibleSlotError
 from scripts.work3.evaluate_c_vs_d import (
     FormalEvaluationAgent,
     build_formal_evaluation_agent,
     evaluate_single_trajectory,
 )
-from scripts.work3.experiment_protocol import build_method_profile
+from apal.training.work3.protocol import build_method_profile
 from scripts.work3.c_reproduction_protocol import (
     actor_fingerprint,
     compare_execution_facts,
@@ -58,7 +57,7 @@ from scripts.work3.c_reproduction_protocol import (
 BASE_DIR = REPO_ROOT / "tests" / "fixtures" / "work3" / "local_history"
 RULE_BASELINE_DIR = BASE_DIR / "rule_baseline_ac_v1"
 PREVIOUS_DIR = BASE_DIR / "c_reproduction_diagnostic_v1" / "seed42"
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 
 RUN_CONTEXT = create_run_context(REPO_ROOT, experiment_name="work3_c_alignment_bc_robustness_v1",
                                  run_id=os.environ.get("APAL_WORK3_LEGACY_RUN_ID"))
@@ -879,7 +878,7 @@ def validation_split_membership(scenario_id: str | None) -> Any:
 
 def load_original_c() -> tuple[FormalEvaluationAgent, dict[str, Any]]:
     agent = build_formal_evaluation_agent("C", ORIGINAL_C_WEIGHTS, device="cpu")
-    checkpoint = torch.load(ORIGINAL_C_WEIGHTS, map_location="cpu", weights_only=False)
+    checkpoint = torch.load(ORIGINAL_C_WEIGHTS, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     return agent, checkpoint
 
 

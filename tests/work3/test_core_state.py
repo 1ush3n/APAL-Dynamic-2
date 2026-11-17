@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from envs.work3.core_types import (
+from apal.envs.work3.core_types import (
     ActionBranch,
     AircraftRuntimeState,
     MultiAircraftState,

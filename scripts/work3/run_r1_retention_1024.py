@@ -21,14 +21,13 @@ from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 import zipfile
 
+from apal.runtime import legacy_pickle
 import torch
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+from apal.project import PROJECT_ROOT as ROOT
 BASE = ROOT / "tests" / "fixtures" / "work3" / "local_history"
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 
 RUN_CONTEXT = create_run_context(ROOT, experiment_name="work3_engineering_closeout_r1_1024_v1",
                                  run_id=os.environ.get("APAL_WORK3_LEGACY_RUN_ID"))
@@ -287,14 +286,14 @@ def _dependency_paths() -> tuple[dict[str, Path], dict[str, str]]:
 
 def _source_paths() -> dict[str, Path]:
     return {
-        "work3_lightning": ROOT / "training" / "work3" / "lightning.py",
-        "work3_vector_env": ROOT / "training" / "work3" / "vector_env.py",
-        "work3_actor_critic": ROOT / "models" / "work3" / "actor_critic.py",
-        "work3_graph_builder": ROOT / "models" / "work3" / "graph_builder.py",
-        "work3_ppo_buffer": ROOT / "models" / "work3" / "ppo_buffer.py",
-        "work3_ppo_trainer": ROOT / "models" / "work3" / "ppo_trainer.py",
-        "work3_environment": ROOT / "envs" / "work3" / "environment.py",
-        "work3_core_types": ROOT / "envs" / "work3" / "core_types.py",
+        "work3_lightning": ROOT / 'apal' / 'training' / 'work3' / 'lightning.py',
+        "work3_vector_env": ROOT / 'apal' / 'training' / 'work3' / 'vector_env.py',
+        "work3_actor_critic": ROOT / 'apal' / 'models' / 'work3' / 'actor_critic.py',
+        "work3_graph_builder": ROOT / 'apal' / 'models' / 'work3' / 'graph_builder.py',
+        "work3_ppo_buffer": ROOT / 'apal' / 'models' / 'work3' / 'ppo_buffer.py',
+        "work3_ppo_trainer": ROOT / 'apal' / 'models' / 'work3' / 'ppo_trainer.py',
+        "work3_environment": ROOT / 'apal' / 'envs' / 'work3' / 'environment.py',
+        "work3_core_types": ROOT / 'apal' / 'envs' / 'work3' / 'core_types.py',
         "ablation_runner": Path(__file__).resolve().parent / "run_ppo_ablation_arms.py",
         "calibration_loader": Path(__file__).resolve().parent / "run_critic_calibration_retention.py",
         "common_retention_runtime": Path(__file__).resolve().parent / "run_bc_ppo_retention.py",
@@ -302,10 +301,10 @@ def _source_paths() -> dict[str, Path]:
         "bc_reproduction_protocol": Path(__file__).resolve().parent / "c_reproduction_protocol.py",
         "trajectory_verifier": Path(__file__).resolve().parent / "verify_trajectory_facts.py",
         "shaping_verifier": Path(__file__).resolve().parent / "verify_shaping_trace.py",
-        "objective_evaluator": ROOT / "utils" / "work3" / "objective_evaluator.py",
+        "objective_evaluator": ROOT / 'apal' / 'utils' / 'work3' / 'objective_evaluator.py',
         "new_r1_runner": Path(__file__).resolve(),
         "training_runtime_tests": ROOT / "tests" / "work3" / "test_work3_training_runtime.py",
-        "retention_contract_tests": ROOT / "tests" / "test_ppo_retention_repeat.py",
+        "retention_contract_tests": ROOT / 'tests' / 'work3' / 'legacy' / 'test_ppo_retention_repeat.py',
     }
 
 
@@ -651,12 +650,12 @@ def _archive_items(out: Path) -> dict[str, Path]:
         if path.is_file():
             items[f"repo/{path.resolve().relative_to(ROOT.resolve()).as_posix()}"] = path.resolve()
     extra = (
-        ROOT / "models" / "work3" / "graph_builder.py",
-        ROOT / "models" / "work3" / "time_head.py",
-        ROOT / "training" / "work3" / "r3_e04_audit.py",
-        ROOT / "envs" / "work3" / "environment.py",
-        ROOT / "envs" / "work3" / "core_types.py",
-        ROOT / "utils" / "work3" / "objective_evaluator.py",
+        ROOT / 'apal' / 'models' / 'work3' / 'graph_builder.py',
+        ROOT / 'apal' / 'models' / 'work3' / 'time_head.py',
+        ROOT / 'apal' / 'training' / 'work3' / 'r3_e04_audit.py',
+        ROOT / 'apal' / 'envs' / 'work3' / 'environment.py',
+        ROOT / 'apal' / 'envs' / 'work3' / 'core_types.py',
+        ROOT / 'apal' / 'utils' / 'work3' / 'objective_evaluator.py',
         ROOT / "pytest.ini",
         ROOT / "pyproject.toml",
     )
@@ -849,11 +848,11 @@ def _write_engineering_evidence(out: Path) -> dict[str, Any]:
 """
     (out / "engineering" / "test_fixture_repairs.md").write_text(repair_text, encoding="utf-8")
     snapshots = {
-        "work3_lightning.py": ROOT / "training" / "work3" / "lightning.py",
+        "work3_lightning.py": ROOT / 'apal' / 'training' / 'work3' / 'lightning.py',
         "run_ppo_ablation_arms.py": Path(__file__).resolve().parent / "run_ppo_ablation_arms.py",
         "run_r1_retention_1024.py": Path(__file__).resolve(),
         "test_work3_training_runtime.py": ROOT / "tests" / "work3" / "test_work3_training_runtime.py",
-        "test_ppo_retention_repeat.py": ROOT / "tests" / "test_ppo_retention_repeat.py",
+        "test_ppo_retention_repeat.py": ROOT / 'tests' / 'work3' / 'legacy' / 'test_ppo_retention_repeat.py',
     }
     for name, source in snapshots.items():
         shutil.copyfile(source, logs_dir / name)
@@ -906,7 +905,7 @@ def run_fp32_equivalence(out: Path) -> dict[str, Any]:
     import scripts.work3.run_critic_calibration_retention as calibration
 
     _set_determinism()
-    rollout = torch.load(OLD_R1 / "first_rollout.pt", map_location="cpu", weights_only=False)
+    rollout = torch.load(OLD_R1 / "first_rollout.pt", map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
     prior_update = read_json(OLD_R1 / "first_update.json")
     indices = [int(index) for index in prior_update["first_minibatch_samples"]]
     if len(indices) != 2:
@@ -1647,7 +1646,7 @@ def _finalize(out: Path, source_binding: Mapping[str, Any], stage_results: Mappi
     }
     checkpoint_integrity = {}
     for path in sorted((out.parent / "checkpoints" / "R1").glob("*.pt")):
-        payload = torch.load(path, map_location="cpu", weights_only=False)
+        payload = torch.load(path, map_location="cpu", weights_only=False, pickle_module=legacy_pickle)
         checkpoint_integrity[str(path.relative_to(out))] = {
             "sha256": sha256(path), "actor_fingerprint": payload.get("actor_fingerprint"),
             "training_decisions": int(payload.get("training_decisions", -1)),

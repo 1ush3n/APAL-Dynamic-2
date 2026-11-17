@@ -23,13 +23,11 @@ from pathlib import Path
 import sys
 from typing import Any, Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from apal.project import PROJECT_ROOT as REPO_ROOT
 
-from core.constraints import ConstraintEngine, calculate_team_synergy_factor
-from data_loader import load_data
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline, MultiAircraftTask
+from apal.core.constraints import ConstraintEngine, calculate_team_synergy_factor
+from apal.data_loader import load_data
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline, MultiAircraftTask
 
 logging.basicConfig(
     level=logging.INFO,
@@ -704,7 +702,7 @@ def generate_rule_baseline(
 
 
 def main() -> None:
-    from runtime.artifacts import create_run_context
+    from apal.runtime.artifacts import create_run_context
     parser = argparse.ArgumentParser(description="Work-3 规则基准生成器")
     parser.add_argument("--repo", type=Path, default=REPO_ROOT, help="仓库根目录")
     parser.add_argument(

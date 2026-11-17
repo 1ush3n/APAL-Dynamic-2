@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
 
 
 @pytest.fixture

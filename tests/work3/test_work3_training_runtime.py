@@ -46,27 +46,27 @@ def restore_global_random_state() -> Iterator[None]:
 
 def _runtime_config_module() -> ModuleType:
     """将缺少的新运行时模块呈现为清晰的测试失败，而不是导入错误。"""
-    if importlib.util.find_spec("training.work3.runtime_config") is None:
+    if importlib.util.find_spec('apal.training.work3.runtime_config') is None:
         pytest.fail("工作三运行时配置加载器尚未实现", pytrace=False)
-    return importlib.import_module("training.work3.runtime_config")
+    return importlib.import_module('apal.training.work3.runtime_config')
 
 
 def _decision_snapshot_module() -> ModuleType:
-    if importlib.util.find_spec("envs.work3.decision_snapshot") is None:
+    if importlib.util.find_spec('apal.envs.work3.decision_snapshot') is None:
         pytest.fail("工作三决策快照与纯团队掩码尚未实现", pytrace=False)
-    return importlib.import_module("envs.work3.decision_snapshot")
+    return importlib.import_module('apal.envs.work3.decision_snapshot')
 
 
 def _work3_vector_env_module() -> ModuleType:
-    if importlib.util.find_spec("training.work3.vector_env") is None:
+    if importlib.util.find_spec('apal.training.work3.vector_env') is None:
         pytest.fail("工作三spawn环境运行时尚未实现", pytrace=False)
-    return importlib.import_module("training.work3.vector_env")
+    return importlib.import_module('apal.training.work3.vector_env')
 
 
 def _work3_lightning_module() -> ModuleType:
-    if importlib.util.find_spec("training.work3.lightning") is None:
+    if importlib.util.find_spec('apal.training.work3.lightning') is None:
         pytest.fail("工作三Lightning训练生命周期尚未实现", pytrace=False)
-    return importlib.import_module("training.work3.lightning")
+    return importlib.import_module('apal.training.work3.lightning')
 
 
 def test_runtime_config_loads_smoke_defaults_and_hashes_resolved_yaml() -> None:
@@ -93,7 +93,7 @@ def test_training_cli_uses_yaml_config_and_passes_resolved_fingerprint(
 ) -> None:
     import sys
 
-    from scripts.work3 import train_ppo_work3
+    from apal.training.work3 import train as train_ppo_work3
 
     runtime_config_module = _runtime_config_module()
     overrides = (
@@ -163,7 +163,7 @@ def test_amp_precision_resolver_rejects_mixed_precision_on_cpu() -> None:
 def test_query_cli_outputs_share_run_context_and_preserve_overrides(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, output_mode: str,
 ) -> None:
-    from scripts.work3 import train_ppo_work3
+    from apal.training.work3 import train as train_ppo_work3
     from omegaconf import OmegaConf
 
     run_dir = tmp_path / "runs" / "work3_query" / output_mode
@@ -212,7 +212,7 @@ def test_query_cli_outputs_share_run_context_and_preserve_overrides(
 def test_direct_training_default_output_uses_runs_before_environment_start(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from scripts.work3 import train_ppo_work3
+    from apal.training.work3 import train as train_ppo_work3
 
     audit: dict[str, object] = {}
     monkeypatch.setattr(train_ppo_work3, "ROOT_DIR", tmp_path)
@@ -274,7 +274,7 @@ def test_historical_comprehensive_validation_uses_one_run_without_rewriting_docs
 def test_query_manifest_records_report_facts_only_after_training_returns(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, outcome: str,
 ) -> None:
-    from scripts.work3 import train_ppo_work3
+    from apal.training.work3 import train as train_ppo_work3
 
     manifest_path = tmp_path / "work3_query" / outcome / "configs" / "run_manifest.json"
     result = {
@@ -329,9 +329,9 @@ def test_actor_sampling_and_replay_keep_probability_math_fp32_under_amp(
     if amp_dtype == "bf16" and not torch.cuda.is_bf16_supported():
         pytest.skip("当前CUDA设备不支持bfloat16")
 
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.actor_critic import ActorCriticWork3
-    from scripts.work3.train_ppo_work3 import ROOT_DIR
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.training.work3.train import ROOT_DIR
 
     environment = AirLineEnvWork3(
         baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
@@ -361,7 +361,7 @@ def test_actor_sampling_and_replay_keep_probability_math_fp32_under_amp(
             time_features.unsqueeze(0).to("cuda"),
             [sample_record],
         )
-        from models.work3.ppo_trainer import PPOTrainerWork3
+        from apal.models.work3.ppo_trainer import PPOTrainerWork3
 
         objective = PPOTrainerWork3(
             actor_critic=actor,
@@ -378,7 +378,7 @@ def test_actor_sampling_and_replay_keep_probability_math_fp32_under_amp(
                 "sample_records": [sample_record],
             }
         )
-        from models.work3.time_head import TimeResidualHead
+        from apal.models.work3.time_head import TimeResidualHead
 
         time_head = TimeResidualHead(in_dim=16, hidden_dim=16).to("cuda")
         auxiliary_objective = PPOTrainerWork3(
@@ -446,7 +446,7 @@ def test_training_entry_uses_configured_amp_for_rollout_and_lightning(
     if amp_dtype == "bf16" and not torch.cuda.is_bf16_supported():
         pytest.skip("当前CUDA设备不支持bfloat16")
 
-    from scripts.work3.train_ppo_work3 import run_training
+    from apal.training.work3.train import run_training
 
     report = run_training(
         run_mode="smoke",
@@ -627,7 +627,7 @@ def test_snapshot_worker_mask_disables_task_without_a_full_skill_team() -> None:
 
 
 def test_environment_team_context_is_an_independent_cpu_snapshot() -> None:
-    from envs.work3.environment import AirLineEnvWork3
+    from apal.envs.work3.environment import AirLineEnvWork3
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
@@ -651,7 +651,7 @@ def test_environment_team_context_is_an_independent_cpu_snapshot() -> None:
 def test_live_team_eligibility_does_not_construct_full_calendar_context(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from envs.work3.environment import AirLineEnvWork3
+    from apal.envs.work3.environment import AirLineEnvWork3
 
     env = AirLineEnvWork3(
         baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
@@ -671,7 +671,7 @@ def test_decision_snapshot_clones_tensor_and_graph_payloads_to_cpu() -> None:
     from torch_geometric.data import HeteroData
 
     module = _decision_snapshot_module()
-    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
+    from apal.models.work3.graph_builder import GRAPH_FEATURE_VERSION
 
     context = module.TeamCompletionContext(
         task_key="0_0",
@@ -727,8 +727,8 @@ def test_snapshot_masks_match_environment_and_actor_replay_probability() -> None
     from dataclasses import replace
     from itertools import permutations
 
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.actor_critic import ActorCriticWork3
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3
 
     env = AirLineEnvWork3(
         baseline_json_path=ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
@@ -800,7 +800,7 @@ def test_snapshot_masks_match_environment_and_actor_replay_probability() -> None
 
 
 def _future_reservation_and_explicit_advance_prefix(env: Any) -> list[dict[str, object]]:
-    from envs.work3.core_types import ActionBranch, TaskStatus
+    from apal.envs.work3.core_types import ActionBranch, TaskStatus
 
     env.reset()
     task = next(
@@ -837,12 +837,12 @@ def _future_reservation_and_explicit_advance_prefix(env: Any) -> list[dict[str, 
 def test_single_env_worker_matches_direct_environment_for_frozen_actions() -> None:
     from copy import deepcopy
 
-    from envs.work3.core_types import ActionBranch, TaskRuntimeState
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.heuristic_agent import HeuristicAgentWork3
-    from scripts.work3.train_ppo_work3 import create_work3_single_env_runtime
+    from apal.envs.work3.core_types import ActionBranch, TaskRuntimeState
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.heuristic_agent import HeuristicAgentWork3
+    from apal.training.work3.train import create_work3_single_env_runtime
     from scripts.work3.evaluate_c_vs_d import _check_completed_trajectory_feasibility
-    from utils.work3.trajectory_feasibility import (
+    from apal.utils.work3.trajectory_feasibility import (
         TaskConstraintRecord,
         TrajectoryExecutionRecord,
         validate_trajectory,
@@ -1034,7 +1034,7 @@ def test_single_env_worker_matches_direct_environment_for_frozen_actions() -> No
 
 
 def test_worker_scenario_plan_is_stable_for_worker_episode_coordinates() -> None:
-    from scripts.work3.train_ppo_work3 import build_worker_scenario_plan
+    from apal.training.work3.train import build_worker_scenario_plan
 
     scenarios = [
         {"scenario_id": f"scenario-{index}", "tau": float(index)}
@@ -1065,11 +1065,11 @@ def test_worker_scenario_plan_is_stable_for_worker_episode_coordinates() -> None
 
 
 def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budget() -> None:
-    from envs.work3.core_types import ActionBranch
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.actor_critic import ActorCriticWork3
-    from models.work3.heuristic_agent import HeuristicAgentWork3
-    from training.work3.vector_env import Work3VectorEnv
+    from apal.envs.work3.core_types import ActionBranch
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.heuristic_agent import HeuristicAgentWork3
+    from apal.training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     planning_env = AirLineEnvWork3(baseline_json_path=baseline_path)
@@ -1159,8 +1159,8 @@ def test_two_spawn_workers_share_one_main_actor_and_enforce_aggregate_step_budge
 
 
 def test_vector_reset_reports_fixed_scenario_and_actual_hit_status() -> None:
-    from scripts.work3.train_ppo_work3 import build_worker_scenario_plan
-    from training.work3.vector_env import Work3VectorEnv
+    from apal.training.work3.train import build_worker_scenario_plan
+    from apal.training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     scenarios = [
@@ -1207,9 +1207,9 @@ def test_vector_reset_reports_fixed_scenario_and_actual_hit_status() -> None:
 
 
 def test_vector_worker_keeps_started_disturbance_target_fixed_and_unhit() -> None:
-    from envs.work3.core_types import ActionBranch
-    from training.work3.vector_env import Work3VectorEnv
-    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+    from apal.envs.work3.core_types import ActionBranch
+    from apal.training.work3.vector_env import Work3VectorEnv
+    from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     baseline = MultiAircraftBaseline.load_from_json(baseline_path)
@@ -1269,11 +1269,11 @@ def test_vector_worker_keeps_started_disturbance_target_fixed_and_unhit() -> Non
 def test_disturbance_hit_with_later_existing_release_has_zero_added_wait() -> None:
     from types import SimpleNamespace
 
-    from envs.work3.core_types import TaskStatus
-    from envs.work3.environment import AirLineEnvWork3
+    from apal.envs.work3.core_types import TaskStatus
+    from apal.envs.work3.environment import AirLineEnvWork3
     from scripts.work3.evaluate_c_vs_d import summarize_disturbance_effects
-    from scripts.work3.train_ppo_work3 import count_actual_scenario_hits
-    from training.work3.vector_env import _scenario_status
+    from apal.training.work3.train import count_actual_scenario_hits
+    from apal.training.work3.vector_env import _scenario_status
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     env = AirLineEnvWork3(baseline_json_path=str(baseline_path))
@@ -1338,9 +1338,9 @@ def test_disturbance_hit_with_later_existing_release_has_zero_added_wait() -> No
 
 
 def test_vector_worker_errors_and_incomplete_step_timeouts_are_explicit_and_cleaned() -> None:
-    from envs.work3.core_types import ActionBranch
-    from models.work3.actor_critic import ActorCriticWork3
-    from training.work3.vector_env import Work3VectorEnv
+    from apal.envs.work3.core_types import ActionBranch
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     failed_vector = Work3VectorEnv(
@@ -1402,8 +1402,8 @@ def test_vector_worker_errors_and_incomplete_step_timeouts_are_explicit_and_clea
 def test_vector_expired_wall_clock_deadline_stops_dispatch_without_fake_result() -> None:
     import time
 
-    from envs.work3.core_types import ActionBranch
-    from training.work3.vector_env import Work3VectorEnv
+    from apal.envs.work3.core_types import ActionBranch
+    from apal.training.work3.vector_env import Work3VectorEnv
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     vector = Work3VectorEnv(
@@ -1496,7 +1496,7 @@ def test_vector_step_collects_full_settlement_window_after_wall_clock_deadline(
 
 
 def test_gae_is_partitioned_by_worker_episode_and_segment() -> None:
-    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+    from apal.models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
 
     buffer = RolloutBufferWork3(gamma=1.0, gae_lambda=1.0, normalize_advantages=False)
     dummy_feat = torch.zeros(32)
@@ -1548,7 +1548,7 @@ def test_gae_is_partitioned_by_worker_episode_and_segment() -> None:
 
 
 def test_time_label_cache_is_worker_scoped_and_outlives_rollout_clear() -> None:
-    from models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
+    from apal.models.work3.ppo_buffer import PendingTimeLabelCache, PPOTransition, RolloutBufferWork3
 
     cache = PendingTimeLabelCache()
     rollout = RolloutBufferWork3(normalize_advantages=False)
@@ -1619,8 +1619,8 @@ def test_time_label_cache_is_worker_scoped_and_outlives_rollout_clear() -> None:
 
 
 def test_episode_potential_versions_survive_overlapping_worker_episodes() -> None:
-    from models.work3.potential_shaping import PotentialRewardShaper
-    from models.work3.time_head import TimeResidualHead
+    from apal.models.work3.potential_shaping import PotentialRewardShaper
+    from apal.models.work3.time_head import TimeResidualHead
 
     initial_head = TimeResidualHead(in_dim=32, hidden_dim=16, use_layer_norm=False)
     for parameter in initial_head.parameters():
@@ -1672,13 +1672,13 @@ def test_training_preserves_rollout_boundary_potential_and_refreshes_episodes(
     import importlib
     from types import SimpleNamespace
 
-    from envs.work3.decision_snapshot import DecisionSnapshot
-    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
-    from models.work3.potential_shaping import PotentialRewardShaper
+    from apal.envs.work3.decision_snapshot import DecisionSnapshot
+    from apal.models.work3.graph_builder import GRAPH_FEATURE_VERSION
+    from apal.models.work3.potential_shaping import PotentialRewardShaper
     from torch_geometric.data import HeteroData
-    from training.work3.vector_env import Work3StepResult, Work3VectorStepBatch
+    from apal.training.work3.vector_env import Work3StepResult, Work3VectorStepBatch
 
-    training = importlib.import_module("scripts.work3.train_ppo_work3")
+    training = importlib.import_module('apal.training.work3.train')
     events: list[tuple[Any, ...]] = []
     last_potential_context: tuple[int, int] | None = None
 
@@ -1971,9 +1971,9 @@ def test_online_predictor_update_preserves_all_active_snapshot_state() -> None:
     """在线头更新不得改写活动episode的图编码器、时间头或归一化状态。"""
     import copy
 
-    from models.work3.actor_critic import ActorCriticWork3
-    from models.work3.potential_shaping import PotentialRewardShaper
-    from models.work3.time_head import TimeResidualHead
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.potential_shaping import PotentialRewardShaper
+    from apal.models.work3.time_head import TimeResidualHead
 
     actor = ActorCriticWork3(hidden_dim=16)
     head = TimeResidualHead(in_dim=16, hidden_dim=16)
@@ -2034,7 +2034,7 @@ def test_online_predictor_update_preserves_all_active_snapshot_state() -> None:
 def test_rollout_buffer_stores_immutable_cpu_feature_mask_and_graph_snapshots() -> None:
     from torch_geometric.data import HeteroData
 
-    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+    from apal.models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
 
     state_feat = torch.arange(32, dtype=torch.float32)
     time_urgency = torch.tensor([1.0, 2.0])
@@ -2076,12 +2076,12 @@ def test_rollout_buffer_stores_immutable_cpu_feature_mask_and_graph_snapshots() 
 
 
 def _make_lightning_training_fixture() -> tuple[object, object, object]:
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
-    from models.work3.action_fusion import compute_time_urgency_vector
-    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
-    from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-    from models.work3.time_head import TimeResidualHead
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3, extract_compact_state_features
+    from apal.models.work3.action_fusion import compute_time_urgency_vector
+    from apal.models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+    from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+    from apal.models.work3.time_head import TimeResidualHead
     lightning_runtime = _work3_lightning_module()
 
     environment = AirLineEnvWork3(
@@ -2129,7 +2129,7 @@ def _make_lightning_training_fixture() -> tuple[object, object, object]:
 
 
 def test_g3_real_label_auxiliary_loss_reaches_shared_graph_encoder() -> None:
-    from models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
 
     actor, time_head, update = _make_lightning_training_fixture()
     transition = update.buffer.transitions[0]
@@ -2206,16 +2206,16 @@ def test_lightning_ppo_update_mixes_stay_and_postpone_samples(
     """同一CPU PPO minibatch含真实留站/后移样本并完成有限参数更新。"""
     import lightning.pytorch as pl
 
-    from envs.work3.core_types import ActionBranch, TaskStatus
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.action_fusion import compute_time_urgency_vector
-    from models.work3.actor_critic import (
+    from apal.envs.work3.core_types import ActionBranch, TaskStatus
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.action_fusion import compute_time_urgency_vector
+    from apal.models.work3.actor_critic import (
         ActorCriticWork3,
         extract_compact_state_features,
     )
-    from models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
-    from models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
-    from models.work3.time_head import TimeResidualHead
+    from apal.models.work3.heuristic_estimator import compute_cycle_heuristic_cmax
+    from apal.models.work3.ppo_buffer import PPOTransition, RolloutBufferWork3
+    from apal.models.work3.time_head import TimeResidualHead
 
     lightning_runtime = _work3_lightning_module()
     torch.manual_seed(107)
@@ -2484,7 +2484,7 @@ def test_lightning_configures_one_deduplicated_optimizer_for_all_trainable_model
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="设备保留验收需要CUDA设备")
 def test_lightning_module_construction_preserves_actor_cuda_device() -> None:
-    from models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3
 
     lightning_runtime = _work3_lightning_module()
     actor = ActorCriticWork3(hidden_dim=16).to("cuda")
@@ -2496,7 +2496,7 @@ def test_lightning_module_construction_preserves_actor_cuda_device() -> None:
 
 
 def test_lightning_ppo_loss_computation_is_pure_and_datamodule_uses_no_loader_workers() -> None:
-    from models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
     lightning_runtime = _work3_lightning_module()
 
     actor, time_head, update = _make_lightning_training_fixture()
@@ -2525,7 +2525,7 @@ def test_lightning_ppo_loss_computation_is_pure_and_datamodule_uses_no_loader_wo
 
 
 def test_lightning_time_auxiliary_batch_scopes_decision_ids_by_worker_episode() -> None:
-    from models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
 
     actor, time_head, update = _make_lightning_training_fixture()
     trainer = PPOTrainerWork3(
@@ -2664,7 +2664,7 @@ def test_work3_pilot_c_d_pair_reports_fixed_hit_and_runtime_gate_truthfully(
     tmp_path: Path,
 ) -> None:
     """有限C/D配对保留同一命中事件，并如实标记截断及缺失时间标签。"""
-    from scripts.work3.train_ppo_work3 import run_training
+    from apal.training.work3.train import run_training
 
     scenario = {
         "scenario_id": "TASK8_FIXED_TAU_ZERO_HIT",
@@ -2781,9 +2781,9 @@ def test_work3_d_pilot_records_real_transfer_labels_and_nonterminal_potential(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """真实周期转站补齐两种符号残差，并触发D的辅助优化更新。"""
-    from models.work3.ppo_buffer import PendingTimeLabelCache
-    from models.work3.potential_shaping import PotentialRewardShaper
-    from scripts.work3.train_ppo_work3 import run_training
+    from apal.models.work3.ppo_buffer import PendingTimeLabelCache
+    from apal.models.work3.potential_shaping import PotentialRewardShaper
+    from apal.training.work3.train import run_training
 
     scenario = {
         "scenario_id": "TASK8_SIGNED_RESIDUAL_TRANSFER",
@@ -2896,7 +2896,7 @@ def test_work3_d_pilot_records_real_transfer_labels_and_nonterminal_potential(
 
 
 def test_training_audit_feasibility_uses_independent_execution_records() -> None:
-    from scripts.work3.train_ppo_work3 import _independent_feasibility_from_audit
+    from apal.training.work3.train import _independent_feasibility_from_audit
 
     audit = {
         "success": True,
@@ -2955,7 +2955,7 @@ def test_work3_cuda_bf16_two_worker_pilot_records_real_hits_and_resource_state(
     if not torch.cuda.is_bf16_supported():
         pytest.skip("当前CUDA设备不支持bfloat16")
 
-    from scripts.work3 import train_ppo_work3
+    from apal.training.work3 import train as train_ppo_work3
 
     scenario = {
         "scenario_id": "TASK8_CUDA_TWO_WORKER_HIT",
@@ -3036,7 +3036,7 @@ def test_work3_cuda_bf16_two_worker_pilot_records_real_hits_and_resource_state(
 
 def test_pilot_success_target_waits_for_started_episodes_to_finish() -> None:
     """达成成功批次目标后，只要仍有已启动轨迹就不得结束试点。"""
-    from scripts.work3.train_ppo_work3 import _should_stop_after_success_target
+    from apal.training.work3.train import _should_stop_after_success_target
 
     assert not _should_stop_after_success_target(
         run_mode="pilot",
@@ -3059,7 +3059,7 @@ def test_pilot_success_target_waits_for_started_episodes_to_finish() -> None:
 
 
 def test_spawn_reset_runs_uniform_warmup_before_loading_fixed_scenario() -> None:
-    from training.work3.vector_env import Work3VectorEnv
+    from apal.training.work3.vector_env import Work3VectorEnv
 
     vector = Work3VectorEnv(
         env_kwargs={
@@ -3121,10 +3121,10 @@ def test_spawn_reset_runs_uniform_warmup_before_loading_fixed_scenario() -> None
 
 
 def test_spawn_reset_applies_due_event_at_uniform_warmup_boundary_before_snapshot() -> None:
-    from envs.work3.core_types import TaskStatus
-    from envs.work3.environment import AirLineEnvWork3
-    from training.work3.vector_env import Work3VectorEnv
-    from utils.work3.uniform_baseline_warmup import run_uniform_baseline_warmup
+    from apal.envs.work3.core_types import TaskStatus
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.training.work3.vector_env import Work3VectorEnv
+    from apal.utils.work3.uniform_baseline_warmup import run_uniform_baseline_warmup
 
     baseline_path = ROOT_DIR / "data" / "work3" / "real_283_k10_baseline.json"
     reference_env = AirLineEnvWork3(baseline_json_path=baseline_path)
@@ -3178,7 +3178,7 @@ def test_training_keeps_completed_peer_step_when_other_worker_response_is_lost(
 ) -> None:
     from dataclasses import replace
 
-    from scripts.work3.train_ppo_work3 import run_training
+    from apal.training.work3.train import run_training
 
     scenario = {
         "scenario_id": "INTERRUPTED_STEP_DISTURBANCE_UNKNOWN",
@@ -3279,7 +3279,7 @@ def test_training_keeps_completed_peer_step_when_other_worker_response_is_lost(
 
 
 def test_checkpoint_evaluation_is_rejected_after_worker_interruption() -> None:
-    from scripts.work3.train_ppo_work3 import _is_checkpoint_evaluation_eligible
+    from apal.training.work3.train import _is_checkpoint_evaluation_eligible
 
     assert not _is_checkpoint_evaluation_eligible(
         run_mode="pilot",

@@ -4,11 +4,11 @@ import json,sys,time
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.core_types import TaskStatus,ActionBranch
-from models.work3.heuristic_agent import HeuristicAgentWork3
-from utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
-from runtime.artifacts import create_run_context
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import TaskStatus,ActionBranch
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.utils.work3.trajectory_feasibility import check_environment_trajectory_feasibility
+from apal.runtime.artifacts import create_run_context
 def main():
     results={}
     for name,n,k in [("mini70",70,7),("mini210",210,7),("real566",566,2)]:

@@ -12,9 +12,9 @@ from unittest.mock import patch
 import pytest
 
 import scripts.work3.evaluate_c_vs_d as evaluation
-import utils.work3.disturbance_generator as dg
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.disturbance_generator import (
+import apal.utils.work3.disturbance_generator as dg
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.disturbance_generator import (
     generate_9class_scenarios,
     split_scenarios,
 )

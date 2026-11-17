@@ -250,7 +250,7 @@ def test_zero_duration_physical_task_schedule():
 
 def test_baseline_serialization_roundtrip_preserves_policy(tmp_path: Path):
     """R1: 验证多架次基准计划在 load -> save -> load 往返中严格保留 transfer_policy 与元数据。"""
-    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+    from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
     baseline_path = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "mini210_rule_baseline.json")
     b1 = MultiAircraftBaseline.load_from_json(baseline_path)
@@ -276,7 +276,7 @@ def test_baseline_serialization_roundtrip_preserves_policy(tmp_path: Path):
 
 def test_baseline_rejects_unknown_transfer_policy(tmp_path: Path):
     """R1: 验证未知转站模式被显式拒绝，不发生静默降级。"""
-    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+    from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
     baseline_path = REPO_ROOT / Path("tests", "fixtures", "work3", "local_history", "rule_baseline_ac_v1", "mini210_rule_baseline.json")
     raw_data = json.loads(baseline_path.read_text(encoding="utf-8"))

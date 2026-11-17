@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
-from runtime.artifacts import create_run_context
+from apal.runtime.artifacts import create_run_context
 def command(args,cwd):
     try:
         r=subprocess.run(args,cwd=cwd,capture_output=True,text=True,encoding="utf-8",errors="replace",timeout=30)
@@ -43,7 +43,7 @@ def main():
         report["small_fp32_backward"]="PASS"
         # Validate every delivered config with the actual repository validator.
         sys.path.insert(0,str(root))
-        from training.work3.runtime_config import load_work3_runtime_config
+        from apal.training.work3.runtime_config import load_work3_runtime_config
         report["configs"]={}
         for path in sorted((root/"conf"/"work3").glob("local_*.yaml")):
             load_work3_runtime_config(path);report["configs"][path.name]="PASS"

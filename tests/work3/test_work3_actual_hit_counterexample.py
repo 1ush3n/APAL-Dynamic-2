@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from envs.work3.core_types import ActionBranch, TaskStatus
-from envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import ActionBranch, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3
 from scripts.work3.evaluate_c_vs_d import _check_completed_trajectory_feasibility
-from scripts.work3.train_ppo_work3 import count_actual_scenario_hits
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
-from utils.work3.objective_evaluator import evaluate_trajectory_objective
+from apal.training.work3.train import count_actual_scenario_hits
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.objective_evaluator import evaluate_trajectory_objective
 
 
 def test_fixed_disturbance_hits_and_completes_full_batch_with_consistent_ledger() -> None:

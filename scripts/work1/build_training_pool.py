@@ -7,19 +7,17 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+from apal.project import PROJECT_ROOT as PROJECT_ROOT
 
-from runtime.hydra_config import (
+from apal.runtime.hydra_config import (
     ExtraArgument,
     HydraCliError,
     hydra_help,
     initialize_keyvalue_args,
     should_show_help,
 )
-from utils.generate_random_dataset import generate_bucket
-from runtime.five_skill_schema import REQUIRED_SKILL_IDS
+from apal.utils.generate_random_dataset import generate_bucket
+from apal.runtime.five_skill_schema import REQUIRED_SKILL_IDS
 
 
 BUCKETS = {

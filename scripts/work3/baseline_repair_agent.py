@@ -5,8 +5,8 @@ from __future__ import annotations
 from itertools import combinations
 from typing import Any, Sequence
 
-from envs.work3.core_types import ActionBranch, TaskRuntimeState, TaskStatus
-from envs.work3.environment import AirLineEnvWork3, NoFeasibleSlotError
+from apal.envs.work3.core_types import ActionBranch, TaskRuntimeState, TaskStatus
+from apal.envs.work3.environment import AirLineEnvWork3, NoFeasibleSlotError
 
 
 class BaselineRepairInfeasibleError(RuntimeError):

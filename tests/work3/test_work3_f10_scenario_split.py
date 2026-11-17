@@ -8,12 +8,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from scripts.work3.collect_validation_trajectories import load_scenarios_for_split
+from apal.data.work3.validation_trajectories import load_scenarios_for_split
 from scripts.work3.evaluate_c_vs_d import (
     evaluate_single_trajectory,
     summarize_disturbance_effects,
 )
-from utils.work3.disturbance_generator import (
+from apal.utils.work3.disturbance_generator import (
     CYCLE_6_STATION_AIRCRAFT,
     INTENSITY_SPECS,
     TIMING_OFFSETS,
@@ -22,7 +22,7 @@ from utils.work3.disturbance_generator import (
     split_scenarios,
     write_experiment_splits,
 )
-from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
 
 @pytest.fixture
@@ -228,7 +228,7 @@ def test_effect_report_separates_unstarted_hit_from_unhit_targets() -> None:
 def test_environment_tracks_whether_a_scenario_disturbance_was_processed(
     baseline_path: Path,
 ) -> None:
-    from envs.work3.environment import AirLineEnvWork3
+    from apal.envs.work3.environment import AirLineEnvWork3
 
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     env.reset()
@@ -257,7 +257,7 @@ def test_environment_tracks_whether_a_scenario_disturbance_was_processed(
 def test_formal_evaluation_reports_an_event_that_has_not_triggered(
     baseline_path: Path,
 ) -> None:
-    from envs.work3.environment import AirLineEnvWork3
+    from apal.envs.work3.environment import AirLineEnvWork3
 
     env = AirLineEnvWork3(baseline_json_path=baseline_path)
     result = evaluate_single_trajectory(

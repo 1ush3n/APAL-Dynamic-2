@@ -15,10 +15,10 @@ import tempfile
 import pytest
 import torch
 
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.core_types import ActionBranch
-from models.work3.actor_critic import ActorCriticWork3
-from models.work3.heuristic_agent import HeuristicAgentWork3
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.core_types import ActionBranch
+from apal.models.work3.actor_critic import ActorCriticWork3
+from apal.models.work3.heuristic_agent import HeuristicAgentWork3
 from scripts.work3.evaluate_c_vs_d import (
     build_formal_evaluation_agent,
     compare_c_vs_d_pair,

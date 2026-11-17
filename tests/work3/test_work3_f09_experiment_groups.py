@@ -13,13 +13,13 @@ from typing import Any
 import pytest
 
 from scripts.work3.evaluate_c_vs_d import build_formal_evaluation_agent
-from scripts.work3.experiment_protocol import build_method_profile
-from scripts.work3.train_ppo_work3 import (
+from apal.training.work3.protocol import build_method_profile
+from apal.training.work3.train import (
     build_episode_scenario_plan,
     load_training_scenarios,
     run_training,
 )
-from training.work3.runtime_config import load_work3_runtime_config
+from apal.training.work3.runtime_config import load_work3_runtime_config
 
 
 def _save_profile_checkpoint(
@@ -33,10 +33,10 @@ def _save_profile_checkpoint(
 ) -> Path:
     import torch
 
-    from models.work3.actor_critic import ActorCriticWork3
-    from models.work3.graph_builder import GRAPH_FEATURE_VERSION
-    from models.work3.ppo_trainer import PPOTrainerWork3
-    from models.work3.time_head import TimeResidualHead
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.graph_builder import GRAPH_FEATURE_VERSION
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.models.work3.time_head import TimeResidualHead
 
     profile = build_method_profile(method_variant)
     profile_data = asdict(profile)
@@ -159,7 +159,7 @@ def test_no_time_auxiliary_report_status_is_not_mislabeled_as_method_c(
     tmp_path: Path,
 ) -> None:
     """B/C均关闭时间辅助学习，B训练报告不得称作C或伪报时间更新。"""
-    from scripts.work3.train_ppo_work3 import (
+    from apal.training.work3.train import (
         _time_auxiliary_not_applicable_status,
     )
 
@@ -249,7 +249,7 @@ def test_training_cli_accepts_fixed_station_and_ablation_profiles(variant: str) 
     result = subprocess.run(
         [
             sys.executable,
-            "scripts/work3/train_ppo_work3.py",
+            'apal/training/work3/train.py',
             "--method",
             variant,
             "--help",
@@ -264,8 +264,8 @@ def test_training_cli_accepts_fixed_station_and_ablation_profiles(variant: str) 
 
 def test_fixed_station_profile_runs_through_formal_evaluation_entry() -> None:
     """正式评测入口接受B profile并执行其禁止后移的图策略。"""
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.actor_critic import ActorCriticWork3
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3
     from scripts.work3.evaluate_c_vs_d import (
         FormalEvaluationAgent,
         evaluate_single_trajectory,
@@ -299,9 +299,9 @@ def test_heuristic_input_profiles_do_not_call_corrected_time_head(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """E/G仍训练时间头，但Actor动作输入保持启发式值。"""
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.actor_critic import ActorCriticWork3
-    from models.work3.time_head import TimeResidualHead
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.time_head import TimeResidualHead
     from scripts.work3.evaluate_c_vs_d import FormalEvaluationAgent
 
     profile = build_method_profile(variant)
@@ -342,7 +342,7 @@ def test_ablation_training_caches_time_labels_independent_of_shaping_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """E/F无学习塑形也缓存标签；G的塑形版本绑定到episode。"""
-    import scripts.work3.train_ppo_work3 as training_module
+    import apal.training.work3.train as training_module
 
     corrected_input_calls = 0
     original_compute = training_module.compute_online_snapshot_time_inputs
@@ -419,7 +419,7 @@ def test_training_cli_accepts_ablation_profile_override() -> None:
     result = subprocess.run(
         [
             sys.executable,
-            "scripts/work3/train_ppo_work3.py",
+            'apal/training/work3/train.py',
             "--method",
             "E",
             "--help",
@@ -714,8 +714,8 @@ def test_formal_d_checkpoint_reload_preserves_prediction_and_policy_output(
     """同一评测状态上保存重载前后的时间预测与策略输出一致。"""
     import torch
 
-    from envs.work3.environment import AirLineEnvWork3
-    from models.work3.actor_critic import ActorCriticWork3
+    from apal.envs.work3.environment import AirLineEnvWork3
+    from apal.models.work3.actor_critic import ActorCriticWork3
 
     checkpoint = _save_profile_checkpoint(
         tmp_path / "formal_d.pt",
@@ -886,7 +886,7 @@ def test_m08_repeated_benchmark_uses_same_checkpoints_and_manifest(
     import torch
 
     from scripts.work3.evaluate_c_vs_d import run_benchmark_evaluation
-    from utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+    from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
 
     baseline_source_path = Path("data/work3/real_283_k10_baseline.json")
     if not baseline_source_path.is_file():

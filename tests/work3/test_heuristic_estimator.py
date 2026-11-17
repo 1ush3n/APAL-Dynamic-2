@@ -13,15 +13,15 @@ from __future__ import annotations
 from pathlib import Path
 import pytest
 
-from envs.work3.core_types import (
+from apal.envs.work3.core_types import (
     ActionBranch,
     AircraftRuntimeState,
     MultiAircraftState,
     TaskRuntimeState,
     TaskStatus,
 )
-from envs.work3.environment import AirLineEnvWork3
-from models.work3.heuristic_estimator import (
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.models.work3.heuristic_estimator import (
     compute_cycle_heuristic_cmax,
     compute_station_estimated_finish,
 )

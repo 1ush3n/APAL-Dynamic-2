@@ -18,12 +18,12 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from utils.work3.multi_aircraft_baseline import (
+from apal.utils.work3.multi_aircraft_baseline import (
     MultiAircraftBaseline,
     expand_to_multi_aircraft_baseline,
 )
-from core.constraints import ConstraintEngine
-from data_loader import load_data
+from apal.core.constraints import ConstraintEngine
+from apal.data_loader import load_data
 
 
 @pytest.fixture(scope="module")

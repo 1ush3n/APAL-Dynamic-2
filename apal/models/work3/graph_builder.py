@@ -1,0 +1,785 @@
+"""工作三 多架次异构图构造器 (Task 5.1)。
+
+核心技术规范：
+1. 节点体系：
+   - task: 2,830 道工序 (10 架飞机 x 283 道物理工序)；
+   - worker: 80 名工人 (来源于初始调度内生绑定并固定于 5 个站位)；
+   - station: 5 个物理脉动装配工位 (0 ~ 4)；
+   - skill: 5 个工种技能中转节点 (0 ~ 4，经典 Skill Hub 模式)。
+2. 特征排布：
+   - 版本规范：严格对齐 work3_graph_v6 规范；
+   - task_x: 包含工时、状态/技能、相对投产脉动偏移、站位偏移、发布位置与最近扰动命中 (28 维)；
+   - worker_x: [效率, 5技能资质(1:6), 等待时间, 空闲标记, 站位锁定(8:13), 预约区间等]，共 21 维；
+   - station_x: [剩余负荷, 在场飞机指示量, 可用槽位, 槽位等待时间, 分层负荷等]，共 15 维；
+   - skill_x: 5 个技能节点的动态资源统计特征，共 11 维。
+3. 边拓扑体系：
+   - DAG 偏序边: ("task", "precedes", "task")；
+   - 站位归属边: ("task", "assigned_to", "station"), ("station", "has_task", "task")；
+   - 工人执行边: ("task", "done_by", "worker")；
+   - 双向 Skill Hub: worker <-> skill <-> task。
+4. 性能指标设计目标：预构建静态图骨架，283x10基准下单步动态更新耗时 < 2ms。
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+from dataclasses import dataclass
+from typing import Any
+
+import numpy as np
+import torch
+from torch_geometric.data import HeteroData
+
+from apal.envs.work3.core_types import (
+    MultiAircraftState,
+    TaskRuntimeState,
+    TaskStatus,
+)
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.utils.resource_graph import (
+    SkillHubTopology,
+    apply_resource_graph,
+    build_skill_features,
+    build_skill_hub_topology,
+)
+from apal.utils.work3.multi_aircraft_baseline import MultiAircraftBaseline
+
+# 状态独热映射表：UNREADY(0) 与 COMPLETED(4) 保持全 0（非活动待调态）
+# READY(1)->1, RESERVED(2)->2, RUNNING(3)->3, POSTPONED(5)->4 (后移待转站)
+TASK_STATUS_TO_SLOT: dict[TaskStatus, int | None] = {
+    TaskStatus.UNREADY: None,
+    TaskStatus.READY: 1,
+    TaskStatus.RESERVED: 2,
+    TaskStatus.RUNNING: 3,
+    TaskStatus.POSTPONED: 4,
+    TaskStatus.COMPLETED: None,
+}
+
+
+GRAPH_FEATURE_VERSION = "work3_graph_v6"
+GRAPH_FEATURE_DIMS: dict[str, int] = {
+    "task": 28,
+    "worker": 21,
+    "station": 15,
+    "skill": 11,
+}
+GRAPH_FEATURE_SCHEMA: dict[str, Any] = {
+    "version": GRAPH_FEATURE_VERSION,
+    "dims": dict(GRAPH_FEATURE_DIMS),
+    "aircraft_role_partition": ("current", "next", "further"),
+    "recent_events_summary_dim": 12,
+    "recent_events_layout": (
+        "last_action_branch_norm",
+        "has_last_action",
+        "last_action_station_norm",
+        "last_action_task_norm",
+        "micro_steps_in_timestamp_norm",
+        "recent_postponed_count_norm",
+        "recent_reserved_count_norm",
+        "recent_events_count_norm",
+        "recent_material_delays_count_norm",
+        "recent_material_delays_hit_norm",
+        "cycle_elapsed_norm",
+        "recent_material_delay_increment_norm",
+    ),
+    "worker_disturbances_supported": False,
+    "task_features": (
+        "duration_norm",
+        "status_ready",
+        "status_reserved",
+        "status_running",
+        "status_postponed",
+        "skill_0",
+        "skill_1",
+        "skill_2",
+        "skill_3",
+        "skill_4",
+        "baseline_in_station_offset_norm",
+        "launch_pulse_offset_norm",
+        "relative_station_offset",
+        "postpone_count",
+        "is_physical_task",
+        "transfers_remaining_to_target_station_norm",
+        "demand",
+        "material_wait_log1p",
+        "is_reserved",
+        "has_schedule",
+        "scheduled_start_remaining_norm",
+        "has_schedule_end",
+        "scheduled_end_remaining_norm",
+        "has_last_published_position",
+        "last_published_station_norm",
+        "last_published_position_norm",
+        "recent_material_delay_hit",
+        "recent_material_delay_increment_norm",
+    ),
+    "worker_features": (
+        "efficiency",
+        "skill_0",
+        "skill_1",
+        "skill_2",
+        "skill_3",
+        "skill_4",
+        "current_busy_wait_log1p",
+        "is_currently_free",
+        "station_0",
+        "station_1",
+        "station_2",
+        "station_3",
+        "station_4",
+        "reserved_slot_13",
+        "reserved_slot_14",
+        "reserved_slot_15",
+        "reserved_slot_16",
+        "active_or_future_interval_count",
+        "has_next_reserved_interval",
+        "next_reserved_start_remaining_norm",
+        "next_reserved_end_remaining_norm",
+    ),
+    "station_workload_semantics": (
+        "total_remaining_processing_work_norm",
+        "current_aircraft_remaining_processing_work_norm",
+        "known_future_remaining_processing_work_norm",
+    ),
+    "station_occupancy_semantics": "binary_presence_indicator_0_or_1",
+    "recent_hit_tasks_contract": "explicit_task_node_features_and_tensors",
+}
+
+
+def get_graph_feature_schema_hash(schema: dict[str, Any] | None = None) -> str:
+    """计算图特征 Schema 的稳定 SHA-256 指纹（涵盖版本、维度、字段布局与语义）。"""
+    s = schema if schema is not None else GRAPH_FEATURE_SCHEMA
+    clean_s = {k: v for k, v in s.items() if k != "schema_fingerprint"}
+    raw = json.dumps(clean_s, sort_keys=True)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+GRAPH_FEATURE_SCHEMA["schema_fingerprint"] = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
+
+
+def validate_checkpoint_graph_feature_schema(checkpoint: dict[str, Any]) -> str:
+    """统一校验检查点的图特征 Schema 合同。
+
+    强制执行三方一致性校验 (Tripartite Equality):
+        checkpoint.declared_hash == hash(checkpoint.saved_schema) == runtime_schema_hash
+    若缺少 schema、缺少 hash、内容被篡改或与运行时不匹配，均拒绝加载并抛出 ValueError。
+
+    Returns:
+        通过校验的 16 位 Schema SHA-256 指纹字符串。
+    """
+    version = checkpoint.get("graph_feature_version")
+    if version != GRAPH_FEATURE_VERSION:
+        raise ValueError(
+            f"检查点图特征版本不匹配：期望 {GRAPH_FEATURE_VERSION}，实际 {version}"
+        )
+    dims = checkpoint.get("graph_feature_dims")
+    if not dims or dict(dims) != dict(GRAPH_FEATURE_DIMS):
+        raise ValueError(
+            f"检查点图特征维度不匹配：期望 {GRAPH_FEATURE_DIMS}，实际 {dims}"
+        )
+    saved_schema = checkpoint.get("graph_feature_schema")
+    if not isinstance(saved_schema, dict):
+        raise ValueError("检查点缺少有效的 graph_feature_schema 模式字典，拒绝加载")
+    declared_hash = checkpoint.get("graph_feature_schema_hash")
+    if not declared_hash or not isinstance(declared_hash, str):
+        raise ValueError("检查点缺少有效的 graph_feature_schema_hash 模式哈希，拒绝加载")
+
+    computed_saved_hash = get_graph_feature_schema_hash(saved_schema)
+    if declared_hash != computed_saved_hash:
+        raise ValueError(
+            f"检查点声明的模式哈希与保存的 schema 内容哈希不一致："
+            f"声明 {declared_hash}，实际内容计算 {computed_saved_hash}"
+        )
+    runtime_hash = get_graph_feature_schema_hash(GRAPH_FEATURE_SCHEMA)
+    if declared_hash != runtime_hash:
+        raise ValueError(
+            f"检查点图特征模式哈希与当前运行时模式哈希不匹配："
+            f"检查点 {declared_hash}，当前运行时 {runtime_hash}"
+        )
+    return declared_hash
+
+
+@dataclass
+class Work3ResourceConfig:
+    """符合 ResourceGraphConfig 协议的工作三轻量级配置。"""
+
+    use_skill_hub: bool = True
+    skill_hub_bidirectional: bool = True
+    num_skill_types: int = 5
+    worker_skill_feature_slots: int = 5
+    worker_feat_dim: int = 17
+    skill_feat_dim: int = 11
+
+
+class MultiAircraftGraphBuilder:
+    """工作三多架次装配线异构图构造器。"""
+
+    def __init__(
+        self,
+        baseline: MultiAircraftBaseline,
+        config: Work3ResourceConfig | None = None,
+    ) -> None:
+        self.baseline = baseline
+        self.config = config if config is not None else Work3ResourceConfig()
+        self.h0 = float(baseline.h0)
+
+        # 建立有序映射
+        # task_keys: 按照 (aircraft_id, task_id) 严格排序
+        self.task_keys: list[str] = sorted(
+            baseline.tasks.keys(),
+            key=lambda k: (baseline.tasks[k].aircraft_id, baseline.tasks[k].task_id),
+        )
+        self.task_key_to_idx: dict[str, int] = {k: i for i, k in enumerate(self.task_keys)}
+        self.num_tasks = len(self.task_keys)
+        # 环境按 aircraft_id 升序投产；网络只接收相对脉动偏移，不接收编号本身。
+        aircraft_ids = sorted({task.aircraft_id for task in baseline.tasks.values()})
+        self.aircraft_launch_rank = {
+            aircraft_id: rank for rank, aircraft_id in enumerate(aircraft_ids)
+        }
+
+        # 收集全线所有工人（来源于初始调度内生绑定）
+        all_workers_set: set[int] = set()
+        for workers in baseline.station_workers.values():
+            all_workers_set.update(workers)
+        self.sorted_workers: list[int] = sorted(all_workers_set)
+        self.worker_id_to_idx: dict[int, int] = {w: i for i, k in enumerate(self.sorted_workers) for w in [k]}
+        self.num_workers = len(self.sorted_workers)
+        self.num_stations = 5
+        self.baseline_teams: tuple[tuple[int, ...], ...] = tuple(
+            tuple(baseline.tasks[key].team) for key in self.task_keys
+        )
+        baseline_team_edges: list[tuple[int, int]] = [
+            (task_idx, self.worker_id_to_idx[worker_id])
+            for task_idx, team in enumerate(self.baseline_teams)
+            for worker_id in team
+            if worker_id in self.worker_id_to_idx
+        ]
+        # 张量形状：[边数, 2] → [2, 边数]。
+        self.baseline_team_edge_index: torch.Tensor = (
+            torch.tensor(baseline_team_edges, dtype=torch.long).T.contiguous()
+            if baseline_team_edges
+            else torch.empty((2, 0), dtype=torch.long)
+        )
+
+        # ------------------
+        # 1. 预构建静态 Task 特征底座 (Shape: [num_tasks, 26])
+        # ------------------
+        self.base_task_x = torch.zeros((self.num_tasks, GRAPH_FEATURE_DIMS["task"]), dtype=torch.float)
+        for i, key in enumerate(self.task_keys):
+            t = baseline.tasks[key]
+            # [0] 持续工时归一化
+            self.base_task_x[i, 0] = float(t.duration) / self.h0
+            # [5:10] 5 种技能独热编码 (0 ~ 4)
+            if 0 <= t.skill < self.config.num_skill_types:
+                self.base_task_x[i, 5 + t.skill] = 1.0
+            # [10] 基准站内偏移
+            self.base_task_x[i, 10] = float(t.in_station_offset) / self.h0
+            # [14] 是否物理工序
+            self.base_task_x[i, 14] = 1.0 if getattr(t, "is_physical", True) else 0.0
+            # [16] 需求人数
+            self.base_task_x[i, 16] = float(t.demand)
+
+        # ------------------
+        # 2. 预构建静态 Worker 特征底座 (Shape: [num_workers, 21])
+        # ------------------
+        self.base_worker_x = torch.zeros((self.num_workers, GRAPH_FEATURE_DIMS["worker"]), dtype=torch.float)
+        # 统计各工人的技能能力（从基准任务中聚合该工人的技能）
+        worker_skills: dict[int, set[int]] = {w: set() for w in self.sorted_workers}
+        worker_station: dict[int, int] = {}
+        for s_id, w_list in baseline.station_workers.items():
+            for w in w_list:
+                worker_station[w] = s_id - 1  # 0-based station
+        for t in baseline.tasks.values():
+            if 0 <= t.skill < self.config.num_skill_types:
+                for w in t.team:
+                    if w in worker_skills:
+                        worker_skills[w].add(t.skill)
+
+        for w_idx, w_id in enumerate(self.sorted_workers):
+            # [0] 默认基准效率 1.0
+            self.base_worker_x[w_idx, 0] = 1.0
+            # [1:6] 5 种工种资质
+            for sk in worker_skills.get(w_id, set()):
+                if 0 <= sk < self.config.num_skill_types:
+                    self.base_worker_x[w_idx, 1 + sk] = 1.0
+            # [8:13] 站位锁定/归属 one-hot
+            st = worker_station.get(w_id, 0)
+            if 0 <= st < 5:
+                self.base_worker_x[w_idx, 8 + st] = 1.0
+
+        # ------------------
+        # 3. 预构建静态边：同机工序工艺 DAG 偏序边 ("task", "precedes", "task")
+        # ------------------
+        precedence_src: list[int] = []
+        precedence_dst: list[int] = []
+        for dst_idx, key in enumerate(self.task_keys):
+            t = baseline.tasks[key]
+            ac_id = t.aircraft_id
+            for p_id in t.predecessors:
+                p_key = f"{ac_id}_{p_id}"
+                if p_key in self.task_key_to_idx:
+                    src_idx = self.task_key_to_idx[p_key]
+                    precedence_src.append(src_idx)
+                    precedence_dst.append(dst_idx)
+
+        if precedence_src:
+            self.precedence_edge_index = torch.tensor(
+                [precedence_src, precedence_dst], dtype=torch.long
+            )
+        else:
+            self.precedence_edge_index = torch.empty((2, 0), dtype=torch.long)
+
+        # ------------------
+        # 4. 预构建 Skill Hub 静态拓扑 与 NumPy 底座
+        # ------------------
+        self.skill_hub_topology: SkillHubTopology = build_skill_hub_topology(
+            self.base_task_x,
+            self.base_worker_x,
+            self.config.num_skill_types,
+        )
+        self.base_task_x_np = self.base_task_x.numpy()
+        self.base_worker_x_np = self.base_worker_x.numpy()
+
+    def build_graph(self, env: AirLineEnvWork3, *, include_role_facts: bool = False) -> HeteroData:
+        """从当前仿真环境状态构建完整的 PyG HeteroData 异构图。"""
+        state: MultiAircraftState = env.state
+        current_time = float(state.current_time)
+        data = HeteroData()
+
+        # 1. 刷新 Task 特征 (使用 NumPy 极速批量更新)
+        task_x_np = self.base_task_x_np.copy()
+        role_facts = np.zeros((self.num_tasks, 7), dtype=np.float32) if include_role_facts else None
+        assigned_ts_src: list[int] = []
+        assigned_ts_dst: list[int] = []
+        done_by_src: list[int] = []
+        done_by_dst: list[int] = []
+        changed_baseline_task_indices: list[int] = []
+        changed_baseline_team_src: list[int] = []
+        changed_baseline_team_dst: list[int] = []
+        published_team_src: list[int] = []
+        published_team_dst: list[int] = []
+        station_remain_workload = [0.0] * 5
+        station_current_workload = [0.0] * 5
+        station_next_workload = [0.0] * 5
+        station_future_workload = [0.0] * 5
+        station_running_count = [0] * 5
+
+        # 飞机与站位分层任务索引列表 (R04 & R08)
+        current_task_indices: list[list[int]] = [[] for _ in range(5)]
+        next_task_indices: list[list[int]] = [[] for _ in range(5)]
+        further_task_indices: list[list[int]] = [[] for _ in range(5)]
+        task_indices_by_aircraft: dict[int, list[int]] = {k: [] for k in range(state.num_aircraft)}
+        ac_current_task_indices: list[list[int]] = [[] for _ in range(state.num_aircraft)]
+        ac_next_task_indices: list[list[int]] = [[] for _ in range(state.num_aircraft)]
+        ac_further_task_indices: list[list[int]] = [[] for _ in range(state.num_aircraft)]
+
+        curr_ac_id = [state.get_aircraft_at_station(s) for s in range(5)]
+        next_ac_id = [
+            (state.current_cycle if state.current_cycle < state.num_aircraft else None)
+        ] + [state.get_aircraft_at_station(s - 1) for s in range(1, 5)]
+
+        h0 = self.h0
+        station_scale = float(max(1, state.num_stations))
+        for idx, key in enumerate(self.task_keys):
+            t_rt: TaskRuntimeState | None = state.tasks.get(key)
+            if t_rt is None:
+                continue
+
+            if t_rt.base_team != self.baseline_teams[idx]:
+                changed_baseline_task_indices.append(idx)
+                for w_id in t_rt.base_team:
+                    if w_id in self.worker_id_to_idx:
+                        changed_baseline_team_src.append(idx)
+                        changed_baseline_team_dst.append(self.worker_id_to_idx[w_id])
+
+            # 历史发布边不表示该团队当前已预约或占用目标站资源。
+            last_published = t_rt.publication_reference
+            pub_team = last_published["team"]
+            if pub_team:
+                for w_id in pub_team:
+                    if w_id in self.worker_id_to_idx:
+                        published_team_src.append(idx)
+                        published_team_dst.append(self.worker_id_to_idx[w_id])
+
+            # [1:5] 状态独热设置 (UNREADY/COMPLETED=全0, READY=1, RESERVED=2, RUNNING=3, POSTPONED=4)
+            task_x_np[idx, 1:5] = 0.0
+            slot = TASK_STATUS_TO_SLOT.get(t_rt.status)
+            if slot is not None:
+                task_x_np[idx, slot] = 1.0
+
+            # [12] 物理相对站位偏移：(飞机当前所在站位 s_k - 工序基准基础站位 m_i^0)
+            ac_state = state.aircraft.get(t_rt.aircraft_id)
+            launch_rank = self.aircraft_launch_rank.get(t_rt.aircraft_id)
+            if launch_rank is None:
+                raise ValueError(f"基准计划缺少飞机{t_rt.aircraft_id}的投产顺序")
+            launch_pulse_offset = launch_rank + 1 - state.current_cycle
+            task_x_np[idx, 11] = float(launch_pulse_offset) / station_scale
+            target_station = int(t_rt.current_station)
+            if ac_state is None or ac_state.current_station < 0:
+                transfers_remaining = max(0, launch_pulse_offset + target_station)
+            else:
+                transfers_remaining = max(
+                    0,
+                    target_station - int(ac_state.current_station),
+                )
+            task_x_np[idx, 15] = float(transfers_remaining) / station_scale
+            if ac_state is not None:
+                curr_station = ac_state.current_station
+                base_station = t_rt.base_station  # 0-based
+                task_x_np[idx, 12] = float(curr_station - base_station) if curr_station >= 0 else 0.0
+
+            # [13] 累计改派后移次数 n_{ki}
+            task_x_np[idx, 13] = float(t_rt.postpone_count)
+
+            # [17] 到料等待紧迫度 log1p(max(0, R - t) / H_0)
+            wait_time = max(0.0, float(t_rt.material_ready_time) - current_time)
+            task_x_np[idx, 17] = math.log1p(wait_time / h0)
+
+            # [18..22] 有效预约/执行时间特征（无预约时置 0，不产生 NaN）
+            is_reserved = t_rt.status == TaskStatus.RESERVED
+            task_x_np[idx, 18] = 1.0 if is_reserved else 0.0
+            has_schedule = (
+                t_rt.status in (TaskStatus.RESERVED, TaskStatus.RUNNING)
+                and t_rt.scheduled_start is not None
+                and math.isfinite(float(t_rt.scheduled_start))
+            )
+            if has_schedule:
+                sched_start = float(t_rt.scheduled_start)
+                task_x_np[idx, 19] = 1.0
+                task_x_np[idx, 20] = max(0.0, sched_start - current_time) / h0
+                exec_dur = (
+                    t_rt.execution_duration
+                    if t_rt.execution_duration is not None
+                    else t_rt.duration
+                )
+                if exec_dur is not None and math.isfinite(float(exec_dur)):
+                    task_x_np[idx, 21] = 1.0
+                    task_x_np[idx, 22] = max(0.0, sched_start + float(exec_dur) - current_time) / h0
+                else:
+                    task_x_np[idx, 21] = 0.0
+                    task_x_np[idx, 22] = 0.0
+            else:
+                task_x_np[idx, 19] = 0.0
+                task_x_np[idx, 20] = 0.0
+                task_x_np[idx, 21] = 0.0
+                task_x_np[idx, 22] = 0.0
+
+            # [23..25] 上一次正式发布计划的站位与周期内位置参照
+            pub_pos = last_published["position"]
+            pub_station = last_published["station"]
+            if pub_pos is not None and math.isfinite(float(pub_pos)):
+                task_x_np[idx, 23] = 1.0
+                task_x_np[idx, 25] = float(pub_pos) / h0
+            else:
+                task_x_np[idx, 23] = 0.0
+                task_x_np[idx, 25] = 0.0
+            task_x_np[idx, 24] = (
+                float(pub_station) / 4.0
+                if pub_station is not None
+                else float(t_rt.base_station) / 4.0
+            )
+
+            # [26..27] 最近受外生扰动影响与下界推迟增量 (S06 / R7)
+            recent_hit_increments = getattr(state, "recent_material_delay_hit_task_increments", {})
+            if key in recent_hit_increments:
+                task_x_np[idx, 26] = 1.0
+                task_x_np[idx, 27] = float(recent_hit_increments[key]) / max(1.0, float(h0))
+            else:
+                task_x_np[idx, 26] = 0.0
+                task_x_np[idx, 27] = 0.0
+
+            # 动态边收集与站位负荷累积
+            st = t_rt.current_station
+            if 0 <= st < 5:
+                assigned_ts_src.append(idx)
+                assigned_ts_dst.append(st)
+                if t_rt.status != TaskStatus.COMPLETED and getattr(t_rt, "is_physical", True):
+                    if role_facts is not None:
+                        role_facts[idx, 0] = 1.0
+                        role_facts[idx, 1] = float(t_rt.standard_duration) / h0
+                        if 0 <= t_rt.skill < 5:
+                            role_facts[idx, 2 + t_rt.skill] = float(t_rt.demand)
+                    task_indices_by_aircraft[t_rt.aircraft_id].append(idx)
+                    ac_id = t_rt.aircraft_id
+                    ac_obj = state.aircraft.get(ac_id)
+                    ac_st = ac_obj.current_station if ac_obj is not None else -1
+                    if ac_st >= 0:
+                        if st == ac_st:
+                            ac_current_task_indices[ac_id].append(idx)
+                        elif st == ac_st + 1:
+                            ac_next_task_indices[ac_id].append(idx)
+                        else:
+                            ac_further_task_indices[ac_id].append(idx)
+                    else:
+                        if ac_id == state.current_cycle and st == 0:
+                            ac_next_task_indices[ac_id].append(idx)
+                        else:
+                            ac_further_task_indices[ac_id].append(idx)
+
+                    execution_duration = float(
+                        t_rt.execution_duration
+                        if t_rt.execution_duration is not None
+                        else t_rt.duration
+                    )
+                    remaining_work = max(0.0, execution_duration)
+                    if (
+                        t_rt.status == TaskStatus.RUNNING
+                        and t_rt.actual_start is not None
+                    ):
+                        remaining_work = max(
+                            0.0,
+                            float(t_rt.actual_start)
+                            + execution_duration
+                            - current_time,
+                        )
+                    station_remain_workload[st] += remaining_work
+
+                    # 分层角色划分：当前在场飞机、下一脉动进入飞机及已后移任务、更后周期飞机 (R04)
+                    if curr_ac_id[st] is not None and t_rt.aircraft_id == curr_ac_id[st]:
+                        current_task_indices[st].append(idx)
+                        station_current_workload[st] += remaining_work
+                        if t_rt.status == TaskStatus.RUNNING:
+                            station_running_count[st] += 1
+                    elif (
+                        (next_ac_id[st] is not None and t_rt.aircraft_id == next_ac_id[st])
+                        or (t_rt.postpone_count > 0 and t_rt.aircraft_id != curr_ac_id[st])
+                    ):
+                        next_task_indices[st].append(idx)
+                        station_next_workload[st] += remaining_work
+                    else:
+                        further_task_indices[st].append(idx)
+                        station_future_workload[st] += remaining_work
+
+            if t_rt.status in (TaskStatus.RUNNING, TaskStatus.RESERVED):
+                for w_id in t_rt.assigned_team:
+                    if w_id in self.worker_id_to_idx:
+                        w_idx = self.worker_id_to_idx[w_id]
+                        done_by_src.append(idx)
+                        done_by_dst.append(w_idx)
+
+        task_x = torch.from_numpy(task_x_np)
+        data["task"].x = task_x
+
+        # 2. 刷新 Worker 特征 (NumPy 极速批量更新)
+        worker_x_np = self.base_worker_x_np.copy()
+        for w_idx, w_id in enumerate(self.sorted_workers):
+            if w_id in env.worker_efficiencies:
+                worker_x_np[w_idx, 0] = float(env.worker_efficiencies[w_id])
+            if w_id in env.worker_skills:
+                worker_x_np[w_idx, 1:6] = 0.0
+                for skill_id in env.worker_skills[w_id]:
+                    if 0 <= skill_id < self.config.num_skill_types:
+                        worker_x_np[w_idx, 1 + skill_id] = 1.0
+            cal = state.workers.get(w_id)
+            if cal is not None:
+                valid_intervals = []
+                for iv in cal.intervals:
+                    if iv.end <= current_time + 1e-5:
+                        continue
+                    iv_task = state.tasks.get(iv.task_key)
+                    if iv_task is not None and iv_task.status not in (
+                        TaskStatus.RUNNING,
+                        TaskStatus.RESERVED,
+                    ):
+                        continue
+                    valid_intervals.append(iv)
+                valid_intervals.sort(key=lambda item: item.start)
+
+                is_free = True
+                wait_w = 0.0
+                for iv in valid_intervals:
+                    if iv.start <= current_time < iv.end - 1e-5:
+                        is_free = False
+                        wait_w = max(wait_w, iv.end - current_time)
+                # [6] 等待空闲时间 log1p(wait_w / H_0)
+                worker_x_np[w_idx, 6] = math.log1p(wait_w / h0)
+                # [7] 当前是否空闲
+                worker_x_np[w_idx, 7] = 1.0 if is_free else 0.0
+                # [17..20] 未来有效预约/占用区间统计与下一预约时段
+                worker_x_np[w_idx, 17] = float(len(valid_intervals)) / 5.0
+                future_intervals = [
+                    iv for iv in valid_intervals if iv.start > current_time - 1e-5
+                ]
+                if not future_intervals and valid_intervals:
+                    future_intervals = valid_intervals
+                if future_intervals:
+                    next_iv = future_intervals[0]
+                    worker_x_np[w_idx, 18] = 1.0
+                    worker_x_np[w_idx, 19] = max(0.0, float(next_iv.start) - current_time) / h0
+                    worker_x_np[w_idx, 20] = max(0.0, float(next_iv.end) - current_time) / h0
+                else:
+                    worker_x_np[w_idx, 18] = 0.0
+                    worker_x_np[w_idx, 19] = 0.0
+                    worker_x_np[w_idx, 20] = 0.0
+
+        worker_x = torch.from_numpy(worker_x_np)
+        data["worker"].x = worker_x
+
+        # 3. 刷新 Station 特征 (Shape: [5, 15])
+        station_x_np = np.zeros((self.num_stations, 15), dtype=np.float32)
+        cycle_elapsed = max(0.0, current_time - state.last_transfer_time)
+        for s in range(self.num_stations):
+            ac_id = state.get_aircraft_at_station(s)
+            station_x_np[s, 0] = float(station_remain_workload[s]) / h0
+            station_x_np[s, 1] = 1.0 if ac_id is not None else 0.0
+            station_x_np[s, 2] = float(max(0, 3 - station_running_count[s])) / 3.0
+            station_x_np[s, 3] = cycle_elapsed / h0
+            # [4] 当前在场飞机负荷；[5] 下次脉动进入该站的飞机及后移负荷；[6] 更后飞机负荷
+            station_x_np[s, 4] = float(station_current_workload[s]) / h0
+            station_x_np[s, 5] = float(station_next_workload[s]) / h0
+            station_x_np[s, 6] = float(station_future_workload[s]) / h0
+
+        data["station"].x = torch.from_numpy(station_x_np)
+
+        # 4. 组装边拓扑
+        data["task", "precedes", "task"].edge_index = self.precedence_edge_index
+
+        if assigned_ts_src:
+            t_s = torch.tensor([assigned_ts_src, assigned_ts_dst], dtype=torch.long)
+            s_t = torch.tensor([assigned_ts_dst, assigned_ts_src], dtype=torch.long)
+        else:
+            t_s = torch.empty((2, 0), dtype=torch.long)
+            s_t = torch.empty((2, 0), dtype=torch.long)
+        data["task", "assigned_to", "station"].edge_index = t_s
+        data["station", "has_task", "task"].edge_index = s_t
+
+        if done_by_src:
+            t_w = torch.tensor([done_by_src, done_by_dst], dtype=torch.long)
+        else:
+            t_w = torch.empty((2, 0), dtype=torch.long)
+        data["task", "done_by", "worker"].edge_index = t_w
+
+        if changed_baseline_task_indices:
+            changed_task_mask = torch.zeros(self.num_tasks, dtype=torch.bool)
+            changed_task_mask[
+                torch.tensor(changed_baseline_task_indices, dtype=torch.long)
+            ] = True
+            keep_edge_mask = ~changed_task_mask[self.baseline_team_edge_index[0]]
+            changed_edges = (
+                torch.tensor(
+                    [changed_baseline_team_src, changed_baseline_team_dst],
+                    dtype=torch.long,
+                )
+                if changed_baseline_team_src
+                else torch.empty((2, 0), dtype=torch.long)
+            )
+            # 张量形状：[2, 静态边数] 与 [2, 变更边数] → [2, 总边数]。
+            baseline_edges = torch.cat(
+                (self.baseline_team_edge_index[:, keep_edge_mask], changed_edges),
+                dim=1,
+            )
+        else:
+            baseline_edges = self.baseline_team_edge_index.clone()
+        data["task", "baseline_team", "worker"].edge_index = baseline_edges
+
+        if published_team_src:
+            published_edges = torch.tensor(
+                [published_team_src, published_team_dst], dtype=torch.long
+            )
+        else:
+            published_edges = torch.empty((2, 0), dtype=torch.long)
+        data["task", "last_published_team", "worker"].edge_index = published_edges
+
+        # 5. 挂载 Skill Hub 特征与双向资源边
+        apply_resource_graph(
+            data,
+            task_x[:, :18],
+            worker_x[:, :17],
+            self.config,
+            skill_hub_topology=self.skill_hub_topology,
+        )
+
+        # 6. 挂载分层读出分区张量索引与动态演化摘要 (R04, R07, R08 / U19-U21)
+        data._current_task_indices = [
+            torch.tensor(current_task_indices[s], dtype=torch.long) for s in range(5)
+        ]
+        data._next_task_indices = [
+            torch.tensor(next_task_indices[s], dtype=torch.long) for s in range(5)
+        ]
+        data._further_task_indices = [
+            torch.tensor(further_task_indices[s], dtype=torch.long) for s in range(5)
+        ]
+        data._task_indices_by_aircraft = [
+            torch.tensor(task_indices_by_aircraft[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
+        data._ac_current_task_indices = [
+            torch.tensor(ac_current_task_indices[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
+        if role_facts is not None:
+            data.role_task_facts = torch.from_numpy(role_facts)
+        data._ac_next_task_indices = [
+            torch.tensor(ac_next_task_indices[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
+        data._ac_further_task_indices = [
+            torch.tensor(ac_further_task_indices[k], dtype=torch.long)
+            for k in range(state.num_aircraft)
+        ]
+
+        has_action = getattr(state, "has_last_action", False)
+        recent_vec = torch.tensor(
+            [
+                float(state.last_action_branch) / 2.0 if has_action else 0.0,
+                1.0 if has_action else 0.0,
+                float(getattr(state, "last_action_station_id", -1) + 1) / 5.0,
+                float(getattr(state, "last_action_task_id", -1) + 1) / float(max(1, self.num_tasks)),
+                float(state.micro_steps_in_timestamp) / 10.0,
+                float(state.recent_postponed_count) / 10.0,
+                float(state.recent_reserved_count) / 10.0,
+                float(getattr(state, "recent_events_count", 0)) / 10.0,
+                float(getattr(state, "recent_material_delays", 0)) / 10.0,
+                float(getattr(state, "recent_material_delays_hit", 0)) / 10.0,
+                float(cycle_elapsed) / h0,
+                float(getattr(state, "recent_material_delay_increment", 0.0)) / max(1.0, float(h0)),
+            ],
+            dtype=torch.float32,
+        )
+        data._recent_events_summary = recent_vec
+        data._recent_hit_task_mask = torch.from_numpy(task_x_np[:, 26] > 0.5)
+        data._recent_hit_task_increments = torch.from_numpy(task_x_np[:, 27])
+
+        return data
+
+    def get_action_candidate_indices(self, env: AirLineEnvWork3) -> list[int]:
+        """获取当前环境下具有合法调度动作资格的候选工序在图节点中的全局索引。"""
+        candidates = env.get_action_candidates()
+        return [
+            self.task_key_to_idx[t.task_key]
+            for t in candidates
+            if t.task_key in self.task_key_to_idx
+        ]
+
+    def get_ready_task_indices(self, env: AirLineEnvWork3) -> list[int]:
+        """获取当前环境下具备留站执行/预约资格的就绪工序索引（委托环境 can_reserve）。"""
+        return [
+            self.task_key_to_idx[t.task_key]
+            for t in env.get_action_candidates()
+            if env.can_reserve(t) and t.task_key in self.task_key_to_idx
+        ]
+
+    def get_ready_task_mask(self, env: AirLineEnvWork3) -> torch.Tensor:
+        """获取全图就绪可执行工序布尔掩码 (Shape: [num_tasks], True 为就绪可留站)。"""
+        mask = torch.zeros(self.num_tasks, dtype=torch.bool)
+        indices = self.get_ready_task_indices(env)
+        if indices:
+            mask[torch.tensor(indices, dtype=torch.long)] = True
+        return mask
+
+    def get_action_branch_mask(self, env: AirLineEnvWork3, task_idx: int) -> dict[str, bool]:
+        """获取指定工序在当前环境下的动作分支合法性掩码（直接委托环境约束）。
+
+        Returns:
+            {"can_stay": bool, "can_postpone": bool}
+        """
+        if task_idx < 0 or task_idx >= self.num_tasks:
+            return {"can_stay": False, "can_postpone": False}
+        key = self.task_keys[task_idx]
+        task = env.state.tasks.get(key)
+        if task is None:
+            return {"can_stay": False, "can_postpone": False}
+        can_stay, can_postpone = env.get_action_branch_mask(task)
+        return {"can_stay": bool(can_stay), "can_postpone": bool(can_postpone)}

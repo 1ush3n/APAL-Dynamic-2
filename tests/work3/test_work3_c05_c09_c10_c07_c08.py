@@ -18,22 +18,22 @@ import pandas as pd
 import pytest
 import torch
 
-from core.constraints import ConstraintEngine
-from envs.work3.core_types import (
+from apal.core.constraints import ConstraintEngine
+from apal.envs.work3.core_types import (
     ActionBranch,
     MultiAircraftState,
     TaskRuntimeState,
     TaskStatus,
     initialize_multi_aircraft_state,
 )
-from envs.work3.decision_snapshot import DecisionSnapshot, TeamCompletionContext, WorkerSnapshot
-from envs.work3.environment import AirLineEnvWork3
-from envs.work3.event_queue import EventType
-from models.work3.actor_critic import (
+from apal.envs.work3.decision_snapshot import DecisionSnapshot, TeamCompletionContext, WorkerSnapshot
+from apal.envs.work3.environment import AirLineEnvWork3
+from apal.envs.work3.event_queue import EventType
+from apal.models.work3.actor_critic import (
     ActorCriticWork3,
     extract_compact_state_features,
 )
-from runtime.five_skill_schema import validate_explicit_five_skill_frame
+from apal.runtime.five_skill_schema import validate_explicit_five_skill_frame
 from torch_geometric.data import HeteroData
 
 BASELINE_PATH = Path("data/work3/real_283_k10_baseline.json")

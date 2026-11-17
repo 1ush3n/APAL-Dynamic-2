@@ -8,8 +8,8 @@ from pathlib import Path
 import torch
 from omegaconf import OmegaConf
 
-from models.work3.actor_critic import ActorCriticWork3
-from scripts.work3.train_ppo_work3 import (
+from apal.models.work3.actor_critic import ActorCriticWork3
+from apal.training.work3.train import (
     ROOT_DIR,
     _json_fingerprint,
     _module_fingerprint,
@@ -17,7 +17,7 @@ from scripts.work3.train_ppo_work3 import (
     build_worker_scenario_plan,
     load_training_scenarios,
 )
-from training.work3.runtime_config import (
+from apal.training.work3.runtime_config import (
     load_work3_runtime_config,
     resolved_config_fingerprint,
 )

@@ -10,13 +10,11 @@ import sys
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+from apal.project import PROJECT_ROOT as PROJECT_ROOT
 
-import evaluate_model as standard_evaluator
-from models.hb_gat_pn import HBGATPN
-from models.main_screen import (
+import apal.evaluation.initial as standard_evaluator
+from apal.models.hb_gat_pn import HBGATPN
+from apal.models.main_screen import (
     DualAttentionContextHBGATPN,
     ScaleGatedContextHBGATPN,
 )
