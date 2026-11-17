@@ -1,3 +1,92 @@
+# 当前目录与实施记录
+
+## 2026-11-17：单一apal包、本机资产及入口整理
+
+起点为 `dbc33c90728249f590a5b4293ec6f237a63160b1`，独立分支 `apal-namespace-20261117`。资产提交 `482d8ba68f59ac9f686546c7f3adcf1f0e28b4a9`；代码提交 `215caace0db0c6ce8a8ea6994babfeeef051fd81`；本报告、导航与唯一迁移表以随后文档提交保存。没有合并main、改写历史、删除其它分支/worktree/stash或浅克隆替换工作目录。GitHub默认main没有自动变更，审阅应选择本分支。
+
+本轮不实施最优示例预训练，不改图结构、网络层、参数键、动作顺序、约束、人员忙碌资格、事件优先级、奖励、精度、超参数或数据划分；没有把目录改动记作性能收益。下文旧日期章节保留原阶段身份，现行规则以本节和根README为准。
+
+### 目录与实际改动
+
+| 原行为 | 新行为 | 文件与原因 |
+|---|---|---|
+| 7个实现目录及根实现混合导入 | 唯一生产包apal，内部原职责保留；不加src层，不合并三套环境/训练逻辑 | `apal/{core,envs,models,training,runtime,baselines,utils}`；根实现迁入apal，训练编排位于`apal/training/entry.py`及`work3/train.py`，评估位于`apal/evaluation` |
+| 多处按文件层级猜项目根 | 轻量`apal.project.PROJECT_ROOT/resolve_project_root`，默认验证conf/data，允许显式项目根 | configs、环境、Hydra、运行路径、基线及工具调用同步更新；相对路径语义不因新包层级漂移 |
+| 同名评估脚本可能导入自身 | 显式导入`apal.evaluation.initial/reschedule` | 根与分组薄入口统一实现；筛查评估修改真实实现模块的模型类，不修改包装器副本 |
+| old模块名写入少数可信pickle | 仅真实旧类在读取点显式映射到apal类 | `apal/runtime/legacy_pickle.py`：DDQN经验1类、工作三状态8类、快照3类、查询结果3类；没有旧顶级包别名或torch全局补丁，不是供不可信pickle执行的安全沙箱 |
+| scripts根106文件、tests根112文件 | scripts根0文件，tests根只留conftest；scripts按common/work1/work2/work3，性能工具与APCF在所属组内 | 64个危险/一次性历史脚本原字节外部保存；所有科学回归及fixtures保留，helper及借用构造器只迁一份 |
+| 多个维护工具默认写results或源码目录 | 复用同一RunContext，默认进入runs，显式输出仍尊重 | 12工具集中调整；公共logger及旧GA导出也接同一运行。12工具包括sensitivity、三机会审计、DDQN replay/GPU汇总、四manifest评估、joint筛查和消融编排 |
+| 旧解析器resume无run_id时连新输出也沿用旧根 | 先固定旧last.ckpt输入，再创建新runs输出；显式恢复路径优先 | `apal/runtime/configuration.py::initialize_training_config`；仅输入/输出职责调整，存在性与严格模型恢复校验继续由原路径执行 |
+| 时间头API默认覆盖源码目录中的best文件 | helper默认只返回模型；CLI默认独立runs保存，显式路径/显式None含义清楚 | `train_time_head(checkpoint_path=None)`不保存；`scripts/work3/train_time_predictor.py`负责默认保存位置。APCF预训练CLI也从根checkpoints改为独立run；未训练APCF或恢复QUERY时间头 |
+| pytest固定根临时目录并无条件创建空目录 | 默认使用pytest系统临时目录；核验均显式仓库外basetemp | 删除pytest.ini旧basetemp及conftest无用mkdir；没有修改断言或跳过规则 |
+
+打包只增加`pyproject.toml`，在原rag_env中用 `pip install --no-deps --no-build-isolation -e .` 登记；不升级依赖。发现范围包含apal和scripts命令工具命名空间，后者让直接文件执行时的工具互导不依赖PYTHONPATH或新增sys.path补丁；生产实现仍只有apal。采用[Setuptools可编辑安装](https://setuptools.pypa.io/en/latest/userguide/development_mode.html)，当前支持从仓库根运行，不承诺脱离conf/data的wheel部署。
+
+保留的有限薄入口：根`train.py/evaluate_model.py/evaluate_reschedule_model.py`；工作三原训练/QUERY评估/轨迹收集命令；分组后的两评估包装及四个已有数据/排程命令。没有为其余每个旧源码路径创建壳。旧`train_lightning.py`实现变为`apal.training.entry`，工具命令同步指向真实位置。旧checkpoint参数键不随文件路径改名。
+
+Git维护树根目录12→6（apal/conf/data/docs/scripts/tests），根文件17→9；scripts158→94，根平铺106→0；tests301→302，根平铺112→1。测试数量变化来自新增集中回归及preflight工具归位，不是删除科学断言。源码提交当前树1141文件，本文档提交增加研究索引后为1142文件；自定义目录角色只有6个，runs是额外的本机输出根，.git是标准历史库。起点Git blob展开62,741,668字节，源码提交62,182,563字节；这些不是磁盘占用或历史克隆大小，文档提交会增加少量文本。r3/r4/r5等真实数据协议保持原位。
+
+### 本机资产、研究材料与清理
+
+本轮普通目录仍为 `D:\OneDrive\研究生\归档\APAL-Dynamic-2`。先完整复制、逐文件SHA复核，再确认源路径/mtime/大小/SHA未变，最后逐文件移除登记副本及已空目录；没有全库clean或递归删除未登记目录。
+
+- 839文件、624,047,083字节：旧PPT、outputs/results、saved_local_run_283、两组研究诊断；另361文件、378,999,016字节：旧性能JSON、历史探针、混合测试及手工烟测产物。共1200文件保留普通副本，其中研究诊断46模型和补充产物140模型均完整保留，不把它们当垃圾或全部声称可重建。
+- 64个历史脚本保留原文件名及字节；旧cleanup硬编码其它项目路径且默认执行、旧批次自动关机，均未运行。compute_statistical_metrics无维护消费者，原44,446字节/SHA也与固定起点物理记录一致。
+- 两份旧参考权重移至 `runs/work3_legacy/imported_dbc33c9/checkpoints/`，附configs/source_manifest；不是QUERY权重，未来新时间头不会覆盖它们。原有效历史运行仍在 `runs/initial_schedule_283/`。
+- `data/generated/initial_283`仍17文件、154,322字节；16CSV与manifest逐项SHA一致。工作二通用final_schedule/reschedule_eval_scenarios及APCF资产本机原本缺失，未伪造替代；R5仍按原manifest与初始模型依赖读取。
+- 当前确认Word/PPT/图源未在本机找到，用户明确同意本轮跳过；旧PPT不能提升为当前开题稿，不建立空proposal目录。研究准备成果仅作[带来源的索引](research.md)，未下载或复验其资料库包。
+- 51个具名旧pyc及已确认空目录已清；本轮产生的缓存、诊断模型、外部pytest目录和唯一固定原树在保留关键证据后具名清理。其它worktree、Git历史和旧本地分支未动。
+
+完整资产校验身份与按文件恢复方法见[历史索引](history.md)；唯一工程映射见[directory_migration.csv](directory_migration.csv)。没有把本机私有逐文件清单提交GitHub。原先1259份普通资料副本及前两轮证据包没有重压或删除。
+
+### 实际核验
+
+Windows，严格使用 `D:\Conda\envs\rag_env\python.exe`；Python3.11.15、Torch2.12.0+cu132、PyG2.7.0、Lightning2.6.5、OmegaConf2.3.0、NumPy2.4.6。CPU FP32，主/环境线程1，实际两个spawn worker；无GPU、服务器或真实LLM调用。进程可见性受CIM权限限制，不宣称宿主独占。以下重叠集合分别记账，不相加成独立总数。
+
+| 实际检查 | 结果与范围 |
+|---|---|
+| 核心迁移组合 | 81 passed，178.07秒；转站、同刻事件、查询/重放、工作一模型与工作二R5、根定位/有限旧类/旧契约及路径 |
+| 配置与resume集中回归 | 整文件46 passed，12.83秒；新2参数resume反例在修复前均失败，修复后旧输入保留、新输出进入runs |
+| 维护工具路径及旧回归 | 44 passed，20.62秒，其中13新路径分派、31关联旧回归；旧默认路径先红，显式覆盖保留 |
+| 最后路径/旧头兼容组合 | 62 passed，16.69秒；包含namespace、配置、logger、现有时间头显式保存训练检查及G3初始化约束，不是QUERY恢复时间预测 |
+| 直接脚本R1与路径回归 | 6 passed，37.87秒；修复安装范围只含apal而导致工具互导失败的问题 |
+| 最终全体收集 | 1618 tests collected，27.96秒，无收集错误；不等于执行1618项通过 |
+| 历史11文件组合 | 113 passed、11 failed，73.30秒；仍为10个C检查点profile不匹配、1个外部路径relative_to旧边界，未删断言或加skip |
+| 七次直接CLI帮助/两项Hydra组合 | 全部成功；两评估包装各验证root在后位和清空PYTHONPATH。工作一同构严格联合动作/reschedule false；工作二异构联合动作/reschedule true。未启动工作一二训练 |
+| 固定数据与源检查 | 634份data/fixtures共55,418,359字节的原SHA保持；原科学断言/跳过规则保持；403活跃Python实际compile及git diff --check通过 |
+
+核心命令（仓库根，rag_env，仓库外basetemp）为：
+
+```powershell
+python -m pytest tests/work3/test_transfer_semantics.py tests/work3/test_same_timestamp_events.py tests/work3/test_worker_mask_replay.py tests/work3/test_scheduling_queries.py tests/work1/test_full_joint_next_diagnostics.py tests/work1/test_dual_attention_context_screen.py tests/work2/test_reschedule_r5_protocol.py tests/common/policy/test_worker_pointer_v2.py::test_v2_experiment_config_is_isolated_and_explicit tests/common/test_namespace.py tests/common/runtime/test_legacy_check_contract.py tests/common/runtime/test_pathlib_compat.py -q -p no:cacheprovider --tb=short
+```
+
+实际命令额外传本轮外部`--basetemp`；13新工具分派与6关联文件、历史11文件及其全部参数保存在外部证据JSON和日志。README给出当前三项工作入口、新QUERY无扰动/受扰评估及最短检查命令；缺失资产的位置与身份在[data.md](data.md)，不把需模型的命令称为无条件可复制运行。
+
+### 真实更新、完整调度与模型边界
+
+整理前、整理后API、整理后实际 `python -m apal.training.work3.train` 三次各从相同seed42/数据/参数开始：2worker、8步、一次真实rollout→GAE→PPO损失→backward→Lightning主优化器step→checkpoint。每次fit/成功/尝试均1，AMP跳过0，重放样本8/绝对误差0；无时间头/标签监督更新。loss=-0.019621893763542175，grad norm=11.951152801513672，均有限；138参数张量实际更新。三次不是顺序累积训练。
+
+API前后59条有序边界全部精确一致；初始/最终Actor、完整Lightning训练状态、optimizer及RNG逐字节摘要一致，未冻结旧embedding或使用allclose。实际CLI保存状态也与整理前精确一致。最终Actor摘要 `d7f384aeea6e749216644105fa4c041347c2584f79b4f41cb071cac22c6f9b76`。两步历史C启动器亦成功完成一次完整更新，重放2/误差0，父子运行目录归属核验通过。所有烟测诚实标记decision_limit/truncated、成功生产批次0，不伪造工期终值。
+
+同一真实诊断权重完成两机/五站/10工序受扰调度：20条有序动作/环境边界与完整结果精确一致，全部离线、费用及可行性核验通过。查询数值/原因、候选/前缀/掩码、事件、承诺、日历与reward/费用包含在边界摘要内；不展开_state_ref反向指针，未单独证明全部Tensor别名与PyG store父指针的合同。比较器的一ULP、候选顺序和原因负控均能识别差异。已有reset=False回归通过实际模块调用保留中段现场，没有AST摘函数代替。
+
+实际CLI用新权重评估283的名义与预登记扰动8步前缀，均正确截断、空终局工期、完整/增量费用账本一致；不据此声称扰动已触发或批次已完工。旧 `data/work3/val_trajectories.pt` 原字节工件通过有限类迁移实际读取16条；其SHA为 `ff3e30ca54c0cf15ff5e7380fc2f4f60f56badae4e326d1ad8f02aa570abaad2`，没有回填或改写原件。
+
+两份本机旧Lightning best（194011与194402）可读format v2，策略568键、优化器568项/2组、agent/scaler有保存，scheduler为空，未见独立RNG字段；当前严格Agent加载均缺相同60个baseline_team参数。用206个原文件重建唯一固定dbc33c9临时原树，实际导入原完整helper，也复现同一严格错误。没有补随机权重/strict=False，不把可读取误写成精确恢复成功。该边界与11个历史测试失败分别登记。
+
+开发期曾发现并修复配置键误当模块字符串、复合代码路径叶名误改、动态__import__返回层级、future导入顺序及直接工具包导入问题；修正后完成上述复验。安装首次还遇到宿主临时目录字符/权限问题，改本轮临时目录后仅登记editable包，依赖未变；原始失败日志保留，不计成科学测试通过。
+
+### 复现证据与未验范围
+
+本轮最小证据包保存于普通资料根 `verification/APAL_namespace_20261117_evidence.zip`；含前后有序摘要、真实CLI/测试原文、输入身份/配置、可复用核验脚本及SHA清单，不含大权重、全部探索trace或原树副本。包内README说明从新空临时目录复核，避免覆盖原证据。证据包62项、369,953字节，SHA256为 `5468dc844b71df532922047a778e1b2e2ed27a7989f6f823a3c277fb691330f3`；相邻.sha256文件可复核，这不是论文资料压缩包。
+
+未验证GPU、Linux原生IPC、长训/收敛/策略收益、全部1618项执行、真实LLM服务、用户其它完整对象pickle及旧Lightning架构迁移。未实施预训练或新的性能候选；原数据协议、旧时间方法及三项研究有效实现仍保留。只有本机可访问目录实际完成整理，其它clone/worktree及服务器未处理。
+
+---
+
+## 2026-11-16已封存阶段记录
+
 # 目录与命名维护记录
 
 本轮从`a710e3427ab87f01d27fca13238172894de6fa09`开始，独立分支`project-layout-20261116`；原工作三容错/性能审阅分支保留。这里只处理归属、路径和输出接口，不改变网络、物理规则、奖励、精度、随机种子和数据划分。
