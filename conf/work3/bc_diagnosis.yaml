@@ -1,0 +1,40 @@
+source_run: runs/work3_pretrain/pretrain_pilot_20261117_01
+artifacts:
+  experiment_name: work3_bc_diagnosis
+  runs_root: runs
+  run_id: bc_diagnosis_20261117_01
+runtime:
+  device: cuda
+  amp_dtype: fp32
+  deterministic: true
+  main_num_threads: 1
+  seeds: [42, 43]
+  total_wall_seconds: 21600
+evaluation:
+  max_decisions: 1000
+  max_wall_seconds: 120.0
+  gap_absolute_tolerance: 0.000000001
+  train_panel:
+    structured: 4
+    task_order: 2
+    postpone: 2
+training:
+  diagnostic_interval: 25
+  maximum_saved_updates: 8
+  preserve_original_settings: true
+selection:
+  baseline: validation_nll
+  candidate: legal_count_then_mean_gap_then_earliest
+  include_initial: true
+  fresh_holdout_requires_frozen_candidate: true
+objective:
+  w_makespan: 1.0
+  w_h: 0.0
+  w_t: 0.0
+  w_w: 0.0
+  w_p: 0.0
+  w_revision_time: 0.0
+  w_revision_team: 0.0
+  lambda_1: 0.10
+  lambda_2: 0.20
+  normalize_by_n: true
