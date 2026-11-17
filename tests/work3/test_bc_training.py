@@ -48,6 +48,39 @@ def test_demand_sampler_preserves_non_team_records_and_validates_weights() -> No
             _demand_sampling_weights(rows, {2: invalid})
 
 
+def test_actual_batch_sampling_audit_preserves_order_and_scope_counts() -> None:
+    from apal.training.work3.behavior_cloning import _sampling_audit
+
+    rows = [{"instance_id": "train_024", "label_scope": ("task", "team", "align"),
+             "record": {"task_key": "0_2", "branch": 0, "chosen_team": (3, 5), "align": 1}},
+            {"instance_id": "train_001", "label_scope": ("branch",),
+             "record": {"task_key": "0_4", "branch": 1}}]
+    rng = torch.get_rng_state().clone()
+    first = _sampling_audit(rows, [7, 3])
+    assert first["scope_counts"] == {"task": 1, "team": 1, "align": 1, "branch": 1}
+    assert first["train_024_0_2_count"] == 1
+    assert first["sample_indices"] == [7, 3]
+    assert first["sample_index_audit_complete"]
+    assert not _sampling_audit(rows, [None, 3])["sample_index_audit_complete"]
+    assert len(first["sample_sequence_sha256"]) == 64
+    assert _sampling_audit(deepcopy(rows), [7, 3]) == first
+    assert _sampling_audit(rows, [8, 3])["sample_sequence_sha256"] != first["sample_sequence_sha256"]
+    assert _sampling_audit(list(reversed(rows)), [3, 7])["sample_sequence_sha256"] != first["sample_sequence_sha256"]
+    changed = deepcopy(rows)
+    changed[0]["record"]["chosen_team"] = (5, 3)
+    assert _sampling_audit(changed, [7, 3])["sample_sequence_sha256"] != first["sample_sequence_sha256"]
+    changed = deepcopy(rows)
+    changed[0]["record"]["graph_snapshot"] = object()
+    assert _sampling_audit(changed, [7, 3]) == first
+    assert torch.equal(torch.get_rng_state(), rng)
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.training.work3.behavior_cloning import Work3BCModule
+    repeated = Work3BCModule(ActorCriticWork3(condition_queries=True, hidden_dim=8), [rows[0], rows[0]],
+        OmegaConf.create({"learning_rate": 0.0003, "max_grad_norm": 0.5, "batch_size": 1}))
+    assert not repeated.sample_index_audit_complete
+    assert repeated._sample_indices[id(rows[0])] is None
+
+
 @pytest.mark.parametrize("training", [False, True])
 def test_diagnostic_checkpoint_preserves_rng_mode_steps_and_outputs(tmp_path: Path, training: bool) -> None:
     import random
@@ -144,6 +177,11 @@ def test_bc_lightning_updates_and_preserves_query_checkpoint_contract(tmp_path: 
     assert not report.get("diagnostic_checkpoints")
     assert {path.name for path in tmp_path.glob("bc*.pt")} == {"bc.pt", "bc_initial.pt", "bc_final.pt"}
     assert report["optimization_steps"] == report["optimizer_step_attempts"] == 3
+    assert report["sampled_scope_counts"] == {"task": 3}
+    assert report["train_024_0_2_count"] == 0
+    assert all(len(row["sample_sequence_sha256"]) == 64 for row in report["history"])
+    assert all(row["sample_indices"] == [0] for row in report["history"])
+    assert report["sample_index_audit_complete"]
     assert report["amp_skipped_steps"] == 0 and report["parameters_changed"] > 0
     assert report["final_validation_nll"] < report["initial_validation_nll"]
     assert report["shared_encoder_has_gradient"] and not report["critic_has_gradient"]

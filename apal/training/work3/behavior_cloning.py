@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from collections.abc import Mapping
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -146,6 +147,23 @@ def _batch_coverage(samples: list[dict[str, Any]]) -> tuple[dict[str, int], dict
     return dict(demands), dict(choices)
 
 
+def _sampling_audit(samples: list[dict[str, Any]], sample_indices: list[int | None]) -> dict[str, Any]:
+    """按实际batch顺序审计动作记录身份，不读取对象地址或神经表示。"""
+    assert len(samples) == len(sample_indices)
+    identities = [{"sample_index": index, "instance_id": row["instance_id"], **{key: row["record"].get(key)
+                   for key in ("task_key", "branch", "chosen_team", "align")}}
+                  for index, row in zip(sample_indices, samples)]
+    encoded = json.dumps(identities, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    scopes = Counter(layer for row in samples for layer in row["label_scope"])
+    return {"sample_sequence_sha256": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+            "sample_indices": list(sample_indices),
+            "sample_index_audit_complete": all(type(index) is int for index in sample_indices),
+            "scope_counts": dict(scopes),
+            # 该固定样例只做呈现审计，不参与损失或抽样。
+            "train_024_0_2_count": sum(row["instance_id"] == "train_024" and row["task_key"] == "0_2"
+                                        for row in identities)}
+
+
 def _evaluate(actor: ActorCriticWork3, samples: list[dict[str, Any]], batch_size: int,
               team_objective: str) -> float:
     training = actor.training
@@ -174,6 +192,10 @@ class Work3BCModule(Work3LightningModule):
                          max_grad_norm=float(config.max_grad_norm), ppo_epochs=0,
                          batch_size=int(config.batch_size))
         self.instance_counts = _counts(samples)
+        identity_counts = Counter(id(row) for row in samples)
+        self.sample_index_audit_complete = len(identity_counts) == len(samples)
+        self._sample_indices = {id(row): index if identity_counts[id(row)] == 1 else None
+                                for index, row in enumerate(samples)}
         self.team_objective = str(config.get("team_objective", "sequence"))
         self.history: list[dict[str, Any]] = []
 
@@ -194,6 +216,7 @@ class Work3BCModule(Work3LightningModule):
         self.history.append({"update": self.optimization_steps, "loss": float(loss.detach().item()),
                              "layer_nll": layers, "grad_norm": grad_norm,
                              "sample_count": len(batch), "demand_counts": demands, "real_choice_counts": choices,
+                             **_sampling_audit(batch, [self._sample_indices.get(id(row)) for row in batch]),
                              "elapsed_seconds": time.perf_counter() - started})
         return loss.detach()
 
@@ -345,10 +368,11 @@ def run_behavior_cloning(config: DictConfig, *, output: Path | None = None,
     trainer.fit(module, train_dataloaders=loader)
     final_loss = _evaluate(actor, samples["validation"], int(config.bc.batch_size), team_objective)
     _save(module, final_output, {**metadata, "final_validation_nll": final_loss})
-    sampled_demands, sampled_choices = Counter(), Counter()
+    sampled_demands, sampled_choices, sampled_scopes = Counter(), Counter(), Counter()
     for update in module.history:
         sampled_demands.update(update["demand_counts"])
         sampled_choices.update(update["real_choice_counts"])
+        sampled_scopes.update(update["scope_counts"])
     result = {"stage": "bc", "team_objective": team_objective, "precision": "fp32", "device": str(device),
               "optimization_steps": module.optimization_steps, "optimizer_step_attempts": module.optimizer_step_attempts,
               "amp_skipped_steps": module.amp_skipped_steps, "initial_validation_nll": initial_loss,
@@ -370,6 +394,12 @@ def run_behavior_cloning(config: DictConfig, *, output: Path | None = None,
               "raw_training_team_demand_counts": _batch_coverage(samples["train"])[0],
               "sampled_team_demand_counts": dict(sampled_demands),
               "sampled_real_choice_counts": dict(sampled_choices),
+              "sampled_scope_counts": dict(sampled_scopes),
+              "sample_index_audit_complete": module.sample_index_audit_complete and all(
+                  row["sample_index_audit_complete"] for row in module.history),
+              "train_024_0_2_count": sum(row["train_024_0_2_count"] for row in module.history),
+              "sampled_batch_sequence_sha256": hashlib.sha256("\n".join(
+                  row["sample_sequence_sha256"] for row in module.history).encode("ascii")).hexdigest(),
               "sampled_decisions": sum(row["sample_count"] for row in module.history),
               "elapsed_seconds": time.monotonic() - started,
               "peak_gpu_memory_bytes": torch.cuda.max_memory_allocated(device) if device.type == "cuda" else None,

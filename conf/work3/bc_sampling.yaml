@@ -1,0 +1,49 @@
+source_run: runs/work3_pretrain/pretrain_pilot_20261117_01
+previous_diagnosis: runs/work3_bc_diagnosis/bc_diagnosis_20261117_01
+artifacts:
+  experiment_name: work3_bc_sampling
+  runs_root: runs
+  run_id: bc_sampling_20261117_01
+runtime:
+  device: cuda
+  amp_dtype: fp32
+  deterministic: true
+  main_num_threads: 1
+  seeds: [42, 43]
+  total_wall_seconds: 19800
+evaluation:
+  max_decisions: 1000
+  max_wall_seconds: 120.0
+  train_panel: {structured: 4, task_order: 2, postpone: 2}
+experiment:
+  single_instance: train_024
+  single_seed: 43
+  checkpoints: [0, 25, 50, 100, 150, 200]
+  primary_update: 200
+  expansion_rule: all1_single_C_exit_strictly_lower_than_original_at_200
+  gap_absolute_tolerance: 0.000000001
+  conditions:
+    original: {1: 0.62, 2: 3.0, 3: 0.18, 5: 1.89}
+    all1: {1: 1.0, 2: 1.0, 3: 1.0, 5: 1.0}
+bc:
+  team_objective: set
+  hidden_dim: 64
+  max_station_workers: 16
+  batch_size: 4
+  max_updates: 200
+  learning_rate: 0.0003
+  max_grad_norm: 0.5
+  validate_every: 25
+  patience: 9
+  max_wall_seconds: 900.0
+objective:
+  w_makespan: 1.0
+  w_h: 0.0
+  w_t: 0.0
+  w_w: 0.0
+  w_p: 0.0
+  w_revision_time: 0.0
+  w_revision_team: 0.0
+  lambda_1: 0.10
+  lambda_2: 0.20
+  normalize_by_n: true
