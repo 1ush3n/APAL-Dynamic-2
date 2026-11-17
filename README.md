@@ -91,3 +91,5 @@ python -m apal.training.work3.train --help
 旧README的完整实验说明按 [dbc33c9固定版本](https://github.com/1ush3n/APAL-Dynamic-2/blob/dbc33c90728249f590a5b4293ec6f237a63160b1/README.md) 查阅，不作为当前命令导航。
 
 2026-11-17已补真实扰动、带证书示例、集合行为克隆和多实例PPO接入，专用配置为`conf/work3/pretrain_pilot.yaml`。两种子等在线预算的有限对照未观察到预训练的总体收益；完整结果、数据范围及复现命令见[预训练试点报告](docs/pretrain_pilot_report.md)。这是独立纯C_exit实验，原QUERY默认混合目标和网络保持。
+
+后续[BC退化诊断](docs/bc_diagnosis_report.md)覆盖训练/验证自主排程、同轨迹曲线和一次新母例留出：NLL下降未保证工期改善，闭环选模候选未取得跨种子稳定收益，原训练默认保持。诊断入口为`python -m apal.evaluation.bc_diagnostics`，配置为`conf/work3/bc_diagnosis.yaml`。
