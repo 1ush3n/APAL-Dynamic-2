@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
 from dataclasses import asdict
 import csv
 import hashlib
@@ -540,11 +539,68 @@ class BCDiagnosis:
                 "autonomous": self.evaluate(model, "train", phase="single_instance", instance_ids=(instance_id,))})
         write_json(self.context.reports_dir / "single_instance_metrics.json", metrics)
 
+    def confirm(self) -> None:
+        """只执行已冻结的唯一选模候选；新母例结果打开后不再修改规则。"""
+        from apal.data.work3.certified_examples import generate_instance, verify_instance
+        self.validate_plan()
+        frozen = read_json(self.context.configs_dir / "confirmation_plan.json")
+        if sha256(self.context.reports_dir / "selection_comparison.json") != frozen["selection_comparison_sha256"]:
+            raise ValueError("新留出打开前冻结的候选发生变化")
+        root = self.root / "artifacts" / "confirmation_data"
+        manifest = root / "holdout_instances.json"
+        if not manifest.exists():
+            registry = read_json(self.source / "data/pilot/private/dataset_registry.json")
+            groups = {row["parent_group"] for row in registry["instances"]}
+            entries, certificates = [], {}
+            for index, spec in enumerate(frozen["instances"]):
+                case = root / f"holdout_{index:03d}"
+                summary = generate_instance(case, **spec)
+                group = str(summary.get("template_group", summary.get("template_group_id")))
+                if group in groups or group == "None":
+                    raise ValueError("新留出母来源重复，停止确认而不按表现换例")
+                groups.add(group)
+                verification = verify_instance(case)
+                certificates[case.name] = verification
+                paths = {name: case / "public" / filename for name, filename in
+                    (("baseline", "baseline.json"), ("raw_data", "tasks.csv"), ("worker_pool", "workers.csv"))}
+                entries.append({"instance_id": case.name, "parent_group": group, "family": spec["family"],
+                    "split": "holdout", **{key: str(path.resolve()) for key, path in paths.items()},
+                    "public_sha256": {key: sha256(path) for key, path in paths.items()},
+                    "scenario": None, "env_config": {"max_slots_per_station": 2, "transfer_policy": "actual_cleared_v0"}})
+            write_json(root / "private" / "verification.json", certificates)
+            write_json(manifest, {"version": "work3_episode_instances_v1", "instances": entries,
+                "episode_sequence": [row["instance_id"] for row in entries]})
+        cases = load_work3_episode_manifest(manifest, split="holdout")
+        certificates = read_json(root / "private" / "verification.json")
+        for case in cases:
+            case["certified_C_exit"] = certificates[case["instance_id"]]["certified_C_exit"]
+        self.plan["cases"]["holdout"] = cases
+        for model in frozen["models"]:
+            self.evaluate(model, "holdout", phase="confirmation")
+
+    def selection(self) -> None:
+        self.validate_plan()
+        choices = read_json(self.context.reports_dir / "selection_comparison.json")
+        points = read_json(self.context.reports_dir / "curves.json")
+        models = []
+        for seed in self.config.runtime.seeds:
+            model = dict(next(row for row in points if row["model_id"] == choices[str(seed)]["closure"]))
+            model = {key: model[key] for key in ("model_id", "seed", "update", "path", "sha256", "parameters_sha256")}
+            source = next((row for row in self.plan["models"]
+                if row["seed"] == seed and row["parameters_sha256"] == model["parameters_sha256"]), None)
+            if source is not None:
+                model.update({key: source[key] for key in ("path", "sha256")})
+            model["rule"] = "closure"
+            models.append(model)
+            self.evaluate(model, "train", phase="selection")
+            self.evaluate(model, "val", phase="selection")
+        write_json(self.context.reports_dir / "selected_models.json", models)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="BC训练实例、学习轨迹与闭环选模诊断")
     parser.add_argument("--config", type=Path, default=PROJECT_ROOT / "conf/work3/bc_diagnosis.yaml")
-    parser.add_argument("--phase", choices=("prepare", "baseline", "rerun", "curve", "prefixes", "branches", "probe"), required=True)
+    parser.add_argument("--phase", choices=("prepare", "baseline", "rerun", "curve", "prefixes", "branches", "probe", "selection", "confirm"), required=True)
     parser.add_argument("--set", action="append", default=[])
     args = parser.parse_args()
     config = OmegaConf.merge(OmegaConf.load(args.config), OmegaConf.from_dotlist(args.set))
@@ -556,7 +612,7 @@ def main() -> None:
     try:
         {"prepare": diagnosis.prepare, "baseline": diagnosis.baseline, "rerun": diagnosis.rerun,
          "curve": diagnosis.curve, "prefixes": diagnosis.prefixes, "branches": diagnosis.branches,
-         "probe": diagnosis.probe}[args.phase]()
+         "probe": diagnosis.probe, "selection": diagnosis.selection, "confirm": diagnosis.confirm}[args.phase]()
         succeeded = True
     finally:
         receipt = {"phase": args.phase, "argv": sys.argv, "python": sys.executable,
