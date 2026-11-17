@@ -1,5 +1,19 @@
 # 历史资料、运行证据与恢复
 
+## 2026年11月17日本机资料补充整理
+
+本次从 `dbc33c90728249f590a5b4293ec6f237a63160b1` 开始。普通资料根仍为 `D:\OneDrive\研究生\归档\APAL-Dynamic-2`，没有压缩整套研究资料或重写历史。以下清单是本机私有资产索引，不提交逐文件私有路径到Git。
+
+- `local_assets/dbc33c9/asset_manifest.json`：839文件、624,047,083字节，包含旧PPT交付、旧outputs/results、saved_local_run_283及两组研究诊断；逐文件SHA复读通过。清单SHA为 `9cc233673aba81a34b4407b217d7ad30bee24f9c527a3382e1872d9ddc9daba9`。
+- `local_assets/dbc33c9/supplement_manifest.json`：另361文件、378,999,016字节，包含3份性能JSON、4份历史探针和354份混合测试/手工烟测产物；其中140个模型全保留，不宣称全可重建。清单SHA为 `e1104338fed4de2dfdc86ca5b136e96215be5e44f3b9b91d8734e4c42a1a701d`。
+- `materials/dbc33c9/scripts/`：63份过期清理、固定批次、一次性诊断及原archive脚本，逐文件校验后退出维护树。旧 `cleanup_workspace.py` 和自动关机批次未执行。恢复源码也可直接读取固定 `dbc33c9` 提交。
+
+普通副本在移除项目内对应文件前，重新检查源路径、大小、mtime和SHA未变；没有删除唯一模型。研究诊断保留其原先的缺失缓存、事后恢复last及未附R2依赖等限制。旧PPT中的“最终版”仍属旧时间预测方案，不能视为当前确认稿。用户同意当前Word/PPT/图源本轮从资料库回迁暂时跳过。
+
+两份仍用于历史评估的旧权重移到本机 `runs/work3_legacy/imported_dbc33c9/checkpoints/`，并在该run的 `configs/source_manifest.json` 保存原名、大小、SHA及非QUERY身份；不向这些输入覆盖新训练结果。当前有效运行仍在 `runs/initial_schedule_283/`；初始283生成池及其manifest留在 `data/generated/initial_283/`。原通用工作二所需两个CSV及APCF资产本机本来缺失，整理没有制造替代输入。
+
+下文保留2026年11月16日的原阶段身份和恢复说明；“未移除research_diagnostics”等表述只描述该旧阶段，本次已按上述独立清单无损外移。
+
 本轮整理从 `a710e3427ab87f01d27fca13238172894de6fa09` 开始。当前代码与运行命令见[仓库说明](../README.md)，工作三方法及实际验证见[迁移记录](work3_query_migration.md)。旧审计、设计稿和测量结果保留其原始日期、来源提交及适用范围，不能作为当前代码的缺陷清单或性能结论直接重用。
 
 [逐项路径映射](directory_migration.csv)是本轮源码、配置、夹具与历史材料的唯一迁移表；普通副本的逐文件校验身份由下述 `archive_manifest.json` 保留。
