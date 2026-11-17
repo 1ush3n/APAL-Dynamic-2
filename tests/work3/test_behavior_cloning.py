@@ -111,3 +111,21 @@ def test_export_rejects_manifest_conditions_outside_certificate(tmp_path: Path) 
     path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="证书|现场"):
         export_demonstrations(path, tmp_path / "wrong.pt", split="train")
+
+
+def test_public_manifest_accepts_portable_windows_relative_paths(tmp_path: Path) -> None:
+    from pathlib import PureWindowsPath
+    from apal.data.work3.certified_examples import generate_dataset
+    from apal.training.work3.runtime_config import load_work3_episode_manifest
+
+    manifests = generate_dataset(tmp_path / "portable", train_count=1, validation_count=1, test_count=1, seed=7041)
+    path = manifests["train"]
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    expected = {}
+    for key in ("baseline", "raw_data", "worker_pool"):
+        relative = payload["instances"][0][key]
+        expected[key] = (path.parent / relative).resolve()
+        payload["instances"][0][key] = str(PureWindowsPath(relative))
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    loaded = load_work3_episode_manifest(path)
+    assert all(Path(loaded[0][key]) == target for key, target in expected.items())

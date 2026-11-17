@@ -15,7 +15,7 @@ import torch
 from apal.data.work3.certified_examples import load_witness_actions, make_instance_env, verify_certificate
 from apal.envs.work3.decision_snapshot import DecisionSnapshot, worker_completion_mask
 from apal.models.work3.actor_critic import ActorCriticWork3, TEAM_SET_CACHE_VERSION
-from apal.training.work3.runtime_config import load_work3_episode_manifest
+from apal.training.work3.runtime_config import load_work3_episode_manifest, seed_work3_runtime
 
 
 def build_team_set_cache(snapshot: DecisionSnapshot, record: dict[str, Any], width: int) -> dict[str, Any]:
@@ -122,6 +122,7 @@ def export_demonstrations(manifest: Path, output: Path, *, split: str,
                "supervised_layers": dict(layers), "choice_layers": dict(choices),
                "elapsed_seconds": time.monotonic() - started, "instance_results": instance_results,
                "manifest_sha256": hashlib.sha256(Path(manifest).read_bytes()).hexdigest(),
+               "export_process_seed": torch.initial_seed(),
                "team_supervision": "已证物理团队的全部合法人员顺序概率之和",
                "team_objective": "set"}
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -138,7 +139,9 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--split", choices=("train", "val"), required=True)
+    parser.add_argument("--seed", type=int, default=20261117)
     args = parser.parse_args()
+    seed_work3_runtime(args.seed, deterministic=True)
     torch.set_num_threads(1)
     summary = export_demonstrations(args.manifest, args.output, split=args.split)
     print(json.dumps({key: summary[key] for key in ("instances", "records", "choice_records", "elapsed_seconds")}, ensure_ascii=False))

@@ -7,7 +7,7 @@ import json
 import math
 import random
 from collections.abc import Mapping, Sequence
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 import numpy as np
@@ -90,7 +90,8 @@ def load_work3_episode_manifest(path: str | Path, *, split: str = "train") -> li
             if not isinstance(value, str) or not value:
                 raise ValueError(f"公开实例缺少路径{key}")
             source = Path(value)
-            source = source if source.is_absolute() else manifest_path.parent / source
+            # 接受Windows导出的相对路径；在Linux上仍按路径分量读取同一公开输入。
+            source = source if source.is_absolute() else manifest_path.parent.joinpath(*PureWindowsPath(value).parts)
             source = source.resolve()
             if hashlib.sha256(source.read_bytes()).hexdigest() != hashes.get(key):
                 raise ValueError(f"公开实例{instance_id}的{key} SHA256不匹配")
