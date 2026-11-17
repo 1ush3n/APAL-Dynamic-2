@@ -78,6 +78,9 @@ def test_weighted_layer_decomposition_matches_original_and_preserves_runtime(tmp
     assert result["all_scope"]["branch"]["count"] == 3
     assert "branch" not in result["choice_only"]
     assert result["team_by_demand"]["2"]["count"] == 2
+    assert result["team_by_demand"]["2"]["team_set_nll_mean"] >= 0.0
+    assert result["team_by_demand"]["2"]["choice_team_set_nll_mean"] == pytest.approx(
+        result["team_by_demand"]["2"]["team_set_nll_mean"])
     assert result["team_by_demand"]["5"]["count"] == 1
     assert {name: module.training for name, module in actor.named_modules()} == modes
     assert torch.equal(torch_rng, torch.get_rng_state()) and python_rng == random.getstate()
@@ -117,5 +120,49 @@ def test_common_prefix_scores_full_actions_without_changing_actor_runtime(tmp_pa
     assert changed["choice_layer_hits"]["team"] is False
     assert changed["choice_layer_hits"]["align"] is None
     assert changed["teacher_team"]["conditional_greedy_target_team"] is False
+    assert torch.equal(rng, torch.get_rng_state())
+    assert {name: module.training for name, module in actor.named_modules()} == modes
+
+
+def test_critical_worker_distribution_uses_sparse_ids_and_original_team_probability(tmp_path: Path) -> None:
+    from apal.data.work3.certified_examples import load_witness_actions
+    from apal.evaluation.bc_prefix_diagnostics import critical_worker_distribution
+    from apal.training.work3.behavior_cloning import _replay
+
+    torch.set_num_threads(1)
+    case = tmp_path / "single_worker"
+    generate_instance(case, family="structured", seed=1901)
+    env = make_instance_env(case)
+    actor = ActorCriticWork3(condition_queries=True, hidden_dim=16).eval()
+    for witness in load_witness_actions(case):
+        action = witness["action"]
+        if action["branch"] == 0 and len(action["team"]) == 1:
+            task = env.state.tasks[action["task_key"]]
+            if len(env.valid_team_completion_workers(task, [])) > 1:
+                break
+        env.step(action)
+    else:
+        raise AssertionError("真实构造未覆盖多合法候选的单人动作")
+    snapshot = actor.make_decision_snapshot(env, torch.zeros(32), torch.zeros(2))
+    _, _, _, record = actor.select_snapshot(snapshot, teacher_action=action)
+    record["team_set_cache"] = build_team_set_cache(snapshot, record, actor.max_station_workers)
+    sample = {"state_features": snapshot.state_features, "time_features": snapshot.time_features,
+              "record": record, "h0": env.state.h0, "current_time": env.state.current_time}
+    with torch.no_grad():
+        expected = float(_replay(actor, [sample], team_objective="set")[0]["team_set"].exp().item())
+    assert any(index != worker for index, worker in enumerate(record["station_worker_ids"]))
+    actor.train()
+    actor.graph_encoder.eval()
+    modes = {name: module.training for name, module in actor.named_modules()}
+    rng = torch.get_rng_state().clone()
+    result = critical_worker_distribution(actor, sample)
+    assert result["target_probability"] == pytest.approx(expected, abs=1e-6)
+    target = int(action["team"][0])
+    assert result["worker_id_to_index"][str(target)] == record["station_worker_ids"].index(target)
+    assert result["legal_probability_sum"] == pytest.approx(1, abs=1e-6)
+    assert all(row["mask"] for row in result["legal_workers"])
+    chosen = max(result["legal_workers"], key=lambda row: row["logit"])
+    assert chosen["worker_id"] == result["greedy_worker_id"]
+    assert all(len(row["query14"]) == 14 for row in result["legal_workers"])
     assert torch.equal(rng, torch.get_rng_state())
     assert {name: module.training for name, module in actor.named_modules()} == modes

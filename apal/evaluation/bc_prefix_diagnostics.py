@@ -10,6 +10,7 @@ import torch
 
 from apal.data.work3.demonstrations import build_team_set_cache
 from apal.envs.work3.decision_snapshot import DecisionSnapshot
+from apal.envs.work3.scheduling_queries import CONDITION_LAYOUT
 from apal.models.work3.actor_critic import ActorCriticWork3
 from apal.training.work3.behavior_cloning import _replay, behavior_cloning_loss
 
@@ -28,6 +29,24 @@ def _teacher_mode(actor: ActorCriticWork3) -> Iterator[None]:
             module.training = training
 
 
+def _worker_context(actor: ActorCriticWork3, sample: dict[str, Any]) -> tuple[
+    torch.Tensor, torch.Tensor, torch.Tensor | None
+]:
+    record, device = sample["record"], next(actor.parameters()).device
+    _, context, task_nodes, worker_nodes, hierarchy = actor._encode_state_components(
+        sample["state_features"].to(device), sample["time_features"].to(device), record["graph_snapshot"])
+    features = record.get("cand_feats", record.get("candidate_task_features"))
+    task = actor._candidate_embeddings(features.to(device), task_nodes, hierarchy, record,
+                                        record["query_task_features"])[int(record["task_idx"])]
+    indices = record.get("worker_node_indices", ())
+    bias = None
+    if worker_nodes is not None and indices:
+        # 人员节点[W,D]经原评分投影[W,1]去末维为[W]。
+        node_indices = torch.as_tensor(indices, device=device)
+        bias = actor.worker_graph_score(worker_nodes[node_indices]).squeeze(-1)
+    return context, task, bias
+
+
 def conditional_greedy_target_team(actor: ActorCriticWork3, sample: dict[str, Any]) -> bool:
     """固定教师工序与留站分支，原逐人贪心是否恰落在已证团队集合内。"""
     record = sample["record"]
@@ -36,17 +55,7 @@ def conditional_greedy_target_team(actor: ActorCriticWork3, sample: dict[str, An
     with _teacher_mode(actor):
         actor._validate_condition_record(record)
         device = next(actor.parameters()).device
-        _, context, task_nodes, worker_nodes, hierarchy = actor._encode_state_components(
-            sample["state_features"].to(device), sample["time_features"].to(device), record["graph_snapshot"])
-        features = record.get("cand_feats", record.get("candidate_task_features"))
-        task = actor._candidate_embeddings(features.to(device), task_nodes, hierarchy, record,
-                                            record["query_task_features"])[int(record["task_idx"])]
-        indices = record.get("worker_node_indices", ())
-        bias = None
-        if worker_nodes is not None and indices:
-            # 人员节点[W,D]经原评分投影[W,1]去末维为[W]。
-            node_indices = torch.as_tensor(indices, device=device)
-            bias = actor.worker_graph_score(worker_nodes[node_indices]).squeeze(-1)
+        context, task, bias = _worker_context(actor, sample)
         actor._team_set_log_prob(context, task, bias, record)
         cache = record["team_set_cache"]
         target, mask = tuple(cache["target_worker_indices"]), 0
@@ -64,6 +73,67 @@ def conditional_greedy_target_team(actor: ActorCriticWork3, sample: dict[str, An
                 return False
             mask |= 1 << target.index(chosen)
         return True
+
+
+def critical_worker_distribution(actor: ActorCriticWork3, sample: dict[str, Any]) -> dict[str, Any]:
+    """固定单人教师工序与留站分支，读取原空前缀人员分布；不执行新动作。"""
+    record = sample["record"]
+    if (not actor.condition_queries or int(record.get("branch", -1)) != 0
+            or len(record.get("chosen_team", ())) != 1):
+        raise ValueError("单人工人分布要求完整QUERY留站团队记录")
+    with _teacher_mode(actor):
+        actor._validate_condition_record(record)
+        parts = _replay(actor, [sample], team_objective="set")[0]
+        expected = float(parts["team_set"].exp().item())
+        entry = record["team_set_cache"]["subsets"][0]
+        if (tuple(entry["selected_worker_indices"]) != () or tuple(record["worker_prefixes"][0]) != ()
+                or tuple(entry["worker_valid_mask"]) != tuple(record["worker_valid_masks"][0])
+                or not torch.equal(entry["query_worker_features"], record["query_worker_features"][0])):
+            raise ValueError("单人空前缀缓存与原条件或掩码不一致")
+        context, task, bias = _worker_context(actor, sample)
+        tracker = torch.zeros(actor.max_station_workers, dtype=context.dtype, device=context.device)
+        raw = entry["query_worker_features"]
+        logits = actor._worker_logits(context, task, tracker, raw, bias, int(record["num_st_workers"]))
+        mask = torch.as_tensor(entry["worker_valid_mask"], dtype=torch.bool, device=context.device)
+        masked = actor._apply_worker_selection_mask(logits, mask, task_key=record["task_key"], step_index=0)
+        probabilities = torch.distributions.Categorical(logits=masked).probs
+        worker_ids = tuple(int(worker) for worker in record["station_worker_ids"])
+        target = int(record["chosen_team"][0])
+        target_index = worker_ids.index(target)
+        if tuple(record["chosen_worker_indices"]) != (target_index,):
+            raise ValueError("教师工人ID与站内候选索引不一致")
+        probability = float(probabilities[target_index].item())
+        error = abs(probability - expected)
+        if error > 1e-5:
+            raise ValueError("单人工人分布与原集合重放概率不一致")
+        h0, now = sample.get("h0"), sample.get("current_time")
+        if h0 is not None and (not math.isfinite(h0) or h0 <= 0):
+            raise ValueError("显式H0必须为正有限数")
+        if now is not None and not math.isfinite(now):
+            raise ValueError("显式当前时刻必须为有限数")
+        legal = []
+        for index, worker in enumerate(worker_ids):
+            if not bool(mask[index]):
+                continue
+            query = raw[index].tolist()
+            normalized = {"start_delta_h0": query[5], "end_delta_h0": query[6],
+                          "duration_h0": query[7], "time_valid": bool(query[8])}
+            window = None
+            if normalized["time_valid"] and h0 is not None and now is not None:
+                window = {"start": now + h0 * query[5], "end": now + h0 * query[6],
+                          "duration": h0 * query[7]}
+            legal.append({"worker_id": worker, "index": index, "mask": True,
+                          "logit": float(logits[index].item()), "probability": float(probabilities[index].item()),
+                          "query14": query, "normalized_window": normalized, "decoded_window": window})
+        greedy_index = int(masked.argmax().item())
+        return {"task_key": record["task_key"], "target_worker_id": target, "target_worker_index": target_index,
+                "station_worker_ids": list(worker_ids), "worker_id_to_index": {str(worker): index for index, worker in enumerate(worker_ids)},
+                "mask": mask.cpu().tolist(), "condition_layout": list(CONDITION_LAYOUT),
+                "query14": raw.tolist(), "legal_workers": legal, "greedy_worker_id": worker_ids[greedy_index],
+                "target_probability": probability, "original_team_set_probability": expected,
+                "probability_abs_error": error, "legal_probability_sum": float(probabilities[mask].sum().item()),
+                "h0": h0, "current_time": now,
+                "scope": "仅条件于教师工序+留站+空选人前缀；窗口从原FP32条件解码，未给H0/当前时刻或无有效时间时不报告绝对窗口"}
 
 
 def score_prefix_decision(actor: ActorCriticWork3, snapshot: DecisionSnapshot,
@@ -183,22 +253,27 @@ def teacher_metrics(actor: ActorCriticWork3, samples: list[dict[str, Any]],
                 if "team" in scope:
                     demand = str(len(sample["record"]["chosen_team"]))
                     values = teams.setdefault(demand, {"count": 0, "probability_sum": 0.0,
+                        "nll_sum": 0.0, "choice_nll_sum": 0.0,
                         "conditional_greedy_target_hits": 0, "choice_count": 0,
                         "choice_probability_sum": 0.0, "choice_conditional_greedy_target_hits": 0})
                     probability = float(parts["team_set"].exp().item())
                     hit = int(conditional_greedy_target_team(actor, sample))
                     values["count"] += 1
                     values["probability_sum"] += probability
+                    values["nll_sum"] += float(-parts["team_set"].item())
                     values["conditional_greedy_target_hits"] += hit
                     if "team" in choice:
                         values["choice_count"] += 1
                         values["choice_probability_sum"] += probability
+                        values["choice_nll_sum"] += float(-parts["team_set"].item())
                         values["choice_conditional_greedy_target_hits"] += hit
     for values in teams.values():
+        values["team_set_nll_mean"] = values.pop("nll_sum") / values["count"]
         values["team_set_probability_mean"] = values.pop("probability_sum") / values["count"]
         values["conditional_greedy_target_hit_rate"] = values["conditional_greedy_target_hits"] / values["count"]
         probability_sum = values.pop("choice_probability_sum")
         count = values["choice_count"]
+        values["choice_team_set_nll_mean"] = values.pop("choice_nll_sum") / count if count else None
         values["choice_team_set_probability_mean"] = probability_sum / count if count else None
         values["choice_conditional_greedy_target_hit_rate"] = values["choice_conditional_greedy_target_hits"] / count if count else None
     contribution_sum = sum(contributions.values())
