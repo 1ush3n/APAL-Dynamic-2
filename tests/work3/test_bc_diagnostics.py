@@ -4,6 +4,32 @@ from __future__ import annotations
 import pytest
 
 
+def test_report_replace_retries_only_permission_error_and_preserves_pending(tmp_path, monkeypatch) -> None:
+    from pathlib import Path
+    from apal.evaluation.bc_diagnostics import write_json
+    import time
+    original, calls = Path.replace, []
+    def transient(path, target):
+        calls.append(path)
+        if len(calls) == 1:
+            raise PermissionError("临时占用")
+        return original(path, target)
+    monkeypatch.setattr(Path, "replace", transient)
+    monkeypatch.setattr(time, "sleep", lambda _: None)
+    output = tmp_path / "report.json"
+    write_json(output, {"value": 1})
+    assert len(calls) == 2 and output.read_text(encoding="utf-8").strip().endswith("}")
+    def permanent(path, target):
+        calls.append(path)
+        raise PermissionError("持续占用")
+    monkeypatch.setattr(Path, "replace", permanent)
+    calls.clear()
+    with pytest.raises(PermissionError):
+        write_json(output, {"value": 2})
+    assert len(calls) == 3 and output.with_suffix(".json.pending").is_file()
+    assert '"value": 1' in output.read_text(encoding="utf-8")
+
+
 def test_resumed_evaluation_rejects_configuration_drift() -> None:
     from omegaconf import OmegaConf
     from apal.evaluation.bc_diagnostics import BCDiagnosis

@@ -37,7 +37,18 @@ def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     pending = path.with_suffix(path.suffix + ".pending")
     pending.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
-    pending.replace(path)
+    replace_report(pending, path)
+
+
+def replace_report(pending: Path, target: Path) -> None:
+    for attempt in range(3):
+        try:
+            pending.replace(target)
+            return
+        except PermissionError:
+            if attempt == 2:
+                raise
+            time.sleep(0.1)
 
 
 def sha256(path: Path) -> str:
@@ -207,12 +218,17 @@ class BCDiagnosis:
                 writer = csv.DictWriter(stream, fieldnames=list(self.rows[0]))
                 writer.writeheader()
                 writer.writerows(self.rows)
-            pending.replace(path)
+            replace_report(pending, path)
 
-    def evaluate(self, model: dict[str, Any], split: str, *, phase: str, panel: bool = False) -> list[dict[str, Any]]:
+    def evaluate(self, model: dict[str, Any], split: str, *, phase: str, panel: bool = False,
+                 instance_ids: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
         cases = self.plan["cases"][split]
         if panel and split == "train":
             cases = [row for row in cases if row["instance_id"] in self.plan["train_panel"]]
+        if instance_ids is not None:
+            cases = [row for row in cases if row["instance_id"] in instance_ids]
+            if len(cases) != len(instance_ids):
+                raise ValueError("诊断实例不属于当前冻结清单")
         actor, output = None, []
         prior = {(row["phase"], row["model_id"], row["split"], row["instance_id"]): row for row in self.rows}
         for case in cases:
@@ -457,13 +473,21 @@ class BCDiagnosis:
                         env.load_scenario(case["scenario"])
                     for previous in trajectory["trace"][:row["decision"]]:
                         env.step(previous["action"])
+                    snapshot = actor.make_decision_snapshot(env, torch.zeros(32), torch.zeros(2))
+                    with torch.inference_mode(), torch.amp.autocast(device_type=next(actor.parameters()).device.type, enabled=False):
+                        current_action, _, _, current_record = actor.select_snapshot(snapshot, deterministic=True)
+                    fields = ("candidate_task_keys", "candidate_branch_masks", "query_task_features",
+                        "query_worker_features", "worker_prefixes", "worker_valid_masks", "query_alignment_features")
+                    if json_facts(current_action) != action or any(
+                            json_facts(current_record.get(key)) != row["record"].get(key) for key in fields):
+                        raise AssertionError("分支对照的完整前缀或原策略输入未复现")
                     before_time, before_cost = env.state.current_time, env.cumulative_cost
                     env.step(selected_action)
                     report = evaluate_query_trajectory(env, actor, reset=False,
                         max_decisions=int(self.config.evaluation.max_decisions),
                         max_wall_seconds=float(self.config.evaluation.max_wall_seconds), amp_dtype="fp32")
                     outcomes[name] = {"action": selected_action, "prefix_time": before_time,
-                        "prefix_cost": before_cost, "report": report}
+                        "prefix_cost": before_cost, "prefix_inputs_exact": True, "checked_fields": fields, "report": report}
                 if outcomes["original"]["report"]["makespan"] != trajectory["report"]["makespan"]:
                     raise AssertionError("同前缀原动作续排未复现原工期")
                 pairs.append({"instance_id": case["instance_id"], "seed": model["seed"], "decision": row["decision"],
@@ -472,24 +496,71 @@ class BCDiagnosis:
                 break
         write_json(self.context.reports_dir / "counterfactuals.json", pairs)
 
+    def probe(self) -> None:
+        """单训练母例的有界记忆诊断；原采样、损失及停止规则均保留。"""
+        from apal.training.work3.behavior_cloning import run_behavior_cloning, load_demonstrations
+        from apal.evaluation.bc_prefix_diagnostics import teacher_metrics
+        self.validate_plan()
+        selection = read_json(self.context.reports_dir / "representatives_selection.json")
+        selected = next(row for family in selection["families"] if family["family"] == "structured"
+                        for row in family["selected"] if row["split"] == "train")
+        seed, instance_id = selected["seed"], selected["instance_id"]
+        report_path = self.context.reports_dir / "single_instance_training.json"
+        source = self.source / "data" / "train_set_records.pt"
+        subset = self.root / "artifacts" / "single_instance_records.pt"
+        config = OmegaConf.create(read_json(self.source / "artifacts/reports" / f"bc_seed{seed}.json")["resolved_config"])
+        config.paths.train_records = str(subset)
+        output = self.context.checkpoint_dir / "single_instance.pt"
+        if not report_path.exists():
+            payload = torch.load(source, map_location="cpu", weights_only=False)
+            payload["records"] = [row for row in payload["records"] if row["instance_id"] == instance_id]
+            if not payload["records"] or len({row["parent_group"] for row in payload["records"]}) != 1:
+                raise ValueError("单例记忆诊断必须只保留一个原训练母例")
+            payload.pop("summary", None)
+            payload["subset_source_sha256"] = sha256(source)
+            payload["subset_instance_id"] = instance_id
+            torch.save(payload, subset)
+            write_json(self.context.configs_dir / "single_instance_plan.json", {
+                "instance_id": instance_id, "seed": seed, "source_sha256": sha256(source),
+                "subset_sha256": sha256(subset), "resolved_config": OmegaConf.to_container(config, resolve=True),
+                "scope": "只缩减训练母例，非候选改进；沿原W0、需求采样、loss、lr、200步上限及patience，不据此称跨实例收益"})
+            run_behavior_cloning(config, output=output, report=report_path)
+        report = read_json(report_path)
+        metrics = []
+        initial = next(model for model in self.plan["models"] if model["seed"] == seed and model["rule"] == "initial")
+        models = [initial]
+        for role, path, step in (("best", output, report["best_update"]),
+                ("final", output.with_name(output.stem + "_final.pt"), report["optimization_steps"])):
+            models.append({"seed": seed, "model_id": f"single_{role}_seed{seed}", "rule": "single_instance_diagnostic",
+                "path": str(path), "sha256": sha256(path), "parameters_sha256": parameter_digest(path), "update": step})
+        for model in models:
+            actor = self.actor(model)
+            samples = load_demonstrations(subset, actor, split="train", team_objective="set")
+            metrics.append({"model": model, "teacher": teacher_metrics(actor, samples),
+                "autonomous": self.evaluate(model, "train", phase="single_instance", instance_ids=(instance_id,))})
+        write_json(self.context.reports_dir / "single_instance_metrics.json", metrics)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="BC训练实例、学习轨迹与闭环选模诊断")
     parser.add_argument("--config", type=Path, default=PROJECT_ROOT / "conf/work3/bc_diagnosis.yaml")
-    parser.add_argument("--phase", choices=("prepare", "baseline", "rerun", "curve", "prefixes", "branches"), required=True)
+    parser.add_argument("--phase", choices=("prepare", "baseline", "rerun", "curve", "prefixes", "branches", "probe"), required=True)
     parser.add_argument("--set", action="append", default=[])
     args = parser.parse_args()
     config = OmegaConf.merge(OmegaConf.load(args.config), OmegaConf.from_dotlist(args.set))
     diagnosis = BCDiagnosis(config)
     started = time.monotonic()
+    source_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, text=True).strip()
+    source_digest = sha256(Path(__file__))
     succeeded = False
     try:
         {"prepare": diagnosis.prepare, "baseline": diagnosis.baseline, "rerun": diagnosis.rerun,
-         "curve": diagnosis.curve, "prefixes": diagnosis.prefixes, "branches": diagnosis.branches}[args.phase]()
+         "curve": diagnosis.curve, "prefixes": diagnosis.prefixes, "branches": diagnosis.branches,
+         "probe": diagnosis.probe}[args.phase]()
         succeeded = True
     finally:
         receipt = {"phase": args.phase, "argv": sys.argv, "python": sys.executable,
-            "git_head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, text=True).strip(),
+            "git_head_at_start": source_head, "entry_source_sha256_at_start": source_digest,
             "finished_epoch": time.time(), "elapsed_seconds": time.monotonic() - started, "success": succeeded}
         with (diagnosis.context.reports_dir / "executions.jsonl").open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(receipt, ensure_ascii=False) + "\n")
