@@ -130,6 +130,85 @@ def test_continuation_evaluation_preserves_progress_and_initial_cost(tmp_path: P
     assert result["success"] and result["cost_ledger_matches"] and result["incremental_cost_ledger_matches"]
 
 
+@pytest.mark.parametrize("reserved", [False, True])
+def test_effective_disturbance_preserves_committed_prefix_and_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reserved: bool,
+) -> None:
+    from .test_work3_m02_disturbed_pulse_trace import _two_aircraft_baseline, TEAMS
+    from apal.envs.work3.core_types import TaskStatus
+    from apal.envs.work3.event_queue import EventType
+    from apal.evaluation.query import evaluate_query_trajectory
+    from apal.utils.work3.objective_evaluator import ObjectiveWeights
+
+    torch.set_num_threads(1)
+    torch.manual_seed(42)
+    actor = ActorCriticWork3(condition_queries=True, hidden_dim=32)
+    path = tmp_path / "effective_disturbance.json"
+    _two_aircraft_baseline(path)
+    prefixes = []
+    for disturbed in (False, True):
+        env = AirLineEnvWork3(baseline_json_path=path, weights=ObjectiveWeights(w_makespan=1.0))
+        env.reset()
+        env.step({"task_key": "0_15", "team": TEAMS[15], "branch": ActionBranch.STATION_EXECUTE, "align": 0})
+        target = env.state.tasks["0_18"]
+        if reserved:
+            env.step({"task_key": target.task_key, "team": TEAMS[18], "branch": ActionBranch.STATION_EXECUTE, "align": 1})
+        expected_status = TaskStatus.RESERVED if reserved else TaskStatus.READY
+        assert target.status == expected_status
+        before = (env.state.current_time, env.cumulative_cost, env.step_count, target.scheduled_start,
+                  target.material_ready_time, target.generation, target.current_station,
+                  tuple(target.assigned_team), target.alignment)
+        prefixes.append(before)
+        old_starts = [event for event in env.event_queue._heap
+                      if event.task_key == target.task_key and event.event_type == EventType.TASK_START]
+        starts, finishes, after_event = [], [], []
+        original_start, original_finish, original_load = env._on_task_started, env._on_task_completed, env.load_scenario
+
+        def record_start(task: Any, when: float) -> None:
+            starts.append((task.task_key, when))
+            original_start(task, when)
+
+        def record_finish(task: Any) -> None:
+            finishes.append(task.task_key)
+            original_finish(task)
+
+        def record_scenario(scenario: dict[str, Any]) -> None:
+            original_load(scenario)
+            after_event.append((target.status, target.material_ready_time, target.scheduled_start, target.generation,
+                                target.current_station, tuple(target.assigned_team), target.alignment))
+            if reserved:
+                assert len(old_starts) == 1 and not env.event_queue._is_event_valid(old_starts[0])
+                for worker_id in target.assigned_team:
+                    intervals = [item for item in env.state.workers[worker_id].intervals if item.task_key == target.task_key]
+                    assert len(intervals) == 1 and intervals[0].start == target.scheduled_start
+
+        monkeypatch.setattr(env, "_on_task_started", record_start)
+        monkeypatch.setattr(env, "_on_task_completed", record_finish)
+        monkeypatch.setattr(env, "load_scenario", record_scenario)
+        scenario = {"scenario_id": "EFFECTIVE_RESERVED" if reserved else "EFFECTIVE_READY",
+                    "tau": before[0], "recovery_time": 25.0, "affected_task_keys": [target.task_key], "valid": True}
+        result = evaluate_query_trajectory(env, actor, reset=False, max_decisions=100,
+                                           scenario=scenario if disturbed else None)
+        assert result["success"] and result["terminated"] and not result["truncated"]
+        assert result["completed_tasks"] == result["total_tasks"] == 10
+        assert result["independent_feasible"] and not result["constraint_violations"]
+        assert result["cost_ledger_matches"] and result["incremental_cost_ledger_matches"]
+        assert result["initial_time"] == before[0] and result["initial_cost"] == before[1]
+        assert env.state.tasks["0_15"].status == TaskStatus.COMPLETED
+        assert [key for key, _ in starts].count(target.task_key) == finishes.count(target.task_key) == 1
+        if disturbed:
+            assert result["disturbance_results"][scenario["scenario_id"]]["actual_hit_task_keys"] == (target.task_key,)
+            assert after_event[0][1] == 25.0 and after_event[0][1] - before[4] > 0.0
+            assert target.actual_start >= 25.0
+            if reserved:
+                assert after_event[0][0] == TaskStatus.RESERVED and after_event[0][2] > before[3]
+                assert after_event[0][3] > before[5] and after_event[0][4:] == before[6:]
+                assert (target.current_station, tuple(target.assigned_team), target.alignment) == before[6:]
+            else:
+                assert after_event[0][0] == TaskStatus.UNREADY
+    assert prefixes[0] == prefixes[1]
+
+
 def test_scoped_programs_bind_relations_and_conditions_into_same_policy(tmp_path: Path) -> None:
     from .test_work3_m02_disturbed_pulse_trace import _two_aircraft_baseline, TEAMS
     from apal.envs.work3.query_program import load_condition_program, compile_condition_program
