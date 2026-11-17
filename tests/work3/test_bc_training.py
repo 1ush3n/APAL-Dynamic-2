@@ -48,6 +48,64 @@ def test_demand_sampler_preserves_non_team_records_and_validates_weights() -> No
             _demand_sampling_weights(rows, {2: invalid})
 
 
+@pytest.mark.parametrize("training", [False, True])
+def test_diagnostic_checkpoint_preserves_rng_mode_steps_and_outputs(tmp_path: Path, training: bool) -> None:
+    import random
+    import numpy as np
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
+    from apal.training.work3.behavior_cloning import Work3BCModule, _Selection
+    from .test_behavior_cloning import _teacher_state
+
+    actor, snapshot, teacher = _teacher_state(tmp_path)
+    _, _, _, record = actor.select_snapshot(snapshot, teacher_action=teacher)
+    config = OmegaConf.create({"runtime": {"max_wall_seconds": 60.0},
+        "bc": {"learning_rate": 0.0003, "max_grad_norm": 0.5, "batch_size": 1,
+               "validate_every": 25, "max_updates": 200, "patience": 4,
+               "diagnostic_checkpoint_dir": str(tmp_path / "diagnostics")}})
+    module = Work3BCModule(actor, [{"instance_id": "A"}], config.bc)
+    actor.train(training)
+    state, times = snapshot.state_features.unsqueeze(0), snapshot.time_features.unsqueeze(0)
+    with torch.no_grad():
+        expected = actor.evaluate_action_log_probs(state, times, [record])
+    original = {key: value.clone() for key, value in actor.state_dict().items()}
+    explicit = torch.Generator().manual_seed(42)
+    python_rng, numpy_rng = random.getstate(), np.random.get_state()
+    torch_rng, explicit_rng = torch.get_rng_state().clone(), explicit.get_state().clone()
+    cuda_initialized = torch.cuda.is_initialized()
+    cuda_rng = torch.cuda.get_rng_state_all() if cuda_initialized else []
+    counts = (module.optimization_steps, module.optimizer_step_attempts, module.amp_skipped_steps)
+    selection = _Selection([], config, tmp_path / "best.pt", {}, 0.25)
+    selection._save_diagnostic(module, 0, 0.25)
+    assert random.getstate() == python_rng
+    current_numpy = np.random.get_state()
+    assert current_numpy[0] == numpy_rng[0] and np.array_equal(current_numpy[1], numpy_rng[1])
+    assert current_numpy[2:] == numpy_rng[2:]
+    assert torch.equal(torch.get_rng_state(), torch_rng) and torch.equal(explicit.get_state(), explicit_rng)
+    assert torch.cuda.is_initialized() == cuda_initialized
+    if cuda_initialized:
+        assert all(torch.equal(left, right) for left, right in zip(cuda_rng, torch.cuda.get_rng_state_all()))
+    assert actor.training == training
+    assert (module.optimization_steps, module.optimizer_step_attempts, module.amp_skipped_steps) == counts
+    path = Path(selection.diagnostic_checkpoints[0]["path"])
+    saved = torch.load(path, map_location="cpu", weights_only=False)
+    assert saved["run_metadata"]["stage"] == "bc"
+    assert saved["run_metadata"]["diagnostic_update"] == 0
+    assert saved["run_metadata"]["diagnostic_validation_nll"] == 0.25
+    assert all(torch.equal(original[key], value) for key, value in saved["actor_critic_state"].items())
+    loaded = ActorCriticWork3(condition_queries=True, hidden_dim=16)
+    PPOTrainerWork3(loaded, create_optimizer=False).load_checkpoint(str(path))
+    loaded.train(training)
+    with torch.no_grad():
+        actual = loaded.evaluate_action_log_probs(state, times, [record])
+    assert all(torch.equal(left, right) for left, right in zip(expected, actual))
+    with pytest.raises(FileExistsError):
+        selection._save_diagnostic(module, 0, 0.25)
+    config.bc.max_updates = 225
+    with pytest.raises(ValueError, match="八个"):
+        _Selection([], config, tmp_path / "best.pt", {}, 0.25)
+
+
 def test_bc_lightning_updates_and_preserves_query_checkpoint_contract(tmp_path: Path) -> None:
     from apal.envs.work3.environment import AirLineEnvWork3
     from apal.models.work3.actor_critic import ActorCriticWork3
@@ -83,6 +141,8 @@ def test_bc_lightning_updates_and_preserves_query_checkpoint_contract(tmp_path: 
                                      "max_updates": 3, "learning_rate": 0.003, "max_grad_norm": 0.5,
                                      "validate_every": 1, "patience": 4}})
     report = run_behavior_cloning(config, output=tmp_path / "bc.pt", report=tmp_path / "bc.json")
+    assert not report.get("diagnostic_checkpoints")
+    assert {path.name for path in tmp_path.glob("bc*.pt")} == {"bc.pt", "bc_initial.pt", "bc_final.pt"}
     assert report["optimization_steps"] == report["optimizer_step_attempts"] == 3
     assert report["amp_skipped_steps"] == 0 and report["parameters_changed"] > 0
     assert report["final_validation_nll"] < report["initial_validation_nll"]
@@ -102,3 +162,23 @@ def test_bc_lightning_updates_and_preserves_query_checkpoint_contract(tmp_path: 
     torch.save(broken, tmp_path / "broken.pt")
     with pytest.raises(ValueError, match="输入语义"):
         load_demonstrations(tmp_path / "broken.pt", actor, split="train")
+    config.bc.diagnostic_checkpoint_dir = str(tmp_path / "diagnostics")
+    diagnostic = run_behavior_cloning(config, output=tmp_path / "diagnostic.pt", report=tmp_path / "diagnostic.json")
+    assert [row["update"] for row in diagnostic["diagnostic_checkpoints"]] == [0, 1, 2, 3]
+    assert diagnostic["optimization_steps"] == report["optimization_steps"]
+    assert [{key: value for key, value in row.items() if key != "elapsed_seconds"} for row in diagnostic["history"]] == [
+        {key: value for key, value in row.items() if key != "elapsed_seconds"} for row in report["history"]]
+    for suffix in (".pt", "_final.pt"):
+        ordinary = torch.load(tmp_path / f"bc{suffix}", map_location="cpu", weights_only=False)
+        saved_diagnostic = torch.load(tmp_path / f"diagnostic{suffix}", map_location="cpu", weights_only=False)
+        assert all(torch.equal(value, saved_diagnostic["actor_critic_state"][key])
+                   for key, value in ordinary["actor_critic_state"].items())
+        left, right = ordinary["bc_training_state"], saved_diagnostic["bc_training_state"]
+        assert left.keys() == right.keys()
+        assert left["optimization_steps"] == right["optimization_steps"]
+        assert left["optimizer_state"]["param_groups"] == right["optimizer_state"]["param_groups"]
+        assert left["optimizer_state"]["state"].keys() == right["optimizer_state"]["state"].keys()
+        for parameter, values in left["optimizer_state"]["state"].items():
+            for key, value in values.items():
+                other = right["optimizer_state"]["state"][parameter][key]
+                assert torch.equal(value, other) if isinstance(value, torch.Tensor) else value == other

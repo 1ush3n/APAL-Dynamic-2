@@ -221,6 +221,35 @@ class _Selection(Callback):
         self.stop_reason = "max_updates"
         self.checks: list[dict[str, Any]] = []
         self.started = time.monotonic()
+        diagnostic_dir = config.bc.get("diagnostic_checkpoint_dir")
+        if diagnostic_dir is not None and (not isinstance(diagnostic_dir, str) or not diagnostic_dir.strip()):
+            raise ValueError("诊断权重目录必须为非空路径或null")
+        self.diagnostic_dir = None if diagnostic_dir is None else resolve_path(diagnostic_dir, PROJECT_ROOT)
+        self.diagnostic_checkpoints: list[dict[str, Any]] = []
+        self.diagnostic_save_seconds = 0.0
+        if self.diagnostic_dir is not None:
+            steps = sorted({0, *range(int(config.bc.validate_every), int(config.bc.max_updates),
+                                     int(config.bc.validate_every)), int(config.bc.max_updates)})
+            if len(steps) > 9:
+                raise ValueError("诊断最多保存初始权重和八个验证间隔点")
+            for step in steps:
+                path = self.diagnostic_dir / f"bc_update_{step:06d}.pt"
+                if path.exists():
+                    raise FileExistsError(f"诊断权重已存在：{path}")
+
+    def _save_diagnostic(self, module: Work3BCModule, step: int, validation_nll: float) -> None:
+        if self.diagnostic_dir is None:
+            return
+        path = self.diagnostic_dir / f"bc_update_{step:06d}.pt"
+        if path.exists():
+            raise FileExistsError(f"诊断权重已存在：{path}")
+        started = time.monotonic()
+        _save(module, path, {**self.metadata, "diagnostic_update": step,
+                             "diagnostic_validation_nll": validation_nll})
+        elapsed = time.monotonic() - started
+        self.diagnostic_save_seconds += elapsed
+        self.diagnostic_checkpoints.append({"update": step, "validation_nll": validation_nll,
+                                            "path": str(path.resolve())})
 
     def on_train_batch_end(self, trainer: Trainer, pl_module: Work3BCModule, outputs: Any,
                            batch: Any, batch_idx: int) -> None:
@@ -229,6 +258,7 @@ class _Selection(Callback):
         if step % int(self.config.bc.validate_every) == 0 or step == int(self.config.bc.max_updates):
             loss = _evaluate(pl_module.actor_critic, self.validation, int(self.config.bc.batch_size), pl_module.team_objective)
             self.checks.append({"update": step, "validation_nll": loss})
+            self._save_diagnostic(pl_module, step, loss)
             if loss < self.best_loss:
                 self.best_loss, self.bad_checks, self.best_step = loss, 0, step
                 _save(pl_module, self.output, {**self.metadata, "selection_validation_nll": loss})
@@ -302,6 +332,7 @@ def run_behavior_cloning(config: DictConfig, *, output: Path | None = None,
     _save(module, initial_output, metadata, stage="initial")
     _save(module, output, {**metadata, "selection_validation_nll": initial_loss})
     selection = _Selection(samples["validation"], config, output, metadata, initial_loss)
+    selection._save_diagnostic(module, 0, initial_loss)
     trainer = Trainer(accelerator="gpu" if device.type == "cuda" else "cpu", devices=1, precision="32-true",
                       max_steps=int(config.bc.max_updates), max_epochs=-1, logger=False, enable_checkpointing=False,
                       enable_progress_bar=False, enable_model_summary=False, num_sanity_val_steps=0,
@@ -346,6 +377,9 @@ def run_behavior_cloning(config: DictConfig, *, output: Path | None = None,
               "source_identity": metadata,
               "final_checkpoint": str(final_output.resolve()), "resolved_config": OmegaConf.to_container(config, resolve=True),
               "checkpoint_evaluation_eligible": False, "research_result_eligible": False}
+    if selection.diagnostic_dir is not None:
+        result["diagnostic_checkpoints"] = selection.diagnostic_checkpoints
+        result["diagnostic_save_seconds"] = selection.diagnostic_save_seconds
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
     return result
