@@ -8,6 +8,8 @@ from typing import Any, Iterator
 
 import torch
 
+from apal.data.work3.demonstrations import build_team_set_cache
+from apal.envs.work3.decision_snapshot import DecisionSnapshot
 from apal.models.work3.actor_critic import ActorCriticWork3
 from apal.training.work3.behavior_cloning import _replay, behavior_cloning_loss
 
@@ -62,6 +64,79 @@ def conditional_greedy_target_team(actor: ActorCriticWork3, sample: dict[str, An
                 return False
             mask |= 1 << target.index(chosen)
         return True
+
+
+def score_prefix_decision(actor: ActorCriticWork3, snapshot: DecisionSnapshot,
+                          teacher_action: dict[str, Any], label_scope: list[str] | tuple[str, ...]) -> dict[str, Any]:
+    """同一教师现场读取整动作与各实际分层；不同选择不自动构成错误。"""
+    if len(set(label_scope)) != len(label_scope) or any(
+        layer not in ("advance", "task", "branch", "team", "align") for layer in label_scope
+    ):
+        raise ValueError("教师监督范围必须是有效且不重复的动作层")
+    with _teacher_mode(actor):
+        _, teacher_lp, _, record = actor.select_snapshot(snapshot, teacher_action=teacher_action)
+        greedy, greedy_lp, _, _ = actor.select_snapshot(snapshot, deterministic=True)
+        stay = record.get("action_type") == "schedule" and int(record["branch"]) == 0
+        if stay:
+            record["team_set_cache"] = build_team_set_cache(snapshot, record, actor.max_station_workers)
+        # 单现场事实[32]、[2]加批次维为[1,32]、[1,2]；表示由当前参数重算。
+        _, replay_lp, _, components = actor.evaluate_action_log_probs(
+            snapshot.state_features.unsqueeze(0), snapshot.time_features.unsqueeze(0), [record],
+            return_components=True, team_set_supervision=True)
+        parts = components[0]
+        scope = tuple(layer for layer in label_scope if layer in parts)
+        available: set[str] = set()
+        if record["action_type"] != "forced_advance":
+            if snapshot.advance_available:
+                available.add("advance")
+            if record["action_type"] == "schedule":
+                if len(snapshot.candidate_task_keys) > 1:
+                    available.add("task")
+                if sum(snapshot.branch_masks[record["task_idx"]]) > 1:
+                    available.add("branch")
+                if stay:
+                    available.add("align")
+                    if len(snapshot.query_tables[record["task_idx"]].entries) > 1:
+                        available.add("team")
+        choices = tuple(layer for layer in scope if layer in available)
+        teacher_advance, greedy_advance = int(teacher_action["branch"]) == 2, int(greedy["branch"]) == 2
+        matches: dict[str, bool | None] = {"advance": teacher_advance == greedy_advance,
+                                         "task": None, "branch": None, "team": None, "align": None}
+        if not teacher_advance and not greedy_advance:
+            matches["task"] = teacher_action["task_key"] == greedy["task_key"]
+            if matches["task"]:
+                matches["branch"] = int(teacher_action["branch"]) == int(greedy["branch"])
+                if matches["branch"] and int(teacher_action["branch"]) == 0:
+                    matches["team"] = set(teacher_action["team"]) == set(greedy["team"])
+                    if matches["team"]:
+                        matches["align"] = int(teacher_action["align"]) == int(greedy["align"])
+        team = None
+        if stay:
+            sample = {"state_features": snapshot.state_features, "time_features": snapshot.time_features,
+                      "record": record}
+            team = {"demand": len(record["chosen_team"]), "supervised": "team" in scope,
+                    "set_probability": float(parts["team_set"].exp().item()),
+                    "conditional_greedy_target_team": conditional_greedy_target_team(actor, sample)}
+        actions = []
+        for action in (teacher_action, greedy):
+            converted = {"branch": int(action["branch"])}
+            if "task_key" in action:
+                converted["task_key"] = str(action["task_key"])
+            if "team" in action:
+                converted["team"] = [int(worker) for worker in action["team"]]
+                converted["align"] = int(action["align"])
+            actions.append(converted)
+        return {"teacher_action": actions[0], "greedy_action": actions[1], "label_scope": list(scope),
+            "choice_layers": list(choices), "choice_layer_counts": {layer: 1 for layer in choices},
+            "choice_layer_comparable_counts": {layer: int(matches[layer] is not None) for layer in choices},
+            "choice_layer_hits": {layer: matches[layer] for layer in choices},
+            "teacher_component_log_probs": {key: float(value.item()) for key, value in parts.items()},
+            "teacher_component_probabilities": {key: float(value.exp().item()) for key, value in parts.items()},
+            "teacher_sequence_log_prob": float(teacher_lp), "greedy_sequence_log_prob": float(greedy_lp),
+            "teacher_sampling_replay_abs_error": abs(float(teacher_lp) - float(replay_lp[0].item())),
+            "teacher_team": team,
+            "first_different_layer": next((layer for layer, match in matches.items() if match is False), None),
+            "comparison_scope": "实际贪心整动作逐层与一条已证教师动作比较；下层只有上游相同时可比，不同不等于坏动作"}
 
 
 def teacher_metrics(actor: ActorCriticWork3, samples: list[dict[str, Any]],

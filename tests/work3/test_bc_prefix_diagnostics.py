@@ -90,3 +90,32 @@ def test_weighted_layer_decomposition_matches_original_and_preserves_runtime(tmp
     with pytest.raises(ValueError):
         teacher_metrics(actor, [broken])
     assert {name: module.training for name, module in actor.named_modules()} == modes
+
+
+def test_common_prefix_scores_full_actions_without_changing_actor_runtime(tmp_path: Path) -> None:
+    from apal.evaluation.bc_prefix_diagnostics import score_prefix_decision
+
+    torch.set_num_threads(1)
+    actor = ActorCriticWork3(condition_queries=True, hidden_dim=16)
+    snapshot, action, sample = _sample_at_greedy_team(tmp_path, actor, 2)
+    actor.train()
+    actor.graph_encoder.eval()
+    modes = {name: module.training for name, module in actor.named_modules()}
+    rng = torch.get_rng_state().clone()
+    result = score_prefix_decision(actor, snapshot, action, sample["label_scope"])
+    assert result["greedy_action"]["task_key"] == action["task_key"]
+    assert result["greedy_action"]["team"] == list(action["team"])
+    assert result["first_different_layer"] is None
+    assert result["teacher_team"]["conditional_greedy_target_team"] is True
+    assert result["choice_layer_hits"]["team"] is True
+    assert "team_set" in result["teacher_component_probabilities"]
+    assert result["teacher_sampling_replay_abs_error"] <= 1e-6
+    table = snapshot.query_tables[sample["record"]["task_idx"]]
+    alternative = next(pair[0].team for pair in table.entries if set(pair[0].team) != set(action["team"]))
+    changed = score_prefix_decision(actor, snapshot, {**action, "team": alternative}, sample["label_scope"])
+    assert changed["first_different_layer"] == "team"
+    assert changed["choice_layer_hits"]["team"] is False
+    assert changed["choice_layer_hits"]["align"] is None
+    assert changed["teacher_team"]["conditional_greedy_target_team"] is False
+    assert torch.equal(rng, torch.get_rng_state())
+    assert {name: module.training for name, module in actor.named_modules()} == modes

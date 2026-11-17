@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from collections import defaultdict
+from dataclasses import asdict
 import csv
 import hashlib
 import json
@@ -10,6 +11,7 @@ import math
 from pathlib import Path
 import statistics
 import subprocess
+import sys
 import time
 from typing import Any
 
@@ -50,6 +52,16 @@ def parameter_digest(path: Path) -> str:
         digest.update(str((name, str(tensor.dtype), tuple(tensor.shape))).encode("utf-8"))
         digest.update(tensor.numpy().tobytes())
     return digest.hexdigest()
+
+
+def json_facts(value: Any) -> Any:
+    if isinstance(value, torch.Tensor):
+        return value.detach().cpu().tolist()
+    if isinstance(value, dict):
+        return {str(key): json_facts(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [json_facts(item) for item in value]
+    return value
 
 
 def select_checkpoint(points: list[dict[str, Any]], rule: str) -> dict[str, Any]:
@@ -180,6 +192,11 @@ class BCDiagnosis:
         PPOTrainerWork3(actor, device=self.config.runtime.device, create_optimizer=False).load_checkpoint(model["path"])
         return actor.eval()
 
+    def environment(self, case: dict[str, Any]) -> AirLineEnvWork3:
+        return AirLineEnvWork3(baseline_json_path=Path(case["baseline"]),
+            raw_data_path=Path(case["raw_data"]), worker_pool_path=Path(case["worker_pool"]),
+            weights=ObjectiveWeights(**OmegaConf.to_container(self.config.objective)), **case["env_config"])
+
     def save_rows(self) -> None:
         write_json(self.rows_path, self.rows)
         write_json(self.cache_path, self.cache)
@@ -224,9 +241,7 @@ class BCDiagnosis:
                     reused = str(old)
                 else:
                     actor = actor or self.actor(model)
-                    env = AirLineEnvWork3(baseline_json_path=Path(case["baseline"]),
-                        raw_data_path=Path(case["raw_data"]), worker_pool_path=Path(case["worker_pool"]),
-                        weights=ObjectiveWeights(**OmegaConf.to_container(self.config.objective)), **case["env_config"])
+                    env = self.environment(case)
                     report = evaluate_query_trajectory(env, actor, scenario=case["scenario"],
                         max_decisions=int(self.config.evaluation.max_decisions),
                         max_wall_seconds=float(self.config.evaluation.max_wall_seconds), amp_dtype="fp32")
@@ -306,17 +321,178 @@ class BCDiagnosis:
             choices[str(seed)] = {rule: select_checkpoint(selected, rule)["model_id"] for rule in ("validation_nll", "closure")}
         write_json(self.context.reports_dir / "selection_comparison.json", choices)
 
+    def autonomous_trace(self, model: dict[str, Any], case: dict[str, Any]) -> dict[str, Any]:
+        """旁路记录原评估器；不重写解码，不额外消耗随机数。"""
+        actor, env = self.actor(model), self.environment(case)
+        trace, events = [], []
+        original_select, original_pop, original_workers = actor.select_snapshot, env.event_queue.pop, actor._worker_logits
+        worker_logits = []
+        retained = ("action_type", "candidate_task_keys", "candidate_branch_masks", "query_task_features",
+            "query_branch_features", "query_worker_features", "query_alignment_features", "worker_prefixes",
+            "worker_valid_masks", "station_worker_ids", "chosen_worker_indices", "chosen_team", "align",
+            "advance_available", "prob_advance", "prob_stay", "branch", "query_program_hashes")
+
+        def observed_select(snapshot: Any, *args: Any, **kwargs: Any) -> Any:
+            worker_logits.clear()
+            result = original_select(snapshot, *args, **kwargs)
+            action, log_prob, value, record = result
+            row = {"decision": len(trace), "time": snapshot.current_time, "cycle": snapshot.cycle_id,
+                "action": json_facts(action), "log_prob": log_prob, "value": value,
+                "record": {key: json_facts(record[key]) for key in retained if key in record}}
+            row["worker_logits_before_mask"] = list(worker_logits)
+            device = next(actor.parameters()).device
+            if record.get("query_worker_features"):
+                row["worker_query_logit_terms"] = [actor.query_worker_score(features.to(device)).squeeze(-1).cpu().tolist()
+                    for features in record["query_worker_features"]]
+            if "task_idx" in record and int(action["branch"]) == 0:
+                table = snapshot.query_tables[int(record["task_idx"])]
+                row["complete_team_windows"] = [[asdict(condition) for condition in pair] for pair in table.entries]
+                row["commitments"] = {key: {"status": task.status.name, "team": list(task.assigned_team),
+                    "station": task.current_station, "start": task.scheduled_start,
+                    "duration": task.execution_duration, "align": task.alignment}
+                    for key, task in env.state.tasks.items() if task.assigned_team}
+                row["worker_calendars"] = {str(key): [list(interval) for interval in worker.intervals]
+                    for key, worker in env.state.workers.items() if worker.intervals}
+            trace.append(row)
+            return result
+
+        def observed_workers(*args: Any, **kwargs: Any) -> Any:
+            result = original_workers(*args, **kwargs)
+            worker_logits.append(result.detach().cpu().tolist())
+            return result
+
+        def observed_pop() -> Any:
+            event = original_pop()
+            if event is not None:
+                events.append({"time": event.timestamp, "priority": event.priority, "event_id": event.event_id,
+                    "type": event.event_type.name, "task_key": event.task_key, "generation": event.generation})
+            return event
+
+        try:
+            actor.select_snapshot, env.event_queue.pop = observed_select, observed_pop
+            actor._worker_logits = observed_workers
+            report = evaluate_query_trajectory(env, actor, scenario=case["scenario"],
+                max_decisions=int(self.config.evaluation.max_decisions),
+                max_wall_seconds=float(self.config.evaluation.max_wall_seconds), amp_dtype="fp32")
+        finally:
+            actor.select_snapshot, env.event_queue.pop = original_select, original_pop
+            actor._worker_logits = original_workers
+        expected = self.cache[f"{model['parameters_sha256']}:{case['split']}:{case['instance_id']}"]
+        keys = ("success", "terminated", "truncated", "termination_reason", "decisions", "makespan", "C_task",
+            "completed_tasks", "total_tasks", "independent_feasible", "constraint_violations", "cost_ledger_matches", "objective")
+        differences = [key for key in keys if report[key] != expected[key]]
+        if differences:
+            raise AssertionError(f"旁路记录改变原自主排程结果: {differences}")
+        final_tasks = {key: {"status": task.status.name, "station": task.current_station,
+            "team": list(task.assigned_team), "align": task.alignment, "scheduled_start": task.scheduled_start,
+            "duration": task.execution_duration, "actual_start": task.actual_start, "actual_end": task.actual_end}
+            for key, task in env.state.tasks.items()}
+        return {"model": model, "report": report, "trace": trace, "events": events, "final_tasks": final_tasks,
+            "baseline_scientific_fields_exact": True, "comparison_keys": keys}
+
+    def prefixes(self) -> None:
+        from apal.data.work3.certified_examples import load_witness_actions
+        from apal.evaluation.bc_prefix_diagnostics import score_prefix_decision
+        self.validate_plan()
+        selection_report = read_json(self.context.reports_dir / "representatives_selection.json")
+        selected = [row for family in selection_report["families"] for row in family["selected"]]
+        for selection in selected:
+            split, instance_id, seed = selection["split"], selection["instance_id"], selection["seed"]
+            case = next(row for row in self.plan["cases"][split] if row["instance_id"] == instance_id)
+            path = self.context.traces_dir / f"prefix_{seed}_{instance_id}.json"
+            if path.exists():
+                continue
+            models = [model for model in self.plan["models"] if model["seed"] == seed]
+            actors = {model["model_id"]: self.actor(model) for model in models}
+            env = self.environment(case)
+            env.reset()
+            if case["scenario"]:
+                env.load_scenario(case["scenario"])
+            common = []
+            for index, teacher in enumerate(load_witness_actions(Path(case["baseline"]).parent.parent)):
+                snapshot = next(iter(actors.values())).make_decision_snapshot(env, torch.zeros(32), torch.zeros(2))
+                common.append({"decision": index, "time": snapshot.current_time,
+                    "teacher_action": json_facts(teacher["action"]),
+                    "models": {name: score_prefix_decision(actor, snapshot, teacher["action"],
+                        teacher["label_scope"]) for name, actor in actors.items()}})
+                env.step(teacher["action"])
+            if not env._check_terminated() or abs(env.state.current_time - case["certified_C_exit"]) > 1e-9:
+                raise AssertionError("共同教师前缀未到达已核证下界")
+            autonomous = {model["model_id"]: self.autonomous_trace(model, case)
+                for model in models if model["rule"] != "final"}
+            write_json(path, json_facts({"selection": selection, "common_teacher_prefix": common,
+                "autonomous": autonomous, "teacher_C_exit": env.state.current_time,
+                "interpretation": "最早不同不等于错误；本文件不声称穷尽多最优动作或条件最优后缀"}))
+            print(json.dumps({"代表": instance_id, "seed": seed, "教师步数": len(common), "文件": str(path)}, ensure_ascii=False), flush=True)
+
+    def branches(self) -> None:
+        """最多两个真实前缀，仅替换完整团队后由同一原策略续排。"""
+        self.validate_plan()
+        pairs = []
+        for path in sorted(self.context.traces_dir.glob("prefix_*.json")):
+            if len(pairs) >= 2:
+                break
+            trace = read_json(path)
+            selection = trace["selection"]
+            if selection["family"] != "structured":
+                continue
+            trajectory = next(row for name, row in trace["autonomous"].items() if "nll_best" in name)
+            model = trajectory["model"]
+            case = next(row for row in self.plan["cases"][selection["split"]]
+                        if row["instance_id"] == selection["instance_id"])
+            for row in trajectory["trace"]:
+                if not row.get("complete_team_windows"):
+                    continue
+                action = row["action"]
+                conditions = [pair[action["align"]] for pair in row["complete_team_windows"]]
+                chosen = next(condition for condition in conditions if set(condition["team"]) == set(action["team"]))
+                alternative = min(conditions, key=lambda condition: (condition["end"], condition["team"]))
+                if alternative["end"] >= chosen["end"] - 1e-9 or alternative["duration"] >= chosen["duration"] - 1e-9:
+                    continue
+                outcomes = {}
+                for name, selected_action in (("original", action), ("alternative_team", {**action, "team": alternative["team"]})):
+                    env, actor = self.environment(case), self.actor(model)
+                    env.reset()
+                    if case["scenario"]:
+                        env.load_scenario(case["scenario"])
+                    for previous in trajectory["trace"][:row["decision"]]:
+                        env.step(previous["action"])
+                    before_time, before_cost = env.state.current_time, env.cumulative_cost
+                    env.step(selected_action)
+                    report = evaluate_query_trajectory(env, actor, reset=False,
+                        max_decisions=int(self.config.evaluation.max_decisions),
+                        max_wall_seconds=float(self.config.evaluation.max_wall_seconds), amp_dtype="fp32")
+                    outcomes[name] = {"action": selected_action, "prefix_time": before_time,
+                        "prefix_cost": before_cost, "report": report}
+                if outcomes["original"]["report"]["makespan"] != trajectory["report"]["makespan"]:
+                    raise AssertionError("同前缀原动作续排未复现原工期")
+                pairs.append({"instance_id": case["instance_id"], "seed": model["seed"], "decision": row["decision"],
+                    "task_key": action["task_key"], "chosen_query": chosen, "alternative_query": alternative,
+                    "outcomes": outcomes, "interpretation": "仅在同一后续策略下的条件对照，不证明全局坏动作或新最优标签"})
+                break
+        write_json(self.context.reports_dir / "counterfactuals.json", pairs)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="BC训练实例、学习轨迹与闭环选模诊断")
     parser.add_argument("--config", type=Path, default=PROJECT_ROOT / "conf/work3/bc_diagnosis.yaml")
-    parser.add_argument("--phase", choices=("prepare", "baseline", "rerun", "curve"), required=True)
+    parser.add_argument("--phase", choices=("prepare", "baseline", "rerun", "curve", "prefixes", "branches"), required=True)
     parser.add_argument("--set", action="append", default=[])
     args = parser.parse_args()
     config = OmegaConf.merge(OmegaConf.load(args.config), OmegaConf.from_dotlist(args.set))
     diagnosis = BCDiagnosis(config)
-    {"prepare": diagnosis.prepare, "baseline": diagnosis.baseline, "rerun": diagnosis.rerun,
-     "curve": diagnosis.curve}[args.phase]()
+    started = time.monotonic()
+    succeeded = False
+    try:
+        {"prepare": diagnosis.prepare, "baseline": diagnosis.baseline, "rerun": diagnosis.rerun,
+         "curve": diagnosis.curve, "prefixes": diagnosis.prefixes, "branches": diagnosis.branches}[args.phase]()
+        succeeded = True
+    finally:
+        receipt = {"phase": args.phase, "argv": sys.argv, "python": sys.executable,
+            "git_head": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, text=True).strip(),
+            "finished_epoch": time.time(), "elapsed_seconds": time.monotonic() - started, "success": succeeded}
+        with (diagnosis.context.reports_dir / "executions.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(receipt, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":

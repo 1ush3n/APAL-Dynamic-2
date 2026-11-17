@@ -47,3 +47,35 @@ def test_truncation_has_no_terminal_cost_or_gap() -> None:
                 "termination_reason": "completed", "makespan": 9.0}
     with pytest.raises(ValueError, match="证书"):
         result_row(model, case, complete, optimum=10.0, phase="A")
+
+
+def test_autonomous_observation_preserves_original_complete_trajectory(tmp_path) -> None:
+    import torch
+    from omegaconf import OmegaConf
+    from apal.data.work3.certified_examples import generate_instance
+    from apal.evaluation.bc_diagnostics import BCDiagnosis, sha256, parameter_digest
+    from apal.evaluation.query import evaluate_query_trajectory
+    from apal.models.work3.actor_critic import ActorCriticWork3
+    from apal.models.work3.ppo_trainer import PPOTrainerWork3
+    torch.set_num_threads(1)
+    torch.manual_seed(42)
+    instance = tmp_path / "case"
+    generate_instance(instance, family="task_order", seed=1801)
+    actor = ActorCriticWork3(condition_queries=True)
+    checkpoint = tmp_path / "initial.pt"
+    PPOTrainerWork3(actor, create_optimizer=False).save_checkpoint(str(checkpoint))
+    model = {"seed": 42, "model_id": "W0", "path": str(checkpoint), "sha256": sha256(checkpoint),
+             "parameters_sha256": parameter_digest(checkpoint)}
+    diagnosis = object.__new__(BCDiagnosis)
+    diagnosis.config = OmegaConf.create({"runtime": {"device": "cpu", "deterministic": True},
+        "objective": {"w_makespan": 1, "w_h": 0, "w_t": 0, "w_w": 0, "w_p": 0},
+        "evaluation": {"max_decisions": 1000, "max_wall_seconds": 120}})
+    case = {"instance_id": "A", "split": "train", "baseline": str(instance / "public" / "baseline.json"),
+        "raw_data": str(instance / "public" / "tasks.csv"), "worker_pool": str(instance / "public" / "workers.csv"),
+        "env_config": {"max_slots_per_station": 2, "transfer_policy": "actual_cleared_v0"}, "scenario": None}
+    expected = evaluate_query_trajectory(diagnosis.environment(case), diagnosis.actor(model), max_decisions=1000)
+    diagnosis.cache = {f"{model['parameters_sha256']}:train:A": expected}
+    trace = diagnosis.autonomous_trace(model, case)
+    assert trace["baseline_scientific_fields_exact"] and trace["report"]["success"]
+    assert trace["events"] and trace["final_tasks"]
+    assert any(row.get("worker_logits_before_mask") and row.get("complete_team_windows") for row in trace["trace"])
